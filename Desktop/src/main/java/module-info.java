@@ -12,5 +12,9 @@ module noran.desktop {
     requires com.almasb.fxgl.all;
 
     opens noran.desktop to javafx.fxml;
+    opens noran.desktop.Controllers to javafx.fxml;
+    opens noran.desktop.Applications to javafx.graphics, javafx.fxml; // ✅ add this line
+
     exports noran.desktop;
+    exports noran.desktop.Applications; // ✅ optional but recommended if other modules will reference it
 }
