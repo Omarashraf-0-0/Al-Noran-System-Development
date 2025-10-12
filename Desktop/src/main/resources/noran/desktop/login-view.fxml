@@ -1,74 +1,95 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Hyperlink?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.PasswordField?>
-<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.*?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.layout.ColumnConstraints?>
-<?import javafx.scene.layout.GridPane?>
-<?import javafx.scene.layout.RowConstraints?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="600.0" prefWidth="1000.0" style="-fx-background-color: #1BA3B6;" xmlns="http://javafx.com/javafx/20.0.2" xmlns:fx="http://javafx.com/fxml/1">
+<AnchorPane fx:controller="noran.desktop.Controllers.LoginController"
+            prefHeight="600.0" prefWidth="1000.0"
+            style="-fx-background-color: #1BA3B6;"
+            xmlns="http://javafx.com/javafx/20.0.2"
+            xmlns:fx="http://javafx.com/fxml/1">
 
-    <!-- Main Container -->
+    <!-- Login Card -->
+    <VBox alignment="CENTER"
+          layoutX="97.0" layoutY="50.0"
+          minHeight="500" prefHeight="500.0"
+          prefWidth="386.0" spacing="20"
+          style="-fx-background-color: #C7E6EA; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 5,0,0,3);">
+        <padding>
+            <Insets bottom="30" left="40" right="40" top="30" />
+        </padding>
 
-        <!-- Login Card -->
-        <VBox alignment="CENTER" layoutX="97.0" layoutY="50.0" minHeight="500" minWidth="-Infinity" prefHeight="500.0" prefWidth="386.0" spacing="20" style="-fx-background-color: #C7E6EA; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 5,0,0,3);">
-            <padding>
-                <Insets bottom="30" left="40" right="40" top="30" />
-            </padding>
+        <Label style="-fx-font-weight: bold;"
+               text="Login to El Noran"
+               textFill="#6b0000">
+            <font>
+                <Font size="22" />
+            </font>
+        </Label>
 
-            <Label style="-fx-font-weight: bold;" text="Login to El Noran" textFill="#6b0000">
+        <GridPane hgap="10" vgap="20">
+            <columnConstraints>
+                <ColumnConstraints />
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints />
+                <RowConstraints />
+                <RowConstraints />
+                <RowConstraints />
+            </rowConstraints>
+
+            <Label text="Employee Username"
+                   GridPane.columnIndex="0" GridPane.rowIndex="0">
                 <font>
-                    <Font size="22" />
+                    <Font size="12" />
                 </font>
             </Label>
 
-            <GridPane hgap="10" vgap="20">
-                <Label text="Employee Username" GridPane.columnIndex="0" GridPane.rowIndex="0">
-                    <font>
-                        <Font size="12" />
-                    </font>
-                </Label>
-                <TextField prefHeight="26.0" prefWidth="266.0" promptText="Username" style="-fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+            <TextField fx:id="usernameField"
+                       prefHeight="26.0" prefWidth="266.0"
+                       promptText="Username"
+                       style="-fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);"
+                       GridPane.columnIndex="0" GridPane.rowIndex="1" />
 
-                <Label text="Password" GridPane.columnIndex="0" GridPane.rowIndex="2">
-                    <font>
-                        <Font size="12" />
-                    </font>
-                </Label>
-                <PasswordField promptText="*******" style="-fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-            <columnConstraints>
-               <ColumnConstraints />
-            </columnConstraints>
-            <rowConstraints>
-               <RowConstraints />
-               <RowConstraints />
-               <RowConstraints />
-               <RowConstraints />
-            </rowConstraints>
-            </GridPane>
+            <Label text="Password"
+                   GridPane.columnIndex="0" GridPane.rowIndex="2">
+                <font>
+                    <Font size="12" />
+                </font>
+            </Label>
 
-            <Hyperlink text="FORGOT PASSWORD" textFill="#6b0000" underline="true" />
+            <PasswordField fx:id="passwordField"
+                           promptText="*******"
+                           style="-fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);"
+                           GridPane.columnIndex="0" GridPane.rowIndex="3" />
+        </GridPane>
 
-            <Button prefWidth="200" style="-fx-background-color: #6b0000; -fx-background-radius: 8; -fx-font-size: 14; -fx-font-weight: bold;" text="Login" textFill="white" />
+        <Hyperlink fx:id="forgotPasswordLink"
+                   text="FORGOT PASSWORD"
+                   textFill="#6b0000"
+                   underline="true"
+                   onAction="#onForgotPasswordClicked" />
 
-        </VBox>
+        <Button fx:id="loginButton"
+                prefWidth="200"
+                style="-fx-background-color: #6b0000; -fx-background-radius: 8; -fx-font-size: 14; -fx-font-weight: bold;"
+                text="Login"
+                textFill="white"
+                onAction="#onLoginClicked" />
+    </VBox>
 
-        <!-- Logo Section -->
-        <VBox alignment="CENTER" />
-         <ImageView fitHeight="300" fitWidth="350" layoutX="610.0" layoutY="141.0" pickOnBounds="true" preserveRatio="true">
-             <image>
-                 <!-- Replace with your logo file path -->
-                 <Image url="@images/Logo.png" />
-             </image>
-         </ImageView>
+    <!-- Logo Section -->
+    <ImageView fitHeight="300" fitWidth="350"
+               layoutX="610.0" layoutY="141.0"
+               pickOnBounds="true" preserveRatio="true">
+        <image>
+            <!-- Make sure this path exists in: src/main/resources/noran/desktop/images/Logo.png -->
+            <Image url="@images/Logo.png" />
+        </image>
+    </ImageView>
 
 </AnchorPane>
