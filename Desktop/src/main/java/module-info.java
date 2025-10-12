@@ -10,11 +10,16 @@ module noran.desktop {
     requires org.kordamp.bootstrapfx.core;
     requires eu.hansolo.tilesfx;
     requires com.almasb.fxgl.all;
+    requires org.mongodb.driver.sync.client;
+
+
 
     opens noran.desktop to javafx.fxml;
     opens noran.desktop.Controllers to javafx.fxml;
     opens noran.desktop.Applications to javafx.graphics, javafx.fxml; // ✅ add this line
 
     exports noran.desktop;
-    exports noran.desktop.Applications; // ✅ optional but recommended if other modules will reference it
+    exports noran.desktop.Applications;
+//    exports noran.desktop.Database;
+    opens noran.desktop.Database to javafx.fxml; // ✅ optional but recommended if other modules will reference it
 }
