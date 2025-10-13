@@ -45,7 +45,7 @@ public class LoginController {
 
         MongoCollection<Document> usersCollection = database.getCollection("users");
 
-        Document user = usersCollection.find(eq("username", username)).first();
+        Document user = usersCollection.find(eq("email", username)).first();
 
         if (user == null) {
             showAlert(Alert.AlertType.ERROR, "Login Failed", "No user found with that username.");
