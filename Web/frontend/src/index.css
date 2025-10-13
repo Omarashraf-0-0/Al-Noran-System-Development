@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.transparent-box {
+  position: relative;
+  border-radius: 40px;
+  background: rgba(255, 255, 255, 0.3); /* semi-transparent white */
+  /* backdrop-filter: blur(8px); */
+  overflow: hidden; /* ensures the pseudo-element border stays inside */
+}
+
+.transparent-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px; /* border thickness */
+  border-radius: inherit;
+  background: linear-gradient(180deg, #1BA3B6, white);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
