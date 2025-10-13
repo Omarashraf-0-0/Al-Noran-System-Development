@@ -26,18 +26,22 @@
 
 
 
-    <!-- Login Card -->
-    <VBox alignment="CENTER" layoutX="500.0" layoutY="148.0" minHeight="500" prefHeight="500.0" prefWidth="386.0" spacing="20" style="-fx-background-color: #C7E6EA; -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 5,0,0,3);">
+    <!-- Transparent Login Card with Poppins Font -->
+    <VBox alignment="CENTER" layoutX="500.0" layoutY="148.0"
+          minHeight="500" prefHeight="500.0" prefWidth="386.0" spacing="20"
+          style="-fx-background-color: rgba(199,230,234,0.5); -fx-background-radius: 20;
+             -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 5,0,0,3);">
         <padding>
             <Insets bottom="30" left="40" right="40" top="30" />
         </padding>
 
-        <Label style="-fx-font-weight: bold;" text="Login to El Noran" textFill="#6b0000">
-            <font>
-                <Font size="22" />
-            </font>
+        <!-- Title -->
+        <Label text="Login to El Noran"
+               style="-fx-font-family: 'Poppins'; -fx-font-weight: 400; -fx-font-style: normal;
+                  -fx-font-size: 22; -fx-line-spacing: 1.4em; -fx-text-fill: #690000;">
         </Label>
 
+        <!-- Fields -->
         <GridPane hgap="10" vgap="20">
             <columnConstraints>
                 <ColumnConstraints />
@@ -49,30 +53,46 @@
                 <RowConstraints />
             </rowConstraints>
 
-            <Label text="Employee Username" GridPane.columnIndex="0" GridPane.rowIndex="0">
-                <font>
-                    <Font size="12" />
-                </font>
-            </Label>
+            <!-- Username -->
+            <Label text="Email" GridPane.rowIndex="0"
+                   style="-fx-font-family: 'Poppins'; -fx-font-weight: 700; -fx-font-style: normal;
+                      -fx-font-size: 14; -fx-text-fill: #690000;" />
 
-            <TextField fx:id="usernameField" prefHeight="26.0" prefWidth="266.0" promptText="Username" style="-fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+            <TextField fx:id="usernameField" promptText="Email"
+                       GridPane.rowIndex="1"
+                       prefHeight="26.0" prefWidth="266.0"
+                       style="-fx-font-family: 'Poppins'; -fx-font-weight: 400; -fx-font-style: normal;
+                          -fx-font-size: 14; -fx-background-radius: 10;
+                          -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" />
 
-            <Label text="Password" GridPane.columnIndex="0" GridPane.rowIndex="2">
-                <font>
-                    <Font size="12" />
-                </font>
-            </Label>
+            <!-- Password -->
+            <Label text="Password" GridPane.rowIndex="2"
+                   style="-fx-font-family: 'Poppins'; -fx-font-weight: 700; -fx-font-style: normal;
+                      -fx-font-size: 14; -fx-text-fill: #690000;" />
 
-            <PasswordField fx:id="passwordField" promptText="*******" style="-fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+            <PasswordField fx:id="passwordField" promptText="*******"
+                           GridPane.rowIndex="3"
+                           style="-fx-font-family: 'Poppins'; -fx-font-weight: 400; -fx-font-style: normal;
+                              -fx-font-size: 14; -fx-background-radius: 10;
+                              -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" />
         </GridPane>
 
-        <Hyperlink fx:id="forgotPasswordLink" onAction="#onForgotPasswordClicked" text="FORGOT PASSWORD" textFill="#6b0000" underline="true" />
+        <!-- Forgot Password -->
+        <Hyperlink fx:id="forgotPasswordLink" onAction="#onForgotPasswordClicked"
+                   text="FORGOT PASSWORD"
+                   style="-fx-font-family: 'Poppins'; -fx-font-weight: 400; -fx-font-style: normal;
+                      -fx-font-size: 13; -fx-text-fill: #690000; -fx-underline: true;" />
 
-        <Button fx:id="loginButton" onAction="#onLoginClicked" prefWidth="200" style="-fx-background-color: #6b0000; -fx-background-radius: 8; -fx-font-size: 14; -fx-font-weight: bold;" text="Login" textFill="white" />
+        <!-- Login Button -->
+        <Button fx:id="loginButton" onAction="#onLoginClicked" text="Login"
+                prefWidth="200"
+                style="-fx-font-family: 'Poppins'; -fx-font-weight: 600; -fx-font-style: normal;
+                   -fx-font-size: 14; -fx-background-color: #690000; -fx-background-radius: 8;
+                   -fx-text-fill: white;" />
     </VBox>
 
     <!-- Logo Section -->
-    <ImageView fitHeight="300" fitWidth="350" layoutX="164.0" layoutY="14.0" pickOnBounds="true" preserveRatio="true">
+    <ImageView fitHeight="262.0" fitWidth="250.0" layoutY="-13.0" pickOnBounds="true" preserveRatio="true">
         <image>
             <!-- Make sure this path exists in: src/main/resources/noran/desktop/images/Logo.png -->
             <Image url="@images/Logo.png" />
