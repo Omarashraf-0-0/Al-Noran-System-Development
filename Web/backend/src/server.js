@@ -25,6 +25,9 @@ app.use(cookieParser())
 app.use('/', express.static(path.join(__dirname, 'public')))
 
 app.use('/', require('./routes/root'))
+// --- ADD THIS LINE ---
+app.use('/api/auth', require('./routes/authRoutes'))
+// ---------------------
 // app.use('/users', require('./routes/userRoutes'))
 
 app.use((req, res) => {
@@ -47,3 +50,4 @@ mongoose.connection.on('error', err => {
     console.log(err)
     logEvents(`${err.no}: ${err.code}\t${err.syscall}\t${err.hostname}`, 'mongoErrLog.log')
 })
+
