@@ -1,10 +1,30 @@
 import 'dart:convert';
+import 'dart:io'; // للتحقق من المنصة
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart'; // للتحقق من kIsWeb
 
 class ApiService {
-  // Base URL من ngrok
-  static const String baseUrl = 'https://c146f6f88dcb.ngrok-free.app';
+  // Base URL - يتغير حسب المنصة تلقائياً
+  static String get baseUrl {
+    // لو Web (Chrome/Edge/Firefox)
+    if (kIsWeb) {
+      return 'http://localhost:3500';
+    }
+
+    // لو Android Emulator
+    if (Platform.isAndroid) {
+      return 'http://10.0.2.2:3500'; // Android emulator يستخدم 10.0.2.2 للوصول للـ localhost
+    }
+
+    // لو iOS Simulator أو جهاز حقيقي
+    if (Platform.isIOS) {
+      return 'http://localhost:3500'; // iOS simulator يستخدم localhost عادي
+    }
+
+    // Default
+    return 'http://localhost:3500';
+  }
 
   // Login API
   static Future<Map<String, dynamic>> login({
@@ -28,6 +48,10 @@ class ApiService {
         if (data['token'] != null) {
           // حفظ الـ token
           await saveToken(data['token']);
+          // حفظ بيانات المستخدم
+          if (data['user'] != null) {
+            await saveUserData(data['user']);
+          }
         }
         return {
           'success': true,
@@ -46,7 +70,7 @@ class ApiService {
       // خطأ في الاتصال
       return {
         'success': false,
-        'message': 'خطأ في الاتصال بالسيرفر',
+        'message': 'خطأ في الاتصال بالسيرفر - تأكد من تشغيل السيرفر',
         'error': e.toString(),
       };
     }
@@ -107,16 +131,43 @@ class ApiService {
     await prefs.setString('auth_token', token);
   }
 
+  // حفظ بيانات المستخدم
+  static Future<void> saveUserData(Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_id', user['id'] ?? '');
+    await prefs.setString('user_name', user['fullname'] ?? '');
+    await prefs.setString('user_email', user['email'] ?? '');
+    await prefs.setString('user_type', user['type'] ?? '');
+    await prefs.setString('username', user['username'] ?? '');
+  }
+
   // جلب الـ Token
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token');
   }
 
+  // جلب بيانات المستخدم
+  static Future<Map<String, String?>> getUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'id': prefs.getString('user_id'),
+      'name': prefs.getString('user_name'),
+      'email': prefs.getString('user_email'),
+      'type': prefs.getString('user_type'),
+      'username': prefs.getString('username'),
+    };
+  }
+
   // حذف الـ Token (Logout)
   static Future<void> removeToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
+    await prefs.remove('user_id');
+    await prefs.remove('user_name');
+    await prefs.remove('user_email');
+    await prefs.remove('user_type');
+    await prefs.remove('username');
   }
 
   // التحقق من تسجيل الدخول
