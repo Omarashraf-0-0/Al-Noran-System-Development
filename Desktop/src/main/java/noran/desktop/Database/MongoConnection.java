@@ -58,7 +58,6 @@ public class MongoConnection {
 
     // For quick manual testing
     public static void main(String[] args) {
-        createUser("testuser@example.com", "password123");
         closeConnection();
     }
 }
