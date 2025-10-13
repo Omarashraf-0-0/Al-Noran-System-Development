@@ -37,6 +37,10 @@ const UserSchema = new mongoose.Schema({
     required: true,
     enum: ['client', 'employee'],
   },
+  active: {
+    type: Boolean,
+    default: true,
+  },
   clientDetails: {
     clientType: {
       type: String,
