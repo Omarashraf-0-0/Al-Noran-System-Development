@@ -1,42 +1,72 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'features/splash/splash_page.dart'; // حسب الـ structure بتاعك
+import 'features/auth/login_page.dart'; // استبدلها بـ LoginPage()
+// import 'features/home/home_page.dart';
 
 void main() {
-  runApp(const AlNoranApp());
+  // قفل الـ Orientation على Portrait فقط (اختياري)
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  // جعل الـ Status Bar شفافة وجميلة
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+    ),
+  );
+
+  runApp(const NoranSmartApp());
 }
 
-class AlNoranApp extends StatelessWidget {
-  const AlNoranApp({super.key});
+class NoranSmartApp extends StatelessWidget {
+  const NoranSmartApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Al-Noran System Development',
+      title: 'نوران سمارت',
       debugShowCheckedModeBanner: false,
+
+      // Theme
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        useMaterial3: true,
-      ),
-      home: const HomePage(),
-    );
-  }
-}
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Al-Noran System Development'),
-        centerTitle: true,
-      ),
-      body: const Center(
-        child: Text(
-          'Welcome to Al-Noran System!',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+        primaryColor: const Color(0xFF690000),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF690000),
+          secondary: const Color(0xFF1ba3b6),
         ),
+
+        // الخط العربي - سيتم تفعيل Cairo بعد تحميله
+        // fontFamily: 'Cairo',
+        // RTL Support
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
+
+      // الصفحة الأولى: Splash Screen
+      home: const SplashScreen(),
+
+      // Routes (اختياري - للتنقل السهل)
+      routes: {
+        '/login': (context) => const LoginPage(), // استبدلها بـ LoginPage()
+        '/home': (context) => Container(), // استبدلها بـ HomePage()
+      },
+
+      // دعم اللغة العربية واتجاه RTL
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ar', 'EG'), // العربية - مصر
+        Locale('ar', ''), // العربية - عام
+      ],
+      locale: const Locale('ar', 'EG'),
     );
   }
 }
