@@ -14,9 +14,14 @@ const PORT = process.env.PORT || 3500
 console.log(process.env.NODE_ENV)
 
 connectDB()
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+    optionsSuccessStatus: 200
+}))
 app.use(logger)
 
-app.use(cors(corsOptions))
+// app.use(cors(corsOptions))
 
 app.use(express.json())
 
