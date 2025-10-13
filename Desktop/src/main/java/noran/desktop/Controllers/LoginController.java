@@ -1,13 +1,14 @@
 package noran.desktop.Controllers;
 
-
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.Hyperlink;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
+
+import static com.mongodb.client.model.Filters.eq;
+import noran.desktop.Database.MongoConnection;
 
 public class LoginController {
 
@@ -23,23 +24,39 @@ public class LoginController {
     @FXML
     private Hyperlink forgotPasswordLink;
 
+    private MongoDatabase database;
+
     @FXML
     void initialize() {
-        // Called automatically after FXML is loaded
-        System.out.println("LoginController initialized.");
+        // Connect to MongoDB when controller is initialized
+        database = MongoConnection.getDatabase();
+        System.out.println("Connected to MongoDB successfully!");
     }
 
     @FXML
     void onLoginClicked(ActionEvent event) {
-        String username = usernameField.getText();
-        String password = passwordField.getText();
+        String username = usernameField.getText().trim();
+        String password = passwordField.getText().trim();
 
         if (username.isEmpty() || password.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "Missing Fields", "Please enter both username and password.");
-        } else if (username.equals("admin") && password.equals("1234")) {
-            showAlert(Alert.AlertType.INFORMATION, "Login Successful", "Welcome, " + username + "!");
+            return;
+        }
+
+        MongoCollection<Document> usersCollection = database.getCollection("users");
+
+        Document user = usersCollection.find(eq("username", username)).first();
+
+        if (user == null) {
+            showAlert(Alert.AlertType.ERROR, "Login Failed", "No user found with that username.");
         } else {
-            showAlert(Alert.AlertType.ERROR, "Login Failed", "Invalid username or password.");
+            String storedPassword = user.getString("password");
+
+            if (password.equals(storedPassword)) {
+                showAlert(Alert.AlertType.INFORMATION, "Login Successful", "Welcome, " + username + "!");
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Login Failed", "Incorrect password.");
+            }
         }
     }
 

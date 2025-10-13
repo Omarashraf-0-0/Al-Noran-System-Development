@@ -26,10 +26,24 @@
 
     <dependencies>
 
-        <!-- ✅ MongoDB Driver -->
+        <!-- MongoDB Driver (Sync API) -->
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-sync</artifactId>
+            <version>5.2.0</version>
+        </dependency>
+
+        <!-- MongoDB Core Driver -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-core</artifactId>
+            <version>5.2.0</version>
+        </dependency>
+
+        <!-- BSON Library -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>bson</artifactId>
             <version>5.2.0</version>
         </dependency>
 
