@@ -36,9 +36,13 @@
         </padding>
 
         <!-- Title -->
-        <Label text="Login to El Noran"
+        <Label text="Login"
                style="-fx-font-family: 'Poppins'; -fx-font-weight: 400; -fx-font-style: normal;
                   -fx-font-size: 22; -fx-line-spacing: 1.4em; -fx-text-fill: #690000;">
+        </Label>
+        <Label text="Welcome to Al Noran"
+               style="-fx-font-family: 'Poppins'; -fx-font-weight: 300; -fx-font-style: normal;
+                  -fx-font-size: 18; -fx-line-spacing: 1.4em; -fx-text-fill: #690000;">
         </Label>
 
         <!-- Fields -->

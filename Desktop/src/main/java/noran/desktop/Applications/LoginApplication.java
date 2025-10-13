@@ -9,7 +9,7 @@ import java.io.IOException;
 public class LoginApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/noran/desktop/login-view.fxml"));
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/noran/desktop/login-view-en.fxml"));
         Scene scene = new Scene(fxmlLoader.load());
         stage.setTitle("Login");
         stage.setScene(scene);
