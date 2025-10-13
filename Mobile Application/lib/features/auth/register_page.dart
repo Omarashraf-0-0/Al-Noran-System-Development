@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/network/api_service.dart';
+import '../../Pop-ups/al_noran_popups.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
@@ -9,14 +11,18 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _ssnController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
+  bool _agreeToTerms = false;
+  String _selectedAccountType = 'personal'; // personal, commercial, factory
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +92,15 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   const SizedBox(height: 16),
 
+                  // Username Field
+                  _buildTextField(
+                    controller: _usernameController,
+                    hint: 'اسم المستخدم',
+                    icon: Icons.alternate_email,
+                  ),
+
+                  const SizedBox(height: 16),
+
                   // Email Field
                   _buildTextField(
                     controller: _emailController,
@@ -103,6 +118,22 @@ class _RegisterPageState extends State<RegisterPage> {
                     icon: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
                   ),
+
+                  const SizedBox(height: 16),
+
+                  // Account Type Selector
+                  _buildAccountTypeSelector(),
+
+                  // SSN Field (only for personal accounts)
+                  if (_selectedAccountType == 'personal') ...[
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _ssnController,
+                      hint: 'الرقم القومي (14 رقم)',
+                      icon: Icons.badge_outlined,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ],
 
                   const SizedBox(height: 16),
 
@@ -136,6 +167,11 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
 
+                  const SizedBox(height: 20),
+
+                  // Terms and Conditions Checkbox
+                  _buildTermsCheckbox(),
+
                   const SizedBox(height: 30),
 
                   // Register Button
@@ -143,15 +179,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: Implement register logic
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('جاري إنشاء الحساب...'),
-                            backgroundColor: Color(0xFF690000),
-                          ),
-                        );
-                      },
+                      onPressed: _handleRegister,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF690000),
                         shape: RoundedRectangleBorder(
@@ -206,6 +234,327 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  // Handle Registration
+  Future<void> _handleRegister() async {
+    // Validation
+    if (_nameController.text.trim().isEmpty) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'من فضلك أدخل الاسم بالكامل',
+      );
+      return;
+    }
+
+    if (_usernameController.text.trim().isEmpty) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'من فضلك أدخل اسم المستخدم',
+      );
+      return;
+    }
+
+    // Username validation (no spaces allowed)
+    if (_usernameController.text.contains(' ')) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'اسم المستخدم لا يجب أن يحتوي على مسافات',
+      );
+      return;
+    }
+
+    if (_emailController.text.trim().isEmpty) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'من فضلك أدخل البريد الإلكتروني',
+      );
+      return;
+    }
+
+    // Email validation
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(_emailController.text.trim())) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'البريد الإلكتروني غير صحيح',
+      );
+      return;
+    }
+
+    if (_phoneController.text.trim().isEmpty) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'من فضلك أدخل رقم الهاتف',
+      );
+      return;
+    }
+
+    // SSN validation for personal accounts
+    if (_selectedAccountType == 'personal') {
+      if (_ssnController.text.trim().isEmpty) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'من فضلك أدخل الرقم القومي',
+        );
+        return;
+      }
+
+      if (_ssnController.text.trim().length != 14) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'الرقم القومي يجب أن يكون 14 رقم',
+        );
+        return;
+      }
+    }
+
+    if (_passwordController.text.trim().isEmpty) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'من فضلك أدخل كلمة المرور',
+      );
+      return;
+    }
+
+    if (_passwordController.text.length < 6) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
+      );
+      return;
+    }
+
+    if (_confirmPasswordController.text != _passwordController.text) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'كلمة المرور غير متطابقة',
+      );
+      return;
+    }
+
+    // Terms and Conditions validation
+    if (!_agreeToTerms) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'يجب الموافقة على الشروط والأحكام',
+      );
+      return;
+    }
+
+    // Show loading
+    AlNoranPopups.showLoading(
+      context: context,
+      message: 'جاري إنشاء الحساب...',
+    );
+
+    try {
+      // Call API
+      final result = await ApiService.register(
+        name: _nameController.text.trim(),
+        username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
+        password: _passwordController.text.trim(),
+        clientType: _selectedAccountType,
+        ssn:
+            _selectedAccountType == 'personal'
+                ? _ssnController.text.trim()
+                : null,
+      );
+
+      // Hide loading
+      if (mounted) {
+        AlNoranPopups.hideLoading(context);
+      }
+
+      if (result['success']) {
+        // نجح التسجيل
+        if (mounted) {
+          await AlNoranPopups.showSuccess(
+            context: context,
+            title: 'مرحباً بك!',
+            message: result['message'] ?? 'تم إنشاء الحساب بنجاح',
+            buttonText: 'تسجيل الدخول',
+            onPressed: () {
+              // العودة لصفحة Login
+              Navigator.pop(context);
+            },
+          );
+        }
+      } else {
+        // فشل التسجيل
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: result['message'] ?? 'فشل إنشاء الحساب',
+          );
+        }
+      }
+    } catch (e) {
+      // Hide loading
+      if (mounted) {
+        AlNoranPopups.hideLoading(context);
+      }
+
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          title: 'خطأ في الاتصال',
+          message:
+              'حدث خطأ غير متوقع. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.',
+        );
+      }
+    }
+  }
+
+  // Account Type Selector
+  Widget _buildAccountTypeSelector() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.business_center, color: Color(0xFF690000)),
+              const SizedBox(width: 12),
+              const Text(
+                'نوع الحساب',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF690000),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildAccountTypeOption(
+                  title: 'شخصي',
+                  value: 'personal',
+                  icon: Icons.person,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildAccountTypeOption(
+                  title: 'تجاري',
+                  value: 'commercial',
+                  icon: Icons.store,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildAccountTypeOption(
+                  title: 'مصنع',
+                  value: 'factory',
+                  icon: Icons.factory,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccountTypeOption({
+    required String title,
+    required String value,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedAccountType == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedAccountType = value;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF690000) : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color:
+                isSelected ? const Color(0xFF690000) : const Color(0xFFE0E0E0),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : const Color(0xFF690000),
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : const Color(0xFF690000),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Terms and Conditions Checkbox
+  Widget _buildTermsCheckbox() {
+    return Row(
+      children: [
+        Checkbox(
+          value: _agreeToTerms,
+          onChanged: (value) {
+            setState(() {
+              _agreeToTerms = value ?? false;
+            });
+          },
+          activeColor: const Color(0xFF690000),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        ),
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _agreeToTerms = !_agreeToTerms;
+              });
+            },
+            child: RichText(
+              textAlign: TextAlign.right,
+              text: const TextSpan(
+                style: TextStyle(fontSize: 14, color: Color(0xFF757575)),
+                children: [
+                  TextSpan(text: 'أوافق على '),
+                  TextSpan(
+                    text: 'الشروط والأحكام',
+                    style: TextStyle(
+                      color: Color(0xFF690000),
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                  TextSpan(text: ' وسياسة الخصوصية'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -255,8 +604,10 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _ssnController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();

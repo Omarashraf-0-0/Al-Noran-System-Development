@@ -79,23 +79,36 @@ class ApiService {
   // Register API
   static Future<Map<String, dynamic>> register({
     required String name,
+    required String username,
     required String email,
     required String phone,
     required String password,
+    required String clientType, // personal, commercial, factory
+    String? ssn, // Required only for personal accounts
   }) async {
     try {
+      final Map<String, dynamic> body = {
+        'fullname': name,
+        'username': username,
+        'email': email,
+        'phone': phone,
+        'password': password,
+        'type': 'client',
+        'clientType': clientType,
+      };
+
+      // Add SSN only if it's provided (for personal accounts)
+      if (ssn != null && ssn.isNotEmpty) {
+        body['ssn'] = ssn;
+      }
+
       final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/register'),
+        Uri.parse('$baseUrl/api/auth/signup'),
         headers: {
           'Content-Type': 'application/json',
           'ngrok-skip-browser-warning': 'true',
         },
-        body: jsonEncode({
-          'name': name,
-          'email': email,
-          'phone': phone,
-          'password': password,
-        }),
+        body: jsonEncode(body),
       );
 
       final data = jsonDecode(response.body);
