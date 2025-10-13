@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'register_page.dart';
 import '../../core/network/api_service.dart';
+import '../../Pop-ups/al_noran_popups.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -343,19 +344,26 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _handleLogin() async {
     // Validation
     if (_emailController.text.trim().isEmpty) {
-      _showErrorDialog('من فضلك أدخل البريد الإلكتروني');
+      AlNoranPopups.showError(
+        context: context,
+        message: 'من فضلك أدخل البريد الإلكتروني',
+      );
       return;
     }
 
     if (_passwordController.text.trim().isEmpty) {
-      _showErrorDialog('من فضلك أدخل كلمة المرور');
+      AlNoranPopups.showError(
+        context: context,
+        message: 'من فضلك أدخل كلمة المرور',
+      );
       return;
     }
 
-    // Start loading
-    setState(() {
-      _isLoading = true;
-    });
+    // Show loading
+    AlNoranPopups.showLoading(
+      context: context,
+      message: 'جاري تسجيل الدخول...',
+    );
 
     try {
       // Call API
@@ -364,103 +372,59 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text.trim(),
       );
 
-      // Stop loading
-      setState(() {
-        _isLoading = false;
-      });
+      // Hide loading
+      if (mounted) {
+        AlNoranPopups.hideLoading(context);
+      }
 
       if (result['success']) {
         // نجح تسجيل الدخول
         if (mounted) {
-          _showSuccessDialog(result['message']);
-          // هنا تقدر تنقل للصفحة الرئيسية
-          // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomePage()));
+          await AlNoranPopups.showSuccess(
+            context: context,
+            title: 'مرحباً بك!',
+            message: result['message'] ?? 'تم تسجيل الدخول بنجاح',
+            buttonText: 'المتابعة',
+            onPressed: () {
+              // هنا تقدر تنقل للصفحة الرئيسية
+              // Navigator.pushReplacement(
+              //   context,
+              //   MaterialPageRoute(builder: (context) => HomePage()),
+              // );
+            },
+          );
+
+          // أو استخدم SnackBar للرسالة السريعة
+          // AlNoranPopups.showSnackBar(
+          //   context: context,
+          //   message: 'تم تسجيل الدخول بنجاح',
+          //   type: PopupType.success,
+          // );
         }
       } else {
         // فشل تسجيل الدخول
         if (mounted) {
-          _showErrorDialog(result['message']);
+          AlNoranPopups.showError(
+            context: context,
+            message: result['message'] ?? 'فشل تسجيل الدخول',
+          );
         }
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showErrorDialog('حدث خطأ غير متوقع');
+      // Hide loading
+      if (mounted) {
+        AlNoranPopups.hideLoading(context);
+      }
+
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          title: 'خطأ في الاتصال',
+          message:
+              'حدث خطأ غير متوقع. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.',
+        );
+      }
     }
-  }
-
-  // Show Error Dialog
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => Directionality(
-            textDirection: TextDirection.rtl,
-            child: AlertDialog(
-              title: const Text(
-                'خطأ',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Text(
-                message,
-                style: const TextStyle(fontFamily: 'Cairo'),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'حسناً',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      color: Color(0xFF690000),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-    );
-  }
-
-  // Show Success Dialog
-  void _showSuccessDialog(String message) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => Directionality(
-            textDirection: TextDirection.rtl,
-            child: AlertDialog(
-              title: const Text(
-                'نجح',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF690000),
-                ),
-              ),
-              content: Text(
-                message,
-                style: const TextStyle(fontFamily: 'Cairo'),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'حسناً',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      color: Color(0xFF690000),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-    );
   }
 
   @override
