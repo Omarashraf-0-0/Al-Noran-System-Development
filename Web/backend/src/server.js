@@ -1,7 +1,7 @@
-require('dotenv').config({ path: './Web/backend/.env' });
+const path = require('path')
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const express = require('express')
 const app = express()
-const path = require('path')
 const errorHandler = require('./middleware/errorHandler')
 const cookieParser = require('cookie-parser')
 const cors = require('cors')
@@ -22,13 +22,11 @@ app.use(express.json())
 
 app.use(cookieParser())
 
-app.use('/', express.static(path.join(__dirname, 'public')))
+app.use('/', express.static(path.join(__dirname, '..', '..', 'frontend', 'public')))
 
 app.use('/', require('./routes/root'))
-// --- ADD THIS LINE ---
 app.use('/api/auth', require('./routes/authRoutes'))
-// ---------------------
-// app.use('/users', require('./routes/userRoutes'))
+app.use('/api/users', require('./routes/userRoutes'))
 
 app.use((req, res) => {
     res.status(404)

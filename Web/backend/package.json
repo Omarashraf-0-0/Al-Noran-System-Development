@@ -1,10 +1,10 @@
 {
   "name": "al-noran",
   "version": "1.0.0",
-  "main": "./Web/backend/src/server.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node ./Web/backend/src/server.js",
-    "dev": "nodemon ./Web/backend/src/server.js"
+    "start": "node .",
+    "dev": "nodemon"
   },
   "keywords": [],
   "author": "",
@@ -20,9 +20,10 @@
     "express-async-handler": "^1.2.0",
     "express-validator": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.4.1"
+    "mongoose": "^8.4.1",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.0"
   }
 }
