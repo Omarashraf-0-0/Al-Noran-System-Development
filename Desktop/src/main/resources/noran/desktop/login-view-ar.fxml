@@ -33,7 +33,7 @@
     <!-- Transparent Login Card with Poppins Font -->
     <VBox alignment="CENTER" layoutX="500.0" layoutY="148.0"
           minHeight="500" prefHeight="500.0" prefWidth="386.0" spacing="20"
-          style="-fx-background-color: rgba(199,230,234,0.5);
+          style="-fx-background-color: rgba(199,230,234,0.6);
                  -fx-background-radius: 20;
                  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 5,0,0,3);">
         <padding>
