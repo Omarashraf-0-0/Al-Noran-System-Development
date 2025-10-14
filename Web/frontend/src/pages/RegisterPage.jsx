@@ -3,6 +3,7 @@ import Navbar from "../components/Navbar";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import RegisterForm from "../components/RegisterForm";
+import { toast } from "react-hot-toast";
 import axios from "axios";
 
 const RegisterPage = () => {
@@ -27,16 +28,18 @@ const RegisterPage = () => {
 		console.log("Transformed data:", registrationData);
 
 		axios
-			.post(`${import.meta.env.VITE_API_URL}/users`, registrationData)
+			.post(`${import.meta.env.VITE_API_URL}/api/users`, registrationData)
 			.then((response) => {
-				console.log("Registration successful:", response.data);
+				// console.log("Registration successful:", response.data);
+				toast.success("تم إنشاء الحساب بنجاح");
+				// window.location.href = "/login";
 			})
 			.catch((error) => {
-				console.error("Error during registration:", error);
+				// console.error("Error during registration:", error);
+				toast.error("فشل في إنشاء الحساب. الرجاء المحاولة مرة أخرى.");
 			});
 		// show the message of the success or failure using
 		// redirect me to the login page
-		window.location.href = "/login";
 	};
 
 	return (
