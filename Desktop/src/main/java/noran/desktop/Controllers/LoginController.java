@@ -5,10 +5,17 @@ import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.stage.Stage;
 
 import static com.mongodb.client.model.Filters.eq;
 import noran.desktop.Database.MongoConnection;
+
+import java.io.IOException;
 
 public class LoginController {
 
@@ -62,8 +69,25 @@ public class LoginController {
 
     @FXML
     void onForgotPasswordClicked(ActionEvent event) {
-        showAlert(Alert.AlertType.INFORMATION, "Password Reset", "Password reset instructions sent to your email.");
+        try {
+            // Load the FXML file (make sure this path is correct!)
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/email-for-otp-ar.fxml"));
+
+            // Create a new scene
+            Parent root = loader.load();
+            Scene scene = new Scene(root);
+
+            // Get the current stage and switch the scene
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            stage.setScene(scene);
+            stage.show();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Error", "Unable to open Forgot Password screen.");
+        }
     }
+
 
     private void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);
