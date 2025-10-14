@@ -7,13 +7,13 @@ import { Link } from "react-router";
 
 const RegisterForm = ({ onSubmit }) => {
 	const [formData, setFormData] = React.useState({
-		fullName: "",
+		fullname: "",
 		email: "",
-		phoneNumber: "",
-		userName: "",
+		phone: "",
+		username: "",
 		password: "",
 		confirmPassword: "",
-		accountType: "",
+		type: "",
 		ssn: "",
 		terms: false,
 	});
@@ -42,7 +42,7 @@ const RegisterForm = ({ onSubmit }) => {
 		}
 
 		// التحقق من رقم البطاقة القومية للحسابات الشخصية
-		if (formData.accountType === "personal") {
+		if (formData.type === "personal") {
 			if (!formData.ssn || formData.ssn.length !== 14) {
 				alert("رجاءً أدخل رقم بطاقة قومية صحيح (14 رقم)");
 				return;
@@ -71,12 +71,12 @@ const RegisterForm = ({ onSubmit }) => {
 			<form onSubmit={handleSubmit} className="w-full">
 				{/* الاسم والإيميل - كل واحد في سطر لوحده */}
 				<InputField
-					id="fullName"
+					id="fullname"
 					type="text"
 					label="الاسم الكامل"
 					placeholder="ادخل الاسم الكامل"
-					value={formData.fullName}
-					onChange={handleInputChange("fullName")}
+					value={formData.fullname}
+					onChange={handleInputChange("fullname")}
 					required
 				/>
 
@@ -93,22 +93,22 @@ const RegisterForm = ({ onSubmit }) => {
 				{/* رقم الهاتف ورقم الضريبة - جنب بعض في الشاشات الكبيرة */}
 				<FieldRow columns={2}>
 					<InputField
-						id="phoneNumber"
+						id="phone"
 						type="tel"
 						label="رقم الهاتف"
 						placeholder="ادخل رقم الهاتف"
-						value={formData.phoneNumber}
-						onChange={handleInputChange("phoneNumber")}
+						value={formData.phone}
+						onChange={handleInputChange("phone")}
 						required
 					/>
 
 					<InputField
-						id="userName"
+						id="username"
 						type="text"
 						label="اسم المستخدم"
 						placeholder="ادخل اسم المستخدم"
-						value={formData.userName}
-						onChange={handleInputChange("userName")}
+						value={formData.username}
+						onChange={handleInputChange("username")}
 						required
 					/>
 				</FieldRow>
@@ -148,10 +148,10 @@ const RegisterForm = ({ onSubmit }) => {
 							<input
 								type="radio"
 								id="personal"
-								name="accountType"
+								name="type"
 								value="personal"
-								checked={formData.accountType === "personal"}
-								onChange={handleInputChange("accountType")}
+								checked={formData.type === "personal"}
+								onChange={handleInputChange("type")}
 								className="ml-2 w-4 h-4 text-[#690000] focus:ring-[#690000]"
 								required
 							/>
@@ -167,10 +167,10 @@ const RegisterForm = ({ onSubmit }) => {
 							<input
 								type="radio"
 								id="commercial"
-								name="accountType"
+								name="type"
 								value="commercial"
-								checked={formData.accountType === "commercial"}
-								onChange={handleInputChange("accountType")}
+								checked={formData.type === "commercial"}
+								onChange={handleInputChange("type")}
 								className="ml-2 w-4 h-4 text-[#690000] focus:ring-[#690000]"
 								required
 							/>
@@ -186,10 +186,10 @@ const RegisterForm = ({ onSubmit }) => {
 							<input
 								type="radio"
 								id="factory"
-								name="accountType"
+								name="type"
 								value="factory"
-								checked={formData.accountType === "factory"}
-								onChange={handleInputChange("accountType")}
+								checked={formData.type === "factory"}
+								onChange={handleInputChange("type")}
 								className="ml-2 w-4 h-4 text-[#690000] focus:ring-[#690000]"
 								required
 							/>
@@ -204,7 +204,7 @@ const RegisterForm = ({ onSubmit }) => {
 				</div>
 
 				{/* رقم البطاقة القومية - يظهر فقط للحسابات الشخصية */}
-				{formData.accountType === "personal" && (
+				{formData.type === "personal" && (
 					<>
 						<Spacer size="sm" />
 						<InputField
