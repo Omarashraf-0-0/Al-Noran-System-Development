@@ -22,9 +22,12 @@
     "express-validator": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.1",
-    "uuid": "^13.0.0"
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "cypress": "^15.4.0",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.0",
+    "supertest": "^7.1.4"
   }
 }

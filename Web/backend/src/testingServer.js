@@ -13,7 +13,6 @@ const PORT = process.env.PORT || 3500
 
 console.log(process.env.NODE_ENV)
 
-connectDB()
 app.use(logger)
 
 app.use(cors(corsOptions))
@@ -44,14 +43,5 @@ app.use((req, res) => {
 app.use(errorHandler)
 
 
-
-
-mongoose.connection.once('open', () => {
-    console.log('Connected to MongoDB')
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
-})
-mongoose.connection.on('error', err => {
-    console.log(err)
-    logEvents(`${err.no}: ${err.code}\t${err.syscall}\t${err.hostname}`, 'mongoErrLog.log')
-})
+module.exports = app;
 
