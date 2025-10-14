@@ -59,7 +59,7 @@ public class ForgotPasswordController {
 
             if (success) {
                 showAlert(AlertType.INFORMATION, "تم الإرسال", "تم إرسال كود إعادة التعيين إلى البريد الإلكتروني");
-                goToOTPVerificationPage(event);
+                goToOTPVerificationPage(event, email);
             } else {
                 showAlert(AlertType.ERROR, "خطأ", "فشل في إرسال الكود. يرجى المحاولة لاحقًا.");
             }
@@ -131,9 +131,12 @@ public class ForgotPasswordController {
     /**
      * Navigates to the OTP Verification page
      */
-    private void goToOTPVerificationPage(ActionEvent event) {
+    private void goToOTPVerificationPage(ActionEvent event, String email) {
         try {
-            Parent root = FXMLLoader.load(getClass().getResource("/noran/desktop/OTPVerification.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/OTPVerification.fxml"));
+            Parent root = loader.load();
+            OTPVerificationController controller = loader.getController();
+            controller.setUserEmail(email); // Pass email to OTPVerificationController
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             Scene scene = new Scene(root);
             stage.setScene(scene);
