@@ -42,7 +42,7 @@
         </padding>
 
         <!-- Back Link -->
-        <HBox alignment="BOTTOM_LEFT" prefWidth="500">
+        <HBox alignment="BOTTOM_RIGHT" prefWidth="500">
             <Hyperlink text="الرجوع" onAction="#onBackClicked"
                        style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
                               -fx-font-size: 13; -fx-text-fill: #690000;
