@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import axios from "axios";
 import Navbar from "../components/Navbar";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
@@ -10,58 +11,37 @@ const ResetPasswordPage = () => {
 	const location = useLocation();
 	const navigate = useNavigate();
 
-	// Check if email and token exist in location.state
+	// Check if email exists in location.state
 	useEffect(() => {
-		if (!location.state?.email || !location.state?.token) {
+		if (!location.state?.email) {
 			toast.error("جلسة غير صالحة. الرجاء المحاولة مرة أخرى.");
 			navigate("/forgetpassword");
 		}
 	}, [location.state, navigate]);
 
-	const handleResetPassword = async (data) => {
-		try {
-			// TODO: Uncomment when backend API is ready
-			/*
-			const response = await fetch("http://localhost:3500/api/auth/reset-password", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					email: data.email,
-					token: location.state.token,
-					newPassword: data.password,
-				}),
-			});
-
-			const result = await response.json();
-
-			if (response.ok) {
-				toast.success("تم تغيير كلمة المرور بنجاح!");
-				navigate("/login");
-			} else {
-				toast.error(result.message || "فشل في تغيير كلمة المرور");
-			}
-			*/
-
-			// Temporary success message for testing
-			console.log("Reset password data:", {
+	const handleResetPassword = (data) => {
+		console.log("Reset password attempt:", data);
+		console.log("API URL:", import.meta.env.VITE_API_URL);
+		
+		// Reset password with backend
+		axios
+			.patch(`${import.meta.env.VITE_API_URL}/api/otp/resetPassword`, {
 				email: data.email,
-				token: location.state?.token,
-				password: data.password,
+				newPassword: data.password,
+			})
+			.then((response) => {
+				console.log("Password reset successfully:", response.data);
+				toast.success("تم تغيير كلمة المرور بنجاح!");
+				// Navigate to login page after successful reset
+				setTimeout(() => {
+					navigate("/login");
+				}, 2000);
+			})
+			.catch((error) => {
+				console.error("Error resetting password:", error);
+				const errorMsg = error.response?.data?.msg || "حدث خطأ. الرجاء المحاولة مرة أخرى.";
+				toast.error(errorMsg);
 			});
-			
-			toast.success("تم تغيير كلمة المرور بنجاح!");
-			
-			// Navigate to login page after successful reset
-			setTimeout(() => {
-				navigate("/login");
-			}, 2000);
-			
-		} catch (error) {
-			console.error("Error resetting password:", error);
-			toast.error("حدث خطأ. الرجاء المحاولة مرة أخرى.");
-		}
 	};
 
 	return (
