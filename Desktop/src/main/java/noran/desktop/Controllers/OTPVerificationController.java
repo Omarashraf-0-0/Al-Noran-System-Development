@@ -109,7 +109,7 @@ public class OTPVerificationController {
      * Resend OTP request to Node.js server
      */
     private boolean resendOtpRequest(String email) throws IOException {
-        URL url = new URL("http://localhost:3000/send-otp");
+        URL url = new URL("http://localhost:3500/send-otp");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
@@ -171,7 +171,7 @@ public class OTPVerificationController {
      * Verify OTP with Node.js server
      */
     private boolean verifyOtp(String email, String otp) throws IOException {
-        URL url = new URL("http://localhost:3000/verify-otp");
+        URL url = new URL("http://localhost:3500/verify-otp");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
@@ -274,14 +274,14 @@ public class OTPVerificationController {
         );
 
         // Update in Node.js server
-        URL url = new URL("http://localhost:3000/update-password");
+        URL url = new URL("http://localhost:3500/update-password");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
         conn.setRequestProperty("Accept", "application/json");
         conn.setDoOutput(true);
 
-        String jsonInput = "{\"email\": \"" + email + "\", \"password\": \"" + hashedPassword + "\"}";
+        String jsonInput = "{\"email\": \"" + email + "\", \"password\": \"" + newPassword + "\"}";
         try (OutputStream os = conn.getOutputStream()) {
             byte[] input = jsonInput.getBytes(StandardCharsets.UTF_8);
             os.write(input);

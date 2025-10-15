@@ -83,7 +83,7 @@ public class ForgotPasswordController {
      * Sends a POST request to Node.js OTP server
      */
     private boolean sendOtpRequest(String email) throws IOException {
-        URL url = new URL("http://localhost:3000/send-otp");
+        URL url = new URL("http://localhost:3500/send-otp");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");

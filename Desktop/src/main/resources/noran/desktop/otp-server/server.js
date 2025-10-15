@@ -5,10 +5,10 @@ import bcrypt from "bcrypt";
 import { MongoClient } from "mongodb";
 
 const app = express();
-const PORT = 3500; // ✅ Match your JavaFX controller
+const PORT = 3500;
 
 // =====================================================
-// 🌍 MongoDB Connection (same as Java class)
+// 🌍 MongoDB Connection
 // =====================================================
 const uri =
     "mongodb+srv://al-noran:al-noran@cluster0.kap4tle.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
@@ -33,11 +33,8 @@ await connectDB();
 app.use(cors());
 app.use(express.json());
 
-// Store OTPs temporarily (in-memory)
-const otpStore = new Map();
-
 // =====================================================
-// 📩 Send OTP
+// 📩 Send OTP — stored in MongoDB
 // =====================================================
 app.post("/send-otp", async (req, res) => {
     console.log("📩 Incoming body:", req.body);
@@ -47,11 +44,8 @@ app.post("/send-otp", async (req, res) => {
         return res.status(400).json({ error: "Email is required" });
     }
 
-    // Generate 5-digit OTP
     const otp = Math.floor(10000 + Math.random() * 90000).toString();
     const reversedOtp = otp.split("").reverse().join("");
-
-    otpStore.set(email, { original: otp, reversed: reversedOtp });
 
     try {
         const transporter = nodemailer.createTransport({
@@ -70,6 +64,14 @@ app.post("/send-otp", async (req, res) => {
         };
 
         await transporter.sendMail(mailOptions);
+
+        const otps = db.collection("otps");
+        await otps.updateOne(
+            { email },
+            { $set: { otp, reversedOtp, createdAt: new Date() } },
+            { upsert: true }
+        );
+
         console.log(`✅ OTP sent to ${email}: ${otp}`);
         res.json({ message: "OTP sent successfully" });
     } catch (error) {
@@ -79,33 +81,43 @@ app.post("/send-otp", async (req, res) => {
 });
 
 // =====================================================
-// ✅ Verify OTP
+// ✅ Verify OTP (checks from MongoDB)
 // =====================================================
-app.post("/verify-otp", (req, res) => {
+app.post("/verify-otp", async (req, res) => {
     const { email, otp } = req.body;
 
     if (!email || !otp) {
         return res.status(400).json({ error: "Email and OTP are required" });
     }
 
-    const storedOtp = otpStore.get(email);
-    if (storedOtp && (storedOtp.original === otp || storedOtp.reversed === otp)) {
-        otpStore.delete(email);
-        res.json({ message: "OTP verified successfully" });
-    } else {
-        res.status(400).json({ error: "Invalid OTP" });
+    try {
+        const otps = db.collection("otps");
+        const record = await otps.findOne({ email });
+
+        if (
+            record &&
+            (record.otp === otp || record.reversedOtp === otp)
+        ) {
+            await otps.deleteOne({ email }); // remove OTP after use
+            res.json({ message: "OTP verified successfully" });
+        } else {
+            res.status(400).json({ error: "Invalid OTP" });
+        }
+    } catch (error) {
+        console.error("❌ Verify OTP error:", error);
+        res.status(500).json({ error: "Failed to verify OTP" });
     }
 });
 
 // =====================================================
-// 🔐 Login API (for JavaFX LoginController)
+// 🔐 Login API
 // =====================================================
 app.post("/api/users/login", async (req, res) => {
-    console.log("🪪 Incoming login request:", req.body); // 👀 Debug log
+    console.log("🪪 Incoming login request:", req.body);
 
     try {
         const { identifier, email, password } = req.body;
-        const loginIdentifier = identifier || email; // Accept both
+        const loginIdentifier = identifier || email;
 
         if (!loginIdentifier || !password) {
             return res
@@ -115,22 +127,25 @@ app.post("/api/users/login", async (req, res) => {
 
         const users = db.collection("users");
 
-        // Search by email or username
         const user = await users.findOne({
             $or: [{ email: loginIdentifier }, { username: loginIdentifier }],
         });
 
         if (!user) {
+            console.log("❌ User not found for:", loginIdentifier);
             return res.status(404).json({ error: "User not found" });
         }
 
-        // Compare password (bcrypt)
+        console.log("🔐 Entered password:", password);
+        console.log("🔐 Stored hash:", user.password);
+
         const isMatch = await bcrypt.compare(password, user.password);
+        console.log("🔐 Compare result:", isMatch);
+
         if (!isMatch) {
             return res.status(401).json({ error: "Incorrect password" });
         }
 
-        // In production: generate JWT
         const token = "dummy-jwt-token-" + user._id;
 
         console.log(`✅ Login success for ${loginIdentifier}`);
@@ -147,6 +162,7 @@ app.post("/api/users/login", async (req, res) => {
     }
 });
 
+
 // =====================================================
 // 🔑 Update Password
 // =====================================================
@@ -162,11 +178,13 @@ app.post("/update-password", async (req, res) => {
         const hashed = await bcrypt.hash(password, 10);
 
         const result = await users.updateOne(
-            { email },
+            { email: { $regex: new RegExp(`^${email}$`, "i") } }, // case-insensitive match
             { $set: { password: hashed } }
         );
 
-        if (result.modifiedCount === 0) {
+        console.log("🔍 Update result:", result);
+
+        if (result.matchedCount === 0) {
             return res.status(404).json({ error: "User not found" });
         }
 
@@ -178,8 +196,9 @@ app.post("/update-password", async (req, res) => {
     }
 });
 
+
 // =====================================================
-// 👤 Optional: Register new user (for testing)
+// 👤 Register New User
 // =====================================================
 app.post("/api/users/register", async (req, res) => {
     try {

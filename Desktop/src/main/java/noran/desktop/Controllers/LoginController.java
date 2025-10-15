@@ -2,14 +2,18 @@ package noran.desktop.Controllers;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.stage.Stage;
+import noran.desktop.Services.APIService;
 import org.json.JSONObject;
 
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.IOException;
 
 public class LoginController {
 
@@ -19,74 +23,75 @@ public class LoginController {
     @FXML
     private PasswordField passwordField;
 
-    private static final String LOGIN_URL = "http://localhost:3500/api/auth/login";
+    // ✅ Match your Node.js backend
+    private static final String LOGIN_URL = "http://localhost:3500/api/users/login";
 
     @FXML
-    protected void onLoginClicked(ActionEvent event) {
-        String username = usernameField.getText().trim();
-        String password = passwordField.getText().trim();
-
-        if (username.isEmpty() || password.isEmpty()) {
-            showAlert(Alert.AlertType.ERROR, "Email/Username and Password are required!");
-            return;
-        }
-
+    private void onLoginClicked(ActionEvent event) {
         try {
-            // ✅ 1. Create JSON body
-            JSONObject loginData = new JSONObject();
-            loginData.put("identifier", username);
-            loginData.put("password", password);
+            String identifier = usernameField.getText();
+            String password = passwordField.getText();
 
-            // ✅ 2. Open HTTP connection
-            URL url = new URL(LOGIN_URL);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-            conn.setRequestProperty("Accept", "application/json");
-            conn.setDoOutput(true);
-            conn.setDoInput(true);
-
-            // ✅ 3. Write JSON body to request
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = loginData.toString().getBytes("UTF-8");
-                os.write(input, 0, input.length);
-                os.flush();
+            if (identifier.isEmpty() || password.isEmpty()) {
+                showAlert(Alert.AlertType.WARNING, "تحذير", "يرجى إدخال البريد الإلكتروني / اسم المستخدم وكلمة المرور.");
+                return;
             }
 
-            // ✅ 4. Get response
-            int responseCode = conn.getResponseCode();
-            InputStream is = (responseCode >= 200 && responseCode < 300)
-                    ? conn.getInputStream()
-                    : conn.getErrorStream();
+            // ✅ Send JSON {identifier, password}
+            String jsonBody = String.format(
+                    "{\"identifier\": \"%s\", \"password\": \"%s\"}",
+                    identifier, password
+            );
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
+            String response = APIService.post(LOGIN_URL, jsonBody);
+
+            if (response == null || response.isBlank()) {
+                showAlert(Alert.AlertType.ERROR, "خطأ", "فشل الاتصال بالخادم. حاول مرة أخرى.");
+                return;
             }
 
-            reader.close();
-            conn.disconnect();
+            JSONObject jsonResponse;
+            try {
+                jsonResponse = new JSONObject(response);
+            } catch (Exception e) {
+                showAlert(Alert.AlertType.ERROR, "خطأ في الاستجابة", "الاستجابة من الخادم ليست بتنسيق JSON صحيح:\n" + response);
+                return;
+            }
 
-            // ✅ 5. Parse server response
-            JSONObject jsonResponse = new JSONObject(response.toString());
+            if (jsonResponse.has("error")) {
+                showAlert(Alert.AlertType.ERROR, "فشل تسجيل الدخول", jsonResponse.getString("error"));
+            } else if (jsonResponse.has("token")) {
+                showAlert(Alert.AlertType.INFORMATION, "تم تسجيل الدخول", "تم تسجيل الدخول بنجاح!");
 
-            if (jsonResponse.has("message") && jsonResponse.getString("message").toLowerCase().contains("success")) {
-                showAlert(Alert.AlertType.INFORMATION, "✅ تسجيل الدخول ناجح!");
+
             } else {
-                showAlert(Alert.AlertType.ERROR, jsonResponse.optString("message", "❌ خطأ في تسجيل الدخول"));
+                showAlert(Alert.AlertType.ERROR, "فشل تسجيل الدخول", "حدث خطأ غير متوقع أثناء تسجيل الدخول.");
             }
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "⚠️ Connection error: " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "خطأ غير متوقع", e.getMessage());
         }
     }
 
-    private void showAlert(Alert.AlertType alertType, String message) {
+    @FXML
+    void onForgotPasswordClicked(ActionEvent event) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/email-for-otp-ar.fxml"));
+            Parent root = loader.load();
+            Scene scene = new Scene(root);
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            stage.setScene(scene);
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "خطأ", "تعذر فتح شاشة إعادة تعيين كلمة المرور.");
+        }
+    }
+
+    private void showAlert(Alert.AlertType alertType, String title, String message) {
         Alert alert = new Alert(alertType);
-        alert.setTitle("Login Status");
+        alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
