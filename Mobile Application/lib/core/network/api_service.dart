@@ -188,4 +188,119 @@ class ApiService {
     final token = await getToken();
     return token != null && token.isNotEmpty;
   }
+
+  // ============ Password Reset APIs ============
+
+  // Forgot Password - إرسال OTP
+  static Future<Map<String, dynamic>> forgotPassword({
+    required String email,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/otp/forgotPassword'),
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: jsonEncode({'email': email}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['msg'] ?? 'تم إرسال رمز التحقق',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['msg'] ?? 'فشل إرسال رمز التحقق',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'خطأ في الاتصال بالسيرفر',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Resend OTP - إعادة إرسال OTP
+  static Future<Map<String, dynamic>> resendOTP({required String email}) async {
+    // Same as forgotPassword - resend OTP
+    return forgotPassword(email: email);
+  }
+
+  // Verify OTP - التحقق من OTP
+  static Future<Map<String, dynamic>> verifyOTP({
+    required String email,
+    required String otp,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/otp/verifyOTP'),
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: jsonEncode({'email': email, 'otp': otp}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['msg'] ?? 'تم التحقق بنجاح'};
+      } else {
+        return {
+          'success': false,
+          'message': data['msg'] ?? 'رمز التحقق غير صحيح',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'خطأ في الاتصال بالسيرفر',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Reset Password - إعادة تعيين كلمة المرور
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/otp/resetPassword'),
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: jsonEncode({'email': email, 'newPassword': newPassword}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['msg'] ?? 'تم تغيير كلمة المرور بنجاح',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['msg'] ?? 'فشل تغيير كلمة المرور',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'خطأ في الاتصال بالسيرفر',
+        'error': e.toString(),
+      };
+    }
+  }
 }
