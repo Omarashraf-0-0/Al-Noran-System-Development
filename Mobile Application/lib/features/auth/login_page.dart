@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'register_page.dart';
+import 'ForgotPasswordPage.dart';
 import '../../core/network/api_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 
@@ -247,7 +248,14 @@ class _LoginPageState extends State<LoginPage> {
 
                   // Forgot Password
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordPage(),
+                        ),
+                      );
+                    },
                     child: const Text(
                       'نسيت كلمة المرور؟',
                       style: TextStyle(
