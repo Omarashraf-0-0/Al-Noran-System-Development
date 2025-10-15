@@ -95,11 +95,10 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         _timer?.cancel();
         _startTimer();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم إعادة إرسال الكود (${_resendCount}/3)'),
-            backgroundColor: Colors.green,
-          ),
+        await AlNoranPopups.showSuccess(
+          context: context,
+          title: 'تم بنجاح',
+          message: 'تم إعادة إرسال الكود (${_resendCount}/3)',
         );
       } else {
         await AlNoranPopups.showError(
@@ -131,11 +130,10 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     String otp = _controllers.map((c) => c.text).join();
 
     if (otp.length != 5) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الرجاء إدخال الكود كاملاً'),
-          backgroundColor: Colors.red,
-        ),
+      await AlNoranPopups.showWarning(
+        context: context,
+        title: 'تنبيه',
+        message: 'الرجاء إدخال الكود كاملاً (5 أرقام)',
       );
       return;
     }
@@ -146,11 +144,12 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         context: context,
         title: 'تم إلغاء العملية',
         message: 'لقد تجاوزت الحد الأقصى للمحاولات الخاطئة (5 مرات)',
-        onPressed: () {
-          Navigator.pop(context); // Back to forgot password
-          Navigator.pop(context); // Back to login
-        },
       );
+
+      if (!mounted) return;
+
+      // العودة لصفحة نسيت كلمة المرور
+      Navigator.of(context).pop();
       return;
     }
 
@@ -210,26 +209,29 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Back Button
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.arrow_forward,
-                        color: primaryDark,
-                        size: 20,
+                // Back Button - على الشمال
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.arrow_back, color: primaryDark, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'الرجوع',
+                            style: TextStyle(
+                              color: primaryDark,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'الرجوع',
-                        style: TextStyle(
-                          color: primaryDark,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
 
