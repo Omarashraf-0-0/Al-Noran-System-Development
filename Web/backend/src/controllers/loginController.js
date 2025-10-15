@@ -20,11 +20,13 @@ const loginUser = async (req, res) => {
     }
 
     // 2️⃣ Find user by email OR id
-
+    console .log('Finding user...');
     if (mongoose.Types.ObjectId.isValid(identifier)) {
       user = await User.findById(identifier);
+      console.log(user.id);
     } else {
       user = await User.findOne({ email: identifier });
+      console.log(user.email);
    }
 
 
@@ -34,6 +36,8 @@ const loginUser = async (req, res) => {
 
     // 3️⃣ Compare passwords
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log(isMatch);
+    console.log(password + ' ' + user.password);
     if (!isMatch) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
