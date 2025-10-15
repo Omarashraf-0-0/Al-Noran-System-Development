@@ -5,6 +5,7 @@ import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import OTPForm from "../components/OTPForm";
 import { toast } from "react-hot-toast";
+import axios from "axios";
 
 const OTPPage = () => {
 	const location = useLocation();
@@ -25,28 +26,23 @@ const OTPPage = () => {
 		console.log("OTP verification attempt:", formData);
 		console.log("API URL:", import.meta.env.VITE_API_URL);
 		
-		// TODO: Add OTP verification logic here when backend is ready
-		// Example:
-		// try {
-		//     const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/verify-otp`, {
-		//         email: formData.email,
-		//         otp: formData.otp
-		//     });
-		//     
-		//     if (response.data.success) {
-		//         toast.success("تم التحقق بنجاح!");
-		//         navigate("/reset-password", { state: { email: formData.email, token: response.data.token } });
-		//     }
-		// } catch (error) {
-		//     toast.error(error.response?.data?.message || "فشل التحقق من الرمز");
-		// }
-
-		// For now, just show success message (remove this when implementing backend)
-		toast.success("تم التحقق من الرمز بنجاح!");
-		
-		// Navigate to reset password page
-		// When backend is ready, include the token: { email, token: response.data.token }
-		navigate("/resetpassword", { state: { email: formData.email, token: "temporary-token" } });
+		// Verify OTP with backend
+		axios
+			.post(`${import.meta.env.VITE_API_URL}/api/otp/verifyOTP`, {
+				email: formData.email,
+				otp: formData.otp
+			})
+			.then((response) => {
+				console.log("OTP verified successfully:", response.data);
+				toast.success("تم التحقق من الرمز بنجاح!");
+				// Navigate to reset password page
+				navigate("/resetpassword", { state: { email: formData.email } });
+			})
+			.catch((error) => {
+				console.error("Error verifying OTP:", error);
+				const errorMsg = "فشل التحقق من الرمز";
+				toast.error(errorMsg);
+			});
 	};
 
 	return (
