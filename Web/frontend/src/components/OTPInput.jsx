@@ -1,14 +1,14 @@
 import React, { useRef, useEffect } from "react";
 
-const OTPInput = ({ length = 6, value = "", onChange }) => {
+const OTPInput = ({ length = 6, value = "", onChange, disabled = false }) => {
 	const inputRefs = useRef([]);
 
 	useEffect(() => {
-		// Focus first input on mount
-		if (inputRefs.current[0]) {
+		// Focus first input on mount (leftmost in LTR)
+		if (inputRefs.current[0] && !disabled) {
 			inputRefs.current[0].focus();
 		}
-	}, []);
+	}, [disabled]);
 
 	const handleChange = (index, e) => {
 		const val = e.target.value;
@@ -60,12 +60,13 @@ const OTPInput = ({ length = 6, value = "", onChange }) => {
 		onChange(newOTP);
 
 		// Focus the next empty input or the last one
-		const nextEmptyIndex = otpArray.length < length ? otpArray.length : length - 1;
+		const nextEmptyIndex =
+			otpArray.length < length ? otpArray.length : length - 1;
 		inputRefs.current[nextEmptyIndex]?.focus();
 	};
 
 	return (
-		<div className="flex justify-center gap-2 sm:gap-3 md:gap-4 dir-ltr">
+		<div className="flex justify-center gap-2 sm:gap-3 md:gap-4" dir="ltr">
 			{Array.from({ length }).map((_, index) => (
 				<input
 					key={index}
@@ -77,16 +78,19 @@ const OTPInput = ({ length = 6, value = "", onChange }) => {
 					onChange={(e) => handleChange(index, e)}
 					onKeyDown={(e) => handleKeyDown(index, e)}
 					onPaste={handlePaste}
+					disabled={disabled}
 					className={`
 						w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16
 						text-center text-xl sm:text-2xl md:text-3xl font-bold
 						border-2 rounded-lg
+						${disabled ? "bg-gray-100 cursor-not-allowed opacity-50" : ""}
 						${value[index] ? "border-[#690000] bg-[#690000]/5" : "border-gray-300"}
 						focus:border-[#690000] focus:outline-none focus:ring-2 focus:ring-[#690000]/20
 						transition-all duration-200
 						text-[#690000]
+						disabled:border-gray-200
 					`}
-					aria-label={`رقم OTP ${index + 1}`}
+					aria-label={`OTP digit ${index + 1}`}
 				/>
 			))}
 		</div>

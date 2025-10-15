@@ -7,17 +7,20 @@ import ForgetPasswordPage from "./pages/ForgetPasswordPage";
 import OTPPage from "./pages/OTPPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { toast } from "react-hot-toast";
-
+import LandingPage from "./pages/LandingPage";
+import NotFound404 from "./pages/NotFound404";
 const App = () => {
 	return (
 		<>
 			<Routes>
-				<Route path="/" element={<HomePage />} />
+				<Route path="/" element={<LandingPage />} />
 				<Route path="/login" element={<LoginPage />} />
 				<Route path="/register" element={<RegisterPage />} />
 				<Route path="/forgetpassword" element={<ForgetPasswordPage />} />
 				<Route path="/verify-otp" element={<OTPPage />} />
 				<Route path="/resetpassword" element={<ResetPasswordPage />} />
+				<Route path="/home" element={<HomePage />} />
+				<Route path="*" element={<NotFound404 />} />
 			</Routes>
 		</>
 	);
