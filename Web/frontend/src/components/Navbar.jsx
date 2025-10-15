@@ -25,10 +25,12 @@ const Navbar = ({
 
 					{/* Right Section - Auth and Search */}
           <div className="flex gap-8">
+            {/* need the logo to direct to the landing page */}
 						<img
 							src="/src/assets/images/logo.png"
 							alt="النوران"
-							className="h-10"
+							className="h-10 cursor-pointer"
+							onClick={() => window.location.href = "/"}
 						/>
             <nav className="hidden md:flex gap-8">
 						<span className="text-xl cursor-pointer hover:text-gray-200 transition-colors">
