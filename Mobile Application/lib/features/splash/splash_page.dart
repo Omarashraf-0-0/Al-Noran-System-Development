@@ -446,11 +446,13 @@ class _SplashScreenState extends State<SplashScreen>
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
+                            begin: Alignment.centerRight,
+                            end: Alignment.centerLeft,
                             colors: [
-                              isCompleted
+                              _progress * 4 > index + 0.5
                                   ? const Color(0xFF1ba3b6)
                                   : Colors.white.withOpacity(0.3),
-                              _progress * 4 > index + 0.5
+                              isCompleted
                                   ? const Color(0xFF1ba3b6)
                                   : Colors.white.withOpacity(0.3),
                             ],

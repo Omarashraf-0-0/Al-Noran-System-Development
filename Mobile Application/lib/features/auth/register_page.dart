@@ -30,209 +30,215 @@ class _RegisterPageState extends State<RegisterPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: Colors.white,
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF690000)),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              children: [
+                const SizedBox(height: 50),
 
-                  // Logo
-                  Image.asset(
-                    'assets/img/logo.png',
-                    width: 150,
-                    height: 150,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.local_shipping_rounded,
-                        size: 100,
+                // زرار الرجوع في أعلى الشمال
+                Row(
+                  children: [
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_forward,
                         color: Color(0xFF690000),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // Title
-                  const Text(
-                    'إنشاء حساب جديد',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF690000),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Subtitle
-                  const Text(
-                    'انضم إلى عائلة النوران',
-                    style: TextStyle(fontSize: 16, color: Color(0xFFa40000)),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // Name Field
-                  _buildTextField(
-                    controller: _nameController,
-                    hint: 'الاسم بالكامل',
-                    icon: Icons.person_outline,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Username Field
-                  _buildTextField(
-                    controller: _usernameController,
-                    hint: 'اسم المستخدم',
-                    icon: Icons.alternate_email,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Email Field
-                  _buildTextField(
-                    controller: _emailController,
-                    hint: 'البريد الإلكتروني',
-                    icon: Icons.email_outlined,
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Phone Field
-                  _buildTextField(
-                    controller: _phoneController,
-                    hint: 'رقم الهاتف',
-                    icon: Icons.phone_outlined,
-                    keyboardType: TextInputType.phone,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Account Type Selector
-                  _buildAccountTypeSelector(),
-
-                  // SSN Field (only for personal accounts)
-                  if (_selectedAccountType == 'personal') ...[
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      controller: _ssnController,
-                      hint: 'الرقم القومي (14 رقم)',
-                      icon: Icons.badge_outlined,
-                      keyboardType: TextInputType.number,
+                        size: 28,
+                      ),
+                      onPressed: () => Navigator.pop(context),
                     ),
                   ],
+                ),
 
-                  const SizedBox(height: 16),
+                const SizedBox(height: 10),
 
-                  // Password Field
-                  _buildTextField(
-                    controller: _passwordController,
-                    hint: 'كلمة المرور',
-                    icon: Icons.lock_outline,
-                    isPassword: true,
-                    isPasswordVisible: _isPasswordVisible,
-                    onTogglePassword: () {
-                      setState(() {
-                        _isPasswordVisible = !_isPasswordVisible;
-                      });
-                    },
+                // Logo
+                Image.asset(
+                  'assets/img/logo.png',
+                  width: 150,
+                  height: 150,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.local_shipping_rounded,
+                      size: 100,
+                      color: Color(0xFF690000),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 30),
+
+                // Title
+                const Text(
+                  'إنشاء حساب جديد',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF690000),
                   ),
+                ),
 
+                const SizedBox(height: 8),
+
+                // Subtitle
+                const Text(
+                  'انضم إلى عائلة النوران',
+                  style: TextStyle(fontSize: 16, color: Color(0xFFa40000)),
+                ),
+
+                const SizedBox(height: 40),
+
+                // Name Field
+                _buildTextField(
+                  controller: _nameController,
+                  hint: 'الاسم بالكامل',
+                  icon: Icons.person_outline,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Username Field
+                _buildTextField(
+                  controller: _usernameController,
+                  hint: 'اسم المستخدم',
+                  icon: Icons.alternate_email,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Email Field
+                _buildTextField(
+                  controller: _emailController,
+                  hint: 'البريد الإلكتروني',
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Phone Field
+                _buildTextField(
+                  controller: _phoneController,
+                  hint: 'رقم الهاتف',
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Account Type Selector
+                _buildAccountTypeSelector(),
+
+                // SSN Field (only for personal accounts)
+                if (_selectedAccountType == 'personal') ...[
                   const SizedBox(height: 16),
-
-                  // Confirm Password Field
                   _buildTextField(
-                    controller: _confirmPasswordController,
-                    hint: 'تأكيد كلمة المرور',
-                    icon: Icons.lock_outline,
-                    isPassword: true,
-                    isPasswordVisible: _isConfirmPasswordVisible,
-                    onTogglePassword: () {
-                      setState(() {
-                        _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-                      });
-                    },
+                    controller: _ssnController,
+                    hint: 'الرقم القومي (14 رقم)',
+                    icon: Icons.badge_outlined,
+                    keyboardType: TextInputType.number,
                   ),
+                ],
 
-                  const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                  // Terms and Conditions Checkbox
-                  _buildTermsCheckbox(),
+                // Password Field
+                _buildTextField(
+                  controller: _passwordController,
+                  hint: 'كلمة المرور',
+                  icon: Icons.lock_outline,
+                  isPassword: true,
+                  isPasswordVisible: _isPasswordVisible,
+                  onTogglePassword: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                ),
 
-                  const SizedBox(height: 30),
+                const SizedBox(height: 16),
 
-                  // Register Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _handleRegister,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF690000),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
+                // Confirm Password Field
+                _buildTextField(
+                  controller: _confirmPasswordController,
+                  hint: 'تأكيد كلمة المرور',
+                  icon: Icons.lock_outline,
+                  isPassword: true,
+                  isPasswordVisible: _isConfirmPasswordVisible,
+                  onTogglePassword: () {
+                    setState(() {
+                      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                    });
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                // Terms and Conditions Checkbox
+                _buildTermsCheckbox(),
+
+                const SizedBox(height: 30),
+
+                // Register Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _handleRegister,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF690000),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Text(
-                        'إنشاء الحساب',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                      elevation: 2,
+                    ),
+                    child: const Text(
+                      'إنشاء الحساب',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-                  // Login Link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'لديك حساب بالفعل؟',
-                        style: TextStyle(color: Color(0xFF757575)),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: const Text(
-                          'تسجيل الدخول',
-                          style: TextStyle(
-                            color: Color(0xFF690000),
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                          ),
+                // Login Link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'لديك حساب بالفعل؟',
+                      style: TextStyle(color: Color(0xFF757575)),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text(
+                        'تسجيل الدخول',
+                        style: TextStyle(
+                          color: Color(0xFF690000),
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
 
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+                const SizedBox(height: 40),
+              ], // Column children
+            ), // Column
+          ), // Padding
+        ), // SingleChildScrollView
+      ), // Scaffold body
+    ); // Directionality child - Scaffold
+  } // build method
 
   // Handle Registration
   Future<void> _handleRegister() async {
