@@ -29,14 +29,14 @@ const ForgetPasswordForm = ( {onSubmit} ) => {
                 نسيت كلمة المرور
             </h2>
             <Spacer size="xl" />
-            <form className="w-full">
+            <form className="w-full" onSubmit={handleSubmit}>
                 <InputField
                     id="email"
                     type="email"
                     label="البريد الألكترونى"
                     placeholder="ادخل البريد الألكترونى"
                     value = {formData.email}
-                    onChange={handleInputChange("fullname")}
+                    onChange={handleInputChange("email")}
                     required
                     />
                     <Spacer size = "sm" />
