@@ -10,7 +10,7 @@ const loginUser = async (req, res) => {
   
   const { identifier, password } = req.body; // identifier = email or user ID
 
-    // console.log('id : ' + identifier + 'pass : ' + password);
+    
     
 
   try {
@@ -19,6 +19,7 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ error: 'Please provide identifier and password' });
     }
 
+   
     //  Find user by email OR id
 
     if (mongoose.Types.ObjectId.isValid(identifier)) {
