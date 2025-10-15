@@ -17,7 +17,9 @@ const ServiceTabs = () => {
 							className="py-6 px-4 text-white text-xl md:text-2xl font-bold"
 						>
 							<div className="flex flex-col items-center gap-4">
-								<span className="text-9xl md:text-9xl leading-none flex items-center justify-center">{service.icon}</span>
+								<span className="text-9xl md:text-9xl leading-none flex items-center justify-center">
+									{service.icon}
+								</span>
 								<span>{service.label}</span>
 							</div>
 						</div>

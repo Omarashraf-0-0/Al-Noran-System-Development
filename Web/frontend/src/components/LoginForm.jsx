@@ -76,6 +76,15 @@ const LoginForm = ({ onSubmit, onForgotPassword }) => {
 			</form>
 
 			<Spacer size="md" />
+			<p className="text-center text-sm sm:text-base">
+				ليس لديك حساب؟{" "}
+				<Link
+					to="/register"
+					className="text-[#690000] underline hover:text-[#690000]/70"
+				>
+					إنشاء حساب
+				</Link>
+			</p>
 		</div>
 	);
 };
