@@ -115,27 +115,22 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigateToHome() async {
-    // بدء انيميشن الاختفاء
-    await _fadeOutController.forward();
-
     if (!mounted) return;
 
-    // الانتقال مع Fade Transition
+    // الانتقال مع Fade Transition سلس
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) {
-          // استيراد صفحة Login
-          return FadeTransition(opacity: animation, child: _getLoginPage());
+          return FadeTransition(opacity: animation, child: const LoginPage());
         },
-        transitionDuration: const Duration(milliseconds: 800),
-        reverseTransitionDuration: const Duration(milliseconds: 400),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // Fade out للـ Splash و Fade in للـ Login في نفس الوقت
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 400),
+        reverseTransitionDuration: const Duration(milliseconds: 300),
       ),
     );
-  }
-
-  Widget _getLoginPage() {
-    // هنا نستدعي صفحة الـ Login
-    return const LoginPage();
   }
 
   @override
@@ -390,9 +385,9 @@ class _SplashScreenState extends State<SplashScreen>
       padding: const EdgeInsets.symmetric(horizontal: 50),
       child: Column(
         children: [
-          // Progress Container Icon - من اليمين لليسار
+          // Progress Container Icon - من الشمال لليمين
           Directionality(
-            textDirection: TextDirection.rtl,
+            textDirection: TextDirection.ltr,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(4, (index) {
@@ -446,13 +441,13 @@ class _SplashScreenState extends State<SplashScreen>
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            begin: Alignment.centerRight,
-                            end: Alignment.centerLeft,
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
                             colors: [
-                              _progress * 4 > index + 0.5
+                              isCompleted
                                   ? const Color(0xFF1ba3b6)
                                   : Colors.white.withOpacity(0.3),
-                              isCompleted
+                              _progress * 4 > index + 0.5
                                   ? const Color(0xFF1ba3b6)
                                   : Colors.white.withOpacity(0.3),
                             ],
