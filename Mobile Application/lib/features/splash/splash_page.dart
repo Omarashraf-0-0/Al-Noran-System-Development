@@ -390,75 +390,78 @@ class _SplashScreenState extends State<SplashScreen>
       padding: const EdgeInsets.symmetric(horizontal: 50),
       child: Column(
         children: [
-          // Progress Container Icon
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(4, (index) {
-              final isActive = _progress * 4 > index;
-              final isCompleted = _progress * 4 > index + 1;
+          // Progress Container Icon - من اليمين لليسار
+          Directionality(
+            textDirection: TextDirection.rtl,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(4, (index) {
+                final isActive = _progress * 4 > index;
+                final isCompleted = _progress * 4 > index + 1;
 
-              return Row(
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 400),
-                    width: isActive ? 40 : 30,
-                    height: isActive ? 40 : 30,
-                    decoration: BoxDecoration(
-                      color:
-                          isCompleted
-                              ? const Color(0xFF1ba3b6)
-                              : isActive
-                              ? const Color(0xFF1ba3b6).withOpacity(0.7)
-                              : Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color:
-                            isActive
-                                ? const Color(0xFF1ba3b6)
-                                : Colors.white.withOpacity(0.3),
-                        width: 2,
-                      ),
-                      boxShadow:
-                          isActive
-                              ? [
-                                BoxShadow(
-                                  color: const Color(
-                                    0xFF1ba3b6,
-                                  ).withOpacity(0.5),
-                                  blurRadius: 15,
-                                  spreadRadius: 2,
-                                ),
-                              ]
-                              : [],
-                    ),
-                    child: Icon(
-                      Icons.inventory_2,
-                      color: isActive ? Colors.white : Colors.white54,
-                      size: isActive ? 22 : 16,
-                    ),
-                  ),
-                  if (index < 3)
-                    Container(
-                      width: 30,
-                      height: 2,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                return Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      width: isActive ? 40 : 30,
+                      height: isActive ? 40 : 30,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
+                        color:
                             isCompleted
                                 ? const Color(0xFF1ba3b6)
-                                : Colors.white.withOpacity(0.3),
-                            _progress * 4 > index + 0.5
-                                ? const Color(0xFF1ba3b6)
-                                : Colors.white.withOpacity(0.3),
-                          ],
+                                : isActive
+                                ? const Color(0xFF1ba3b6).withOpacity(0.7)
+                                : Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color:
+                              isActive
+                                  ? const Color(0xFF1ba3b6)
+                                  : Colors.white.withOpacity(0.3),
+                          width: 2,
                         ),
-                        borderRadius: BorderRadius.circular(2),
+                        boxShadow:
+                            isActive
+                                ? [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFF1ba3b6,
+                                    ).withOpacity(0.5),
+                                    blurRadius: 15,
+                                    spreadRadius: 2,
+                                  ),
+                                ]
+                                : [],
+                      ),
+                      child: Icon(
+                        Icons.inventory_2,
+                        color: isActive ? Colors.white : Colors.white54,
+                        size: isActive ? 22 : 16,
                       ),
                     ),
-                ],
-              );
-            }),
+                    if (index < 3)
+                      Container(
+                        width: 30,
+                        height: 2,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              isCompleted
+                                  ? const Color(0xFF1ba3b6)
+                                  : Colors.white.withOpacity(0.3),
+                              _progress * 4 > index + 0.5
+                                  ? const Color(0xFF1ba3b6)
+                                  : Colors.white.withOpacity(0.3),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                  ],
+                );
+              }),
+            ),
           ),
 
           const SizedBox(height: 25),

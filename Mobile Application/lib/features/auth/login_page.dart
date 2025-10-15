@@ -183,35 +183,7 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Apple Button
-                      Container(
-                        width: 140,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE0E0E0)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.apple, size: 28),
-                            SizedBox(width: 8),
-                            Text(
-                              'ابل',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontFamily: 'Cairo',
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(width: 16),
-
-                      // Google Button
+                      // Google Button (على اليمين)
                       Container(
                         width: 140,
                         height: 56,
@@ -231,6 +203,34 @@ class _LoginPageState extends State<LoginPage> {
                             const SizedBox(width: 8),
                             const Text(
                               'جوجل',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontFamily: 'Cairo',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(width: 16),
+
+                      // Apple Button (على الشمال)
+                      Container(
+                        width: 140,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE0E0E0)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.apple, size: 28),
+                            SizedBox(width: 8),
+                            Text(
+                              'ابل',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontFamily: 'Cairo',
