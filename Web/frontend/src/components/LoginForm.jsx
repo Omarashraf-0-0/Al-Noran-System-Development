@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import InputField from "./InputField";
 import Button from "./Button";
 import Spacer from "./Spacer";
-import Link from "./Link";
+import { Link } from "react-router";
 
 const LoginForm = ({ onSubmit, onForgotPassword }) => {
 	const [formData, setFormData] = useState({
@@ -59,7 +59,9 @@ const LoginForm = ({ onSubmit, onForgotPassword }) => {
 				<div className="flex flex-col sm:flex-row items-center justify-between gap-4">
 					<div className="flex items-start w-full sm:w-auto">
 						<p className="text-sm sm:text-base">
-							<Link onClick={onForgotPassword}>هل نسيت كلمة المرور؟</Link>
+							<Link to="/forgetpassword"
+								className="text-[#690000] underline hover:text-[#690000]/70"
+							>هل نسيت كلمة المرور؟</Link>
 						</p>
 					</div>
 				</div>

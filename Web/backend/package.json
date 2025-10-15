@@ -5,7 +5,8 @@
   "scripts": {
     "test": "jest",
     "start": "node .",
-    "dev": "nodemon"
+    "dev": "nodemon",
+    "kill-port": "powershell -ExecutionPolicy Bypass -Command \"Get-Process -Id (Get-NetTCPConnection -LocalPort 3500 -ErrorAction SilentlyContinue).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force\""
   },
   "keywords": [],
   "author": "",
