@@ -40,7 +40,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 // زرار الرجوع في أعلى الشمال
                 Row(
                   children: [
-                    const Spacer(),
                     IconButton(
                       icon: const Icon(
                         Icons.arrow_forward,
@@ -49,6 +48,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       onPressed: () => Navigator.pop(context),
                     ),
+                    const Spacer(),
                   ],
                 ),
 
