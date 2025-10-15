@@ -26,7 +26,10 @@ const UserSchema = new mongoose.Schema({
       /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
       'Please provide a valid email address',
     ],
+
   },
+  resetOTP: { type: String },
+  otpExpires: { type: Date },
   password: {
     type: String,
     required: [true, 'Please provide a password'],

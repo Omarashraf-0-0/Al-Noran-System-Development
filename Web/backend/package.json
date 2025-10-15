@@ -5,13 +5,15 @@
   "scripts": {
     "test": "jest",
     "start": "node .",
-    "dev": "nodemon"
+    "dev": "nodemon",
+    "kill-port": "powershell -ExecutionPolicy Bypass -Command \"Get-Process -Id (Get-NetTCPConnection -LocalPort 3500 -ErrorAction SilentlyContinue).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.12.2",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -22,7 +24,9 @@
     "express-validator": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.1",
-    "uuid": "^8.3.2"
+
+    "nodemailer": "^7.0.9",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "cypress": "^15.4.0",

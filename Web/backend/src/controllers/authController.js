@@ -11,7 +11,7 @@ const login = asyncHandler(async (req, res) => {
   // Validation
   if (!email || !password) {
     res.status(400);
-    throw new Error('Please provide email and password');
+    throw new Error('من فضلك أدخل البريد الإلكتروني وكلمة المرور');
   }
 
   // Check for user
@@ -19,7 +19,7 @@ const login = asyncHandler(async (req, res) => {
 
   if (!user) {
     res.status(401);
-    throw new Error('Invalid credentials');
+    throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
   }
 
   // Check if password matches
@@ -27,13 +27,13 @@ const login = asyncHandler(async (req, res) => {
 
   if (!isPasswordMatch) {
     res.status(401);
-    throw new Error('Invalid credentials');
+    throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
   }
 
   // Check if user is active
   if (!user.active) {
     res.status(403);
-    throw new Error('Your account has been deactivated');
+    throw new Error('تم إيقاف حسابك. تواصل مع الإدارة');
   }
 
   // Create token
@@ -41,7 +41,7 @@ const login = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: 'Login successful',
+    message: 'تم تسجيل الدخول بنجاح',
     token,
     user: {
       id: user._id,
@@ -78,11 +78,16 @@ const signup = asyncHandler(async (req, res) => {
 
   const userExists = await User.findOne({ $or: [{ email }, { username }, { phone }] }).lean().exec();
   if (userExists) {
-     res.status(409).json({
-      success: false,
-      error: 'A user with that email, username, or phone number already exists.'
-    });
-    throw new Error('A user with that email, username, or phone number already exists.');
+// <<<<<<< HEAD
+//      res.status(409).json({
+//       success: false,
+//       error: 'A user with that email, username, or phone number already exists.'
+//     });
+//     throw new Error('A user with that email, username, or phone number already exists.');
+// =======
+    res.status(409);
+    throw new Error('البريد الإلكتروني أو اسم المستخدم أو رقم الهاتف مستخدم بالفعل');
+
   }
 
   const userData = {
@@ -109,7 +114,7 @@ const signup = asyncHandler(async (req, res) => {
     const token = user.getSignedJwtToken();
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: 'تم إنشاء الحساب بنجاح',
       token,
       user: {
           id: user._id,
@@ -120,7 +125,7 @@ const signup = asyncHandler(async (req, res) => {
     });
   } else {
     res.status(400);
-    throw new Error('Invalid user data');
+    throw new Error('البيانات المدخلة غير صحيحة');
   }
 });
 
