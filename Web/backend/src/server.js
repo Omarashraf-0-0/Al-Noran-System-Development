@@ -33,11 +33,13 @@ app.use('/', require('./routes/root'))
 app.use('/api/auth', require('./routes/authRoutes'))
 app.use('/api/users', require('./routes/userRoutes'))
 app.use('/api/users', require('./routes/loginRoutes'))
+app.use('/api/otp', require('./routes/otpRoutes'))
 
 app.use((req, res) => {
     res.status(404)
     if (req.accepts('html')) {
-        res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'views',  '404.html'))
+        // res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'views',  '404.html'))
+        res.json({ message: '404 Not Found' })
     } else if (req.accepts('json')) {
         res.json({ message: '404 Not Found' })
     } else {
