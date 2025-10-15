@@ -5,6 +5,7 @@ import FormContainer from "../components/FormContainer";
 import LoginForm from "../components/LoginForm";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import { href } from "react-router";
 
 const LoginPage = () => {
 	const handleLogin = (formData) => {
@@ -30,7 +31,7 @@ const LoginPage = () => {
 	};
 
 	const handleForgotPassword = () => {
-		console.log("Forgot password clicked");
+		// console.log("Forgot password clicked");
 		// Add your forgot password logic here
 		// e.g., navigate to forgot password page or show modal
 	};
