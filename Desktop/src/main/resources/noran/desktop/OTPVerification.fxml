@@ -56,15 +56,15 @@
 
         <!-- OTP Fields -->
         <HBox spacing="10" alignment="CENTER">
-            <TextField fx:id="otp1" prefWidth="40" prefHeight="40"
-                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
-            <TextField fx:id="otp2" prefWidth="40" prefHeight="40"
-                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
-            <TextField fx:id="otp3" prefWidth="40" prefHeight="40"
+            <TextField fx:id="otp5" prefWidth="40" prefHeight="40"
                        style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
             <TextField fx:id="otp4" prefWidth="40" prefHeight="40"
                        style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
-            <TextField fx:id="otp5" prefWidth="40" prefHeight="40"
+            <TextField fx:id="otp3" prefWidth="40" prefHeight="40"
+                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
+            <TextField fx:id="otp2" prefWidth="40" prefHeight="40"
+                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
+            <TextField fx:id="otp1" prefWidth="40" prefHeight="40"
                        style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
         </HBox>
 
