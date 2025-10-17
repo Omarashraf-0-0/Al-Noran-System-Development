@@ -11,6 +11,16 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.mindrot.jbcrypt.BCrypt;
 
+import org.apache.http.client.methods.HttpPatch;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.util.EntityUtils;
+import org.apache.http.HttpResponse;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -102,19 +112,31 @@ public class OTPVerificationController {
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
         conn.setDoOutput(true);
+
         String json = "{\"email\":\"" + email + "\",\"otp\":\"" + otp + "\"}";
         try (OutputStream os = conn.getOutputStream()) {
             os.write(json.getBytes(StandardCharsets.UTF_8));
         }
 
         if (conn.getResponseCode() == 200) {
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-                String line = br.readLine();
-                return line != null && line.contains("OTP verified successfully");
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) {
+                    response.append(line);
+                }
+
+                // ✅ Parse JSON and check for Arabic success message
+                String responseText = response.toString();
+                System.out.println("Response: " + responseText);
+                return responseText.contains("تم التحقق من الرمز بنجاح");
             }
         }
         return false;
     }
+
 
     private void showResetPasswordDialog(ActionEvent event) {
         Dialog<ButtonType> dialog = new Dialog<>();
@@ -143,26 +165,42 @@ public class OTPVerificationController {
                     } else {
                         showAlert(Alert.AlertType.ERROR, "خطأ", "فشل في تحديث كلمة المرور");
                     }
-                } catch (IOException e) {
+                } catch (Exception e) {
                     showAlert(Alert.AlertType.ERROR, "خطأ في الاتصال", "تعذر الاتصال بالخادم");
                 }
             }
         });
     }
 
-    private boolean resetPassword(String email, String password) throws IOException {
-        String hashed = BCrypt.hashpw(password, BCrypt.gensalt(10));
-        URL url = new URL("http://localhost:3500/api/otp/resetPassword");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("PATCH");
-        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-        conn.setDoOutput(true);
-        String json = "{\"email\":\"" + email + "\",\"newPassword\":\"" + hashed + "\"}";
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(json.getBytes(StandardCharsets.UTF_8));
+    public boolean resetPassword(String email, String newPassword) {
+        String url = "http://localhost:3500/api/otp/resetPassword";
+
+        try (CloseableHttpClient client = HttpClients.createDefault()) {
+            HttpPatch patchRequest = new HttpPatch(url);
+            patchRequest.setHeader("Content-Type", "application/json; charset=UTF-8");
+
+            // Build JSON body
+            String jsonBody = String.format("{\"email\":\"%s\",\"newPassword\":\"%s\"}", email, newPassword);
+            patchRequest.setEntity(new StringEntity(jsonBody, StandardCharsets.UTF_8));
+
+            // Execute request
+            HttpResponse response = client.execute(patchRequest);
+            int statusCode = response.getStatusLine().getStatusCode();
+
+            // Read response
+            String responseBody = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+            System.out.println("Response Code: " + statusCode);
+            System.out.println("Response Body: " + responseBody);
+
+            // Check for success
+            return statusCode == 200;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
         }
-        return conn.getResponseCode() == 200;
     }
+
 
     private void navigateToLogin(ActionEvent event) {
         try {
