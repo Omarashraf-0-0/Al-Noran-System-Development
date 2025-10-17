@@ -23,54 +23,44 @@ public class LoginController {
     @FXML
     private PasswordField passwordField;
 
-    // ✅ Match your Node.js backend
+    // ✅ Match your backend login endpoint
     private static final String LOGIN_URL = "http://localhost:3500/api/users/login";
 
     @FXML
     private void onLoginClicked(ActionEvent event) {
+        String identifier = usernameField.getText().trim();
+        String password = passwordField.getText().trim();
+
+        if (identifier.isEmpty() || password.isEmpty()) {
+            showAlert(Alert.AlertType.WARNING, "تحذير", "يرجى إدخال البريد الإلكتروني / اسم المستخدم وكلمة المرور.");
+            return;
+        }
+
+        // ✅ Match backend keys exactly: identifier and password
+        String jsonBody = String.format("{\"identifier\":\"%s\",\"password\":\"%s\"}", identifier, password);
+
+        String response = APIService.post(LOGIN_URL, jsonBody);
+
+        if (response == null || response.isBlank()) {
+            showAlert(Alert.AlertType.ERROR, "خطأ", "فشل الاتصال بالخادم. تأكد أن السيرفر يعمل على المنفذ 3500.");
+            return;
+        }
+
         try {
-            String identifier = usernameField.getText();
-            String password = passwordField.getText();
+            JSONObject json = new JSONObject(response);
 
-            if (identifier.isEmpty() || password.isEmpty()) {
-                showAlert(Alert.AlertType.WARNING, "تحذير", "يرجى إدخال البريد الإلكتروني / اسم المستخدم وكلمة المرور.");
-                return;
-            }
-
-            // ✅ Send JSON {identifier, password}
-            String jsonBody = String.format(
-                    "{\"identifier\": \"%s\", \"password\": \"%s\"}",
-                    identifier, password
-            );
-
-            String response = APIService.post(LOGIN_URL, jsonBody);
-
-            if (response == null || response.isBlank()) {
-                showAlert(Alert.AlertType.ERROR, "خطأ", "فشل الاتصال بالخادم. حاول مرة أخرى.");
-                return;
-            }
-
-            JSONObject jsonResponse;
-            try {
-                jsonResponse = new JSONObject(response);
-            } catch (Exception e) {
-                showAlert(Alert.AlertType.ERROR, "خطأ في الاستجابة", "الاستجابة من الخادم ليست بتنسيق JSON صحيح:\n" + response);
-                return;
-            }
-
-            if (jsonResponse.has("error")) {
-                showAlert(Alert.AlertType.ERROR, "فشل تسجيل الدخول", jsonResponse.getString("error"));
-            } else if (jsonResponse.has("token")) {
+            if (json.has("error")) {
+                showAlert(Alert.AlertType.ERROR, "فشل تسجيل الدخول", json.getString("error"));
+            } else if (json.has("token")) {
                 showAlert(Alert.AlertType.INFORMATION, "تم تسجيل الدخول", "تم تسجيل الدخول بنجاح!");
-
-
+                // goToHomeScreen(event);
             } else {
-                showAlert(Alert.AlertType.ERROR, "فشل تسجيل الدخول", "حدث خطأ غير متوقع أثناء تسجيل الدخول.");
+                showAlert(Alert.AlertType.INFORMATION, "استجابة الخادم", response);
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "خطأ غير متوقع", e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "خطأ في الاستجابة", "تعذر تحليل استجابة JSON:\n" + response);
         }
     }
 
