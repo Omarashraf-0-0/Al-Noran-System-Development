@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="600.0" prefWidth="1000.0"
+            style="-fx-background-image: url('noran/desktop/images/background.png');
+                   -fx-background-size: cover;
+                   -fx-background-position: center center;
+                   -fx-background-repeat: no-repeat;"
+            xmlns="http://javafx.com/javafx/23.0.1"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="noran.desktop.Controllers.LoginController">
+
+    <ImageView fitHeight="768.0" fitWidth="1366.0" pickOnBounds="true" preserveRatio="false">
+        <image>
+            <Image url="@images/background.png" />
+        </image>
+    </ImageView>
+
+    <!-- Transparent Login Card with Poppins Font -->
+    <VBox alignment="CENTER" layoutX="500.0" layoutY="148.0"
+          minHeight="500" prefHeight="500.0" prefWidth="386.0" spacing="20"
+          style="-fx-background-color: rgba(199,230,234,0.6);
+                 -fx-background-radius: 20;
+                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 5,0,0,3);">
+        <padding>
+            <Insets bottom="30" left="40" right="40" top="30" />
+        </padding>
+
+        <!-- Title -->
+        <Label text="تسجيل الدخول"
+               style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
+                      -fx-font-size: 22; -fx-text-fill: #690000;" />
+        <Label text="اهلا بك في النوران"
+               style="-fx-font-family: 'Poppins'; -fx-font-weight: 300;
+                      -fx-font-size: 18; -fx-text-fill: #690000;" />
+
+        <!-- Fields -->
+        <GridPane hgap="10" vgap="20" nodeOrientation="RIGHT_TO_LEFT">
+            <columnConstraints>
+                <ColumnConstraints />
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints />
+                <RowConstraints />
+                <RowConstraints />
+                <RowConstraints />
+            </rowConstraints>
+
+            <!-- Username -->
+            <Label text="البريد الالكتروني" GridPane.rowIndex="0"
+                   style="-fx-font-family: 'Poppins'; -fx-font-weight: 700;
+                          -fx-font-size: 14; -fx-text-fill: #690000;
+                          -fx-alignment: CENTER-RIGHT;" />
+
+            <TextField fx:id="usernameField" promptText="البريد الالكتروني"
+                       GridPane.rowIndex="1"
+                       prefHeight="26.0" prefWidth="266.0"
+                       nodeOrientation="RIGHT_TO_LEFT"
+                       style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
+                              -fx-font-size: 14; -fx-background-radius: 10;
+                              -fx-alignment: CENTER-RIGHT;
+                              -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" />
+
+            <!-- Password -->
+            <Label text="كلمة المرور" GridPane.rowIndex="2"
+                   style="-fx-font-family: 'Poppins'; -fx-font-weight: 700;
+                          -fx-font-size: 14; -fx-text-fill: #690000;
+                          -fx-alignment: CENTER-RIGHT;" />
+
+            <PasswordField fx:id="passwordField" promptText="*******"
+                           GridPane.rowIndex="3"
+                           nodeOrientation="RIGHT_TO_LEFT"
+                           style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
+                                  -fx-font-size: 14; -fx-background-radius: 10;
+                                  -fx-alignment: CENTER-RIGHT;
+                                  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" />
+        </GridPane>
+
+        <!-- Forgot Password -->
+        <Hyperlink fx:id="forgotPasswordLink" onAction="#onForgotPasswordClicked"
+                   text="نسيت كلمة المرور"
+                   style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
+                          -fx-font-size: 13; -fx-text-fill: #690000; -fx-underline: true;"
+                   nodeOrientation="RIGHT_TO_LEFT" />
+
+        <!-- Login Button -->
+        <Button fx:id="loginButton" onAction="#onLoginClicked" text="تسجيل الدخول"
+                prefWidth="200"
+                style="-fx-font-family: 'Poppins'; -fx-font-weight: 600;
+                       -fx-font-size: 14; -fx-background-color: #690000;
+                       -fx-background-radius: 8; -fx-text-fill: white;" />
+    </VBox>
+
+    <!-- Logo Section -->
+    <ImageView fitHeight="262.0" fitWidth="250.0" layoutY="-13.0" pickOnBounds="true" preserveRatio="true">
+        <image>
+            <!-- Make sure this path exists in: src/main/resources/noran/desktop/images/Logo.png -->
+            <Image url="@images/Logo.png" />
+        </image>
+    </ImageView>
+
+</AnchorPane>
