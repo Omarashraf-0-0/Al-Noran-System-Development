@@ -10,19 +10,25 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.3' # your Flutter version
+          flutter-version: '3.24.3'
 
       - name: Install dependencies
+        working-directory: Mobile Application
         run: flutter pub get
 
       - name: Run tests
+        working-directory: Mobile Application
         run: flutter test
 
       - name: Build APK
+        working-directory: Mobile Application
         run: flutter build apk --release
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
-        
+        with:
+          name: release-apk
+          path: Mobile Application/build/app/outputs/flutter-apk/app-release.apk
