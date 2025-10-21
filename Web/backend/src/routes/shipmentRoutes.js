@@ -7,7 +7,7 @@ const {
   getShipmentStatusByAcid,
   getShipmentStatusByNumber46,
   deleteShipment,
-} = require("../controllers/shipment.controller");
+} = require("../controllers/shipmentController");
 
 const router = express.Router();
 
