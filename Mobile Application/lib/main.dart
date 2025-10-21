@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'features/splash/splash_page.dart'; // حسب الـ structure بتاعك
-import 'features/auth/login_page.dart'; // استبدلها بـ LoginPage()
-// import 'features/home/home_page.dart';
+import 'features/splash/splash_page.dart';
+import 'features/auth/login_page.dart';
+import 'features/home/homePage.dart';
+import 'features/home/myShipments.dart';
 
 void main() {
   // قفل الـ Orientation على Portrait فقط (اختياري)
@@ -52,8 +53,23 @@ class NoranSmartApp extends StatelessWidget {
 
       // Routes (اختياري - للتنقل السهل)
       routes: {
-        '/login': (context) => const LoginPage(), // استبدلها بـ LoginPage()
-        '/home': (context) => Container(), // استبدلها بـ HomePage()
+        '/login': (context) => const LoginPage(),
+        '/home': (context) {
+          // استقبال البيانات من صفحة Login
+          return const HomePage(
+            userName: 'مستخدم',
+            userEmail: 'user@alnoran.com',
+          );
+        },
+        '/shipments': (context) {
+          final args =
+              ModalRoute.of(context)?.settings.arguments
+                  as Map<String, dynamic>?;
+          return MyShipmentsPage(
+            userName: args?['userName'] ?? 'مستخدم',
+            userEmail: args?['userEmail'] ?? 'user@alnoran.com',
+          );
+        },
       },
 
       // دعم اللغة العربية واتجاه RTL

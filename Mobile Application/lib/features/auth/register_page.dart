@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/network/api_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
+import '../../util/validators.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
@@ -61,7 +62,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   height: 150,
                   errorBuilder: (context, error, stackTrace) {
                     return const Icon(
-                      Icons.local_shipping_rounded,
+                      Icons.flight_takeoff_rounded,
                       size: 100,
                       color: Color(0xFF690000),
                     );
@@ -276,9 +277,8 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Email validation
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(_emailController.text.trim())) {
+    // Email validation (case-insensitive)
+    if (!AlNoranValidators.isValidEmail(_emailController.text)) {
       AlNoranPopups.showError(
         context: context,
         message: 'البريد الإلكتروني غير صحيح',
@@ -294,6 +294,15 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    // Egyptian Phone validation
+    if (!AlNoranValidators.isValidEgyptianPhone(_phoneController.text)) {
+      AlNoranPopups.showError(
+        context: context,
+        message: AlNoranValidators.getPhoneErrorMessage(_phoneController.text),
+      );
+      return;
+    }
+
     // SSN validation for personal accounts
     if (_selectedAccountType == 'personal') {
       if (_ssnController.text.trim().isEmpty) {
@@ -304,10 +313,13 @@ class _RegisterPageState extends State<RegisterPage> {
         return;
       }
 
-      if (_ssnController.text.trim().length != 14) {
+      // Egyptian National ID validation
+      if (!AlNoranValidators.isValidEgyptianNationalId(_ssnController.text)) {
         AlNoranPopups.showError(
           context: context,
-          message: 'الرقم القومي يجب أن يكون 14 رقم',
+          message: AlNoranValidators.getNationalIdErrorMessage(
+            _ssnController.text,
+          ),
         );
         return;
       }
@@ -353,11 +365,11 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     try {
-      // Call API
+      // Call API (normalize email to lowercase)
       final result = await ApiService.register(
         name: _nameController.text.trim(),
         username: _usernameController.text.trim(),
-        email: _emailController.text.trim(),
+        email: AlNoranValidators.normalizeEmail(_emailController.text),
         phone: _phoneController.text.trim(),
         password: _passwordController.text.trim(),
         clientType: _selectedAccountType,
