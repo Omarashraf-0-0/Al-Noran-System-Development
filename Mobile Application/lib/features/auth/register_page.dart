@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../core/network/api_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/validators.dart';
+import 'personalRegistration.dart';
+import 'commercialRegistration.dart';
+import 'factoryRegistration.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
@@ -15,7 +17,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _ssnController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
@@ -131,17 +132,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 // Account Type Selector
                 _buildAccountTypeSelector(),
-
-                // SSN Field (only for personal accounts)
-                if (_selectedAccountType == 'personal') ...[
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _ssnController,
-                    hint: 'الرقم القومي (14 رقم)',
-                    icon: Icons.badge_outlined,
-                    keyboardType: TextInputType.number,
-                  ),
-                ],
 
                 const SizedBox(height: 16),
 
@@ -303,28 +293,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // SSN validation for personal accounts
-    if (_selectedAccountType == 'personal') {
-      if (_ssnController.text.trim().isEmpty) {
-        AlNoranPopups.showError(
-          context: context,
-          message: 'من فضلك أدخل الرقم القومي',
-        );
-        return;
-      }
-
-      // Egyptian National ID validation
-      if (!AlNoranValidators.isValidEgyptianNationalId(_ssnController.text)) {
-        AlNoranPopups.showError(
-          context: context,
-          message: AlNoranValidators.getNationalIdErrorMessage(
-            _ssnController.text,
-          ),
-        );
-        return;
-      }
-    }
-
     if (_passwordController.text.trim().isEmpty) {
       AlNoranPopups.showError(
         context: context,
@@ -358,68 +326,44 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Show loading
-    AlNoranPopups.showLoading(
-      context: context,
-      message: 'جاري إنشاء الحساب...',
-    );
+    // Instead of creating account here, navigate to appropriate page based on account type
+    final userData = {
+      'name': _nameController.text.trim(),
+      'username': _usernameController.text.trim(),
+      'email': AlNoranValidators.normalizeEmail(_emailController.text),
+      'phone': _phoneController.text.trim(),
+      'password': _passwordController.text.trim(),
+    };
 
-    try {
-      // Call API (normalize email to lowercase)
-      final result = await ApiService.register(
-        name: _nameController.text.trim(),
-        username: _usernameController.text.trim(),
-        email: AlNoranValidators.normalizeEmail(_emailController.text),
-        phone: _phoneController.text.trim(),
-        password: _passwordController.text.trim(),
-        clientType: _selectedAccountType,
-        ssn:
-            _selectedAccountType == 'personal'
-                ? _ssnController.text.trim()
-                : null,
-      );
-
-      // Hide loading
-      if (mounted) {
-        AlNoranPopups.hideLoading(context);
-      }
-
-      if (result['success']) {
-        // نجح التسجيل
-        if (mounted) {
-          await AlNoranPopups.showSuccess(
-            context: context,
-            title: 'مرحباً بك!',
-            message: result['message'] ?? 'تم إنشاء الحساب بنجاح',
-            buttonText: 'تسجيل الدخول',
-            onPressed: () {
-              // العودة لصفحة Login
-              Navigator.pop(context);
-            },
+    if (mounted) {
+      // Navigate to appropriate registration page based on account type
+      switch (_selectedAccountType) {
+        case 'personal':
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => PersonalRegistrationPage(userData: userData),
+            ),
           );
-        }
-      } else {
-        // فشل التسجيل
-        if (mounted) {
-          AlNoranPopups.showError(
-            context: context,
-            message: result['message'] ?? 'فشل إنشاء الحساب',
+          break;
+        case 'commercial':
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => CommercialRegistrationPage(userData: userData),
+            ),
           );
-        }
-      }
-    } catch (e) {
-      // Hide loading
-      if (mounted) {
-        AlNoranPopups.hideLoading(context);
-      }
-
-      if (mounted) {
-        AlNoranPopups.showError(
-          context: context,
-          title: 'خطأ في الاتصال',
-          message:
-              'حدث خطأ غير متوقع. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.',
-        );
+          break;
+        case 'factory':
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => FactoryRegistrationPage(userData: userData),
+            ),
+          );
+          break;
       }
     }
   }
@@ -625,7 +569,6 @@ class _RegisterPageState extends State<RegisterPage> {
     _usernameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _ssnController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
