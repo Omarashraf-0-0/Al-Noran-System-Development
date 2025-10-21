@@ -34,7 +34,9 @@ app.use('/api/auth', require('./routes/authRoutes'))
 app.use('/api/users', require('./routes/userRoutes'))
 app.use('/api/users', require('./routes/loginRoutes'))
 app.use('/api/otp', require('./routes/otpRoutes'))
-
+app.use("/api/shipments", require("./routes/shipmentRoutes"));
+app.use('/api/acid', require('./routes/acidRoutes'))
+app.use('/api/finance', require('./routes/financeRoutes'))
 app.use((req, res) => {
     res.status(404)
     if (req.accepts('html')) {
