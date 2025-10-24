@@ -8,7 +8,7 @@ import 'reset_password_page.dart';
 class OtpVerificationPage extends StatefulWidget {
   final String email;
 
-  const OtpVerificationPage({Key? key, required this.email}) : super(key: key);
+  const OtpVerificationPage({super.key, required this.email});
 
   @override
   State<OtpVerificationPage> createState() => _OtpVerificationPageState();
@@ -98,7 +98,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         await AlNoranPopups.showSuccess(
           context: context,
           title: 'تم بنجاح',
-          message: 'تم إعادة إرسال الكود (${_resendCount}/3)',
+          message: 'تم إعادة إرسال الكود ($_resendCount/3)',
         );
       } else {
         await AlNoranPopups.showError(
@@ -176,7 +176,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         await AlNoranPopups.showError(
           context: context,
           title: 'كود خاطئ',
-          message: 'الكود المدخل غير صحيح (${_wrongAttempts}/5)',
+          message: 'الكود المدخل غير صحيح ($_wrongAttempts/5)',
         );
 
         // Clear OTP fields

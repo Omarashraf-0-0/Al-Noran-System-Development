@@ -20,6 +20,7 @@ const App = () => {
 				<Route path="/verify-otp" element={<OTPPage />} />
 				<Route path="/resetpassword" element={<ResetPasswordPage />} />
 				<Route path="/home" element={<HomePage />} />
+				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
 				<Route path="*" element={<NotFound404 />} />
 			</Routes>
 		</>
