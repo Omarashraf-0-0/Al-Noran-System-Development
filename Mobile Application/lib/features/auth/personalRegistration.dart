@@ -8,8 +8,7 @@ import '../../util/validators.dart';
 class PersonalRegistrationPage extends StatefulWidget {
   final Map<String, dynamic> userData;
 
-  const PersonalRegistrationPage({Key? key, required this.userData})
-    : super(key: key);
+  const PersonalRegistrationPage({super.key, required this.userData});
 
   @override
   State<PersonalRegistrationPage> createState() =>
