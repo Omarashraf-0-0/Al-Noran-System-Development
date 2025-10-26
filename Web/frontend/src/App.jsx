@@ -9,6 +9,8 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { toast } from "react-hot-toast";
 import LandingPage from "./pages/LandingPage";
 import NotFound404 from "./pages/NotFound404";
+import EmployeeDashboard from "./pages/EmployeeDashboard";
+import WelcomeBanner from "./pages/WelcomeBanner";
 const App = () => {
 	return (
 		<>
@@ -21,6 +23,7 @@ const App = () => {
 				<Route path="/resetpassword" element={<ResetPasswordPage />} />
 				<Route path="/home" element={<HomePage />} />
 				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
+				<Route path="/welcomebanner" element={<WelcomeBanner />} />
 				<Route path="*" element={<NotFound404 />} />
 			</Routes>
 		</>

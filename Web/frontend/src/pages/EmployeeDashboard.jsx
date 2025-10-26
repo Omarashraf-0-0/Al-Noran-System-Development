@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { Search, Filter } from "lucide-react";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+import WelcomeBanner from "./WelcomeBanner";
+import quickReorderIcon from "../assets/images/quick_reorder.png";
+import filterListIcon from "../assets/images/filter_list.png"; 
+import filterAltIcon from "../assets/images/filter_alt.png"; 
+import searchIcon from "../assets/images/Search.svg"; 
 
 const shipments = [
   {
@@ -7,23 +13,36 @@ const shipments = [
     clientName: "اسم العميل",
     shipmentNo: "AIR-0005",
     status: "في انتظار رقم ACID",
-    date: "منذ 29 يوم",
+    date: "بتاريخ 29 اكتوبر",
   },
   {
     id: 2,
     clientName: "اسم العميل",
-    shipmentNo: "AIR-0005",
+    shipmentNo: "AIR-0006",
     status: "في انتظار رقم ACID",
-    date: "منذ 29 يوم",
+    date: "بتاريخ 14 اكتوبر",
   },
   {
     id: 3,
     clientName: "اسم العميل",
-    shipmentNo: "AIR-0005",
+    shipmentNo: "AIR-0007",
     status: "في انتظار رقم ACID",
-    date: "منذ 29 يوم",
+    date: "بتاريخ 5 أكتوبر",
   },
-  // Add more as needed
+  {
+    id: 4,
+    clientName: "اسم العميل",
+    shipmentNo: "AIR-0008",
+    status: "في انتظار رقم ACID",
+    date: "بتاريخ 4 أكتوبر",
+  },
+  {
+    id: 5,
+    clientName: "اسم العميل",
+    shipmentNo: "AIR-0009",
+    status: "في انتظار رقم ACID",
+    date: "بتاريخ 1 أكتوبر",
+  },
 ];
 
 export default function ShipmentsList() {
@@ -34,74 +53,132 @@ export default function ShipmentsList() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8 px-4 font-sans">
-      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-md p-6">
-        {/* Header */}
-        <h1 className="text-2xl font-bold text-right text-red-800 mb-6">شحناتي</h1>
+    <div className="flex flex-col min-h-screen bg-gray-50 font-sans">
+      {/* Header */}
+      <Header />
 
-        {/* Search & Filter */}
-        <div className="flex flex-row-reverse items-center justify-between mb-6">
-          <div className="flex items-center space-x-2 space-x-reverse">
-            <button className="flex items-center gap-1 text-red-800 font-medium">
-              <Filter className="w-5 h-5" />
-              <span>فلتر</span>
-            </button>
-          </div>
+      {/* Welcome Banner */}
+      <WelcomeBanner />
 
-          <div className="relative w-1/2">
-            <input
-              type="text"
-              placeholder="ابحث برقم الشحنة"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full border border-gray-300 rounded-full py-2 px-4 pr-10 text-right focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-            <Search className="absolute left-3 top-2.5 text-gray-400" />
-          </div>
-        </div>
+      {/* Main Section  */}
+      <section className="flex-grow w-full bg-white py-12 px-8 shadow-inner">
+        <div className="max-w-6xl mx-auto">
+          {/* Page Title */}
+          <h1 className="text-3xl font-bold text-right text-red-800 mb-8">
+            شحناتي
+          </h1>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-right border-separate border-spacing-y-3">
-            <thead>
-              <tr className="text-gray-600 text-sm">
-                <th>اسم العميل</th>
-                <th>رقم البوليصة</th>
-                <th>الحالة</th>
-                <th>التفاصيل</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredShipments.map((shipment) => (
-                <tr
-                  key={shipment.id}
-                  className="bg-gray-100 hover:bg-gray-200 rounded-xl transition"
-                >
-                  <td className="py-3 px-4">
-                    <div className="flex flex-col text-sm">
-                      <span>{shipment.clientName}</span>
-                      <span className="text-gray-500 text-xs">
-                        {shipment.date}
+{/* 🔍 Search + Filter + Sort */}
+<div className="flex items-center justify-center mb-8 gap-4">
+  {/* Left side — Filter + Sort */}
+  <div className="flex items-center gap-3">
+    <button className="flex items-center gap-2 text-red-800 font-medium">
+      <img
+        src={filterAltIcon}
+        alt="Filter"
+        className="w-5 h-5 object-contain"
+      />
+    </button>
+
+    <button className="flex items-center gap-2 text-red-800 font-medium">
+      <img
+        src={filterListIcon}
+        alt="Sort"
+        className="w-5 h-5 object-contain"
+      />
+    </button>
+  </div>
+
+  {/* Search Bar (centered) */}
+  <div className="relative w-1/2">
+    <input
+      type="text"
+      placeholder="ابحث برقم الشحنة"
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="w-full bg-white shadow-md rounded-full py-2 px-4 pr-10 text-right focus:outline-none focus:ring-2 focus:ring-red-500 placeholder-gray-400"
+    />
+    <img
+      src={searchIcon}
+      alt="Search"
+      className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+    />
+  </div>
+</div>
+
+
+
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-right border-separate border-spacing-y-3">
+              <tbody>
+                {filteredShipments.map((shipment) => (
+                  <tr
+                    key={shipment.id}
+                    className="bg-gray-100 hover:bg-gray-200 rounded-xl transition text-right"
+                  >
+                    {/* Client Name */}
+                    <td className="py-3 px-4 align-top">
+                      <div className="flex flex-col text-sm">
+                        <span className="text-gray-700 text-base font-semibold">
+                          {shipment.clientName}
+                        </span>
+                        <span className="text-gray-500 text-xs">
+                          {shipment.date}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Policy Number */}
+                    <td className="py-3 px-4 align-top">
+                      <div className="flex flex-col text-sm">
+                        <span className="text-gray-700 text-base font-semibold mb-1">
+                          رقم البوليصة
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Shipment ID */}
+                    <td className="py-3 px-4 align-top">
+                      <div className="flex flex-col text-sm">
+                        <span className="font-semibold text-gray-800">
+                          {shipment.shipmentNo}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Status */}
+                    <td className="py-3 px-4 align-top">
+                      <span
+                        className="bg-blue-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit"
+                        style={{ color: "#690000" }}
+                      >
+                        <img
+                          src={quickReorderIcon}
+                          alt="status icon"
+                          className="w-4 h-4"
+                        />
+                        {shipment.status}
                       </span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">{shipment.shipmentNo}</td>
-                  <td className="py-3 px-4">
-                    <span className="bg-cyan-100 text-cyan-800 text-xs font-semibold px-3 py-1 rounded-full">
-                      {shipment.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-blue-700 font-medium hover:underline cursor-pointer">
-                    عرض كل التفاصيل
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+
+                    {/* Details Link */}
+                    <td className="py-3 px-4 align-top">
+                      <span className="text-blue-600 text-sm font-medium underline cursor-pointer">
+                        عرض كل التفاصيل
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
-
-
