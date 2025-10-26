@@ -18,6 +18,7 @@ describe('Register test', () => {
 
     cy.get('.go3958317564').should('contain', 'تم إنشاء الحساب بنجاح');
   });
+  
 
 
   it('Register with bad credentials (used email)', () => {
@@ -39,7 +40,9 @@ describe('Register test', () => {
 
     cy.wait(1500); 
 
-    cy.get('.go3958317564').should('contain', 'فشل في إنشاء الحساب. الرجاء المحاولة مرة أخرى.'); 
+    // cy.get('[data-testid="toast-message"]').should('contain', 'فشل في إنشاء الحساب. الرجاء المحاولة مرة أخرى.');
+    cy.contains('فشل في إنشاء الحساب. الرجاء المحاولة مرة أخرى.')
+    .should('be.visible');
   });
 
 

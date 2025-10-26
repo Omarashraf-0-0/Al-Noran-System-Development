@@ -65,6 +65,6 @@ test("Register with already used email should fail",async ()=>{
     .post('/api/auth/signup')
     .send(testUser);
     expect(res.statusCode).toEqual(409);
-    expect(res.body).toHaveProperty('error');
-    expect(res.body.error).toBe('A user with that email, username, or phone number already exists.');
+    expect(res.body).toHaveProperty('message');
+    expect(res.body.message).toBe('البريد الإلكتروني أو اسم المستخدم أو رقم الهاتف مستخدم بالفعل');
 })
