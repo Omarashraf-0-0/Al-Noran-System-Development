@@ -52,8 +52,38 @@ public class LoginController {
             if (json.has("error")) {
                 showAlert(Alert.AlertType.ERROR, "فشل تسجيل الدخول", json.getString("error"));
             } else if (json.has("token")) {
+
+                // extract user info when available and store in AppSession so it's accessible app-wide
+                try {
+                    String extractedId = "";
+                    String extractedName = "";
+
+                    if (json.has("user") && json.get("user") instanceof JSONObject) {
+                        JSONObject u = json.getJSONObject("user");
+                        extractedId = u.optString("id", u.optString("_id", u.optString("userId", "")));
+                        extractedName = u.optString("name", u.optString("username", u.optString("email", "")));
+                    } else {
+                        // try top-level fields as fallback
+                        extractedId = json.optString("id", json.optString("_id", ""));
+                        extractedName = json.optString("name", json.optString("username", json.optString("email", "")));
+                    }
+
+                    // create and store User in session
+                    noran.desktop.Controllers.User loggedInUser = new noran.desktop.Controllers.User(extractedId, extractedName);
+                    noran.desktop.AppSession.getInstance().setCurrentUser(loggedInUser);
+
+                } catch (Exception ex) {
+                    // don't fail login if parsing user info fails — keep going
+                    ex.printStackTrace();
+                }
+
                 showAlert(Alert.AlertType.INFORMATION, "تم تسجيل الدخول", "تم تسجيل الدخول بنجاح!");
-                // goToHomeScreen(event);
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/dashboard.fxml"));
+                Parent root = loader.load();
+                Scene scene = new Scene(root);
+                Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                stage.setScene(scene);
+                stage.show();
             } else {
                 showAlert(Alert.AlertType.INFORMATION, "استجابة الخادم", response);
             }
