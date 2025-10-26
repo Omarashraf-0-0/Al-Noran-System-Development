@@ -3,6 +3,7 @@ import 'dart:io'; // للتحقق من المنصة
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart'; // للتحقق من kIsWeb
+import 'package:http_parser/http_parser.dart';
 
 class ApiService {
   // Base URL - يتغير حسب المنصة تلقائياً
@@ -12,9 +13,9 @@ class ApiService {
       return 'http://localhost:3500';
     }
 
-    // لو Android Emulator
+    // لو موبايل حقيقي أو Emulator - استخدم IP اللابتوب
     if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3500'; // Android emulator يستخدم 10.0.2.2 للوصول للـ localhost
+      return 'http://192.168.1.12:3500'; // IP اللابتوب على نفس الشبكة
     }
 
     // لو iOS Simulator أو جهاز حقيقي
@@ -299,6 +300,142 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في الاتصال بالسيرفر',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Upload Document - رفع مستند
+  static Future<Map<String, dynamic>> uploadDocument({
+    required File file,
+    required String uploadType, // 'users' or 'shipments'
+    String? userId,
+    Map<String, dynamic>? relatedTo,
+    String? description,
+    List<String>? tags,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/upload/$uploadType'),
+      );
+
+      // Add file
+      var fileStream = http.ByteStream(file.openRead());
+      var fileLength = await file.length();
+      var multipartFile = http.MultipartFile(
+        'document',
+        fileStream,
+        fileLength,
+        filename: file.path.split('/').last,
+        contentType: MediaType('application', 'octet-stream'),
+      );
+      request.files.add(multipartFile);
+
+      // Add optional fields
+      if (userId != null) {
+        request.fields['uploadedBy'] = userId;
+      }
+      if (relatedTo != null) {
+        request.fields['relatedTo'] = jsonEncode(relatedTo);
+      }
+      if (description != null) {
+        request.fields['description'] = description;
+      }
+      if (tags != null) {
+        request.fields['tags'] = jsonEncode(tags);
+      }
+
+      // Send request
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم رفع الملف بنجاح',
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل رفع الملف',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'خطأ في رفع الملف',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Upload Multiple Documents - رفع عدة مستندات
+  static Future<Map<String, dynamic>> uploadMultipleDocuments({
+    required List<File> files,
+    required String uploadType, // 'users' or 'shipments'
+    String? userId,
+    Map<String, dynamic>? relatedTo,
+    String? description,
+    List<String>? tags,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/upload/$uploadType/multiple'),
+      );
+
+      // Add files
+      for (var file in files) {
+        var fileStream = http.ByteStream(file.openRead());
+        var fileLength = await file.length();
+        var multipartFile = http.MultipartFile(
+          'documents',
+          fileStream,
+          fileLength,
+          filename: file.path.split('/').last,
+          contentType: MediaType('application', 'octet-stream'),
+        );
+        request.files.add(multipartFile);
+      }
+
+      // Add optional fields
+      if (userId != null) {
+        request.fields['uploadedBy'] = userId;
+      }
+      if (relatedTo != null) {
+        request.fields['relatedTo'] = jsonEncode(relatedTo);
+      }
+      if (description != null) {
+        request.fields['description'] = description;
+      }
+      if (tags != null) {
+        request.fields['tags'] = jsonEncode(tags);
+      }
+
+      // Send request
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم رفع الملفات بنجاح',
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل رفع الملفات',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'خطأ في رفع الملفات',
         'error': e.toString(),
       };
     }
