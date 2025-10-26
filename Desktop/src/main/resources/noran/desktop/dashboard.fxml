@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="700" prefWidth="1100" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.HelloController">
+
+    <!-- RIGHT SIDEBAR (moved to right side for RTL layout) -->
+    <left>
+    <VBox fx:id="sidebar" alignment="TOP_RIGHT" prefWidth="260" spacing="14" style="-fx-background-color: white; -fx-padding: 18; -fx-border-color: transparent;">
+
+        <!-- menu as buttons -->
+        <VBox alignment="TOP_CENTER" spacing="16">
+            <Button maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 8 16; -fx-font-size: 14; -fx-background-radius: 8; -fx-alignment: CENTER_LEFT;" text="لوحة التحكم" />
+            <Button fx:id="btnCurrentOps" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="العمليات الحالية" />
+            <Button fx:id="btnRecentOps" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="آخر العمليات المنفذة" />
+            <Button fx:id="btnClients" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أرشيف العملاء" />
+            <Button fx:id="btnFiles" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أرشيف الملفات" />
+            <Button fx:id="btnInvoices" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الفواتير" />
+            <Button fx:id="btnPermissions" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الصلاحيات" />
+        </VBox>
+
+
+
+    </VBox>
+    </left>
+
+    <!-- TOP BAR -->
+    <top>
+    <HBox alignment="CENTER" maxWidth="Infinity" spacing="40" style="-fx-padding: 12 0; -fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0.0, 0, 2); -fx-background-radius: 0;">
+
+            <!-- logo in top bar (right side) -->
+                <ImageView fx:id="logoImage" fitHeight="112" fitWidth="200" pickOnBounds="true" preserveRatio="true" style="-fx-alignment: LEFT">
+                <image>
+                    <Image url="@images/Logo.png" />
+                </image>
+            </ImageView>
+
+            <!-- small page title -->
+            <HBox alignment="CENTER_RIGHT" spacing="8" style="-fx-background-color: #ffffff; -fx-padding: 6 10; -fx-background-radius: 20;">
+
+                <ImageView fitHeight="18" fitWidth="18">
+                    <image>
+                        <Image url="@images/menu.png" />
+                    </image>
+                </ImageView>
+                <Label style="-fx-font-size: 15; -fx-text-fill: #111; -fx-padding: 0 12 0 12;" text="لوحة التحكم" />
+
+            </HBox>
+
+
+            <!-- Search -->
+            <HBox alignment="CENTER_RIGHT" spacing="8" maxHeight="40" style="-fx-background-color: #f3f4f6; -fx-padding: 6 10; -fx-background-radius: 20;">
+                <TextField fx:id="searchField" onAction="#onSearch" prefWidth="380" promptText="ابحث برقم الشحنة" style="-fx-background-color: transparent; -fx-border-width: 0;" />
+                <ImageView fitHeight="18" fitWidth="18">
+                    <image>
+                        <Image url="@images/search.png" />
+                    </image>
+                </ImageView>
+            </HBox>
+
+            <!-- notification icon -->
+            <StackPane fx:id="notifBtn" alignment="CENTER" maxHeight="40" style="-fx-padding: 6; -fx-background-radius: 18; -fx-background-color: #f3f4f6;">
+                <ImageView fitHeight="18" fitWidth="18">
+                    <image>
+                        <Image url="@images/notification.png" />
+                    </image>
+                </ImageView>
+            </StackPane>
+
+            <!-- user avatar + name + id -->
+            <HBox alignment="CENTER" spacing="10" style="-fx-padding: 0 8;">
+                <VBox alignment="CENTER_LEFT" spacing="2">
+                    <Label fx:id="userNameLabel" style="-fx-font-weight: 600; -fx-font-size: 14;" text="ياسمين" />
+                    <Label fx:id="userIdLabel" style="-fx-text-fill: #9b9b9b; -fx-font-size: 11;" text="ID: 1234567" />
+                </VBox>
+
+                <ImageView fitHeight="44" fitWidth="44" preserveRatio="true">
+                    <image>
+                        <Image url="@images/avatar.png" />
+                    </image>
+                </ImageView>
+            </HBox>
+
+        </HBox>
+    </top>
+
+    <!-- CENTER CONTENT -->
+    <center>
+        <VBox spacing="18" style="-fx-padding: 18 24;">
+            <!-- top stat cards -->
+            <GridPane hgap="18" vgap="12">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="25" />
+                    <ColumnConstraints percentWidth="25" />
+                    <ColumnConstraints percentWidth="25" />
+                    <ColumnConstraints percentWidth="25" />
+                </columnConstraints>
+
+                <!-- Card 1 -->
+                <StackPane style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 10;" GridPane.columnIndex="0">
+                    <VBox alignment="TOP_LEFT">
+                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="إجمالى الإيرادات" />
+                        <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #222; -fx-padding: 12 0 0 0;" text="100" />
+                    </VBox>
+                </StackPane>
+
+                <!-- Card 2 -->
+                <StackPane style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 10;" GridPane.columnIndex="1">
+                    <VBox alignment="TOP_LEFT">
+                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="عدد الفواتير المعالجة" />
+                        <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #222; -fx-padding: 12 0 0 0;" text="100" />
+                    </VBox>
+                </StackPane>
+
+                <!-- Card 3 -->
+                <StackPane style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 10;" GridPane.columnIndex="2">
+                    <VBox alignment="TOP_LEFT">
+                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="عدد الشحنات المكتملة" />
+                        <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #222; -fx-padding: 12 0 0 0;" text="100" />
+                    </VBox>
+                </StackPane>
+
+                <!-- Card 4 -->
+                <StackPane style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 10;" GridPane.columnIndex="3">
+                    <VBox alignment="TOP_LEFT">
+                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="عدد الشحنات الجارية" />
+                        <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #222; -fx-padding: 12 0 0 0;" text="100" />
+                    </VBox>
+                </StackPane>
+            <rowConstraints>
+               <RowConstraints />
+            </rowConstraints>
+            </GridPane>
+
+            <!-- big statistics panel -->
+            <StackPane style="-fx-padding: 12; -fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #f0f0f0; -fx-border-radius: 12; -fx-pref-height: 420;">
+                <VBox alignment="TOP_CENTER" spacing="18" style="-fx-padding: 28;">
+                    <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #333;" text="الإحصائيات" />
+                    <Region VBox.vgrow="ALWAYS" />
+
+                    <HBox alignment="CENTER" spacing="10">
+                        <Button style="-fx-background-color: #eef2ff; -fx-text-fill: #2a2a2a; -fx-font-size: 14; -fx-padding: 10 18; -fx-background-radius: 8;" text="تحميل الإحصائيات" />
+                    </HBox>
+                </VBox>
+            </StackPane>
+        </VBox>
+    </center>
+</BorderPane>
