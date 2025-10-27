@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.geometry.Pos?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.RowConstraints?>
+
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TableColumn?>
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="noran.desktop.HelloController"
+            prefWidth="1200" prefHeight="820"
+            style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;"
+            nodeOrientation="RIGHT_TO_LEFT">
+
+    <!-- RIGHT SIDEBAR (shared with dashboard) -->
+    <left>
+    <VBox fx:id="sidebar" prefWidth="260" spacing="14" alignment="TOP_RIGHT"
+          style="-fx-background-color: white; -fx-padding: 18; -fx-border-color: transparent;">
+
+        <!-- menu as buttons -->
+        <VBox spacing="6" alignment="TOP_CENTER">
+            <Button fx:id="btnInvoices" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="لوحة التحكم" />
+            <Button fx:id="btnCurrentOps" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="العمليات الحالية" />
+            <Button fx:id="btnRecentOps" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="آخر العمليات المنفذة" />
+            <Button fx:id="btnClients" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أرشيف العملاء" />
+            <Button fx:id="btnFiles" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أرشيف الملفات" />
+            <Button maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 8 16; -fx-font-size: 14; -fx-background-radius: 8; -fx-alignment: CENTER_LEFT;" text="إدارة الفواتير" />
+            <Button fx:id="btnPermissions" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الصلاحيات" />
+        </VBox>
+
+        <Region VBox.vgrow="ALWAYS"/>
+
+        <!-- optional footer -->
+        <Label text="نسخة سطح المكتب" style="-fx-text-fill: #888; -fx-font-size: 11;" />
+    </VBox>
+    </left>
+
+    <!-- TOP BAR (shared with dashboard) -->
+    <top>
+    <HBox alignment="CENTER" spacing="75" maxWidth="Infinity" style="-fx-padding: 12 0; -fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0.0, 0, 2); -fx-background-radius: 0;">
+
+
+        <!-- logo in top bar (right side) -->
+        <ImageView fx:id="logoImage" fitWidth="200" fitHeight="112" pickOnBounds="true" preserveRatio="true">
+            <image>
+                <Image url="@images/Logo.png" />
+            </image>
+        </ImageView>
+
+        <!-- small page title -->
+        <HBox alignment="CENTER_RIGHT" spacing="8" style="-fx-background-color: #ffffff; -fx-padding: 6 10; -fx-background-radius: 20;">
+
+            <ImageView fitWidth="18" fitHeight="18">
+                <image>
+                    <Image url="@images/menu.png"/>
+                </image>
+            </ImageView>
+            <Label text="إدارة الفواتير" style="-fx-font-size: 15; -fx-text-fill: #111; -fx-padding: 0 12 0 12;" />
+
+        </HBox>
+
+        <!-- Search -->
+        <HBox alignment="CENTER_RIGHT" spacing="8" maxHeight="40" style="-fx-background-color: #f3f4f6; -fx-padding: 6 10; -fx-background-radius: 20;">
+            <TextField fx:id="searchField" onAction="#onSearch" prefWidth="380" promptText="ابحث برقم الشحنة" style="-fx-background-color: transparent; -fx-border-width: 0;" />
+            <ImageView fitWidth="18" fitHeight="18">
+                <image>
+                    <Image url="@images/search.png"/>
+                </image>
+            </ImageView>
+        </HBox>
+
+        <!-- notification icon -->
+        <StackPane fx:id="notifBtn" alignment="CENTER" maxHeight="40" style="-fx-padding: 6; -fx-background-radius: 18; -fx-background-color: #f3f4f6;">
+            <ImageView fitWidth="18" fitHeight="18">
+                <image>
+                    <Image url="@images/notification.png" />
+                </image>
+            </ImageView>
+        </StackPane>
+
+        <!-- user avatar + name + id -->
+        <HBox alignment="CENTER" spacing="10" style="-fx-padding: 0 8;">
+            <VBox alignment="CENTER_LEFT" spacing="2">
+                <Label fx:id="userNameLabel" style="-fx-font-weight: 600; -fx-font-size: 14;" text="ياسمين" />
+                <Label fx:id="userIdLabel" style="-fx-text-fill: #9b9b9b; -fx-font-size: 11;" text="ID: 1234567" />
+            </VBox>
+
+            <ImageView fitWidth="44" fitHeight="44" preserveRatio="true">
+                <image>
+                    <Image url="@images/avatar.png" />
+                </image>
+            </ImageView>
+        </HBox>
+
+    </HBox>
+    </top>
+
+    <!-- CENTER CONTENT: invoices management UI -->
+    <center>
+        <VBox spacing="18" style="-fx-padding: 18 24;">
+
+            <!-- filters row -->
+            <HBox spacing="12" alignment="CENTER_LEFT" style="-fx-padding: 8 0 16 0;">
+                <Region HBox.hgrow="ALWAYS"/>
+                <HBox spacing="10">
+                    <TextField promptText="البحث برقم الشحنة" style="-fx-pref-width: 260; -fx-background-color: #fff; -fx-padding: 10; -fx-background-radius: 8;" />
+                    <TextField promptText="اسم العميل" style="-fx-pref-width: 220; -fx-background-color: #fff; -fx-padding: 10; -fx-background-radius: 8;" />
+                    <TextField promptText="نوع الشحن" style="-fx-pref-width: 180; -fx-background-color: #fff; -fx-padding: 10; -fx-background-radius: 8;" />
+                </HBox>
+            </HBox>
+
+            <!-- main invoice panel -->
+            <StackPane style="-fx-padding: 12; -fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #f0f0f0; -fx-border-radius: 12; -fx-pref-height: 520;">
+                <VBox spacing="18" style="-fx-padding: 24; -fx-pref-width: 900;">
+                    <HBox alignment="TOP_RIGHT" spacing="12">
+                        <VBox alignment="TOP_RIGHT">
+                            <Label text="اسم العميل : ياسمين" style="-fx-font-size: 16; -fx-font-weight: 700;" />
+                            <HBox spacing="10" alignment="CENTER_RIGHT">
+                                <Label text="الرقم الضريبي: 1234" />
+                                <Label text="رقم الفاتورة: #12" />
+                                <Label text="التاريخ: 2025-10-26" />
+                            </HBox>
+                        </VBox>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <ImageView fitWidth="80" fitHeight="60" preserveRatio="true">
+                            <image>
+                                <Image url="@images/Logo.png" />
+                            </image>
+                        </ImageView>
+                    </HBox>
+
+                    <Separator />
+
+                    <!-- actual TableView for invoice items -->
+                    <TableView fx:id="invoicesTable" prefHeight="360" prefWidth="880">
+                        <columns>
+                            <TableColumn fx:id="colDescription" text="الوصف" prefWidth="460" />
+                            <TableColumn fx:id="colPrice" text="الثمن" prefWidth="200" />
+                            <TableColumn fx:id="colDate" text="التاريخ" prefWidth="220" />
+                        </columns>
+                    </TableView>
+
+                    <Region VBox.vgrow="ALWAYS" />
+
+                    <HBox alignment="CENTER_RIGHT" spacing="12" style="-fx-padding: 12 0 0 0;">
+                        <Button text="اضافة عنصر جديد +" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" />
+                        <Button text="تغيير حالة الفاتورة" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" />
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Button text="تحميل الفاتورة" style="-fx-background-color: #eef2ff; -fx-text-fill: #2a2a2a; -fx-padding: 10 18; -fx-background-radius: 8;" />
+                    </HBox>
+                </VBox>
+            </StackPane>
+
+        </VBox>
+    </center>
+
+</BorderPane>
