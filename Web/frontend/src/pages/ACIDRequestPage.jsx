@@ -3,7 +3,6 @@ import Navbar from "../components/Navbar";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import ACIDRequestForm from "../components/ACIDRequestForm";
-import acidRequestSchema from '../models/acid'
 import { toast } from "react-hot-toast";
 import axios from "axios";
 
