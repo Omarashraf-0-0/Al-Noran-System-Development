@@ -4,7 +4,7 @@ import '../Pop-ups/al_noran_popups.dart';
 /// صفحة توضيحية لكل أنواع الـ Pop-ups
 /// استخدمها كمرجع عند الحاجة
 class PopupsExamplePage extends StatelessWidget {
-  const PopupsExamplePage({Key? key}) : super(key: key);
+  const PopupsExamplePage({super.key});
 
   @override
   Widget build(BuildContext context) {

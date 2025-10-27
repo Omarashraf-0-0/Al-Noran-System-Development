@@ -5,10 +5,10 @@ class MyShipmentsPage extends StatefulWidget {
   final String userEmail;
 
   const MyShipmentsPage({
-    Key? key,
+    super.key,
     required this.userName,
     required this.userEmail,
-  }) : super(key: key);
+  });
 
   @override
   State<MyShipmentsPage> createState() => _MyShipmentsPageState();
