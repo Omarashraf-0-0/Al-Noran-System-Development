@@ -1,0 +1,62 @@
+/* ===============================
+   TableView Custom Styling (Red Header)
+   =============================== */
+
+/* Force override the header background */
+.table-view .column-header-background,
+.table-view .column-header-background .nested-column-header {
+    -fx-background-color: #c91e2b !important;  /* solid red header */
+    -fx-background-insets: 0;
+    -fx-background-radius: 8 8 0 0;
+}
+
+/* Each individual header cell (no gray gradient) */
+.table-view .column-header {
+    -fx-background-color: #c91e2b !important;
+    -fx-border-color: transparent;
+}
+
+/* Header text style */
+.table-view .column-header .label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-alignment: CENTER;
+}
+
+/* Remove gray filler area on right if table is empty */
+.table-view .filler {
+    -fx-background-color: #c91e2b !important;
+}
+
+/* Table body */
+.table-view {
+    -fx-background-color: white;
+    -fx-border-color: #c91e2b;
+    -fx-background-radius: 8;
+    -fx-table-cell-border-color: #e0e0e0;
+}
+
+/* Normal rows */
+.table-row-cell {
+    -fx-background-color: white;
+    -fx-padding: 6px;
+}
+
+/* Hovered row */
+.table-row-cell:hover {
+    -fx-background-color: #fce8ea;
+}
+
+/* Selected row */
+.table-row-cell:selected {
+    -fx-background-color: #c91e2b;
+    -fx-text-fill: white;
+}
+
+/* Cell text */
+.table-cell {
+    -fx-text-fill: black;
+    -fx-font-size: 13px;
+    -fx-alignment: CENTER_LEFT;
+}
