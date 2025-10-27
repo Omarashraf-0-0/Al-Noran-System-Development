@@ -26,7 +26,6 @@ const shipmentSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    
     // Container details
     num_of_containers: {
       type: Number,
