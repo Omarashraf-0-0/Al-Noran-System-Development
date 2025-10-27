@@ -7,7 +7,7 @@ const {
   deleteUser
 } = require('../controllers/userController');
 
-router.route('/')
+router.route('/getAll')
   .get(getAllUsers)
   .post(createUser);
 router.route('/:id')

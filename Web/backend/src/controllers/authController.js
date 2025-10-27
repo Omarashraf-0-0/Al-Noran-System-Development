@@ -2,6 +2,8 @@ const User = require('../models/user');
 const { validationResult } = require('express-validator');
 const asyncHandler = require('express-async-handler');
 
+
+
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public

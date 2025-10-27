@@ -1,23 +1,34 @@
 const nodemailer = require("nodemailer");
 require('dotenv').config();
 
+// const transporter = nodemailer.createTransport({
+//   service: "gmail",
+//   auth: {
+//     user: "salahgamal20016@gmail.com",
+//     pass: process.env.GOOGLE_APP_PASSWORD,
+//   },
+// });
+
 const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "salahgamal20016@gmail.com",
-    pass: process.env.GOOGLE_APP_PASSWORD,
-  },
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
 });
 
 
-const send_mail = async (to, subject, text) => {
+const send_mail = async (to, subject, text, html = "") => {
+
+  if(html === "")
+  html = `<b>${text}</b>`
     try {
         const info = await transporter.sendMail({
-            from: "salahgamal20016@gmail.com",
+            from: process.env.EMAIL_USER,
             to,
             subject,
             text,
-            html: `<b>${text}</b>`,
+            html,
         });
 
         console.log("Message sent:", info.messageId);
