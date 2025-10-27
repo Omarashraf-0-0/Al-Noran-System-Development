@@ -48,7 +48,7 @@ WORKDIR /app
 COPY pubspec.* ./
 
 # Ensure intl version compatibility with Flutter SDK
-RUN flutter pub add intl:^0.19.0 || true
+RUN flutter pub add intl:^0.20.2 || true
 RUN flutter pub get || true
 
 # Now copy the rest of the application

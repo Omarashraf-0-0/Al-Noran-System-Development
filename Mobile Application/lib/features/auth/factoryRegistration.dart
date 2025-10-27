@@ -7,8 +7,7 @@ import '../../core/network/api_service.dart';
 class FactoryRegistrationPage extends StatefulWidget {
   final Map<String, dynamic> userData;
 
-  const FactoryRegistrationPage({Key? key, required this.userData})
-    : super(key: key);
+  const FactoryRegistrationPage({super.key, required this.userData});
 
   @override
   State<FactoryRegistrationPage> createState() =>

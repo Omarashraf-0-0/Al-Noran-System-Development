@@ -7,8 +7,7 @@ class AlNoranLoading extends StatelessWidget {
   final double size;
   final Color? color;
 
-  const AlNoranLoading({Key? key, this.message, this.size = 50, this.color})
-    : super(key: key);
+  const AlNoranLoading({super.key, this.message, this.size = 50, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +69,7 @@ class AlNoranLoading extends StatelessWidget {
 class AlNoranLoadingOverlay extends StatelessWidget {
   final String? message;
 
-  const AlNoranLoadingOverlay({Key? key, this.message}) : super(key: key);
+  const AlNoranLoadingOverlay({super.key, this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -118,10 +117,10 @@ class AlNoranButtonLoading extends StatelessWidget {
   final double size;
 
   const AlNoranButtonLoading({
-    Key? key,
+    super.key,
     this.color = Colors.white,
     this.size = 20,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
