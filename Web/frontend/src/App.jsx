@@ -8,7 +8,12 @@ import OTPPage from "./pages/OTPPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { toast } from "react-hot-toast";
 import LandingPage from "./pages/LandingPage";
+import ACIDRequestPage from "./pages/ACIDRequestPage";
 import NotFound404 from "./pages/NotFound404";
+import EmployeeDashboard from "./pages/EmployeeDashboard";
+import WelcomeBanner from "./pages/WelcomeBanner";
+import ShipmentStatus from "./pages/ShipmentStatus";
+
 const App = () => {
 	return (
 		<>
@@ -20,6 +25,10 @@ const App = () => {
 				<Route path="/verify-otp" element={<OTPPage />} />
 				<Route path="/resetpassword" element={<ResetPasswordPage />} />
 				<Route path="/home" element={<HomePage />} />
+				<Route path="/acidrequest" element={<ACIDRequestPage />} />
+				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
+				<Route path="/shipmentstatus" element={<ShipmentStatus />} />
+				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
 				<Route path="*" element={<NotFound404 />} />
 			</Routes>
 		</>

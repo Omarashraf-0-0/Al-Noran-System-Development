@@ -1,5 +1,6 @@
 /// Validators for Al Noran Application
 /// Egyptian Phone Numbers & National ID Validation
+library;
 
 class AlNoranValidators {
   /// Email Validation (Case-Insensitive)
