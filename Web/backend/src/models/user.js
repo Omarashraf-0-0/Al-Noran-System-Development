@@ -44,6 +44,17 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  taxNumber: {
+    type: String,
+    required: false,
+    trim: true,
+  },
+  rank: {
+    type: String,
+    enum: ['1', '2', '3', null],
+    required: false,
+    default: null,
+  },
   clientDetails: {
     clientType: {
       type: String,
