@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane prefHeight="820.0" prefWidth="1200.0"
+            style="-fx-background-image: url('noran/desktop/images/background.png');
+                   -fx-background-size: cover;
+                   -fx-background-position: center center;
+                   -fx-background-repeat: no-repeat;"
+            xmlns="http://javafx.com/javafx/23.0.1"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="noran.desktop.Controllers.OTPVerificationController">
+
+    <!-- Background -->
+    <ImageView fitHeight="768.0" fitWidth="1366.0" pickOnBounds="true" preserveRatio="false">
+        <image>
+            <Image url="@images/background.png" />
+        </image>
+    </ImageView>
+
+    <!-- Main Card -->
+    <VBox layoutX="400.0" layoutY="160.0"
+          prefWidth="500.0" prefHeight="300.0" spacing="25"
+          alignment="CENTER"
+          style="-fx-background-color: rgba(255, 255, 255, 0.8);
+                 -fx-background-radius: 20;
+                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 5,0,0,3);"
+          nodeOrientation="RIGHT_TO_LEFT">
+
+        <padding>
+            <Insets top="30" right="40" bottom="30" left="40"/>
+        </padding>
+
+        <!-- Back Link -->
+        <HBox alignment="BOTTOM_RIGHT" prefWidth="500">
+            <Hyperlink text="الرجوع" onAction="#onBackClicked"
+                       style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
+                              -fx-font-size: 13; -fx-text-fill: #690000;
+                              -fx-underline: true;" />
+        </HBox>
+
+        <!-- Title -->
+        <Label text="رمز التحقق (OTP)"
+               style="-fx-font-family: 'Poppins'; -fx-font-weight: 700;
+                      -fx-font-size: 20; -fx-text-fill: #690000;" />
+
+        <!-- OTP Fields -->
+        <HBox spacing="10" alignment="CENTER">
+            <TextField fx:id="otp5" prefWidth="40" prefHeight="40"
+                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
+            <TextField fx:id="otp4" prefWidth="40" prefHeight="40"
+                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
+            <TextField fx:id="otp3" prefWidth="40" prefHeight="40"
+                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
+            <TextField fx:id="otp2" prefWidth="40" prefHeight="40"
+                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
+            <TextField fx:id="otp1" prefWidth="40" prefHeight="40"
+                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
+        </HBox>
+
+        <!-- Resend Link -->
+        <Hyperlink text="إعادة إرسال الكود" onAction="#onResendClicked"
+                   style="-fx-font-family: 'Poppins'; -fx-font-size: 13;
+                          -fx-text-fill: #690000; -fx-underline: true;" />
+
+        <!-- Confirm Button -->
+        <Button fx:id="confirmButton" text="تأكيد الكود" onAction="#onConfirmClicked"
+                prefWidth="200" prefHeight="35"
+                style="-fx-font-family: 'Poppins'; -fx-font-weight: 600;
+                       -fx-font-size: 14; -fx-background-color: #690000;
+                       -fx-background-radius: 8; -fx-text-fill: white;" />
+
+    </VBox>
+
+    <!-- Logo -->
+    <ImageView fitHeight="120.0" fitWidth="180.0"
+               layoutX="40.0" layoutY="20.0"
+               preserveRatio="true" pickOnBounds="true">
+        <image>
+            <Image url="@images/Logo.png" />
+        </image>
+    </ImageView>
+
+</AnchorPane>
