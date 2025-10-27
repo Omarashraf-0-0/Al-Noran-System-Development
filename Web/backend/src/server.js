@@ -43,8 +43,9 @@ app.use("/api/otp", require("./routes/otpRoutes"));
 app.use("/api/shipments", require("./routes/shipmentRoutes"));
 app.use("/api/acid", require("./routes/acidRoutes"));
 app.use("/api/finance", require("./routes/financeRoutes"));
-app.use("/api/upload/users", require("./routes/uploadRoutes"));
-app.use("/api/upload/shipments", require("./routes/uploadRoutes"));
+app.use("/api/upload/users", require("./routes/uploadRoutes")); // Legacy local uploads
+app.use("/api/upload/shipments", require("./routes/uploadRoutes")); // Legacy local uploads
+app.use("/api/uploads", require("./routes/uploadS3Routes")); // NEW: S3-based uploads
 app.use((req, res) => {
 	res.status(404);
 	if (req.accepts("html")) {

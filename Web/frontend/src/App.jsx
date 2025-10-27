@@ -8,6 +8,7 @@ import OTPPage from "./pages/OTPPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { toast } from "react-hot-toast";
 import LandingPage from "./pages/LandingPage";
+import ACIDRequestPage from "./pages/ACIDRequestPage";
 import NotFound404 from "./pages/NotFound404";
 const App = () => {
 	return (
@@ -20,6 +21,7 @@ const App = () => {
 				<Route path="/verify-otp" element={<OTPPage />} />
 				<Route path="/resetpassword" element={<ResetPasswordPage />} />
 				<Route path="/home" element={<HomePage />} />
+				<Route path="/acidrequest" element={<ACIDRequestPage />} />
 				<Route path="*" element={<NotFound404 />} />
 			</Routes>
 		</>
