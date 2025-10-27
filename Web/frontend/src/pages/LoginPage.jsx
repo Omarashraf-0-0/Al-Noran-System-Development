@@ -5,7 +5,6 @@ import FormContainer from "../components/FormContainer";
 import LoginForm from "../components/LoginForm";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-import { href } from "react-router";
 
 const LoginPage = () => {
 	const handleLogin = (formData) => {
@@ -21,6 +20,12 @@ const LoginPage = () => {
 			.then((response) => {
 				console.log("Login successful:", response.data);
 				toast.success("تم تسجيل الدخول بنجاح");
+				localStorage.setItem("user", JSON.stringify(response.data.user));
+				localStorage.setItem("token", response.data.token);
+				// we need to wait to abit before redirecting
+				setTimeout(() => {
+					window.location.href = "/home";
+				}, 2000);
 			})
 			.catch((error) => {
 				console.error("Error during login:", error);
