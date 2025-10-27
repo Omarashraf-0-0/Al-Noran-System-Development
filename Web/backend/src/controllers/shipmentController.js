@@ -98,6 +98,15 @@ const getShipmentStatusByNumber46 = async (req, res) => {
 		res.status(500).json({ message: error.message });
 	}
 };
+const getShipmentrelatedToEmployee = async (req, res) => {
+	try {
+		const employeeId = req.params.employeeId;
+		const shipments = await Shipment.find({ assignedTo: employeeId });
+		res.json(shipments);
+	} catch (error) {
+		res.status(500).json({ message: error.message });
+	}
+};
 module.exports = {
 	createShipment,
 	getAllShipments,
@@ -106,4 +115,5 @@ module.exports = {
 	deleteShipment,
 	getShipmentStatusByNumber46,
 	getShipmentStatusByAcid,
+	getShipmentrelatedToEmployee,
 };

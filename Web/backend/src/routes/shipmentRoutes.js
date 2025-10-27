@@ -7,6 +7,7 @@ const {
   getShipmentStatusByAcid,
   getShipmentStatusByNumber46,
   deleteShipment,
+  getShipmentrelatedToEmployee,
 } = require("../controllers/shipmentController");
 
 const router = express.Router();
@@ -18,5 +19,5 @@ router.get("/:acid", getShipmentByAcid);
 router.get("/status/number46/:number46", getShipmentStatusByNumber46);
 router.patch("/:acid", updateShipmentStatus);
 router.delete("/:acid", deleteShipment);
-
+router.get("/employee/:employeeId", getShipmentrelatedToEmployee);
 module.exports = router;
