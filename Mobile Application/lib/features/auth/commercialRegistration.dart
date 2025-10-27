@@ -7,8 +7,7 @@ import '../../core/network/api_service.dart';
 class CommercialRegistrationPage extends StatefulWidget {
   final Map<String, dynamic> userData;
 
-  const CommercialRegistrationPage({Key? key, required this.userData})
-    : super(key: key);
+  const CommercialRegistrationPage({super.key, required this.userData});
 
   @override
   State<CommercialRegistrationPage> createState() =>
