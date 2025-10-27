@@ -30,14 +30,16 @@ public class OTPVerificationController {
 
     @FXML private TextField otp1, otp2, otp3, otp4, otp5;
     private String userEmail;
+    @FXML private TextField newPasswordField, confirmedNewPassword;
 
     @FXML
     private void initialize() {
-        restrictToSingleDigit(otp1);
-        restrictToSingleDigit(otp2);
-        restrictToSingleDigit(otp3);
-        restrictToSingleDigit(otp4);
-        restrictToSingleDigit(otp5);
+        // only attach listeners if otp fields are present in this view
+        if (otp1 != null) restrictToSingleDigit(otp1);
+        if (otp2 != null) restrictToSingleDigit(otp2);
+        if (otp3 != null) restrictToSingleDigit(otp3);
+        if (otp4 != null) restrictToSingleDigit(otp4);
+        if (otp5 != null) restrictToSingleDigit(otp5);
     }
 
     private void restrictToSingleDigit(TextField field) {
@@ -97,7 +99,23 @@ public class OTPVerificationController {
 
         try {
             if (verifyOtp(userEmail, otp)) {
-                showResetPasswordDialog(event);
+                // load reset page as a full scene controlled by this controller
+                try {
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/reset-passowrd.fxml"));
+                    Parent root = loader.load();
+                    // controller will be OTPVerificationController instance used by the reset scene
+                    OTPVerificationController controller = loader.getController();
+                    controller.setUserEmail(this.userEmail);
+
+                    Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                    stage.setScene(new Scene(root));
+                    stage.show();
+                    return;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    showAlert(Alert.AlertType.ERROR, "خطأ", "تعذر فتح صفحة إعادة تعيين كلمة المرور.");
+                    return;
+                }
             } else {
                 showAlert(Alert.AlertType.ERROR, "خطأ", "رمز التحقق غير صحيح");
             }
@@ -139,37 +157,46 @@ public class OTPVerificationController {
 
 
     private void showResetPasswordDialog(ActionEvent event) {
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("إعادة تعيين كلمة المرور");
-        dialog.setHeaderText("أدخل كلمة المرور الجديدة");
+        // deprecated: we now use a full scene (reset-passowrd.fxml) instead of a dialog
+    }
 
-        VBox box = new VBox(10);
-        PasswordField newPass = new PasswordField();
-        PasswordField confirmPass = new PasswordField();
-        box.getChildren().addAll(new Label("كلمة المرور الجديدة:"), newPass,
-                new Label("تأكيد كلمة المرور:"), confirmPass);
-        dialog.getDialogPane().setContent(box);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+    @FXML
+    private void onSendCodeClicked(ActionEvent event) {
+        // Handle reset password submission from reset-passowrd.fxml
+        if (newPasswordField == null || confirmedNewPassword == null) {
+            showAlert(Alert.AlertType.ERROR, "خطأ", "حقل كلمة المرور غير متوفر");
+            return;
+        }
 
-        dialog.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                if (!newPass.getText().equals(confirmPass.getText())) {
-                    showAlert(Alert.AlertType.ERROR, "خطأ", "كلمات المرور غير متطابقة");
-                    return;
-                }
+        String newPass = newPasswordField.getText();
+        String confirm = confirmedNewPassword.getText();
+        if (newPass == null || newPass.isBlank()) {
+            showAlert(Alert.AlertType.ERROR, "خطأ", "يرجى إدخال كلمة المرور الجديدة");
+            return;
+        }
+        if (!newPass.equals(confirm)) {
+            showAlert(Alert.AlertType.ERROR, "خطأ", "كلمات المرور غير متطابقة");
+            return;
+        }
 
+        try {
+            if (resetPassword(userEmail, newPass)) {
+                showAlert(Alert.AlertType.INFORMATION, "نجاح", "تم تحديث كلمة المرور");
+                // navigate to dashboard after successful reset
                 try {
-                    if (resetPassword(userEmail, newPass.getText())) {
-                        showAlert(Alert.AlertType.INFORMATION, "نجاح", "تم تحديث كلمة المرور");
-                        navigateToLogin(event);
-                    } else {
-                        showAlert(Alert.AlertType.ERROR, "خطأ", "فشل في تحديث كلمة المرور");
-                    }
-                } catch (Exception e) {
-                    showAlert(Alert.AlertType.ERROR, "خطأ في الاتصال", "تعذر الاتصال بالخادم");
+                    Parent root = FXMLLoader.load(getClass().getResource("/noran/desktop/dashboard.fxml"));
+                    Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                    stage.setScene(new Scene(root));
+                    stage.show();
+                } catch (IOException ioEx) {
+                    showAlert(Alert.AlertType.ERROR, "خطأ", "تعذر فتح لوحة التحكم");
                 }
+            } else {
+                showAlert(Alert.AlertType.ERROR, "خطأ", "فشل في تحديث كلمة المرور");
             }
-        });
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "خطأ في الاتصال", "تعذر الاتصال بالخادم");
+        }
     }
 
     public boolean resetPassword(String email, String newPassword) {

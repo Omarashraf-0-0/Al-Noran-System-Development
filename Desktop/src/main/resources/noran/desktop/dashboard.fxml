@@ -4,7 +4,7 @@
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="700" prefWidth="1100" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.HelloController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="820" prefWidth="1200" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.DashboardController">
 
     <!-- RIGHT SIDEBAR (moved to right side for RTL layout) -->
     <left>
@@ -17,7 +17,7 @@
             <Button fx:id="btnRecentOps" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="آخر العمليات المنفذة" />
             <Button fx:id="btnClients" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أرشيف العملاء" />
             <Button fx:id="btnFiles" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أرشيف الملفات" />
-            <Button fx:id="btnInvoices" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الفواتير" />
+            <Button fx:id="btnInvoices" onAction="#invoice_management_btn_handle" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الفواتير" />
             <Button fx:id="btnPermissions" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الصلاحيات" />
         </VBox>
 
@@ -28,7 +28,7 @@
 
     <!-- TOP BAR -->
     <top>
-    <HBox alignment="CENTER" maxWidth="Infinity" spacing="40" style="-fx-padding: 12 0; -fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0.0, 0, 2); -fx-background-radius: 0;">
+    <HBox alignment="CENTER" maxWidth="Infinity" spacing="75" style="-fx-padding: 12 0; -fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0.0, 0, 2); -fx-background-radius: 0;">
 
             <!-- logo in top bar (right side) -->
                 <ImageView fx:id="logoImage" fitHeight="112" fitWidth="200" pickOnBounds="true" preserveRatio="true" style="-fx-alignment: LEFT">
