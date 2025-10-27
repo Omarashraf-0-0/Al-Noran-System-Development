@@ -26,7 +26,7 @@ void main() {
 }
 
 class NoranSmartApp extends StatelessWidget {
-  const NoranSmartApp({Key? key}) : super(key: key);
+  const NoranSmartApp({super.key});
 
   @override
   Widget build(BuildContext context) {
