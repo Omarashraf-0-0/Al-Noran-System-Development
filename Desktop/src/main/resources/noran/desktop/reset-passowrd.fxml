@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.geometry.Insets?>
+<AnchorPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            prefHeight="600.0" prefWidth="1000.0"
+            style="-fx-background-image: url('noran/desktop/images/background.png');
+                   -fx-background-size: cover;
+                   -fx-background-position: center center;
+                   -fx-background-repeat: no-repeat;"
+            fx:controller="noran.desktop.Controllers.OTPVerificationController">
+
+    <!-- Background -->
+    <ImageView fitHeight="768.0" fitWidth="1366.0" pickOnBounds="true" preserveRatio="false">
+        <image>
+            <Image url="@images/background.png" />
+        </image>
+    </ImageView>
+
+    <!-- Main Card -->
+    <VBox layoutX="400.0" layoutY="160.0"
+          prefWidth="500.0" prefHeight="300.0" spacing="25"
+          alignment="CENTER"
+          style="-fx-background-color: rgba(199,230,234,0.6);
+                 -fx-background-radius: 20;
+                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 5,0,0,3);"
+          nodeOrientation="RIGHT_TO_LEFT">
+
+        <padding>
+            <Insets top="30" right="40" bottom="30" left="40"/>
+        </padding>
+
+        <!-- Back Link in HBox aligned to TOP_LEFT -->
+        <HBox alignment="TOP_RIGHT" prefWidth="500" >
+            <Hyperlink text="الرجوع" onAction="#onBackClicked"
+                       style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
+                          -fx-font-size: 13; -fx-text-fill: #690000;
+                          -fx-underline: true;" />
+        </HBox>
+
+        <!-- Title -->
+        <Label text="نسيت كلمة المرور"
+               style="-fx-font-family: 'Poppins'; -fx-font-weight: 700;
+                  -fx-font-size: 20; -fx-text-fill: #690000;" />
+
+        <!-- Email Field -->
+        <GridPane hgap="10" vgap="10" nodeOrientation="RIGHT_TO_LEFT" alignment="CENTER">
+            <Label text="كلمة المرور الجديدة"
+                   style="-fx-font-family: 'Poppins'; -fx-font-weight: 600;
+                      -fx-font-size: 14; -fx-text-fill: #690000;
+                      -fx-alignment: CENTER-RIGHT;" GridPane.rowIndex="0" />
+
+            <TextField fx:id="newPasswordField" promptText="*******"
+                       GridPane.rowIndex="1"
+                       prefWidth="300"
+                       nodeOrientation="RIGHT_TO_LEFT"
+                       style="-fx-font-family: 'Poppins'; -fx-font-size: 14;
+                          -fx-background-radius: 10;
+                          -fx-alignment: CENTER-RIGHT;
+                          -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" />
+
+        </GridPane>
+        <GridPane hgap="10" vgap="10" nodeOrientation="RIGHT_TO_LEFT" alignment="CENTER">
+            <Label text="تأكيد كلمة المرور"
+                   style="-fx-font-family: 'Poppins'; -fx-font-weight: 600;
+                      -fx-font-size: 14; -fx-text-fill: #690000;
+                      -fx-alignment: CENTER-RIGHT;" GridPane.rowIndex="0" />
+
+            <TextField fx:id="confirmedNewPassword" promptText="*******"
+                       GridPane.rowIndex="1"
+                       prefWidth="300"
+                       nodeOrientation="RIGHT_TO_LEFT"
+                       style="-fx-font-family: 'Poppins'; -fx-font-size: 14;
+                          -fx-background-radius: 10;
+                          -fx-alignment: CENTER-RIGHT;
+                          -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" />
+        </GridPane>
+
+        <!-- Send Button -->
+        <Button fx:id="sendCodeButton" text="تغيير كلمة المرور" onAction="#onSendCodeClicked"
+                prefWidth="200" prefHeight="35"
+                style="-fx-font-family: 'Poppins'; -fx-font-weight: 600;
+                   -fx-font-size: 14; -fx-background-color: #690000;
+                   -fx-background-radius: 8; -fx-text-fill: white;" />
+    </VBox>
+
+
+    <!-- Logo -->
+    <ImageView fitHeight="120.0" fitWidth="180.0"
+               layoutX="40.0" layoutY="20.0"
+               preserveRatio="true" pickOnBounds="true">
+        <image>
+            <Image url="@images/Logo.png" />
+        </image>
+    </ImageView>
+
+</AnchorPane>

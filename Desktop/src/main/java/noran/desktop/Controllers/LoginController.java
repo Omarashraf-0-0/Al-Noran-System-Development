@@ -61,22 +61,20 @@ public class LoginController {
                     if (json.has("user") && json.get("user") instanceof JSONObject) {
                         JSONObject u = json.getJSONObject("user");
                         extractedId = u.optString("id", u.optString("_id", u.optString("userId", "")));
-                        extractedName = u.optString("name", u.optString("username", u.optString("email", "")));
+                        extractedName = u.optString("name", u.optString("username", u.optString("fullname", "")));
                     } else {
                         // try top-level fields as fallback
                         extractedId = json.optString("id", json.optString("_id", ""));
-                        extractedName = json.optString("name", json.optString("username", json.optString("email", "")));
+                        extractedName = json.optString("name", json.optString("username", json.optString("username", "")));
                     }
 
                     // create and store User in session
                     noran.desktop.Controllers.User loggedInUser = new noran.desktop.Controllers.User(extractedId, extractedName);
                     noran.desktop.AppSession.getInstance().setCurrentUser(loggedInUser);
-
                 } catch (Exception ex) {
                     // don't fail login if parsing user info fails — keep going
                     ex.printStackTrace();
                 }
-
                 showAlert(Alert.AlertType.INFORMATION, "تم تسجيل الدخول", "تم تسجيل الدخول بنجاح!");
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/dashboard.fxml"));
                 Parent root = loader.load();
