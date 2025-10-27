@@ -2,3 +2,7 @@ node_modules
 logs 
 ./Web/backend/.env
 uploads/
+Web\backend\.env
+Web/backend/.env
+Web/backend/.env
+Web/backend/.env
