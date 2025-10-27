@@ -5,7 +5,7 @@
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="820" prefWidth="1200" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.HelloController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="700" prefWidth="1200" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.HelloController">
     <stylesheets>
         <String fx:value="@invoices-table.css" />
     </stylesheets>
@@ -15,8 +15,8 @@
     <VBox fx:id="sidebar" alignment="TOP_RIGHT" prefWidth="260" spacing="14" style="-fx-background-color: white; -fx-padding: 18; -fx-border-color: transparent;">
 
         <!-- menu as buttons -->
-        <VBox alignment="TOP_CENTER" spacing="6">
-            <Button fx:id="btnInvoices" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="لوحة التحكم" />
+        <VBox alignment="TOP_CENTER" spacing="16">
+            <Button fx:id="btnInvoices" onAction="#onDashboardClick" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="لوحة التحكم" />
             <Button fx:id="btnCurrentOps" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="العمليات الحالية" />
             <Button fx:id="btnRecentOps" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="آخر العمليات المنفذة" />
             <Button fx:id="btnClients" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أرشيف العملاء" />
@@ -134,13 +134,12 @@
                     <!-- actual TableView for invoice items -->
                     <TableView fx:id="invoicesTable" prefHeight="360" prefWidth="880" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css">
                         <columns>
-                            <TableColumn fx:id="colDescription" prefWidth="460" text="الوصف" style="-fx-background-color: #c91e2b" />
-                            <TableColumn fx:id="colPrice" prefWidth="200" text="الثمن" style="-fx-background-color: #c91e2b" />
-                            <TableColumn fx:id="colDate" prefWidth="220" text="التاريخ" style="-fx-background-color: #c91e2b" />
+                            <TableColumn fx:id="colDescription" prefWidth="460" text="الوصف"  />
+                            <TableColumn fx:id="colPrice" prefWidth="200" text="الثمن"  />
+                            <TableColumn fx:id="colDate" prefWidth="220" text="التاريخ"  />
                         </columns>
                     </TableView>
 
-                    <Region VBox.vgrow="ALWAYS" />
 
                     <HBox alignment="CENTER_RIGHT" spacing="12" style="-fx-padding: 12 0 0 0;">
                         <Button style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="اضافة عنصر جديد +" />
