@@ -78,6 +78,7 @@ const createUser = asyncHandler(async (req, res) => {
         type: user.type
       }
     });
+    console.log(`New user registered: ${user})`);
   } else {
     res.status(400).json({ message: 'Invalid user data received' });
   }
