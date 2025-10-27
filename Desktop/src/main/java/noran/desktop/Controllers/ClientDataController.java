@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
 
-public class DashboardController implements Initializable {
+public class ClientDataController implements Initializable {
     @FXML
     Label userNameLabel;
     @FXML
@@ -35,11 +35,8 @@ public class DashboardController implements Initializable {
 
     }
 
-    public void onSearch(ActionEvent actionEvent) {
-    }
-
-    public void invoice_management_btn_handle(ActionEvent event) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/client-data.fxml"));
+    public void onDashboardClick(ActionEvent event) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/dashboard.fxml"));
         Parent root = loader.load();
         Scene scene = new Scene(root);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
