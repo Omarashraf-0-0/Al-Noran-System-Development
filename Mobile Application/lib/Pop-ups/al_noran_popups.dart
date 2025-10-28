@@ -381,29 +381,78 @@ class AlNoranPopups {
           onWillPop: () async => false,
           child: Directionality(
             textDirection: TextDirection.rtl,
-            child: AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              content: Container(
-                padding: const EdgeInsets.all(20),
+            child: Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AlNoranColors.primary,
-                      ),
-                      strokeWidth: 3,
+                    // Custom Loading Animation
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Outer Circle
+                        SizedBox(
+                          width: 70,
+                          height: 70,
+                          child: CircularProgressIndicator(
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              AlNoranColors.primary,
+                            ),
+                            strokeWidth: 4,
+                            backgroundColor: AlNoranColors.primary.withOpacity(
+                              0.1,
+                            ),
+                          ),
+                        ),
+                        // Inner Icon/Logo
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AlNoranColors.primary.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.flight_takeoff_rounded,
+                            color: AlNoranColors.primary,
+                            size: 24,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     Text(
                       message,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 16,
                         fontFamily: 'Cairo',
-                        color: AlNoranColors.grey,
+                        fontWeight: FontWeight.w600,
+                        color: AlNoranColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'الرجاء الانتظار...',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontFamily: 'Cairo',
+                        color: AlNoranColors.grey.withOpacity(0.7),
                       ),
                     ),
                   ],

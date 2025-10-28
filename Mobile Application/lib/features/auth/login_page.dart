@@ -3,9 +3,12 @@ import 'register_page.dart';
 import 'ForgotPasswordPage.dart';
 import '../../core/network/api_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
+import '../../core/widgets/al_noran_loading.dart';
+import '../../util/validators.dart';
+import '../home/homePage.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -15,7 +18,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -295,14 +298,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         child:
                             _isLoading
-                                ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
+                                ? const AlNoranButtonLoading()
                                 : const Text(
                                   'تسجيل الدخول',
                                   style: TextStyle(
@@ -387,9 +383,9 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     try {
-      // Call API
+      // Call API (normalize email to lowercase)
       final result = await ApiService.login(
-        email: _emailController.text.trim(),
+        email: AlNoranValidators.normalizeEmail(_emailController.text),
         password: _passwordController.text.trim(),
       );
 
@@ -401,26 +397,26 @@ class _LoginPageState extends State<LoginPage> {
       if (result['success']) {
         // نجح تسجيل الدخول
         if (mounted) {
-          await AlNoranPopups.showSuccess(
-            context: context,
-            title: 'مرحباً بك!',
-            message: result['message'] ?? 'تم تسجيل الدخول بنجاح',
-            buttonText: 'المتابعة',
-            onPressed: () {
-              // هنا تقدر تنقل للصفحة الرئيسية
-              // Navigator.pushReplacement(
-              //   context,
-              //   MaterialPageRoute(builder: (context) => HomePage()),
-              // );
-            },
-          );
+          // الحصول على اسم المستخدم من البيانات
+          String userName = 'مستخدم';
+          if (result['data'] != null && result['data']['user'] != null) {
+            userName =
+                result['data']['user']['fullname'] ??
+                result['data']['user']['username'] ??
+                'مستخدم';
+          }
 
-          // أو استخدم SnackBar للرسالة السريعة
-          // AlNoranPopups.showSnackBar(
-          //   context: context,
-          //   message: 'تم تسجيل الدخول بنجاح',
-          //   type: PopupType.success,
-          // );
+          // الانتقال للصفحة الرئيسية
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => HomePage(
+                    userName: userName,
+                    userEmail: _emailController.text,
+                  ),
+            ),
+          );
         }
       } else {
         // فشل تسجيل الدخول
