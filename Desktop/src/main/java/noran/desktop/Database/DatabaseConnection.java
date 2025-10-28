@@ -21,43 +21,50 @@ public class DatabaseConnection {
             String url = "jdbc:sqlite:" + DB_PATH;
             conn = DriverManager.getConnection(url);
 
-            // ✅ Create table if not exists (added taxNumber and rank)
-            String sql = "CREATE TABLE IF NOT EXISTS users ("
-                    + "id TEXT PRIMARY KEY, "
-                    + "fullname TEXT NOT NULL, "
-                    + "username TEXT NOT NULL UNIQUE, "
-                    + "phone TEXT, "
-                    + "email TEXT NOT NULL UNIQUE, "
-                    + "password TEXT NOT NULL, "
-                    + "type TEXT CHECK(type IN ('client', 'employee')), "
-                    + "active INTEGER DEFAULT 1, "
-                    + "clientType TEXT, "
-                    + "ssn TEXT, "
-                    + "taxNumber TEXT, " // ✅ New column
-                    + "employeeType TEXT, "
-                    + "verified INTEGER DEFAULT 0, "
-                    + "rank TEXT CHECK(rank IN ('low', 'med', 'high') OR rank IS NULL) DEFAULT NULL, " // ✅ New column with enum check
-                    + "createdAt INTEGER, "
-                    + "updatedAt INTEGER, "
-                    + "version INTEGER DEFAULT 0"
-                    + ");";
-
-            // ✅ Execute SQL safely
             try (Statement stmt = conn.createStatement()) {
+                // ⚠️ Drop the users table if it exists
+                stmt.execute("DROP TABLE IF EXISTS users;");
+                System.out.println("🗑️  Old 'users' table deleted.");
+
+                // ✅ Recreate the users table from scratch
+                String sql = """
+                    CREATE TABLE users (
+                        _id TEXT PRIMARY KEY,
+                        fullname TEXT,
+                        username TEXT UNIQUE,
+                        phone TEXT,
+                        email TEXT UNIQUE,
+                        password TEXT,
+                        type TEXT CHECK(type IN ('client', 'employee')),
+                        active BOOLEAN DEFAULT 1,
+                        taxNumber TEXT,
+                        rank TEXT CHECK(rank IN ('low', 'med', 'high') OR rank IS NULL) DEFAULT NULL,
+                        clientType TEXT,
+                        ssn TEXT,
+                        employeeType TEXT,
+                        verified BOOLEAN DEFAULT 0,
+                        createdAt TEXT,
+                        updatedAt TEXT,
+                        version INTEGER DEFAULT 0
+                    );
+                """;
+
                 stmt.execute(sql);
-                System.out.println("✅ Successfully created or verified 'users' table structure");
-            } catch (SQLException e) {
-                e.printStackTrace();
+                System.out.println("✅ 'users' table recreated successfully.");
             }
 
-            System.out.println("✅ Database created or opened at: " + dbFile.getAbsolutePath());
+            System.out.println("✅ Database ready at: " + dbFile.getAbsolutePath());
+
+        } catch (SQLException e) {
+            System.err.println("❌ SQL Error: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("❌ Database connection failed: " + e.getMessage());
+            System.err.println("❌ Database connection failed: " + e.getMessage());
         }
+
         return conn;
     }
 
     public static void main(String[] args) {
-        connect(); // Run once to create the file and table
+        connect(); // Run once to recreate table
     }
 }
