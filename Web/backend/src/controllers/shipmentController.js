@@ -202,6 +202,27 @@ const getShipmentrelatedToEmployee = async (req, res) => {
 		res.status(500).json({ message: error.message });
 	}
 };
+
+
+const addShipments = async (req,res)=>{
+	const shipmentsData = req.body;
+
+    if (!Array.isArray(shipmentsData)) {
+      return res.status(400).json({ message: 'Expected an array of shipments' });
+    }
+	try{
+		const shipments = await Shipment.insertMany(shipmentsData,{ ordered: false });
+
+		res.status(201).json({
+			message: `${shipments.length} shipments saved successfully`,
+			shipments,
+		});
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to save shipments' });
+  }
+};
+
 module.exports = {
 	createShipment,
 	getAllShipments,
@@ -211,4 +232,5 @@ module.exports = {
 	getShipmentStatusByNumber46,
 	getShipmentStatusByAcid,
 	getShipmentrelatedToEmployee,
+	addShipments
 };
