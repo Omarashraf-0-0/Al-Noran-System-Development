@@ -1,6 +1,13 @@
 const mongoose = require('mongoose');
 
 const acidRequestSchema = new mongoose.Schema({
+  // ✅ User ID reference
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+
   // ✅ بيانات المورد (فاتورة مبدئية)
   supplier: {
     name: { type: String, required: true },
@@ -16,6 +23,12 @@ const acidRequestSchema = new mongoose.Schema({
     weight: { type: Number, required: true },       // الوزن المبدئي
     customsItem: { type: String, required: true },  // بند جمركي (غير أساسي)
   },
+
+  // ✅ Uploaded documents
+  uploads: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Upload',
+  }],
 
   // ✅ بيانات الطلب العامة
   requestDate: { type: Date, default: Date.now },

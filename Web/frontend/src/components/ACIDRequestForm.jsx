@@ -5,7 +5,16 @@ import Button from "./Button";
 import FieldRow from "./FieldRow";
 import { Link } from "react-router";
 
-const ACIDRequestForm = ({ onSubmit }) => {
+const ACIDRequestForm = ({ 
+	onSubmit,
+	selectedFile,
+	uploadedInvoice, 
+	uploading, 
+	progress, 
+	onFileSelect, 
+	onDeleteUpload, 
+	onViewDocument 
+}) => {
 	const [formData, setFormData] = React.useState({
         preliminaryInvoice: "",
         goods: {
@@ -26,10 +35,24 @@ const ACIDRequestForm = ({ onSubmit }) => {
 	});
 
 	const handleInputChange = (field) => (e) => {
-		setFormData((prev) => ({
-			...prev,
-			[field]: e.target.value,
-		}));
+		const value = e.target.value;
+		
+		// Handle nested properties (e.g., "goods.weight" or "supplier.name")
+		if (field.includes('.')) {
+			const [parent, child] = field.split('.');
+			setFormData((prev) => ({
+				...prev,
+				[parent]: {
+					...prev[parent],
+					[child]: value,
+				},
+			}));
+		} else {
+			setFormData((prev) => ({
+				...prev,
+				[field]: value,
+			}));
+		}
 	};
 
 	const handleCheckboxChange = (field) => (e) => {
@@ -56,20 +79,100 @@ const ACIDRequestForm = ({ onSubmit }) => {
 			<Spacer size="xl" />
 
 			<form onSubmit={handleSubmit} className="w-full">
-				{/* we need upload preliminaryInvoice input field*/}
-				<InputField
-					id="preliminaryInvoice"
-					type="file"
-					label="فاتورة مبدئية "
-					placeholder="فاتورة مبدئية "
-					value={formData.preliminaryInvoice}
-					onChange={handleInputChange("preliminaryInvoice")}
-					required
-				/>
+			{/* Proforma Invoice Upload Card */}
+			<div 
+				className={`border-2 rounded-lg p-4 mb-6 transition-all ${
+					selectedFile || uploadedInvoice
+						? "border-green-500 bg-green-50"
+						: "border-gray-300 bg-white hover:border-blue-400"
+				}`}
+				dir="rtl"
+			>
+				<div className="flex items-center justify-between mb-2">
+					<div className="flex items-center gap-3">
+						<span className="text-2xl">
+							{uploadedInvoice ? "✅" : selectedFile ? "📄" : "📎"}
+						</span>
+						<div>
+							<h3 className="font-semibold text-gray-800">
+								فاتورة مبدئية <span className="text-red-500">*</span>
+							</h3>
+							<span className="text-xs text-gray-500">
+								(PDF أو صورة - حد أقصى 10 ميجابايت)
+							</span>
+						</div>
+					</div>
 
+					{selectedFile || uploadedInvoice ? (
+						<div className="flex gap-2">
+							{uploadedInvoice && (
+								<button
+									type="button"
+									onClick={onViewDocument}
+									className="btn btn-sm btn-info text-white"
+								>
+									👁️ عرض
+								</button>
+							)}
+							<button
+								type="button"
+								onClick={onDeleteUpload}
+								className="btn btn-sm btn-error text-white"
+							>
+								🗑️ حذف
+							</button>
+						</div>
+					) : (
+						<label className="btn btn-sm btn-primary text-white">
+							📤 اختر ملف
+							<input
+								type="file"
+								className="hidden"
+								accept=".pdf,.jpg,.jpeg,.png"
+								onChange={(e) => onFileSelect(e.target.files[0])}
+								disabled={uploading}
+							/>
+						</label>
+					)}
+				</div>
+
+				{/* Upload Progress Bar */}
+				{uploading && (
+					<div className="mt-3">
+						<div className="w-full bg-gray-200 rounded-full h-2">
+							<div
+								className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+								style={{ width: `${progress}%` }}
+							></div>
+						</div>
+						<p className="text-xs text-gray-600 mt-1 text-center">
+							{progress}%
+						</p>
+					</div>
+				)}
+
+				{/* File Info */}
+				{selectedFile && !uploadedInvoice && (
+					<div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded">
+						<p>📄 {selectedFile.name}</p>
+						<p className="text-gray-500">
+							الحجم: {(selectedFile.size / 1024 / 1024).toFixed(2)} ميجابايت
+						</p>
+						<p className="text-blue-600 font-semibold mt-1">
+							⏳ سيتم الرفع عند الضغط على "إرسال الطلب"
+						</p>
+					</div>
+				)}
 				
-
-				{/* رقم الهاتف ورقم الضريبة - جنب بعض في الشاشات الكبيرة */}
+				{uploadedInvoice && (
+					<div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded">
+						<p>📄 {uploadedInvoice.filename}</p>
+						<p className="text-gray-500">
+							تم الرفع: {new Date(uploadedInvoice.uploadedAt).toLocaleDateString("ar-EG")}
+						</p>
+					</div>
+				)}
+			</div>				{/* رقم الهاتف ورقم الضريبة - جنب بعض في الشاشات الكبيرة */}
 				<FieldRow columns={2}>
                     <InputField
                         id="goods.weight"

@@ -54,6 +54,10 @@ const generateS3Key = ({
 		case "registration":
 			fullPath = `${basePath}/registration/${uniqueFilename}`;
 			break;
+		case "acidrequest":
+			// ACID requests don't need relatedId initially (created during request)
+			fullPath = `${basePath}/acidrequest/${uniqueFilename}`;
+			break;
 		case "acid":
 			if (!relatedId) throw new Error("relatedId required for acid category");
 			fullPath = `${basePath}/acid/${relatedId}/${uniqueFilename}`;
