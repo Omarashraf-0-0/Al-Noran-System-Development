@@ -7,7 +7,7 @@
 
 <BorderPane nodeOrientation="RIGHT_TO_LEFT"
             prefHeight="780"
-            prefWidth="1200"
+            prefWidth="1250"
             style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;"
             xmlns="http://javafx.com/javafx/17.0.12"
             xmlns:fx="http://javafx.com/fxml/1"
