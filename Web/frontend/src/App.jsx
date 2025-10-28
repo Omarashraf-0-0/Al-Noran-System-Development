@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route } from "react-router";
-import HomePage from "./pages/HomePage";
+import TrackingPage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ForgetPasswordPage from "./pages/ForgetPasswordPage";
@@ -24,7 +24,7 @@ const App = () => {
 				<Route path="/forgetpassword" element={<ForgetPasswordPage />} />
 				<Route path="/verify-otp" element={<OTPPage />} />
 				<Route path="/resetpassword" element={<ResetPasswordPage />} />
-				<Route path="/home" element={<HomePage />} />
+				<Route path="/home" element={<TrackingPage />} />
 				<Route path="/acidrequest" element={<ACIDRequestPage />} />
 				<Route path="/upload-documents" element={<DocumentUploadPage />} />
 				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
