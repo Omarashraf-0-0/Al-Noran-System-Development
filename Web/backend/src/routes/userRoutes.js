@@ -5,10 +5,11 @@ const {
   createUser,
   updateUser,
   deleteUser,
-  changePassword
+  changePassword,
+  addUsers
 } = require('../controllers/userController');
 
-router.route('/')
+router.route('/getAll')
   .get(getAllUsers)
   .post(createUser);
 
@@ -19,5 +20,8 @@ router.route('/:id')
   .patch(updateUser)
   .put(updateUser) // Add PUT support for mobile app
   .delete(deleteUser);
+
+router.route('/addUsers')
+  .post(addUsers);
 
 module.exports = router;

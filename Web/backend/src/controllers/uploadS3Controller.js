@@ -76,6 +76,7 @@ const uploadFile = async (req, res) => {
 
 		const validCategories = [
 			"registration",
+			"acidrequest",
 			"acid",
 			"shipment",
 			"invoice",
@@ -384,7 +385,11 @@ const getUploads = async (req, res) => {
 					};
 				} catch (error) {
 					console.error(`Error generating presigned URL for ${upload.s3Key}:`, error);
-					return upload;
+					return {
+						id: upload._id,
+						_id: upload._id,
+						...upload,
+					};
 				}
 			})
 		);
@@ -408,6 +413,7 @@ const getUploads = async (req, res) => {
 const getUploadById = async (req, res) => {
 	try {
 		const { id } = req.params;
+		console.log("Fetching upload by ID:", id);
 
 		const upload = await Upload.findById(id).populate(
 			"userId",
@@ -415,22 +421,43 @@ const getUploadById = async (req, res) => {
 		);
 
 		if (!upload) {
+			console.log("Upload not found:", id);
 			return res.status(404).json({ message: "Upload not found" });
 		}
 
-		// Generate presigned URL
+		console.log("Upload found:", upload.s3Key);
+
+		// Generate fresh presigned URL (valid for 1 hour)
 		const presignedUrl = await getPresignedUrl(upload.s3Key, 3600);
+		console.log("Presigned URL generated successfully");
 
 		res.status(200).json({
 			success: true,
 			upload: {
-				...upload.toObject(),
-				presignedUrl,
+				id: upload._id,
+				filename: upload.filename,
+				originalname: upload.originalname,
+				s3Key: upload.s3Key,
+				url: presignedUrl, // Fresh presigned URL
+				presignedUrl, // Also include as presignedUrl for backward compatibility
+				category: upload.category,
+				documentType: upload.documentType,
+				userType: upload.userType,
+				clientType: upload.clientType,
+				mimetype: upload.mimetype,
+				size: upload.size,
+				uploadedAt: upload.uploadedAt,
+				uploadedBy: upload.uploadedBy,
+				userId: upload.userId,
 			},
 		});
 	} catch (error) {
 		console.error("Get Upload By ID Error:", error);
-		res.status(500).json({ message: error.message || "Server error" });
+		console.error("Error stack:", error.stack);
+		res.status(500).json({ 
+			message: error.message || "Server error",
+			error: process.env.NODE_ENV === 'development' ? error.message : undefined
+		});
 	}
 };
 

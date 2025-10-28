@@ -78,6 +78,7 @@ const createUser = asyncHandler(async (req, res) => {
         type: user.type
       }
     });
+    console.log(`New user registered: ${user})`);
   } else {
     res.status(400).json({ message: 'Invalid user data received' });
   }
@@ -229,10 +230,34 @@ const changePassword = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Add multiple users
+// @route   POST /api/users/addUsers
+// @access  Private
+const addUsers = async (req, res) => {
+  const usersData = req.body;
+  if (!Array.isArray(usersData)) {
+    return res.status(400).json({ message: 'Expected an array of users' });
+  }
+  try {
+    const response = await User.insertMany(usersData, { ordered: false });
+    if (response) {
+      return res.status(200).json({
+        message: "Users saved successfully",
+        users: response
+      });
+    } else {
+      return res.status(400).json({ message: 'Invalid user data received' });
+    }
+  } catch (error) {
+    return res.status(500).json({ "error": error.message });
+  }
+};
+
 module.exports = {
   getAllUsers,
   createUser,
   updateUser,
   deleteUser,
-  changePassword
+  changePassword,
+  addUsers
 };

@@ -8,8 +8,7 @@ import '../../util/file_picker_helper.dart'; // FilePickerHelper for PDF support
 class PersonalRegistrationPage extends StatefulWidget {
   final Map<String, dynamic> userData;
 
-  const PersonalRegistrationPage({Key? key, required this.userData})
-    : super(key: key);
+  const PersonalRegistrationPage({super.key, required this.userData});
 
   @override
   State<PersonalRegistrationPage> createState() =>
