@@ -28,14 +28,11 @@
                 <Button fx:id="btnRecentOps" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="آخر العمليات المنفذة" />
                 <Button fx:id="btnClients" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أرشيف العملاء" />
                 <Button fx:id="btnFiles" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أرشيف الملفات" />
-                <Button maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 8 16; -fx-font-size: 14; -fx-background-radius: 8; -fx-alignment: CENTER_LEFT;" text="إدارة الفواتير" />
+                <Button maxWidth="Infinity" onAction="#invoice_management_btn_handle" mnemonicParsing="false" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 8 16; -fx-font-size: 14; -fx-background-radius: 8; -fx-alignment: CENTER_LEFT;" text="إدارة الفواتير" />
                 <Button fx:id="btnPermissions" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الصلاحيات" />
             </VBox>
 
-            <Region VBox.vgrow="ALWAYS" />
 
-            <!-- optional footer -->
-            <Label style="-fx-text-fill: #888; -fx-font-size: 11;" text="نسخة سطح المكتب" />
         </VBox>
     </left>
 
@@ -108,16 +105,16 @@
             <VBox spacing="8"
                   style="-fx-background-color: white; -fx-padding: 18; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);">
                 <HBox spacing="25">
-                    <Label text="اسم العميل:" style="-fx-font-weight: bold;" />
-                    <Label fx:id="clientNameLabel" text="—" />
-                    <Label text="الرقم الضريبي:" style="-fx-font-weight: bold;" />
-                    <Label fx:id="taxNumberLabel" text="—" />
+                    <Label text="" style="-fx-font-weight: bold;" />
+                    <Label fx:id="clientNameLabel" text="—" style="-fx-font-weight: bold;"/>
+                    <Label text="-" style="-fx-font-weight: bold;" />
+                    <Label fx:id="taxNumberLabel" text="—" style="-fx-font-weight: bold;"/>
                 </HBox>
                 <HBox spacing="25">
-                    <Label text="رقم الفاتورة:" style="-fx-font-weight: bold;" />
-                    <Label fx:id="invoiceNumberLabel" text="—" />
-                    <Label text="تاريخ الفاتورة:" style="-fx-font-weight: bold;" />
-                    <Label fx:id="invoiceDateLabel" text="—" />
+                    <Label text="" style="-fx-font-weight: bold;" />
+                    <Label fx:id="invoiceNumberLabel" text="—" style="-fx-font-weight: bold;"/>
+                    <Label text="" style="-fx-font-weight: bold;" />
+                    <Label fx:id="invoiceDateLabel" text="—" style="-fx-font-weight: bold;"/>
                 </HBox>
             </VBox>
 
@@ -131,30 +128,34 @@
 
             <!-- Invoices Table -->
             <StackPane style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 16; -fx-border-color: #f0f0f0; -fx-border-radius: 12;">
-                <ImageView fitWidth="800" mouseTransparent="true" opacity="0.07" preserveRatio="true">
+                <ImageView fitWidth="350" mouseTransparent="true" opacity="0.07" preserveRatio="true">
                     <image>
                         <Image url="@images/Logo.png" />
                     </image>
                 </ImageView>
 
                 <TableView fx:id="invoicesTable"
-                           prefHeight="400"
+                           prefHeight="350"
                            style="-fx-background-color: transparent;"
                            stylesheets="@invoices-table.css">
                     <columns>
                         <TableColumn fx:id="colDescription" text="الوصف" prefWidth="460" />
                         <TableColumn fx:id="colPrice" text="السعر" prefWidth="200" />
-                        <TableColumn fx:id="colDate" text="التاريخ" prefWidth="220" />
+                        <TableColumn fx:id="colDate" text="الحالة" prefWidth="220" />
                     </columns>
                 </TableView>
             </StackPane>
 
             <!-- Buttons -->
             <HBox alignment="CENTER_RIGHT" spacing="12" style="-fx-padding: 12 0 0 0;">
-                <Button style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="اضافة عنصر جديد +" />
+                <Button onAction="#addNewInvoiceRow" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="اضافة عنصر جديد +" />
                 <Button style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="تغيير حالة الفاتورة" />
+                <Button fx:id="deleteRowBtn"
+                        onAction="#deleteSelectedRow"
+                        style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="مسح العنصر" />
                 <Region HBox.hgrow="ALWAYS" />
-                <Button style="-fx-background-color: #eef2ff; -fx-text-fill: #2a2a2a; -fx-padding: 10 18; -fx-background-radius: 8;" text="تحميل الفاتورة" />
+                <Label fx:id="totalCost" style="-fx-font-weight: 600; -fx-font-size: 14;" text="المجموع الكلي :" />
+                <Button onAction="#downloadInvoicePDF" style="-fx-background-color: #eef2ff; -fx-text-fill: #2a2a2a; -fx-padding: 10 18; -fx-background-radius: 8;" text="تحميل الفاتورة" />
             </HBox>
 
         </VBox>
