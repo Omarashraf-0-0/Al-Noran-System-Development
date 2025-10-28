@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Search, MessageCircle, Plane, Ship, FileText, MapPin, Phone, Facebook, Twitter, Instagram, Globe, Menu, X, User, Bell } from 'lucide-react';
 
-import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-
+import Header from '../components/Header';
 // Tracking Hero Component
 const TrackingHero = ({ onSearch }) => {
   const [trackingNumber, setTrackingNumber] = useState('');
@@ -90,7 +89,7 @@ const CurrentShipments = () => {
     <div className="container mx-auto px-4 py-16" dir="rtl">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-3xl font-bold text-gray-800">الشحنات الحالية</h2>
-        <a href="/all-shipments" className="text-teal-600 hover:text-teal-700 font-semibold flex items-center space-x-reverse space-x-2 group">
+        <a href="/client-shipments" className="text-teal-600 hover:text-teal-700 font-semibold flex items-center space-x-reverse space-x-2 group">
           <span>رؤية الكل</span>
           <span className="group-hover:translate-x-1 transition-transform">←</span>
         </a>
@@ -146,7 +145,7 @@ const TrackingPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar />
+      <Header />
       <main className="flex-grow">
         <TrackingHero onSearch={handleSearch} />
         <QuickActions />

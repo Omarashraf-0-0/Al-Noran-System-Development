@@ -30,7 +30,7 @@ const LoginPage = () => {
 					// TODO: Change to /dashboard when dashboard is ready
 					switch (user.type) {
 						case "client":
-							window.location.href = "/upload-documents";
+							window.location.href = "/home";
 							break;
 						case "employee":
 							window.location.href = "/employeedashboard";
