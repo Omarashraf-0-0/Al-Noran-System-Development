@@ -6,6 +6,11 @@ const storage = multer.memoryStorage();
 
 // File filter
 const fileFilter = (req, file, cb) => {
+	console.log('📄 [Multer] File received:');
+	console.log('   - Original name:', file.originalname);
+	console.log('   - Mimetype:', file.mimetype);
+	console.log('   - Field name:', file.fieldname);
+	
 	const allowedMimetypes = [
 		"application/pdf",
 		"image/jpeg",
@@ -20,8 +25,11 @@ const fileFilter = (req, file, cb) => {
 	];
 
 	if (allowedMimetypes.includes(file.mimetype)) {
+		console.log('✅ [Multer] File type accepted');
 		cb(null, true);
 	} else {
+		console.log('❌ [Multer] File type REJECTED - mimetype:', file.mimetype);
+		console.log('   Allowed types:', allowedMimetypes);
 		cb(
 			new Error(
 				"Invalid file type. Only PDF, Images, Word, and Excel files are allowed"

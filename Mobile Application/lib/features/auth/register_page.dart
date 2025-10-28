@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/validators.dart';
+import '../../core/network/api_service.dart';
 import 'personalRegistration.dart';
 import 'commercialRegistration.dart';
 import 'factoryRegistration.dart';
@@ -323,6 +324,76 @@ class _RegisterPageState extends State<RegisterPage> {
         context: context,
         message: 'يجب الموافقة على الشروط والأحكام',
       );
+      return;
+    }
+
+    // ✅ التحقق من توفر اسم المستخدم والبريد الإلكتروني قبل المتابعة
+    print('🔍 جاري التحقق من توفر البيانات...');
+
+    // Show loading
+    if (mounted) {
+      AlNoranPopups.showLoading(
+        context: context,
+        message: 'جاري التحقق من البيانات...',
+      );
+    }
+
+    try {
+      final checkResult = await ApiService.checkAvailability(
+        username: _usernameController.text.trim(),
+        email: AlNoranValidators.normalizeEmail(_emailController.text),
+      );
+
+      // Dismiss loading
+      if (mounted) {
+        Navigator.pop(context);
+      }
+
+      print('📨 Response: $checkResult');
+
+      if (!checkResult['success']) {
+        // خطأ في الاتصال
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: checkResult['message'] ?? 'خطأ في الاتصال بالسيرفر',
+          );
+        }
+        return;
+      }
+
+      if (!checkResult['available']) {
+        // البيانات مستخدمة بالفعل
+        String fieldName =
+            checkResult['field'] == 'username'
+                ? 'اسم المستخدم'
+                : 'البريد الإلكتروني';
+
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: '$fieldName مستخدم بالفعل. من فضلك اختر $fieldName آخر',
+          );
+        }
+        return;
+      }
+
+      // ✅ البيانات متاحة - يمكن المتابعة
+      print('✅ البيانات متاحة - الانتقال لصفحة رفع المستندات');
+    } catch (e) {
+      // Dismiss loading if still showing
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+
+      print('❌ Exception during validation: $e');
+
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ أثناء التحقق. تأكد من اتصالك بالإنترنت',
+        );
+      }
       return;
     }
 

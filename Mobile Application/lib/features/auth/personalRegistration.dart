@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
 import '../../util/validators.dart';
+import '../../util/file_picker_helper.dart'; // FilePickerHelper for PDF support
 
 class PersonalRegistrationPage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -19,7 +19,6 @@ class PersonalRegistrationPage extends StatefulWidget {
 class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
   final TextEditingController _nationalIdController = TextEditingController();
   File? _powerOfAttorneyFile;
-  final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
 
   @override
@@ -319,115 +318,20 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
   }
 
   Future<void> _pickPowerOfAttorney() async {
-    // Show bottom sheet to choose between camera or gallery
-    final ImageSource? source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 16),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'اختر طريقة رفع الملف',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Cairo',
-                    color: Color(0xFF690000),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1ba3b6).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      color: Color(0xFF1ba3b6),
-                      size: 28,
-                    ),
-                  ),
-                  title: const Text(
-                    'التقاط صورة',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  onTap: () => Navigator.pop(context, ImageSource.camera),
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF690000).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.photo_library,
-                      color: Color(0xFF690000),
-                      size: 28,
-                    ),
-                  ),
-                  title: const Text(
-                    'اختيار من المعرض',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  onTap: () => Navigator.pop(context, ImageSource.gallery),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    try {
+      // استخدام FilePickerHelper الجديد اللي بيدعم PDF
+      final File? pickedFile = await FilePickerHelper.pickFile(context);
 
-    if (source != null) {
-      try {
-        final XFile? pickedFile = await _picker.pickImage(
-          source: source,
-          imageQuality: 80,
-        );
-
-        if (pickedFile != null) {
-          setState(() {
-            _powerOfAttorneyFile = File(pickedFile.path);
-          });
-        }
-      } catch (e) {
-        AlNoranPopups.showError(
-          context: context,
-          message: 'حدث خطأ أثناء اختيار الملف',
-        );
+      if (pickedFile != null) {
+        setState(() {
+          _powerOfAttorneyFile = pickedFile;
+        });
       }
+    } catch (e) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'حدث خطأ أثناء اختيار الملف',
+      );
     }
   }
 
@@ -489,52 +393,44 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
         return;
       }
 
-      // Get user ID from response
-      final userId = registerResult['data']?['user']?['_id'];
+      // JWT Token is automatically saved by ApiService.register
+      // Now we can upload to S3 using the token
 
-      if (userId != null) {
-        // Upload power of attorney document
-        final uploadResult = await ApiService.uploadDocument(
-          file: _powerOfAttorneyFile!,
-          uploadType: 'users',
-          userId: userId,
-          relatedTo: {'model': 'User', 'id': userId},
-          description: 'التوكيل - حساب شخصي',
-          tags: ['power_of_attorney', 'personal', 'registration'],
+      // Upload power of attorney document to S3
+      final uploadResult = await ApiService.uploadToS3(
+        file: _powerOfAttorneyFile!,
+        category: 'registration',
+        documentType: 'power_of_attorney',
+        description: 'التوكيل - حساب شخصي',
+        tags: ['power_of_attorney', 'personal', 'registration'],
+        userType: 'client',
+        clientType: 'personal',
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (uploadResult['success']) {
+        await AlNoranPopups.showSuccess(
+          context: context,
+          title: 'تم التسجيل بنجاح',
+          message:
+              'تم إنشاء حسابك وتحميل المستندات إلى السحابة بنجاح. سيتم مراجعة حسابك وتفعيله خلال 24 ساعة',
         );
 
-        setState(() {
-          _isLoading = false;
-        });
-
-        if (uploadResult['success']) {
-          await AlNoranPopups.showSuccess(
-            context: context,
-            title: 'تم التسجيل بنجاح',
-            message:
-                'تم إنشاء حسابك بنجاح. سيتم مراجعة المستندات وتفعيل حسابك خلال 24 ساعة',
-          );
-
-          if (mounted) {
-            // Navigate to login page
-            Navigator.of(
-              context,
-            ).pushNamedAndRemoveUntil('/login', (route) => false);
-          }
-        } else {
-          AlNoranPopups.showError(
-            context: context,
-            message:
-                'تم إنشاء الحساب ولكن فشل رفع التوكيل. يرجى المحاولة مرة أخرى',
-          );
+        if (mounted) {
+          // Navigate to login page
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil('/login', (route) => false);
         }
       } else {
-        setState(() {
-          _isLoading = false;
-        });
         AlNoranPopups.showError(
           context: context,
-          message: 'حدث خطأ أثناء إنشاء الحساب',
+          title: 'تحذير',
+          message:
+              'تم إنشاء الحساب ولكن فشل رفع التوكيل إلى السحابة. يرجى تسجيل الدخول ورفع المستندات من الإعدادات\n\nالخطأ: ${uploadResult['message']}',
         );
       }
     } catch (e) {

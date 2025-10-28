@@ -13,9 +13,14 @@ class ApiService {
       return 'http://localhost:3500';
     }
 
-    // لو موبايل حقيقي أو Emulator - استخدم IP اللابتوب
+    // لو Android (Emulator أو Physical Device)
     if (Platform.isAndroid) {
-      return 'http://192.168.1.12:3500'; // IP اللابتوب على نفس الشبكة
+      // للموبايل الحقيقي - استخدم IP اللابتوب على نفس الشبكة
+      // تأكد إن اللابتوب والموبايل على نفس WiFi
+      return 'http://192.168.1.8:3500';
+
+      // لو Emulator فقط، استخدم:
+      // return 'http://10.0.2.2:3500';
     }
 
     // لو iOS Simulator أو جهاز حقيقي
@@ -133,6 +138,47 @@ class ApiService {
     } catch (e) {
       return {
         'success': false,
+        'message': 'خطأ في الاتصال بالسيرفر',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Check username/email availability before registration
+  static Future<Map<String, dynamic>> checkAvailability({
+    required String username,
+    required String email,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/check-availability'),
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: jsonEncode({'username': username, 'email': email}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'available': data['available'] ?? false,
+          'field': data['field'],
+          'message': data['message'] ?? '',
+        };
+      } else {
+        return {
+          'success': false,
+          'available': false,
+          'message': data['message'] ?? 'فشل التحقق',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'available': false,
         'message': 'خطأ في الاتصال بالسيرفر',
         'error': e.toString(),
       };
@@ -436,6 +482,282 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في رفع الملفات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // ============ S3 Upload APIs (NEW - With JWT) ============
+
+  /// Upload Single File to S3
+  /// Required: JWT token must be saved (after login/register)
+  /// @param file - File to upload
+  /// @param category - registration | acid | shipment | invoice | archive
+  /// @param documentType - Type of document (e.g., contract, taxCard, etc.)
+  /// @param relatedId - Related entity ID (shipmentId, acidId, etc.)
+  /// @param userType - client | employee | admin (optional, will use logged-in user type)
+  /// @param clientType - factory | commercial | personal (required for registration)
+  static Future<Map<String, dynamic>> uploadToS3({
+    required File file,
+    required String category,
+    String? documentType,
+    String? relatedId,
+    String? description,
+    List<String>? tags,
+    String? userType,
+    String? clientType,
+  }) async {
+    try {
+      print('🔵 [Upload] بدء عملية رفع الملف...');
+      print('📁 File: ${file.path.split('/').last}');
+      print('📂 Category: $category');
+      print('📄 Document Type: $documentType');
+
+      // Get JWT token
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        print('❌ [Upload] لا يوجد token - يجب تسجيل الدخول');
+        return {
+          'success': false,
+          'message': 'يجب تسجيل الدخول أولاً',
+          'error': 'No authentication token found',
+        };
+      }
+
+      print('✅ Token موجود: ${token.substring(0, 20)}...');
+      print('🌐 URL: $baseUrl/api/uploads');
+
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/uploads'),
+      );
+
+      // Add Authorization header with Bearer token
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add file
+      var fileStream = http.ByteStream(file.openRead());
+      var fileLength = await file.length();
+      print('📦 File size: ${(fileLength / 1024).toStringAsFixed(2)} KB');
+
+      // Detect correct mimetype from file extension
+      String fileName = file.path.split('/').last;
+      String fileExtension = fileName.split('.').last.toLowerCase();
+
+      MediaType? contentType;
+      if (fileExtension == 'pdf') {
+        contentType = MediaType('application', 'pdf');
+      } else if (['jpg', 'jpeg'].contains(fileExtension)) {
+        contentType = MediaType('image', 'jpeg');
+      } else if (fileExtension == 'png') {
+        contentType = MediaType('image', 'png');
+      } else if (fileExtension == 'gif') {
+        contentType = MediaType('image', 'gif');
+      } else if (fileExtension == 'webp') {
+        contentType = MediaType('image', 'webp');
+      } else if (fileExtension == 'doc') {
+        contentType = MediaType('application', 'msword');
+      } else if (fileExtension == 'docx') {
+        contentType = MediaType(
+          'application',
+          'vnd.openxmlformats-officedocument.wordprocessingml.document',
+        );
+      } else if (fileExtension == 'xls') {
+        contentType = MediaType('application', 'vnd.ms-excel');
+      } else if (fileExtension == 'xlsx') {
+        contentType = MediaType(
+          'application',
+          'vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+      } else {
+        // Default fallback
+        contentType = MediaType('application', 'octet-stream');
+      }
+
+      print('📄 Detected mimetype: ${contentType.mimeType}');
+
+      var multipartFile = http.MultipartFile(
+        'file', // S3 route expects 'file' field
+        fileStream,
+        fileLength,
+        filename: fileName,
+        contentType: contentType,
+      );
+      request.files.add(multipartFile);
+
+      // Add required fields
+      request.fields['category'] = category;
+
+      // Add optional fields
+      if (documentType != null) request.fields['documentType'] = documentType;
+      if (relatedId != null) request.fields['relatedId'] = relatedId;
+      if (description != null) request.fields['description'] = description;
+      if (tags != null) request.fields['tags'] = jsonEncode(tags);
+      if (userType != null) request.fields['userType'] = userType;
+      if (clientType != null) request.fields['clientType'] = clientType;
+
+      print('📋 Fields: ${request.fields}');
+      print('⏳ جاري إرسال الطلب...');
+
+      // Send request
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      print('📨 Response Status: ${response.statusCode}');
+      print('📨 Response Body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('✅✅✅ [Upload SUCCESS] تم رفع الملف بنجاح!');
+        print('🔗 S3 URL: ${data['data']?['s3Url'] ?? 'N/A'}');
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم رفع الملف بنجاح إلى S3',
+          'data': data,
+        };
+      } else {
+        print('❌❌❌ [Upload FAILED] فشل رفع الملف');
+        print('Error: ${data['error'] ?? data['message']}');
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل رفع الملف',
+          'error': data['error'],
+        };
+      }
+    } catch (e) {
+      print('💥💥💥 [Upload EXCEPTION] خطأ في رفع الملف');
+      print('Exception: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في رفع الملف إلى S3',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Upload Multiple Files to S3
+  /// Required: JWT token must be saved
+  static Future<Map<String, dynamic>> uploadMultipleToS3({
+    required List<File> files,
+    required String category,
+    String? documentType,
+    String? relatedId,
+    String? description,
+    List<String>? tags,
+    String? userType,
+    String? clientType,
+  }) async {
+    try {
+      // Get JWT token
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'message': 'يجب تسجيل الدخول أولاً',
+          'error': 'No authentication token found',
+        };
+      }
+
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/uploads/multiple'),
+      );
+
+      // Add Authorization header
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add files
+      for (var file in files) {
+        var fileStream = http.ByteStream(file.openRead());
+        var fileLength = await file.length();
+        var multipartFile = http.MultipartFile(
+          'files', // S3 route expects 'files' field for multiple
+          fileStream,
+          fileLength,
+          filename: file.path.split('/').last,
+          contentType: MediaType('application', 'octet-stream'),
+        );
+        request.files.add(multipartFile);
+      }
+
+      // Add required fields
+      request.fields['category'] = category;
+
+      // Add optional fields
+      if (documentType != null) request.fields['documentType'] = documentType;
+      if (relatedId != null) request.fields['relatedId'] = relatedId;
+      if (description != null) request.fields['description'] = description;
+      if (tags != null) request.fields['tags'] = jsonEncode(tags);
+      if (userType != null) request.fields['userType'] = userType;
+      if (clientType != null) request.fields['clientType'] = clientType;
+
+      // Send request
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم رفع الملفات بنجاح إلى S3',
+          'data': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل رفع الملفات',
+          'error': data['error'],
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'خطأ في رفع الملفات إلى S3',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Check Required Documents Status
+  /// Checks if user has uploaded all required registration documents
+  static Future<Map<String, dynamic>> checkRequiredDocuments() async {
+    try {
+      // Get JWT token
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      // Get user ID
+      final userData = await getUserData();
+      final userId = userData['id'];
+      if (userId == null || userId.isEmpty) {
+        return {'success': false, 'message': 'لم يتم العثور على معرف المستخدم'};
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/uploads/check-required/$userId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل التحقق من المستندات',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'خطأ في التحقق من المستندات',
         'error': e.toString(),
       };
     }
