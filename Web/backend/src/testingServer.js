@@ -1,0 +1,47 @@
+const path = require('path')
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const express = require('express')
+const app = express()
+const errorHandler = require('./middleware/errorHandler')
+const cookieParser = require('cookie-parser')
+const cors = require('cors')
+const corsOptions = require('./config/corsOptions')
+const connectDB = require('./config/dbConn')
+const mongoose = require('mongoose')
+const {logger , logEvents} = require('./middleware/logger')
+const PORT = process.env.PORT || 3500
+
+console.log(process.env.NODE_ENV)
+
+app.use(logger)
+
+app.use(cors(corsOptions))
+
+app.use(express.json())
+
+app.use(cookieParser())
+
+app.use('/', express.static(path.join(__dirname, '..', '..', 'frontend', 'public')))
+
+app.use('/', require('./routes/root'))
+app.use('/api/auth', require('./routes/authRoutes'))
+app.use('/api/users', require('./routes/userRoutes'))
+app.use('/api/users', require('./routes/loginRoutes'))
+
+app.use((req, res) => {
+    res.status(404)
+    if (req.accepts('html')) {
+        res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'views',  '404.html'))
+    } else if (req.accepts('json')) {
+        res.json({ message: '404 Not Found' })
+    } else {
+        res.type('txt').send('404 Not Found')
+    }
+})
+
+
+app.use(errorHandler)
+
+
+module.exports = app;
+

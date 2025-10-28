@@ -30,9 +30,12 @@
     "multer": "^2.0.2",
     "nodemailer": "^7.0.9",
     "socket.io": "^4.8.1",
-    "uuid": "^13.0.0"
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "cypress": "^15.4.0",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.0",
+    "supertest": "^7.1.4"
   }
 }

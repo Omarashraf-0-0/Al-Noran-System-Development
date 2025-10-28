@@ -65,6 +65,7 @@ app.use("/api/users", require("./routes/loginRoutes"));
 app.use("/api/otp", require("./routes/otpRoutes"));
 app.use("/api/shipments", require("./routes/shipmentRoutes"));
 app.use("/api/acid", require("./routes/acidRoutes"));
+app.use("/api/invoice", require("./routes/invoiceRoutes"));
 app.use("/api/finance", require("./routes/financeRoutes"));
 app.use("/api/upload/users", require("./routes/uploadRoutes"));
 app.use("/api/upload/shipments", require("./routes/uploadRoutes"));
