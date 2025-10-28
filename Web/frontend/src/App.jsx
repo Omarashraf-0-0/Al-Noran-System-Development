@@ -28,7 +28,7 @@ const App = () => {
 				<Route path="/acidrequest" element={<ACIDRequestPage />} />
 				<Route path="/upload-documents" element={<DocumentUploadPage />} />
 				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
-				<Route path="/shipmentstatus" element={<ShipmentStatus />} />
+				<Route path="/shipmentstatus/:shipmentId" element={<ShipmentStatus />} />
 				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
 				<Route path="*" element={<NotFound404 />} />
 			</Routes>
