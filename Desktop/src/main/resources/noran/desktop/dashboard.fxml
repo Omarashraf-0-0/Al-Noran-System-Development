@@ -4,7 +4,8 @@
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1200" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.DashboardController">
+<?import javafx.scene.chart.PieChart?>
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.DashboardController">
 
     <!-- RIGHT SIDEBAR (moved to right side for RTL layout) -->
     <left>
@@ -109,7 +110,7 @@
                 <!-- Card 2 -->
                 <StackPane style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 10;" GridPane.columnIndex="1">
                     <VBox alignment="TOP_LEFT">
-                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="عدد الفواتير المعالجة" />
+                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="عدد الفواتير المعلقة" />
                         <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #222; -fx-padding: 12 0 0 0;" text="100" />
                     </VBox>
                 </StackPane>
@@ -117,7 +118,7 @@
                 <!-- Card 3 -->
                 <StackPane style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 10;" GridPane.columnIndex="2">
                     <VBox alignment="TOP_LEFT">
-                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="عدد الشحنات المكتملة" />
+                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="عدد الشهادات المكتملة" />
                         <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #222; -fx-padding: 12 0 0 0;" text="100" />
                     </VBox>
                 </StackPane>
@@ -125,26 +126,43 @@
                 <!-- Card 4 -->
                 <StackPane style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 10;" GridPane.columnIndex="3">
                     <VBox alignment="TOP_LEFT">
-                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="عدد الشحنات الجارية" />
+                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="عدد الشهادات الجارية" />
                         <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #222; -fx-padding: 12 0 0 0;" text="100" />
                     </VBox>
                 </StackPane>
-            <rowConstraints>
-               <RowConstraints />
-            </rowConstraints>
             </GridPane>
 
             <!-- big statistics panel -->
-            <StackPane style="-fx-padding: 12; -fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #f0f0f0; -fx-border-radius: 12; -fx-pref-height: 420;">
-                <VBox alignment="TOP_CENTER" spacing="18" style="-fx-padding: 28;">
+            <StackPane style="-fx-padding: 18; -fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #f0f0f0; -fx-border-radius: 12;">
+                <VBox alignment="TOP_CENTER" spacing="32" style="-fx-padding: 28;">
                     <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #333;" text="الإحصائيات" />
-                    <Region VBox.vgrow="ALWAYS" />
 
-                    <HBox alignment="CENTER" spacing="10">
-                        <Button style="-fx-background-color: #eef2ff; -fx-text-fill: #2a2a2a; -fx-font-size: 14; -fx-padding: 10 18; -fx-background-radius: 8;" text="تحميل الإحصائيات" />
+                    <!-- 3 Chart Containers -->
+                    <HBox alignment="CENTER" spacing="40">
+                        <!-- Chart 1 -->
+                        <VBox alignment="CENTER">
+                            <Label style="-fx-font-weight: 600; -fx-font-size: 14;" text="مقارنة بين الإيرادات" />
+                            <PieChart fx:id="chartRevenueComparison" prefHeight="180" prefWidth="180" />
+                        </VBox>
+
+                        <!-- Chart 2 -->
+                        <VBox alignment="CENTER">
+                            <Label style="-fx-font-weight: 600; -fx-font-size: 14;" text="إجمالي المدفوعات الشهرية" />
+                            <PieChart fx:id="chartMonthlyPayments" prefHeight="180" prefWidth="180" />
+                        </VBox>
+
+                        <!-- Chart 3 -->
+                        <VBox alignment="CENTER">
+                            <Label style="-fx-font-weight: 600; -fx-font-size: 14;" text="أكثر العملاء نشاطًا" />
+                            <PieChart fx:id="chartActiveClients" prefHeight="180" prefWidth="180" />
+                        </VBox>
                     </HBox>
+
+                    <!-- Download Button -->
+                    <Button style="-fx-background-color: #eef2ff; -fx-text-fill: #2a2a2a; -fx-font-size: 14; -fx-padding: 10 18; -fx-background-radius: 8;" text="تحميل الإحصائيات" />
                 </VBox>
             </StackPane>
         </VBox>
     </center>
+
 </BorderPane>
