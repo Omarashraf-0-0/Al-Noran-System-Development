@@ -1,61 +1,27 @@
 package noran.desktop.models;
 
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import javafx.beans.property.*;
 
-/**
- * Model for an invoice line item.
- */
 public class InvoiceItem {
-
-    private final SimpleStringProperty description = new SimpleStringProperty();
-    private final SimpleDoubleProperty price = new SimpleDoubleProperty();
-    private final SimpleStringProperty date = new SimpleStringProperty();
-
-
-    public InvoiceItem() {
-    }
+    private final SimpleStringProperty description; // الوصف
+    private final SimpleDoubleProperty price;       // السعر
+    private final SimpleStringProperty date;        // الحالة or التاريخ
 
     public InvoiceItem(String description, double price, String date) {
-        this.description.set(description);
-        this.price.set(price);
-        this.date.set(date);
+        this.description = new SimpleStringProperty(description);
+        this.price = new SimpleDoubleProperty(price);
+        this.date = new SimpleStringProperty(date);
     }
 
-    public String getDescription() {
-        return description.get();
-    }
+    public String getDescription() { return description.get(); }
+    public void setDescription(String desc) { description.set(desc); }
+    public SimpleStringProperty descriptionProperty() { return description; }
 
-    public StringProperty descriptionProperty() {
-        return description;
-    }
+    public double getPrice() { return price.get(); }
+    public void setPrice(double p) { price.set(p); }
+    public SimpleDoubleProperty priceProperty() { return price; }
 
-    public void setDescription(String description) {
-        this.description.set(description);
-    }
-
-    public double getPrice() {
-        return price.get();
-    }
-
-    public SimpleDoubleProperty priceProperty() {
-        return price;
-    }
-
-    public void setPrice(double price) {
-        this.price.set(price);
-    }
-
-    public String getDate() {
-        return date.get();
-    }
-
-    public StringProperty dateProperty() {
-        return date;
-    }
-
-    public void setDate(String date) {
-        this.date.set(date);
-    }
+    public String getDate() { return date.get(); }
+    public void setDate(String d) { date.set(d); }
+    public SimpleStringProperty dateProperty() { return date; }
 }

@@ -64,7 +64,7 @@ public class ClientDataController implements Initializable {
 
     private void loadUsersFromDatabase() {
         userList.clear();
-        String sql = "SELECT username, clientType, ssn FROM users WHERE type = 'client'";
+        String sql = "SELECT _id, username, clientType, ssn FROM users WHERE type = 'client'";
 
         try (Connection conn = DatabaseConnection.connect();
              PreparedStatement stmt = conn.prepareStatement(sql);
@@ -75,8 +75,9 @@ public class ClientDataController implements Initializable {
                 String clientType = rs.getString("clientType");
                 String taxNumber = rs.getString("ssn");
                 String rank = "N/A";
+                String id = rs.getString("_id");
 
-                userList.add(new UserRow(username, clientType, taxNumber, rank));
+                userList.add(new UserRow(username, clientType, taxNumber, rank,id));
             }
             invoicesTable.setItems(userList);
 
@@ -113,7 +114,7 @@ public class ClientDataController implements Initializable {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/invoices-management.fxml"));
             Parent root = loader.load();
             HelloController controller = loader.getController();
-            controller.setSelectedClient(user.getUsername(), user.getTaxNumber(), user.getClientType());
+            controller.setSelectedClient(user.getUsername(), user.getTaxNumber(), user.getClientType(), user.getId());
 
             Scene scene = new Scene(root);
             Stage stage = (Stage) invoicesTable.getScene().getWindow();
@@ -130,14 +131,16 @@ public class ClientDataController implements Initializable {
         private final javafx.beans.property.SimpleStringProperty clientType;
         private final javafx.beans.property.SimpleStringProperty taxNumber;
         private final javafx.beans.property.SimpleStringProperty rank;
+        private final javafx.beans.property.SimpleStringProperty id;
 
-        public UserRow(String username, String clientType, String taxNumber, String rank) {
+        public UserRow(String username, String clientType, String taxNumber, String rank, String id) {
             this.username = new javafx.beans.property.SimpleStringProperty(username);
             this.clientType = new javafx.beans.property.SimpleStringProperty(clientType);
             this.taxNumber = new javafx.beans.property.SimpleStringProperty(taxNumber);
             this.rank = new javafx.beans.property.SimpleStringProperty(rank);
+            this.id = new javafx.beans.property.SimpleStringProperty(id);
         }
-
+        public String getId() {return id.get();}
         public String getUsername() { return username.get(); }
         public String getClientType() { return clientType.get(); }
         public String getTaxNumber() { return taxNumber.get(); }
