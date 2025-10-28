@@ -13,8 +13,11 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.917.0",
+    "@aws-sdk/s3-request-presigner": "^3.917.0",
     "axios": "^1.12.2",
     "bcrypt": "^5.1.1",
+    "client-s3": "github:aws-sdk/client-s3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
@@ -24,10 +27,15 @@
     "express-validator": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.1",
+    "multer": "^2.0.2",
     "nodemailer": "^7.0.9",
-    "uuid": "^13.0.0"
+    "socket.io": "^4.8.1",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "cypress": "^15.4.0",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.0",
+    "supertest": "^7.1.4"
   }
 }

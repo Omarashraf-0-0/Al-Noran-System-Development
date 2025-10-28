@@ -28,18 +28,25 @@ const RegisterPage = () => {
 		console.log("Transformed data:", registrationData);
 
 		axios
-			.post(`${import.meta.env.VITE_API_URL}/api/users`, registrationData)
+			.post(`${import.meta.env.VITE_API_URL}/api/auth/signup`, registrationData)
 			.then((response) => {
-				// console.log("Registration successful:", response.data);
-				toast.success("تم إنشاء الحساب بنجاح");
-				// window.location.href = "/login";
+				console.log("Registration successful:", response.data);
+				toast.success("تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...");
+				
+				// Save token and user info
+				localStorage.setItem("token", response.data.token);
+				localStorage.setItem("user", JSON.stringify(response.data.user));
+				
+				// Redirect to upload documents page after 2 seconds
+				setTimeout(() => {
+					window.location.href = "/upload-documents";
+				}, 2000);
 			})
 			.catch((error) => {
-				// console.error("Error during registration:", error);
-				toast.error("فشل في إنشاء الحساب. الرجاء المحاولة مرة أخرى.");
+				console.error("Error during registration:", error);
+				const errorMessage = error.response?.data?.message || "فشل في إنشاء الحساب. الرجاء المحاولة مرة أخرى.";
+				toast.error(errorMessage);
 			});
-		// show the message of the success or failure using
-		// redirect me to the login page
 	};
 
 	return (

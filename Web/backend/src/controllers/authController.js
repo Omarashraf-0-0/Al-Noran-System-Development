@@ -2,6 +2,8 @@ const User = require('../models/user');
 const { validationResult } = require('express-validator');
 const asyncHandler = require('express-async-handler');
 
+
+
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
@@ -73,13 +75,25 @@ const signup = asyncHandler(async (req, res) => {
     type,
     clientType,
     ssn,
-    employeeType
+    employeeType,
+    taxNumber,
+    rank,
+    clientDetails,
+    employeeDetails
   } = req.body;
 
   const userExists = await User.findOne({ $or: [{ email }, { username }, { phone }] }).lean().exec();
   if (userExists) {
+// <<<<<<< HEAD
+//      res.status(409).json({
+//       success: false,
+//       error: 'A user with that email, username, or phone number already exists.'
+//     });
+//     throw new Error('A user with that email, username, or phone number already exists.');
+// =======
     res.status(409);
     throw new Error('البريد الإلكتروني أو اسم المستخدم أو رقم الهاتف مستخدم بالفعل');
+
   }
 
   const userData = {
@@ -91,13 +105,37 @@ const signup = asyncHandler(async (req, res) => {
     type,
   };
 
+  // Add taxNumber and rank if provided
+  if (taxNumber) userData.taxNumber = taxNumber;
+  if (rank) userData.rank = rank;
+
+  // Handle client details - support both nested and flat formats
   if (type === 'client') {
-    userData.clientDetails = { clientType };
-    if (clientType === 'personal') {
-      userData.clientDetails.ssn = ssn;
+    // Check if clientDetails object is provided (nested format)
+    if (clientDetails) {
+      userData.clientDetails = {
+        clientType: clientDetails.clientType || null,
+        ssn: clientDetails.ssn || ""
+      };
+    } 
+    // Otherwise use flat format (backward compatibility)
+    else if (clientType) {
+      userData.clientDetails = { 
+        clientType,
+        ssn: ssn || ""
+      };
     }
-  } else if (type === 'employee') {
-    userData.employeeDetails = { employeeType };
+  } 
+  // Handle employee details
+  else if (type === 'employee') {
+    if (employeeDetails) {
+      userData.employeeDetails = {
+        employeeType: employeeDetails.employeeType || null,
+        verified: employeeDetails.verified || false
+      };
+    } else if (employeeType) {
+      userData.employeeDetails = { employeeType };
+    }
   }
 
   const user = await User.create(userData);
@@ -112,7 +150,12 @@ const signup = asyncHandler(async (req, res) => {
           id: user._id,
           fullname: user.fullname,
           username: user.username,
-          type: user.type
+          email: user.email,
+          type: user.type,
+          clientDetails: user.clientDetails,
+          employeeDetails: user.employeeDetails,
+          taxNumber: user.taxNumber,
+          rank: user.rank
       }
     });
   } else {
@@ -121,8 +164,39 @@ const signup = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Get current user info
+// @route   GET /api/auth/me
+// @access  Private
+const getMe = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id).select('-password');
+  
+  if (!user) {
+    res.status(404);
+    throw new Error('المستخدم غير موجود');
+  }
+
+  res.status(200).json({
+    success: true,
+    user: {
+      id: user._id,
+      fullname: user.fullname,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      type: user.type,
+      active: user.active,
+      clientDetails: user.clientDetails,
+      employeeDetails: user.employeeDetails,
+      taxNumber: user.taxNumber,
+      rank: user.rank,
+      createdAt: user.createdAt,
+    }
+  });
+});
+
 module.exports = {
   login,
-  signup
+  signup,
+  getMe
 };
 

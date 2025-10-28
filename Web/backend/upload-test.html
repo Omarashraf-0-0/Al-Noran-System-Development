@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Upload Test - Al Noran System</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			body {
+				font-family: Arial, sans-serif;
+				background: #f5f5f5;
+				padding: 20px;
+			}
+			.container {
+				max-width: 800px;
+				margin: 0 auto;
+				background: white;
+				padding: 30px;
+				border-radius: 10px;
+				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+			}
+			h1 {
+				color: #3ba5a8;
+				margin-bottom: 30px;
+				text-align: center;
+			}
+			.upload-section {
+				margin-bottom: 40px;
+				padding: 20px;
+				border: 2px dashed #3ba5a8;
+				border-radius: 10px;
+			}
+			h2 {
+				color: #6b1212;
+				margin-bottom: 15px;
+			}
+			.form-group {
+				margin-bottom: 15px;
+			}
+			label {
+				display: block;
+				margin-bottom: 5px;
+				font-weight: bold;
+				color: #333;
+			}
+			input[type="file"] {
+				width: 100%;
+				padding: 10px;
+				border: 1px solid #ddd;
+				border-radius: 5px;
+			}
+			button {
+				background: #3ba5a8;
+				color: white;
+				padding: 12px 30px;
+				border: none;
+				border-radius: 5px;
+				cursor: pointer;
+				font-size: 16px;
+				font-weight: bold;
+			}
+			button:hover {
+				background: #2d8a8d;
+			}
+			button:disabled {
+				background: #ccc;
+				cursor: not-allowed;
+			}
+			.delete-btn {
+				background: #6b1212;
+				padding: 8px 20px;
+				font-size: 14px;
+			}
+			.delete-btn:hover {
+				background: #8b1414;
+			}
+			.response {
+				margin-top: 15px;
+				padding: 15px;
+				border-radius: 5px;
+				background: #f0f0f0;
+				display: none;
+			}
+			.response.success {
+				background: #d4edda;
+				color: #155724;
+				border: 1px solid #c3e6cb;
+				display: block;
+			}
+			.response.error {
+				background: #f8d7da;
+				color: #721c24;
+				border: 1px solid #f5c6cb;
+				display: block;
+			}
+			.file-info {
+				margin-top: 10px;
+				padding: 10px;
+				background: #e9ecef;
+				border-radius: 5px;
+			}
+			.file-info p {
+				margin: 5px 0;
+			}
+			.loading {
+				display: none;
+				text-align: center;
+				color: #3ba5a8;
+				margin-top: 10px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>🚢 Al Noran Upload System Test</h1>
+
+			<!-- Single File Upload - Users -->
+			<div class="upload-section">
+				<h2>📄 تحميل ملف مستخدم واحد</h2>
+				<div class="form-group">
+					<label for="userFile">اختر ملف:</label>
+					<input
+						type="file"
+						id="userFile"
+						accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
+					/>
+				</div>
+				<button onclick="uploadUserFile()">رفع الملف</button>
+				<div class="loading" id="userLoading">جاري الرفع...</div>
+				<div class="response" id="userResponse"></div>
+			</div>
+
+			<!-- Single File Upload - Shipments -->
+			<div class="upload-section">
+				<h2>📦 تحميل ملف شحنة واحدة</h2>
+				<div class="form-group">
+					<label for="shipmentFile">اختر ملف:</label>
+					<input
+						type="file"
+						id="shipmentFile"
+						accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
+					/>
+				</div>
+				<button onclick="uploadShipmentFile()">رفع الملف</button>
+				<div class="loading" id="shipmentLoading">جاري الرفع...</div>
+				<div class="response" id="shipmentResponse"></div>
+			</div>
+
+			<!-- Multiple Files Upload -->
+			<div class="upload-section">
+				<h2>📚 تحميل ملفات متعددة (للمستخدمين)</h2>
+				<div class="form-group">
+					<label for="multipleFiles">اختر ملفات (حد أقصى 5):</label>
+					<input
+						type="file"
+						id="multipleFiles"
+						multiple
+						accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
+					/>
+				</div>
+				<button onclick="uploadMultipleFiles()">رفع الملفات</button>
+				<div class="loading" id="multipleLoading">جاري الرفع...</div>
+				<div class="response" id="multipleResponse"></div>
+			</div>
+
+			<!-- Delete File -->
+			<div class="upload-section">
+				<h2>🗑️ حذف ملف</h2>
+				<div class="form-group">
+					<label for="deleteFilename">اسم الملف:</label>
+					<input
+						type="text"
+						id="deleteFilename"
+						placeholder="مثال: document-1234567890-987654321.pdf"
+						style="
+							width: 100%;
+							padding: 10px;
+							border: 1px solid #ddd;
+							border-radius: 5px;
+						"
+					/>
+				</div>
+				<div class="form-group">
+					<label>نوع الملف:</label>
+					<select
+						id="deleteType"
+						style="
+							width: 100%;
+							padding: 10px;
+							border: 1px solid #ddd;
+							border-radius: 5px;
+						"
+					>
+						<option value="users">مستخدم</option>
+						<option value="shipments">شحنة</option>
+					</select>
+				</div>
+				<button onclick="deleteFile()" class="delete-btn">حذف الملف</button>
+				<div class="loading" id="deleteLoading">جاري الحذف...</div>
+				<div class="response" id="deleteResponse"></div>
+			</div>
+		</div>
+
+		<script>
+			const API_URL = "http://localhost:3500";
+
+			async function uploadUserFile() {
+				const fileInput = document.getElementById("userFile");
+				const loading = document.getElementById("userLoading");
+				const response = document.getElementById("userResponse");
+
+				if (!fileInput.files[0]) {
+					showResponse(response, "error", "يرجى اختيار ملف");
+					return;
+				}
+
+				const formData = new FormData();
+				formData.append("document", fileInput.files[0]);
+
+				loading.style.display = "block";
+				response.style.display = "none";
+
+				try {
+					const res = await fetch(`${API_URL}/api/upload/users`, {
+						method: "POST",
+						body: formData,
+					});
+
+					const data = await res.json();
+					loading.style.display = "none";
+
+					if (res.ok) {
+						showResponse(
+							response,
+							"success",
+							`تم الرفع بنجاح!<br>
+                        <div class="file-info">
+                            <p><strong>اسم الملف:</strong> ${
+															data.file.filename
+														}</p>
+                            <p><strong>الحجم:</strong> ${(
+															data.file.size / 1024
+														).toFixed(2)} KB</p>
+                            <p><strong>النوع:</strong> ${data.file.mimetype}</p>
+                            <p><strong>الرابط:</strong> <a href="${API_URL}/uploads/users/${
+								data.file.filename
+							}" target="_blank">عرض الملف</a></p>
+                        </div>`
+						);
+					} else {
+						showResponse(response, "error", data.message || "فشل الرفع");
+					}
+				} catch (error) {
+					loading.style.display = "none";
+					showResponse(response, "error", "خطأ في الاتصال بالخادم");
+				}
+			}
+
+			async function uploadShipmentFile() {
+				const fileInput = document.getElementById("shipmentFile");
+				const loading = document.getElementById("shipmentLoading");
+				const response = document.getElementById("shipmentResponse");
+
+				if (!fileInput.files[0]) {
+					showResponse(response, "error", "يرجى اختيار ملف");
+					return;
+				}
+
+				const formData = new FormData();
+				formData.append("document", fileInput.files[0]);
+
+				loading.style.display = "block";
+				response.style.display = "none";
+
+				try {
+					const res = await fetch(`${API_URL}/api/upload/shipments`, {
+						method: "POST",
+						body: formData,
+					});
+
+					const data = await res.json();
+					loading.style.display = "none";
+
+					if (res.ok) {
+						showResponse(
+							response,
+							"success",
+							`تم الرفع بنجاح!<br>
+                        <div class="file-info">
+                            <p><strong>اسم الملف:</strong> ${
+															data.file.filename
+														}</p>
+                            <p><strong>الحجم:</strong> ${(
+															data.file.size / 1024
+														).toFixed(2)} KB</p>
+                            <p><strong>النوع:</strong> ${data.file.mimetype}</p>
+                            <p><strong>الرابط:</strong> <a href="${API_URL}/uploads/shipments/${
+								data.file.filename
+							}" target="_blank">عرض الملف</a></p>
+                        </div>`
+						);
+					} else {
+						showResponse(response, "error", data.message || "فشل الرفع");
+					}
+				} catch (error) {
+					loading.style.display = "none";
+					showResponse(response, "error", "خطأ في الاتصال بالخادم");
+				}
+			}
+
+			async function uploadMultipleFiles() {
+				const fileInput = document.getElementById("multipleFiles");
+				const loading = document.getElementById("multipleLoading");
+				const response = document.getElementById("multipleResponse");
+
+				if (!fileInput.files.length) {
+					showResponse(response, "error", "يرجى اختيار ملفات");
+					return;
+				}
+
+				if (fileInput.files.length > 5) {
+					showResponse(response, "error", "الحد الأقصى 5 ملفات");
+					return;
+				}
+
+				const formData = new FormData();
+				Array.from(fileInput.files).forEach((file) => {
+					formData.append("documents", file);
+				});
+
+				loading.style.display = "block";
+				response.style.display = "none";
+
+				try {
+					const res = await fetch(`${API_URL}/api/upload/users/multiple`, {
+						method: "POST",
+						body: formData,
+					});
+
+					const data = await res.json();
+					loading.style.display = "none";
+
+					if (res.ok) {
+						let filesInfo = data.files
+							.map(
+								(file) =>
+									`<div class="file-info">
+                            <p><strong>اسم الملف:</strong> ${file.filename}</p>
+                            <p><strong>الحجم:</strong> ${(
+															file.size / 1024
+														).toFixed(2)} KB</p>
+                            <p><strong>الرابط:</strong> <a href="${API_URL}/uploads/users/${
+										file.filename
+									}" target="_blank">عرض</a></p>
+                        </div>`
+							)
+							.join("");
+
+						showResponse(
+							response,
+							"success",
+							`تم رفع ${data.files.length} ملف بنجاح!<br>${filesInfo}`
+						);
+					} else {
+						showResponse(response, "error", data.message || "فشل الرفع");
+					}
+				} catch (error) {
+					loading.style.display = "none";
+					showResponse(response, "error", "خطأ في الاتصال بالخادم");
+				}
+			}
+
+			async function deleteFile() {
+				const filename = document.getElementById("deleteFilename").value.trim();
+				const type = document.getElementById("deleteType").value;
+				const loading = document.getElementById("deleteLoading");
+				const response = document.getElementById("deleteResponse");
+
+				if (!filename) {
+					showResponse(response, "error", "يرجى إدخال اسم الملف");
+					return;
+				}
+
+				loading.style.display = "block";
+				response.style.display = "none";
+
+				try {
+					const res = await fetch(`${API_URL}/api/upload/${type}/${filename}`, {
+						method: "DELETE",
+					});
+
+					const data = await res.json();
+					loading.style.display = "none";
+
+					if (res.ok) {
+						showResponse(response, "success", data.message);
+						document.getElementById("deleteFilename").value = "";
+					} else {
+						showResponse(response, "error", data.message || "فشل الحذف");
+					}
+				} catch (error) {
+					loading.style.display = "none";
+					showResponse(response, "error", "خطأ في الاتصال بالخادم");
+				}
+			}
+
+			function showResponse(element, type, message) {
+				element.className = `response ${type}`;
+				element.innerHTML = message;
+				element.style.display = "block";
+			}
+		</script>
+	</body>
+</html>

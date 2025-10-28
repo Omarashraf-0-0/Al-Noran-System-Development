@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import '../auth/login_page.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -237,11 +237,6 @@ class _SplashScreenState extends State<SplashScreen>
                                   Icons.directions_boat,
                                   'شحن بحري',
                                 ),
-                                const SizedBox(width: 20),
-                                _buildServiceIcon(
-                                  Icons.local_shipping,
-                                  'شحن بري',
-                                ),
                               ],
                             ),
                             const SizedBox(height: 15),
@@ -339,7 +334,7 @@ class _SplashScreenState extends State<SplashScreen>
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) {
                   return const Icon(
-                    Icons.local_shipping_rounded,
+                    Icons.flight_takeoff_rounded,
                     size: 120,
                     color: Color(0xFF690000),
                   );
