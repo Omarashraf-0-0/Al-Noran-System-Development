@@ -48,6 +48,7 @@ export default function ShipmentsList() {
           id: shipment._id,
           clientName: shipment.employerName || "Unknown Client",
           shipmentNo: shipment.number46 || shipment.shipmentNumber || "N/A",
+          acid: shipment.acid || "N/A",
           status: shipment.status || "pending",
           date: new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
             day: "numeric",
