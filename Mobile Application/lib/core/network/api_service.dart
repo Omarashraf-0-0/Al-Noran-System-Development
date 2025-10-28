@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart'; // للتحقق من kIsWeb
 import 'package:http_parser/http_parser.dart';
+import '../storage/secure_storage.dart';
 
 class ApiService {
   // Base URL - يتغير حسب المنصة تلقائياً
@@ -38,6 +39,8 @@ class ApiService {
     required String password,
   }) async {
     try {
+      print('🔐 [API] Login request to: $baseUrl/api/auth/login');
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/login'),
         headers: {
@@ -47,10 +50,19 @@ class ApiService {
         body: jsonEncode({'email': email, 'password': password}),
       );
 
+      print('🔐 [API] Login response status: ${response.statusCode}');
+      print('🔐 [API] Login response body: ${response.body}');
+
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // نجح تسجيل الدخول
+        print('🔐 [API] Login successful!');
+        print('🔐 [API] User data from backend: ${data['user']}');
+        print(
+          '🔐 [API] ClientDetails from backend: ${data['user']?['clientDetails']}',
+        );
+
         if (data['token'] != null) {
           // حفظ الـ token
           await saveToken(data['token']);
@@ -66,6 +78,7 @@ class ApiService {
         };
       } else {
         // فشل تسجيل الدخول
+        print('🔐 [API] Login failed: ${data['message']}');
         return {
           'success': false,
           'message': data['message'] ?? 'فشل تسجيل الدخول',
@@ -74,6 +87,7 @@ class ApiService {
       }
     } catch (e) {
       // خطأ في الاتصال
+      print('🔐 [API] Login exception: $e');
       return {
         'success': false,
         'message': 'خطأ في الاتصال بالسيرفر - تأكد من تشغيل السيرفر',
@@ -108,6 +122,10 @@ class ApiService {
         body['ssn'] = ssn;
       }
 
+      print('📱 [Register] Sending registration request...');
+      print('📱 [Register] URL: $baseUrl/api/auth/signup');
+      print('📱 [Register] Body: $body');
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/auth/signup'),
         headers: {
@@ -117,11 +135,15 @@ class ApiService {
         body: jsonEncode(body),
       );
 
+      print('📱 [Register] Response status: ${response.statusCode}');
+      print('📱 [Register] Response body: ${response.body}');
+
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (data['token'] != null) {
           await saveToken(data['token']);
+          print('✅ [Register] Token saved successfully');
         }
         return {
           'success': true,
@@ -129,6 +151,7 @@ class ApiService {
           'data': data,
         };
       } else {
+        print('❌ [Register] Registration failed: ${data['message']}');
         return {
           'success': false,
           'message': data['message'] ?? 'فشل التسجيل',
@@ -136,6 +159,7 @@ class ApiService {
         };
       }
     } catch (e) {
+      print('❌ [Register] Exception: $e');
       return {
         'success': false,
         'message': 'خطأ في الاتصال بالسيرفر',
@@ -193,12 +217,21 @@ class ApiService {
 
   // حفظ بيانات المستخدم
   static Future<void> saveUserData(Map<String, dynamic> user) async {
+    print('💾 [saveUserData] Saving user data: $user');
+    print('💾 [saveUserData] ClientDetails: ${user['clientDetails']}');
+
+    // حفظ في SecureStorage (كامل البيانات)
+    await SecureStorage.saveUserData(user);
+    print('💾 [saveUserData] Saved to SecureStorage');
+
+    // حفظ في SharedPreferences (للتوافق مع الكود القديم)
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_id', user['id'] ?? '');
+    await prefs.setString('user_id', user['_id'] ?? user['id'] ?? '');
     await prefs.setString('user_name', user['fullname'] ?? '');
     await prefs.setString('user_email', user['email'] ?? '');
     await prefs.setString('user_type', user['type'] ?? '');
     await prefs.setString('username', user['username'] ?? '');
+    print('💾 [saveUserData] Saved to SharedPreferences');
   }
 
   // جلب الـ Token
@@ -758,6 +791,532 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في التحقق من المستندات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get User Uploads
+  /// Fetches all uploaded documents for a user
+  static Future<Map<String, dynamic>> getUploads({
+    required String userId,
+    String? category,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        print('❌ [getUploads] No token found');
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      String url = '$baseUrl/api/uploads/user/$userId';
+      if (category != null && category.isNotEmpty) {
+        url += '?category=$category';
+      }
+
+      print('📤 [getUploads] Requesting: $url');
+      print('📤 [getUploads] Token: ${token.substring(0, 20)}...');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📥 [getUploads] Status: ${response.statusCode}');
+      print('📥 [getUploads] Body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        print(
+          '✅ [getUploads] Success! Found ${data['uploads']?.length ?? 0} uploads',
+        );
+        return {'success': true, 'uploads': data['uploads'] ?? []};
+      } else {
+        print('❌ [getUploads] Failed: ${data['message']}');
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحميل المستندات',
+        };
+      }
+    } catch (e) {
+      print('❌ [getUploads] Exception: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل المستندات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update User Profile
+  /// Updates user's personal information
+  static Future<Map<String, dynamic>> updateUserProfile({
+    required String userId,
+    String? fullname,
+    String? email,
+    String? phone,
+    String? nationalId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      final body = <String, dynamic>{};
+      if (fullname != null && fullname.isNotEmpty) body['fullname'] = fullname;
+      if (email != null && email.isNotEmpty) body['email'] = email;
+      if (phone != null && phone.isNotEmpty) body['phone'] = phone;
+      if (nationalId != null && nationalId.isNotEmpty)
+        body['nationalId'] = nationalId;
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/users/$userId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم تحديث البيانات بنجاح',
+          'user': data['user'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث البيانات',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث البيانات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update Client Details
+  /// Updates company/business information
+  static Future<Map<String, dynamic>> updateClientDetails({
+    required String userId,
+    String? companyName,
+    String? commercialRegisterNumber,
+    String? taxCardNumber,
+    String? address,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      final body = <String, dynamic>{};
+      if (companyName != null && companyName.isNotEmpty) {
+        body['companyName'] = companyName;
+      }
+      if (commercialRegisterNumber != null &&
+          commercialRegisterNumber.isNotEmpty) {
+        body['commercialRegisterNumber'] = commercialRegisterNumber;
+      }
+      if (taxCardNumber != null && taxCardNumber.isNotEmpty) {
+        body['taxCardNumber'] = taxCardNumber;
+      }
+      if (address != null && address.isNotEmpty) {
+        body['address'] = address;
+      }
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/users/$userId/client-details'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم تحديث بيانات الشركة بنجاح',
+          'clientDetails': data['clientDetails'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث بيانات الشركة',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث بيانات الشركة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Change Password
+  /// Changes user's password
+  static Future<Map<String, dynamic>> changePassword({
+    required String userId,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/users/$userId/change-password'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم تغيير كلمة المرور بنجاح',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تغيير كلمة المرور',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'خطأ في تغيير كلمة المرور',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update Upload
+  /// Updates upload description or other metadata
+  static Future<Map<String, dynamic>> updateUpload({
+    required String uploadId,
+    String? description,
+    List<String>? tags,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      final body = <String, dynamic>{};
+      if (description != null) body['description'] = description;
+      if (tags != null) body['tags'] = tags;
+
+      print('📝 [updateUpload] Updating upload: $uploadId');
+      print('📝 [updateUpload] Body: $body');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/uploads/$uploadId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      print('📝 [updateUpload] Response status: ${response.statusCode}');
+      print('📝 [updateUpload] Response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم تحديث المستند بنجاح',
+          'upload': data['upload'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث المستند',
+        };
+      }
+    } catch (e) {
+      print('❌ [updateUpload] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث المستند',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Delete Upload
+  /// Deletes an upload from S3 and database
+  static Future<Map<String, dynamic>> deleteUpload({
+    required String uploadId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🗑️ [deleteUpload] Deleting upload: $uploadId');
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/uploads/$uploadId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🗑️ [deleteUpload] Response status: ${response.statusCode}');
+      print('🗑️ [deleteUpload] Response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم حذف المستند بنجاح',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل حذف المستند',
+        };
+      }
+    } catch (e) {
+      print('❌ [deleteUpload] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في حذف المستند',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // ==================== Shipments API ====================
+
+  /// Get All Shipments
+  /// Retrieves all shipments from database
+  static Future<Map<String, dynamic>> getAllShipments() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🚢 [getAllShipments] Fetching shipments...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/shipments/getAll'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🚢 [getAllShipments] Status: ${response.statusCode}');
+      print('🚢 [getAllShipments] Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'shipments': data is List ? data : []};
+      } else {
+        return {'success': false, 'message': 'فشل تحميل الشحنات'};
+      }
+    } catch (e) {
+      print('❌ [getAllShipments] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل الشحنات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get Shipment By ACID
+  /// Retrieves single shipment by ACID number
+  static Future<Map<String, dynamic>> getShipmentByAcid({
+    required String acid,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🚢 [getShipmentByAcid] Fetching shipment: $acid');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/shipments/$acid'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🚢 [getShipmentByAcid] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'shipment': data};
+      } else if (response.statusCode == 404) {
+        return {'success': false, 'message': 'الشحنة غير موجودة'};
+      } else {
+        return {'success': false, 'message': 'فشل تحميل بيانات الشحنة'};
+      }
+    } catch (e) {
+      print('❌ [getShipmentByAcid] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل بيانات الشحنة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Create Shipment
+  /// Creates a new shipment
+  static Future<Map<String, dynamic>> createShipment({
+    required String acid,
+    String? importerName,
+    String? number46,
+    String? employerName,
+    String? shipmentDescription,
+    DateTime? arrivalDate,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      final body = <String, dynamic>{'acid': acid};
+      if (importerName != null) body['importerName'] = importerName;
+      if (number46 != null) body['number46'] = number46;
+      if (employerName != null) body['employerName'] = employerName;
+      if (shipmentDescription != null)
+        body['shipmentDescription'] = shipmentDescription;
+      if (arrivalDate != null)
+        body['arrivalDate'] = arrivalDate.toIso8601String();
+
+      print('🚢 [createShipment] Creating shipment: $acid');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/shipments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      print('🚢 [createShipment] Status: ${response.statusCode}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': 'تم إنشاء الشحنة بنجاح',
+          'shipment': data,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل إنشاء الشحنة',
+        };
+      }
+    } catch (e) {
+      print('❌ [createShipment] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في إنشاء الشحنة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update Shipment Status
+  /// Updates shipment status and other fields
+  static Future<Map<String, dynamic>> updateShipmentStatus({
+    required String acid,
+    String? status,
+    String? importerName,
+    String? number46,
+    String? employerName,
+    String? shipmentDescription,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      final body = <String, dynamic>{};
+      if (status != null) body['status'] = status;
+      if (importerName != null) body['importerName'] = importerName;
+      if (number46 != null) body['number46'] = number46;
+      if (employerName != null) body['employerName'] = employerName;
+      if (shipmentDescription != null)
+        body['shipmentDescription'] = shipmentDescription;
+
+      print('🚢 [updateShipmentStatus] Updating shipment: $acid');
+
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/shipments/$acid'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      print('🚢 [updateShipmentStatus] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم تحديث الشحنة بنجاح',
+          'shipment': data,
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث الشحنة',
+        };
+      }
+    } catch (e) {
+      print('❌ [updateShipmentStatus] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث الشحنة',
         'error': e.toString(),
       };
     }

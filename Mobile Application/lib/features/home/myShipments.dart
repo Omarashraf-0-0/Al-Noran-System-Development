@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/network/api_service.dart';
 
 class MyShipmentsPage extends StatefulWidget {
   final String userName;
@@ -20,34 +21,235 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
   final TextEditingController _searchController = TextEditingController();
   int _selectedIndex = 2;
   String _selectedFilter = 'الكل';
+  String _selectedSort = 'الأحدث';
 
-  final List<Map<String, dynamic>> _currentShipments = [
-    {
-      'id': 'SEA-0012',
-      'type': 'بحري',
-      'polNumber': 'POL-12345',
-      'date': '29 أكتوبر 2024',
-      'status': 'في إنتظار رقم ACID',
-      'isUrgent': true,
-      'hasDocuments': true,
-    },
-    {
-      'id': 'AIR-0005',
-      'type': 'جوي',
-      'polNumber': 'AIR-98765',
-      'date': '28 أكتوبر 2024',
-      'status': 'قيد المعالجة',
-      'isUrgent': false,
-      'hasDocuments': false,
-    },
-  ];
-
-  final List<Map<String, dynamic>> _completedShipments = [];
+  List<Map<String, dynamic>> _allCurrentShipments = [];
+  List<Map<String, dynamic>> _allCompletedShipments = [];
+  List<Map<String, dynamic>> _currentShipments = [];
+  List<Map<String, dynamic>> _completedShipments = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _searchController.addListener(_onSearchChanged);
+    _loadShipments();
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    _applyFiltersAndSearch();
+  }
+
+  void _applyFiltersAndSearch() {
+    final searchQuery = _searchController.text.toLowerCase().trim();
+
+    setState(() {
+      // Filter current shipments
+      _currentShipments =
+          _allCurrentShipments.where((shipment) {
+            final matchesSearch =
+                searchQuery.isEmpty ||
+                shipment['id'].toString().toLowerCase().contains(searchQuery) ||
+                shipment['polNumber'].toString().toLowerCase().contains(
+                  searchQuery,
+                );
+
+            final matchesFilter =
+                _selectedFilter == 'الكل' ||
+                _getShipmentTypeFilter(shipment) == _selectedFilter;
+
+            return matchesSearch && matchesFilter;
+          }).toList();
+
+      // Filter completed shipments
+      _completedShipments =
+          _allCompletedShipments.where((shipment) {
+            final matchesSearch =
+                searchQuery.isEmpty ||
+                shipment['id'].toString().toLowerCase().contains(searchQuery) ||
+                shipment['polNumber'].toString().toLowerCase().contains(
+                  searchQuery,
+                );
+
+            final matchesFilter =
+                _selectedFilter == 'الكل' ||
+                _getShipmentTypeFilter(shipment) == _selectedFilter;
+
+            return matchesSearch && matchesFilter;
+          }).toList();
+
+      // Apply sorting
+      _applySorting();
+    });
+  }
+
+  String _getShipmentTypeFilter(Map<String, dynamic> shipment) {
+    final type = shipment['type']?.toString() ?? '';
+    return type;
+  }
+
+  void _applySorting() {
+    switch (_selectedSort) {
+      case 'الأحدث':
+        _currentShipments.sort(
+          (a, b) => (b['rawData']?['createdAt'] ?? '').toString().compareTo(
+            (a['rawData']?['createdAt'] ?? '').toString(),
+          ),
+        );
+        _completedShipments.sort(
+          (a, b) => (b['rawData']?['createdAt'] ?? '').toString().compareTo(
+            (a['rawData']?['createdAt'] ?? '').toString(),
+          ),
+        );
+        break;
+      case 'الأقدم':
+        _currentShipments.sort(
+          (a, b) => (a['rawData']?['createdAt'] ?? '').toString().compareTo(
+            (b['rawData']?['createdAt'] ?? '').toString(),
+          ),
+        );
+        _completedShipments.sort(
+          (a, b) => (a['rawData']?['createdAt'] ?? '').toString().compareTo(
+            (b['rawData']?['createdAt'] ?? '').toString(),
+          ),
+        );
+        break;
+      case 'ACID':
+        _currentShipments.sort(
+          (a, b) => a['id'].toString().compareTo(b['id'].toString()),
+        );
+        _completedShipments.sort(
+          (a, b) => a['id'].toString().compareTo(b['id'].toString()),
+        );
+        break;
+    }
+  }
+
+  Future<void> _loadShipments() async {
+    try {
+      setState(() => _isLoading = true);
+
+      print('🚢 [MyShipments] Loading shipments...');
+
+      final response = await ApiService.getAllShipments();
+
+      print('🚢 [MyShipments] Response: $response');
+
+      if (response['success'] == true) {
+        final shipments = List<Map<String, dynamic>>.from(
+          response['shipments'] ?? [],
+        );
+
+        print('🚢 [MyShipments] Found ${shipments.length} shipments');
+
+        // تقسيم الشحنات حسب الحالة
+        final current = <Map<String, dynamic>>[];
+        final completed = <Map<String, dynamic>>[];
+
+        for (var shipment in shipments) {
+          // تحويل البيانات من Backend إلى الشكل المطلوب في UI
+          final mappedShipment = {
+            'id': shipment['acid'] ?? 'N/A',
+            'type': _getShipmentType(shipment['acid']),
+            'polNumber': shipment['number46'] ?? 'غير محدد',
+            'date': _formatDate(
+              shipment['arrivalDate'] ?? shipment['createdAt'],
+            ),
+            'status': shipment['status'] ?? 'غير محدد',
+            'isUrgent': _isUrgent(shipment['status']),
+            'hasDocuments': shipment['invoiceUrl'] != null,
+            'importerName': shipment['importerName'],
+            'employerName': shipment['employerName'],
+            'description': shipment['shipmentDescription'],
+            'rawData': shipment, // للاحتفاظ بالبيانات الأصلية
+          };
+
+          if (shipment['status'] == 'تمت بنجاح') {
+            completed.add(mappedShipment);
+          } else {
+            current.add(mappedShipment);
+          }
+        }
+
+        setState(() {
+          _allCurrentShipments = current;
+          _allCompletedShipments = completed;
+          _currentShipments = current;
+          _completedShipments = completed;
+          _isLoading = false;
+        });
+
+        print(
+          '🚢 [MyShipments] Current: ${current.length}, Completed: ${completed.length}',
+        );
+      } else {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response['message'] ?? 'فشل تحميل الشحنات'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ [MyShipments] Error: $e');
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('حدث خطأ في تحميل الشحنات'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  String _getShipmentType(String? acid) {
+    if (acid == null) return 'غير محدد';
+    if (acid.toUpperCase().startsWith('SEA')) return 'بحري';
+    if (acid.toUpperCase().startsWith('AIR')) return 'جوي';
+    if (acid.toUpperCase().startsWith('LAND')) return 'بري';
+    return 'غير محدد';
+  }
+
+  bool _isUrgent(String? status) {
+    return status == 'في انتظار الشحن' || status == 'في انتظار وصول الإذن';
+  }
+
+  String _formatDate(dynamic date) {
+    if (date == null) return 'غير محدد';
+    try {
+      final DateTime dateTime = DateTime.parse(date.toString());
+      final months = [
+        'يناير',
+        'فبراير',
+        'مارس',
+        'أبريل',
+        'مايو',
+        'يونيو',
+        'يوليو',
+        'أغسطس',
+        'سبتمبر',
+        'أكتوبر',
+        'نوفمبر',
+        'ديسمبر',
+      ];
+      return '${dateTime.day} ${months[dateTime.month - 1]} ${dateTime.year}';
+    } catch (e) {
+      return 'غير محدد';
+    }
   }
 
   @override
@@ -65,13 +267,20 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
               _buildTabs(),
               const SizedBox(height: 16),
               Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildShipmentsList(_currentShipments, true),
-                    _buildShipmentsList(_completedShipments, false),
-                  ],
-                ),
+                child:
+                    _isLoading
+                        ? const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF690000),
+                          ),
+                        )
+                        : TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildShipmentsList(_currentShipments, true),
+                            _buildShipmentsList(_completedShipments, false),
+                          ],
+                        ),
               ),
             ],
           ),
@@ -337,28 +546,55 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     bool isCurrent,
   ) {
     if (shipments.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text(
-              isCurrent ? 'لا توجد شحنات جارية' : 'لا توجد شحنات مكتملة',
-              style: TextStyle(
-                fontSize: 18,
-                fontFamily: 'Cairo',
-                color: Colors.grey[500],
+      return RefreshIndicator(
+        onRefresh: _loadShipments,
+        color: const Color(0xFF690000),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    size: 80,
+                    color: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isCurrent ? 'لا توجد شحنات جارية' : 'لا توجد شحنات مكتملة',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontFamily: 'Cairo',
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'اسحب لأسفل للتحديث',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'Cairo',
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: shipments.length,
-      itemBuilder: (context, index) => _buildShipmentCard(shipments[index]),
+    return RefreshIndicator(
+      onRefresh: _loadShipments,
+      color: const Color(0xFF690000),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: shipments.length,
+        itemBuilder: (context, index) => _buildShipmentCard(shipments[index]),
+      ),
     );
   }
 
@@ -794,7 +1030,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                   _buildFilterOption('الكل', Icons.list_rounded),
                   _buildFilterOption('بحري', Icons.directions_boat_rounded),
                   _buildFilterOption('جوي', Icons.flight_takeoff_rounded),
-                  _buildFilterOption('عاجل', Icons.priority_high_rounded),
+                  _buildFilterOption('بري', Icons.local_shipping_rounded),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -807,8 +1043,11 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     final isSelected = _selectedFilter == title;
     return InkWell(
       onTap: () {
-        setState(() => _selectedFilter = title);
+        setState(() {
+          _selectedFilter = title;
+        });
         Navigator.pop(context);
+        _applyFiltersAndSearch();
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -1072,12 +1311,5 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _searchController.dispose();
-    super.dispose();
   }
 }

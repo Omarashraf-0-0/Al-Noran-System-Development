@@ -179,9 +179,60 @@ const deleteUser = asyncHandler(async (req, res) => {
   res.json({ message: reply });
 });
 
+// @desc    Change user password
+// @route   PUT /api/users/:id/change-password
+// @access  Private
+const changePassword = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { currentPassword, newPassword } = req.body;
+
+  console.log('🔐 [changePassword] User ID:', id);
+  console.log('🔐 [changePassword] Request body:', { currentPassword: '***', newPassword: '***' });
+
+  // Validate input
+  if (!id || !currentPassword || !newPassword) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'User ID, current password, and new password are required' 
+    });
+  }
+
+  // Find user with password
+  const user = await User.findById(id).select('+password').exec();
+
+  if (!user) {
+    return res.status(404).json({ 
+      success: false,
+      message: 'User not found' 
+    });
+  }
+
+  // Verify current password
+  const isPasswordMatch = await user.matchPassword(currentPassword);
+  
+  if (!isPasswordMatch) {
+    return res.status(401).json({ 
+      success: false,
+      message: 'Current password is incorrect' 
+    });
+  }
+
+  // Update password (will be hashed by pre-save hook)
+  user.password = newPassword;
+  await user.save();
+
+  console.log('✅ [changePassword] Password changed successfully');
+
+  res.json({ 
+    success: true,
+    message: 'Password changed successfully' 
+  });
+});
+
 module.exports = {
   getAllUsers,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  changePassword
 };

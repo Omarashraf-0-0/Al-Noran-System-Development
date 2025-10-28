@@ -50,6 +50,8 @@ const login = asyncHandler(async (req, res) => {
       email: user.email,
       type: user.type,
       phone: user.phone,
+      clientDetails: user.clientDetails,
+      employeeDetails: user.employeeDetails
     }
   });
 });
@@ -112,7 +114,11 @@ const signup = asyncHandler(async (req, res) => {
           id: user._id,
           fullname: user.fullname,
           username: user.username,
-          type: user.type
+          email: user.email,
+          phone: user.phone,
+          type: user.type,
+          clientDetails: user.clientDetails,
+          employeeDetails: user.employeeDetails
       }
     });
   } else {

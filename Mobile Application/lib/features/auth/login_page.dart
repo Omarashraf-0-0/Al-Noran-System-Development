@@ -397,6 +397,24 @@ class _LoginPageState extends State<LoginPage> {
       if (result['success']) {
         // نجح تسجيل الدخول
         if (mounted) {
+          // Debug: Print the response data
+          print('🔐 [Login] Full response: $result');
+          print('🔐 [Login] User data: ${result['data']?['user']}');
+          print(
+            '🔐 [Login] ClientDetails: ${result['data']?['user']?['clientDetails']}',
+          );
+
+          // Save token and user data to SecureStorage
+          if (result['data'] != null) {
+            if (result['data']['token'] != null) {
+              await ApiService.saveToken(result['data']['token']);
+            }
+            if (result['data']['user'] != null) {
+              await ApiService.saveUserData(result['data']['user']);
+              print('✅ [Login] User data saved to storage');
+            }
+          }
+
           // الحصول على اسم المستخدم من البيانات
           String userName = 'مستخدم';
           if (result['data'] != null && result['data']['user'] != null) {
