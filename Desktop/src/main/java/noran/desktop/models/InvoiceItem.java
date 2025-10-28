@@ -13,6 +13,7 @@ public class InvoiceItem {
     private final SimpleDoubleProperty price = new SimpleDoubleProperty();
     private final SimpleStringProperty date = new SimpleStringProperty();
 
+
     public InvoiceItem() {
     }
 
