@@ -54,6 +54,7 @@ const uploadFile = async (req, res) => {
 
 		const validCategories = [
 			"registration",
+			"acidrequest",
 			"acid",
 			"shipment",
 			"invoice",
