@@ -2,6 +2,8 @@ const User = require('../models/user');
 const { validationResult } = require('express-validator');
 const asyncHandler = require('express-async-handler');
 
+
+
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
@@ -82,8 +84,16 @@ const signup = asyncHandler(async (req, res) => {
 
   const userExists = await User.findOne({ $or: [{ email }, { username }, { phone }] }).lean().exec();
   if (userExists) {
+// <<<<<<< HEAD
+//      res.status(409).json({
+//       success: false,
+//       error: 'A user with that email, username, or phone number already exists.'
+//     });
+//     throw new Error('A user with that email, username, or phone number already exists.');
+// =======
     res.status(409);
     throw new Error('البريد الإلكتروني أو اسم المستخدم أو رقم الهاتف مستخدم بالفعل');
+
   }
 
   const userData = {

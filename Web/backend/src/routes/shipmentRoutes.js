@@ -8,11 +8,13 @@ const {
   getShipmentStatusByNumber46,
   deleteShipment,
   getShipmentrelatedToEmployee,
+  addShipments,
 } = require("../controllers/shipmentController");
 
 const router = express.Router();
 
 router.post("/", createShipment);
+router.post("/addShipments", addShipments);
 router.get("/getAll", getAllShipments);
 router.get("/status/:acid", getShipmentStatusByAcid);
 router.get("/:acid", getShipmentByAcid);

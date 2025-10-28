@@ -180,9 +180,33 @@ const deleteUser = asyncHandler(async (req, res) => {
   res.json({ message: reply });
 });
 
+
+const addUsers = async (req,res) => {
+  const usersData =  req.body;
+  if (!Array.isArray(usersData)) {
+      return res.status(400).json({ message: 'Expected an array of users' });
+  }
+  try{
+    const response = await User.insertMany(usersData, { ordered: false });
+    if(response)
+    {
+      return res.status(200).json({
+        message:"Users saved successfully",
+        users:response
+      });
+    }else {
+      return res.status(400).json({ message: 'Invalid user data received' });
+    }
+  }catch(error) {
+    return res.status(500).json({"error":error.message});
+  }
+};
+
+
 module.exports = {
   getAllUsers,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  addUsers,
 };
