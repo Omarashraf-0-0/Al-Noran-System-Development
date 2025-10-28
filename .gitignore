@@ -1,9 +1,7 @@
 node_modules
+*.env
 logs 
-./Web/backend/.env
 uploads/
-Web\backend\.env
-Web/backend/.env
-Web/backend/.env
-Web/backend/.env
 Web/backend/package-lock.json
+*/*.env
+*/*/*.env
