@@ -21,7 +21,7 @@ public class DatabaseConnection {
             String url = "jdbc:sqlite:" + DB_PATH;
             conn = DriverManager.getConnection(url);
 
-            // ✅ Create table if not exists
+            // ✅ Create table if not exists (added taxNumber and rank)
             String sql = "CREATE TABLE IF NOT EXISTS users ("
                     + "id TEXT PRIMARY KEY, "
                     + "fullname TEXT NOT NULL, "
@@ -33,8 +33,10 @@ public class DatabaseConnection {
                     + "active INTEGER DEFAULT 1, "
                     + "clientType TEXT, "
                     + "ssn TEXT, "
+                    + "taxNumber TEXT, " // ✅ New column
                     + "employeeType TEXT, "
                     + "verified INTEGER DEFAULT 0, "
+                    + "rank TEXT CHECK(rank IN ('low', 'med', 'high') OR rank IS NULL) DEFAULT NULL, " // ✅ New column with enum check
                     + "createdAt INTEGER, "
                     + "updatedAt INTEGER, "
                     + "version INTEGER DEFAULT 0"
@@ -43,8 +45,8 @@ public class DatabaseConnection {
             // ✅ Execute SQL safely
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute(sql);
-                System.out.println("Successfully created users table");
-            }catch (SQLException e){
+                System.out.println("✅ Successfully created or verified 'users' table structure");
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
 
