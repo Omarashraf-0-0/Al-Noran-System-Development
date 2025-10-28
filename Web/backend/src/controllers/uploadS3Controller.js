@@ -324,22 +324,8 @@ const getUploads = async (req, res) => {
 				try {
 					const presignedUrl = await getPresignedUrl(upload.s3Key, 3600);
 					return {
-						id: upload._id, // Add id field
-						_id: upload._id, // Keep _id for backward compatibility
-						filename: upload.filename,
-						originalname: upload.originalname,
-						s3Key: upload.s3Key,
-						url: presignedUrl, // Presigned URL for immediate access
-						category: upload.category,
-						documentType: upload.documentType,
-						userType: upload.userType,
-						clientType: upload.clientType,
-						mimetype: upload.mimetype,
-						size: upload.size,
-						uploadedAt: upload.uploadedAt,
-						uploadedBy: upload.uploadedBy,
-						userId: upload.userId,
-						presignedUrl, // Also include as presignedUrl
+						...upload,
+						presignedUrl,
 					};
 				} catch (error) {
 					console.error(`Error generating presigned URL for ${upload.s3Key}:`, error);

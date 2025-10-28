@@ -68,6 +68,7 @@ app.use("/api/acid", require("./routes/acidRoutes"));
 app.use("/api/finance", require("./routes/financeRoutes"));
 app.use("/api/upload/users", require("./routes/uploadRoutes"));
 app.use("/api/upload/shipments", require("./routes/uploadRoutes"));
+app.use("/api/uploads", require("./routes/uploadS3Routes")); // S3 Upload Routes
 app.use((req, res) => {
     res.status(404);
     if (req.accepts("html")) {

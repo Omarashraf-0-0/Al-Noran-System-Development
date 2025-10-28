@@ -245,7 +245,7 @@ const DocumentUploadPage = () => {
 		}
 
 		// TODO: When dashboard is ready, change this to navigate("/dashboard")
-		navigate("/home");
+		navigate("/shipmentstatus");
 	};
 
 	if (!clientType) {
