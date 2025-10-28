@@ -2,6 +2,8 @@ package noran.desktop.Controllers;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -35,6 +37,8 @@ public class ClientDataController implements Initializable {
     private TableColumn<UserRow, String> colClientType;
     @FXML
     private TableColumn<UserRow, String> colClientRank;
+    @FXML
+    private TextField searchField;
 
     private ObservableList<UserRow> userList = FXCollections.observableArrayList();
 
@@ -48,6 +52,9 @@ public class ClientDataController implements Initializable {
 
         // Load users from SQLite
         loadUsersFromDatabase();
+
+        // Dynamic Search
+        setupSearchFilter();
 
         // Fill top bar user info if available
         var currentUser = AppSession.getInstance().getCurrentUser();
@@ -82,6 +89,30 @@ public class ClientDataController implements Initializable {
             e.printStackTrace();
             System.out.println("❌ Error loading users: " + e.getMessage());
         }
+    }
+
+    /** 🔍 Set up dynamic search filtering */
+    private void setupSearchFilter() {
+        FilteredList<UserRow> filteredData = new FilteredList<>(userList, p -> true);
+
+        searchField.textProperty().addListener((observable, oldValue, newValue) -> {
+            filteredData.setPredicate(user -> {
+                // If search field is empty, display all users
+                if (newValue == null || newValue.isBlank()) {
+                    return true;
+                }
+
+                String lowerCaseFilter = newValue.toLowerCase();
+
+                // Match client name
+                return user.getUsername().toLowerCase().contains(lowerCaseFilter);
+            });
+        });
+
+        // Wrap the FilteredList in a SortedList
+        SortedList<UserRow> sortedData = new SortedList<>(filteredData);
+        sortedData.comparatorProperty().bind(invoicesTable.comparatorProperty());
+        invoicesTable.setItems(sortedData);
     }
 
     @FXML
