@@ -4,6 +4,10 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const uploadController = require("../controllers/uploadController");
+const mailSender = require("../services/mailer");
+const jwt = require("jsonwebtoken");
+
+
 
 // Set up storage engine for multer
 const storage = multer.diskStorage({

@@ -44,6 +44,17 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  taxNumber: {
+    type: String,
+    required: false,
+    trim: true,
+  },
+  rank: {
+    type: String,
+    enum: ['1', '2', '3', null],
+    required: false,
+    default: null,
+  },
   clientDetails: {
     clientType: {
       type: String,
@@ -80,7 +91,7 @@ UserSchema.pre('save', async function (next) {
 });
 
 UserSchema.methods.getSignedJwtToken = function () {
-  return jwt.sign({ id: this._id, username: this.username }, process.env.JWT_SECRET, {
+  return jwt.sign({ id: this._id, username: this.username, email:this.email}, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE,
   });
 };
