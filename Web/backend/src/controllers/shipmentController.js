@@ -214,9 +214,14 @@ const getShipmentStatusByNumber46 = async (req, res) => {
 const getShipmentrelatedToEmployee = async (req, res) => {
 	try {
 		const employeeId = req.params.employeeId;
-		const shipments = await Shipment.find({ assignedTo: employeeId });
+		console.log("Fetching shipments for employee:", employeeId);
+		
+		const shipments = await Shipment.find({ user_id: employeeId }).sort({ createdAt: -1 });
+		
+		console.log(`Found ${shipments.length} shipments for employee ${employeeId}`);
 		res.json(shipments);
 	} catch (error) {
+		console.error("Error fetching shipments:", error);
 		res.status(500).json({ message: error.message });
 	}
 };

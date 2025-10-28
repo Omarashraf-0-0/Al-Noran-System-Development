@@ -29,11 +29,15 @@ StatCard.propTypes = {
 };
 
 const WelcomeBanner = () => {
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const userName = user?.username || user?.fullname || user?.name || "الزائر";
+  
   return (
     <section className="flex flex-col items-center py-8 px-4">
       {/* 🟥 Greeting Above the Card */}
       <div className="w-full max-w-4xl mb-4 text-right">
-        <h1 className="text-2xl font-bold text-red-800">مرحباً, الأسم!</h1>
+        <h1 className="text-2xl font-bold text-red-800">مرحباً, {userName}!</h1>
       </div>
 
       {/* 🟫 Card Section */}
