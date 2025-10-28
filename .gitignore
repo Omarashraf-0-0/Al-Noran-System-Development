@@ -5,3 +5,6 @@ uploads/
 Web/backend/package-lock.json
 */*.env
 */*/*.env
+*.env
+./Web/backend/package-lock.json
+
