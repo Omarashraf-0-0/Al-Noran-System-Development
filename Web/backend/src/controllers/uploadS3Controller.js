@@ -346,7 +346,9 @@ const uploadMultipleFiles = async (req, res) => {
  */
 const getUploads = async (req, res) => {
 	try {
-		const { userId, category, relatedId, userType, documentType } = req.query;
+		// Get userId from params (for /user/:userId route) or query
+		const userId = req.params.userId || req.query.userId;
+		const { category, relatedId, userType, documentType } = req.query;
 
 		// Build query
 		const query = { isActive: true };
@@ -357,15 +359,19 @@ const getUploads = async (req, res) => {
 		if (userType) query.userType = userType;
 		if (documentType) query.documentType = documentType;
 
-		// If no userId in query, use authenticated user's ID
+		// If no userId in query/params, use authenticated user's ID
 		if (!userId && req.user) {
 			query.userId = req.user.id || req.user._id;
 		}
+
+		console.log('🔍 [getUploads] Query:', query);
 
 		const uploads = await Upload.find(query)
 			.sort({ uploadedAt: -1 })
 			.populate("userId", "fullname email username type")
 			.lean();
+
+		console.log(`📦 [getUploads] Found ${uploads.length} uploads`);
 
 		// Generate presigned URLs for each upload
 		const uploadsWithPresignedUrls = await Promise.all(
@@ -425,6 +431,64 @@ const getUploadById = async (req, res) => {
 	} catch (error) {
 		console.error("Get Upload By ID Error:", error);
 		res.status(500).json({ message: error.message || "Server error" });
+	}
+};
+
+/**
+ * @route   PUT /api/uploads/:id
+ * @desc    Update upload metadata (description, tags, etc.)
+ * @access  Private (JWT required)
+ */
+const updateUpload = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { description, tags } = req.body;
+
+		console.log('📝 [updateUpload] Updating upload:', id);
+		console.log('📝 [updateUpload] New description:', description);
+		console.log('📝 [updateUpload] New tags:', tags);
+
+		const upload = await Upload.findById(id);
+
+		if (!upload) {
+			return res.status(404).json({ 
+				success: false,
+				message: "Upload not found" 
+			});
+		}
+
+		// Check if user owns this upload (or is admin)
+		const userId = req.user?.id || req.user?._id;
+		if (upload.userId.toString() !== userId.toString() && req.user?.type !== "admin") {
+			return res.status(403).json({ 
+				success: false,
+				message: "Not authorized to update this upload" 
+			});
+		}
+
+		// Update fields
+		if (description !== undefined) upload.description = description;
+		if (tags !== undefined) upload.tags = tags;
+
+		await upload.save();
+
+		console.log('✅ [updateUpload] Upload updated successfully');
+
+		res.status(200).json({
+			success: true,
+			message: "Upload updated successfully",
+			upload: {
+				id: upload._id,
+				description: upload.description,
+				tags: upload.tags,
+			},
+		});
+	} catch (error) {
+		console.error('❌ [updateUpload] Error:', error.message);
+		res.status(500).json({ 
+			success: false,
+			message: "Server error updating upload" 
+		});
 	}
 };
 
@@ -510,6 +574,7 @@ module.exports = {
 	uploadMultipleFiles,
 	getUploads,
 	getUploadById,
+	updateUpload,
 	deleteUpload,
 	checkRequiredDocuments,
 };

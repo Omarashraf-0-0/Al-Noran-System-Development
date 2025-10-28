@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../Pop-ups/al_noran_popups.dart';
+import '../../core/network/api_service.dart';
+import '../profile/profile_page.dart';
+import '../profile/profile_settings_page.dart';
+import '../profile/settings_menu_page.dart';
 
 class HomePage extends StatefulWidget {
   final String userName;
@@ -24,43 +28,113 @@ class _HomePageState extends State<HomePage> {
     'completedShipments': 0,
   };
 
+  List<Map<String, dynamic>> _recentShipments = [];
+  bool _isLoadingShipments = true;
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadRecentShipments();
   }
 
   Future<void> _loadUserData() async {
-    // هنا يمكن جلب إحصائيات المستخدم من الـ Backend
     // TODO: Implement API call to get user statistics
-    setState(() {
-      _userStats = {
-        'totalShipments': 24,
-        'activeShipments': 5,
-        'completedShipments': 19,
-      };
-    });
   }
 
-  // Mock Data
-  final List<Map<String, dynamic>> _currentShipments = [
-    {
-      'id': 'SEA-0012',
-      'name': 'اسم الشحنة',
-      'polNumber': 'رقم البوليصة',
-      'date': 'تاريخ الجمعة 29 أكتوبر',
-      'status': 'في إنتظار رقم ACID',
-      'isUrgent': true,
-    },
-    {
-      'id': 'SEA-0012',
-      'name': 'اسم الشحنة',
-      'polNumber': 'رقم البوليصة',
-      'date': 'تاريخ الجمعة 29 أكتوبر',
-      'status': 'في إنتظار رقم ACID',
-      'isUrgent': true,
-    },
-  ];
+  Future<void> _loadRecentShipments() async {
+    try {
+      setState(() => _isLoadingShipments = true);
+
+      print('🏠 [HomePage] Loading recent shipments...');
+
+      final response = await ApiService.getAllShipments();
+
+      if (response['success'] == true) {
+        final shipments = List<Map<String, dynamic>>.from(
+          response['shipments'] ?? [],
+        );
+
+        print('🏠 [HomePage] Found ${shipments.length} shipments');
+
+        // أخذ آخر 3 شحنات فقط
+        final recent =
+            shipments.take(3).map((shipment) {
+              return {
+                'id': shipment['acid'] ?? 'N/A',
+                'name': shipment['shipmentDescription'] ?? 'شحنة',
+                'polNumber': shipment['number46'] ?? 'غير محدد',
+                'date': _formatDate(
+                  shipment['arrivalDate'] ?? shipment['createdAt'],
+                ),
+                'status': shipment['status'] ?? 'غير محدد',
+                'isUrgent': _isUrgent(shipment['status']),
+                'rawData': shipment,
+              };
+            }).toList();
+
+        setState(() {
+          _recentShipments = recent;
+          _isLoadingShipments = false;
+          // تحديث الإحصائيات
+          _userStats = {
+            'totalShipments': shipments.length,
+            'activeShipments':
+                shipments.where((s) => s['status'] != 'تمت بنجاح').length,
+            'completedShipments':
+                shipments.where((s) => s['status'] == 'تمت بنجاح').length,
+          };
+        });
+
+        print('🏠 [HomePage] Recent shipments loaded: ${recent.length}');
+      } else {
+        setState(() => _isLoadingShipments = false);
+      }
+    } catch (e) {
+      print('❌ [HomePage] Error loading shipments: $e');
+      setState(() => _isLoadingShipments = false);
+    }
+  }
+
+  bool _isUrgent(String? status) {
+    return status == 'في انتظار الشحن' || status == 'في انتظار وصول الإذن';
+  }
+
+  String _formatDate(dynamic date) {
+    if (date == null) return 'غير محدد';
+    try {
+      final DateTime dateTime = DateTime.parse(date.toString());
+      final months = [
+        'يناير',
+        'فبراير',
+        'مارس',
+        'أبريل',
+        'مايو',
+        'يونيو',
+        'يوليو',
+        'أغسطس',
+        'سبتمبر',
+        'أكتوبر',
+        'نوفمبر',
+        'ديسمبر',
+      ];
+      final days = [
+        'الأحد',
+        'الإثنين',
+        'الثلاثاء',
+        'الأربعاء',
+        'الخميس',
+        'الجمعة',
+        'السبت',
+      ];
+      return 'تاريخ ${days[dateTime.weekday % 7]} ${dateTime.day} ${months[dateTime.month - 1]}';
+    } catch (e) {
+      return 'غير محدد';
+    }
+  }
+
+  // Mock Data - REMOVED
+  // final List<Map<String, dynamic>> _currentShipments = [...]
 
   @override
   Widget build(BuildContext context) {
@@ -138,21 +212,32 @@ class _HomePageState extends State<HomePage> {
           // Profile Picture & Notification (على اليمين في RTL - أول عناصر في Row)
           Row(
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
-                    width: 2,
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfilePage(),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(50),
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 2,
+                    ),
                   ),
-                ),
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.white,
-                  child: Icon(
-                    Icons.person,
-                    color: const Color(0xFF690000),
-                    size: 24,
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.white,
+                    child: Icon(
+                      Icons.person,
+                      color: const Color(0xFF690000),
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
@@ -398,7 +483,12 @@ class _HomePageState extends State<HomePage> {
                     const Color(0xFF690000),
                     () {
                       Navigator.pop(context);
-                      // TODO: Navigate to profile
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ProfilePage(),
+                        ),
+                      );
                     },
                   ),
                   _buildMenuItem(
@@ -407,7 +497,12 @@ class _HomePageState extends State<HomePage> {
                     const Color(0xFF690000),
                     () {
                       Navigator.pop(context);
-                      // TODO: Navigate to settings
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SettingsMenuPage(),
+                        ),
+                      );
                     },
                   ),
                   _buildMenuItem(
@@ -737,6 +832,40 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Expanded(
                     child: _buildServiceCard(
+                      'الملف الشخصي',
+                      Icons.person_outline,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfilePage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildServiceCard(
+                      'إعدادات الحساب',
+                      Icons.settings_outlined,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfileSettingsPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildServiceCard(
                       'تواصل معنا',
                       Icons.headset_mic_outlined,
                     ),
@@ -775,9 +904,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildServiceCard(String title, IconData icon) {
+  Widget _buildServiceCard(String title, IconData icon, {VoidCallback? onTap}) {
     return InkWell(
-      onTap: () => _handleServiceTap(title),
+      onTap: onTap ?? () => _handleServiceTap(title),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -834,6 +963,35 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCurrentShipmentsSection() {
+    if (_isLoadingShipments) {
+      return const Padding(
+        padding: EdgeInsets.all(32),
+        child: Center(
+          child: CircularProgressIndicator(color: Color(0xFF690000)),
+        ),
+      );
+    }
+
+    if (_recentShipments.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          children: [
+            Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey[300]),
+            const SizedBox(height: 12),
+            Text(
+              'لا توجد شحنات حالياً',
+              style: TextStyle(
+                fontSize: 16,
+                fontFamily: 'Cairo',
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
       children: [
         Padding(
@@ -842,7 +1000,7 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'الشحنات الحالية',
+                'آخر الشحنات',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -893,9 +1051,9 @@ class _HomePageState extends State<HomePage> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          itemCount: _currentShipments.length,
+          itemCount: _recentShipments.length,
           itemBuilder: (context, index) {
-            return _buildShipmentCard(_currentShipments[index]);
+            return _buildShipmentCard(_recentShipments[index]);
           },
         ),
       ],
@@ -1265,12 +1423,16 @@ class _HomePageState extends State<HomePage> {
         );
         break;
       case 4:
-        // حسابي
-        AlNoranPopups.showInfo(
-          context: context,
-          title: 'حسابي',
-          message: 'قسم الحساب الشخصي قيد التطوير',
-        );
+        // حسابي - Navigate to Profile Page
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ProfilePage()),
+        ).then((_) {
+          // إعادة تعيين الـ selected index عند الرجوع
+          setState(() {
+            _selectedIndex = 0;
+          });
+        });
         break;
     }
   }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import '../auth/login_page.dart';
+import '../home/homePage.dart';
+import '../../core/network/api_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -117,11 +119,28 @@ class _SplashScreenState extends State<SplashScreen>
   void _navigateToHome() async {
     if (!mounted) return;
 
+    // Check if user is already logged in
+    final token = await ApiService.getToken();
+    final userData = await ApiService.getUserData();
+
+    Widget nextPage;
+
+    if (token != null && token.isNotEmpty && userData['id'] != null) {
+      // User is logged in, go directly to HomePage
+      nextPage = HomePage(
+        userName: userData['name'] ?? 'مستخدم',
+        userEmail: userData['email'] ?? '',
+      );
+    } else {
+      // User not logged in, go to LoginPage
+      nextPage = const LoginPage();
+    }
+
     // الانتقال مع Fade Transition سلس
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) {
-          return FadeTransition(opacity: animation, child: const LoginPage());
+          return FadeTransition(opacity: animation, child: nextPage);
         },
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           // Fade out للـ Splash و Fade in للـ Login في نفس الوقت
