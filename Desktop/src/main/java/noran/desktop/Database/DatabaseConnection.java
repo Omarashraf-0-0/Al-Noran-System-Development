@@ -22,12 +22,12 @@ public class DatabaseConnection {
             conn = DriverManager.getConnection(url);
 
             try (Statement stmt = conn.createStatement()) {
-                // ⚠️ Drop the users table if it exists
-                stmt.execute("DROP TABLE IF EXISTS users;");
-                System.out.println("🗑️  Old 'users' table deleted.");
+                // 🗑️ Drop old users table
+//                stmt.execute("DROP TABLE IF EXISTS users;");
+//                System.out.println("🗑️  Old 'users' table deleted.");
 
-                // ✅ Recreate the users table from scratch
-                String sql = """
+                // ✅ Recreate the users table
+                String usersTable = """
                     CREATE TABLE users (
                         _id TEXT PRIMARY KEY,
                         fullname TEXT,
@@ -48,12 +48,37 @@ public class DatabaseConnection {
                         version INTEGER DEFAULT 0
                     );
                 """;
-
-                stmt.execute(sql);
+                stmt.execute(usersTable);
                 System.out.println("✅ 'users' table recreated successfully.");
+
+                // 🗑️ Drop old shipments table
+//                stmt.execute("DROP TABLE IF EXISTS shipments;");
+//                System.out.println("🗑️  Old 'shipments' table deleted.");
+
+                // ✅ Recreate the shipments table (with clientId)
+                String shipmentsTable = """
+                    CREATE TABLE shipments (
+                        shipment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        port_name TEXT NOT NULL,
+                        num_of_containers INTEGER CHECK (num_of_containers >= 0),
+                        type_of_containers TEXT,       -- JSON string for array-like data
+                        third_gomroky TEXT,            -- customs office
+                        country TEXT,
+                        status TEXT,
+                        policy TEXT,
+                        dragt BOOLEAN DEFAULT 0,
+                        clearance_fees REAL DEFAULT 0.00,
+                        expenses_and_tips REAL DEFAULT 0.00,
+                        sundries REAL DEFAULT 0.00,
+                        clientId TEXT,                 -- 🔗 new column linking to users._id
+                        FOREIGN KEY (clientId) REFERENCES users(_id)
+                    );
+                """;
+                stmt.execute(shipmentsTable);
+                System.out.println("✅ 'shipments' table recreated successfully with new column 'clientId'.");
             }
 
-            System.out.println("✅ Database ready at: " + dbFile.getAbsolutePath());
+            System.out.println("✅ Database ready at: " + new File(DB_PATH).getAbsolutePath());
 
         } catch (SQLException e) {
             System.err.println("❌ SQL Error: " + e.getMessage());
@@ -65,6 +90,6 @@ public class DatabaseConnection {
     }
 
     public static void main(String[] args) {
-        connect(); // Run once to recreate table
+        connect(); // Run once to recreate tables
     }
 }

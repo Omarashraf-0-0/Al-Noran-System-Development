@@ -9,26 +9,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Statement;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.List;
+import java.sql.*;
+import java.util.*;
 
-/**
- * Sync shipments between remote (REST-backed Mongo) and local SQLite `shipments` table.
- *
- * Behavior:
- * - Fetch remote shipments via GET
- * - Read local shipments from SQLite
- * - Push local-only shipments to remote via POST
- * - Insert remote-only shipments into local SQLite
- *
- * Configure endpoints below.
- */
 public class RestMongoShipmentsSyncClient {
 
     private static final String REMOTE_SHIPMENTS_GET_URL = "http://localhost:3500/api/shipments/getAll";
@@ -55,24 +38,24 @@ public class RestMongoShipmentsSyncClient {
             if (id != null) remoteById.put(id, doc);
         }
 
-    ensureLocalTableExists();
+        ensureLocalTableExists();
 
-        // Read local shipments using the new schema
+        // ✅ Read local shipments using correct column name
         Map<String, JSONObject> localById = new HashMap<>();
         List<JSONObject> localList = new ArrayList<>();
+
         try (Connection conn = DatabaseConnection.connect()) {
-            String sql = "SELECT id, user_id, port_name, num_of_containers, type_of_containers, third_gomroky, country, status, policy, dragt, clearance_fees, expenses_and_tips, sundries, createdAt, updatedAt, version FROM shipments";
+            String sql = "SELECT shipment_id, clientId, port_name, num_of_containers, type_of_containers, third_gomroky, country, status, policy, dragt, clearance_fees, expenses_and_tips, sundries FROM shipments";
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ResultSet rs = ps.executeQuery();
                 while (rs.next()) {
                     JSONObject j = new JSONObject();
-                    j.put("id", rs.getString("id"));
-                    j.put("user_id", rs.getString("user_id"));
+                    j.put("shipment_id", rs.getString("shipment_id"));
+                    j.put("clientId", rs.getString("clientId"));
                     j.put("port_name", rs.getString("port_name"));
                     j.put("num_of_containers", rs.getInt("num_of_containers"));
-                    // arrays stored as JSON text
-                    j.put("type_of_containers", new org.json.JSONArray(rs.getString("type_of_containers") == null ? "[]" : rs.getString("type_of_containers")));
-                    j.put("third_gomroky", new org.json.JSONArray(rs.getString("third_gomroky") == null ? "[]" : rs.getString("third_gomroky")));
+                    j.put("type_of_containers", new JSONArray(rs.getString("type_of_containers") == null ? "[]" : rs.getString("type_of_containers")));
+                    j.put("third_gomroky", new JSONArray(rs.getString("third_gomroky") == null ? "[]" : rs.getString("third_gomroky")));
                     j.put("country", rs.getString("country"));
                     j.put("status", rs.getString("status"));
                     j.put("policy", rs.getString("policy"));
@@ -80,120 +63,84 @@ public class RestMongoShipmentsSyncClient {
                     j.put("clearance_fees", rs.getDouble("clearance_fees"));
                     j.put("expenses_and_tips", rs.getDouble("expenses_and_tips"));
                     j.put("sundries", rs.getDouble("sundries"));
-                    j.put("createdAt", rs.getLong("createdAt"));
-                    j.put("updatedAt", rs.getLong("updatedAt"));
-                    j.put("version", rs.getInt("version"));
 
-                    String id = rs.getString("id");
+                    String id = rs.getString("shipment_id");
                     if (id != null) localById.put(id, j);
                     localList.add(j);
                 }
             }
         }
 
-        // Local-only -> push to remote
-        List<JSONObject> toPush = new ArrayList<>();
-        for (JSONObject local : localList) {
-            String id = local.optString("id", null);
-            if (id == null || id.isBlank()) continue;
-            if (!remoteById.containsKey(id)) toPush.add(local);
-        }
-
-        System.out.println("Local-only shipments to push: " + toPush.size());
-        for (JSONObject s : toPush) {
-            JSONObject payload = new JSONObject();
-            payload.put("user_id", s.optString("user_id", ""));
-            payload.put("port_name", s.optString("port_name", ""));
-            payload.put("num_of_containers", s.optInt("num_of_containers", 0));
-            // ensure arrays are sent as actual arrays
-            Object types = s.opt("type_of_containers");
-            if (types instanceof org.json.JSONArray) payload.put("type_of_containers", types);
-            else payload.put("type_of_containers", new org.json.JSONArray());
-            Object third = s.opt("third_gomroky");
-            if (third instanceof org.json.JSONArray) payload.put("third_gomroky", third);
-            else payload.put("third_gomroky", new org.json.JSONArray());
-            payload.put("country", s.optString("country", ""));
-            payload.put("status", s.optString("status", ""));
-            payload.put("policy", s.optString("policy", ""));
-            payload.put("dragt", s.optBoolean("dragt", false));
-            payload.put("clearance_fees", s.optDouble("clearance_fees", 0.0));
-            payload.put("expenses_and_tips", s.optDouble("expenses_and_tips", 0.0));
-            payload.put("sundries", s.optDouble("sundries", 0.0));
-
-            String resp = APIService.post(REMOTE_SHIPMENTS_CREATE_URL, payload.toString());
-            System.out.println("Pushed shipment " + payload.optString("port_name") + " -> " + (resp == null ? "null" : resp));
-        }
-
-        // Remote-only -> insert locally
+        // ✅ Insert remote-only shipments
         List<JSONObject> toInsert = new ArrayList<>();
         for (Map.Entry<String, JSONObject> e : remoteById.entrySet()) {
-            String id = e.getKey();
-            if (!localById.containsKey(id)) toInsert.add(e.getValue());
+            if (!localById.containsKey(e.getKey())) toInsert.add(e.getValue());
         }
 
         System.out.println("Remote-only shipments to insert locally: " + toInsert.size());
+
         if (!toInsert.isEmpty()) {
             try (Connection conn = DatabaseConnection.connect()) {
-                String insertSQL = "INSERT OR REPLACE INTO shipments (id, user_id, port_name, num_of_containers, type_of_containers, third_gomroky, country, status, policy, dragt, clearance_fees, expenses_and_tips, sundries, createdAt, updatedAt, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                String insertSQL = """
+                    INSERT OR REPLACE INTO shipments (
+                        port_name, num_of_containers, type_of_containers, third_gomroky, country,
+                        status, policy, dragt, clearance_fees, expenses_and_tips, sundries, clientId
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
+
                 PreparedStatement pstmt = conn.prepareStatement(insertSQL);
-                int count = 0;
+
                 for (JSONObject doc : toInsert) {
-                    String id = parseId(doc);
-                    pstmt.setString(1, id);
-                    // user_id may be nested
-                    String userId = null;
-                    if (doc.has("user_id")) {
-                        Object u = doc.get("user_id");
-                        if (u instanceof JSONObject) userId = ((JSONObject) u).optString("$oid", null);
-                        else userId = doc.optString("user_id", null);
+                    pstmt.setString(1, doc.optString("port_name", ""));
+                    pstmt.setInt(2, doc.optInt("num_of_containers", 0));
+                    pstmt.setString(3, doc.has("type_of_containers") ? doc.getJSONArray("type_of_containers").toString() : "[]");
+                    pstmt.setString(4, doc.has("third_gomroky") ? doc.getJSONArray("third_gomroky").toString() : "[]");
+                    pstmt.setString(5, doc.optString("country", ""));
+                    pstmt.setString(6, doc.optString("status", ""));
+                    pstmt.setString(7, doc.optString("policy", ""));
+                    pstmt.setInt(8, doc.optBoolean("dragt", false) ? 1 : 0);
+                    pstmt.setDouble(9, doc.optDouble("clearance_fees", 0.0));
+                    pstmt.setDouble(10, doc.optDouble("expenses_and_tips", 0.0));
+                    pstmt.setDouble(11, doc.optDouble("sundries", 0.0));
+
+                    // ✅ Link to a user (clientId)
+                    String clientId = null;
+                    if (doc.has("clientId")) {
+                        Object c = doc.get("clientId");
+                        if (c instanceof JSONObject) clientId = ((JSONObject) c).optString("$oid", null);
+                        else clientId = doc.optString("clientId", null);
                     }
-                    pstmt.setString(2, userId);
-                    pstmt.setString(3, doc.optString("port_name", null));
-                    pstmt.setInt(4, doc.optInt("num_of_containers", 0));
-                    // store arrays as JSON text
-                    pstmt.setString(5, doc.has("type_of_containers") ? doc.get("type_of_containers").toString() : "[]");
-                    pstmt.setString(6, doc.has("third_gomroky") ? doc.get("third_gomroky").toString() : "[]");
-                    pstmt.setString(7, doc.optString("country", null));
-                    pstmt.setString(8, doc.optString("status", null));
-                    pstmt.setString(9, doc.optString("policy", null));
-                    pstmt.setInt(10, doc.optBoolean("dragt", false) ? 1 : 0);
-                    pstmt.setDouble(11, doc.optDouble("clearance_fees", 0.0));
-                    pstmt.setDouble(12, doc.optDouble("expenses_and_tips", 0.0));
-                    pstmt.setDouble(13, doc.optDouble("sundries", 0.0));
-                    pstmt.setLong(14, getLongFromMongoDate(doc.opt("createdAt")));
-                    pstmt.setLong(15, getLongFromMongoDate(doc.opt("updatedAt")));
-                    pstmt.setInt(16, doc.optInt("__v", 0));
+                    pstmt.setString(12, clientId);
 
                     pstmt.executeUpdate();
-                    count++;
+                    System.out.println("✅ Inserted shipment: " + doc.optString("port_name"));
                 }
-                System.out.println("Inserted " + count + " shipments into local DB.");
             }
         }
 
-        System.out.println("Shipments sync complete.");
+        System.out.println("✅ Shipments sync complete.");
     }
 
     private static void ensureLocalTableExists() throws Exception {
         try (Connection conn = DatabaseConnection.connect()) {
-            String create = "CREATE TABLE IF NOT EXISTS shipments ("+
-                    "id TEXT PRIMARY KEY, " +
-                    "user_id TEXT, " +
-                    "port_name TEXT, " +
-                    "num_of_containers INTEGER, " +
-                    "type_of_containers TEXT, " +
-                    "third_gomroky TEXT, " +
-                    "country TEXT, " +
-                    "status TEXT, " +
-                    "policy TEXT, " +
-                    "dragt INTEGER DEFAULT 0, " +
-                    "clearance_fees REAL DEFAULT 0.0, " +
-                    "expenses_and_tips REAL DEFAULT 0.0, " +
-                    "sundries REAL DEFAULT 0.0, " +
-                    "createdAt INTEGER, " +
-                    "updatedAt INTEGER, " +
-                    "version INTEGER DEFAULT 0" +
-                    ")";
+            String create = """
+                CREATE TABLE IF NOT EXISTS shipments (
+                    shipment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    port_name TEXT NOT NULL,
+                    num_of_containers INTEGER CHECK (num_of_containers >= 0),
+                    type_of_containers TEXT,
+                    third_gomroky TEXT,
+                    country TEXT,
+                    status TEXT,
+                    policy TEXT,
+                    dragt BOOLEAN DEFAULT 0,
+                    clearance_fees REAL DEFAULT 0.00,
+                    expenses_and_tips REAL DEFAULT 0.00,
+                    sundries REAL DEFAULT 0.00,
+                    clientId TEXT,
+                    FOREIGN KEY (clientId) REFERENCES users(_id)
+                )
+            """;
             try (Statement st = conn.createStatement()) {
                 st.execute(create);
             }
@@ -220,7 +167,6 @@ public class RestMongoShipmentsSyncClient {
             if (parsed instanceof JSONObject) {
                 JSONObject o = (JSONObject) parsed;
                 if (o.has("shipments") && o.get("shipments") instanceof JSONArray) return o.getJSONArray("shipments");
-                // If single object, wrap
                 return new JSONArray().put(o);
             }
 
@@ -237,29 +183,8 @@ public class RestMongoShipmentsSyncClient {
             if (idObj instanceof JSONObject) {
                 JSONObject idDoc = (JSONObject) idObj;
                 if (idDoc.has("$oid")) return idDoc.optString("$oid", null);
-            } else {
-                return doc.optString("_id", null);
-            }
+            } else return doc.optString("_id", null);
         }
-        return doc.optString("id", null);
-    }
-
-    private static long getLongFromMongoDate(Object o) {
-        if (o == null) return System.currentTimeMillis();
-        try {
-            if (o instanceof JSONObject) {
-                JSONObject dobj = (JSONObject) o;
-                if (dobj.has("$date")) {
-                    Object d = dobj.get("$date");
-                    if (d instanceof JSONObject) {
-                        JSONObject n = (JSONObject) d;
-                        if (n.has("$numberLong")) return Long.parseLong(n.getString("$numberLong"));
-                    } else if (d instanceof Number) {
-                        return ((Number) d).longValue();
-                    }
-                }
-            } else if (o instanceof Number) return ((Number) o).longValue();
-        } catch (Exception ignored) { }
-        return System.currentTimeMillis();
+        return null;
     }
 }
