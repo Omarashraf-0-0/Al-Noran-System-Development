@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
+import '../../util/file_picker_helper.dart';
 
 class CommercialRegistrationPage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -24,7 +24,6 @@ class _CommercialRegistrationPageState
   File? _importCertificateFile; // الشهادة الاستيرادية
   File? _exportCardFile; // بطاقة التصدير (اختياري)
 
-  final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
 
   @override
@@ -342,134 +341,39 @@ class _CommercialRegistrationPageState
   }
 
   Future<void> _pickFile(String fileType) async {
-    // Show bottom sheet to choose between camera or gallery
-    final ImageSource? source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 16),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'اختر طريقة رفع الملف',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Cairo',
-                    color: Color(0xFF690000),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1ba3b6).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      color: Color(0xFF1ba3b6),
-                      size: 28,
-                    ),
-                  ),
-                  title: const Text(
-                    'التقاط صورة',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  onTap: () => Navigator.pop(context, ImageSource.camera),
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF690000).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.photo_library,
-                      color: Color(0xFF690000),
-                      size: 28,
-                    ),
-                  ),
-                  title: const Text(
-                    'اختيار من المعرض',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  onTap: () => Navigator.pop(context, ImageSource.gallery),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    try {
+      // استخدام FilePickerHelper الجديد اللي بيدعم PDF
+      final File? pickedFile = await FilePickerHelper.pickFile(context);
 
-    if (source != null) {
-      try {
-        final XFile? pickedFile = await _picker.pickImage(
-          source: source,
-          imageQuality: 80,
-        );
-
-        if (pickedFile != null) {
-          setState(() {
-            switch (fileType) {
-              case 'contract':
-                _contractFile = File(pickedFile.path);
-                break;
-              case 'taxCard':
-                _taxCardFile = File(pickedFile.path);
-                break;
-              case 'commercialRegister':
-                _commercialRegisterFile = File(pickedFile.path);
-                break;
-              case 'valueAddedCertificate':
-                _valueAddedCertificateFile = File(pickedFile.path);
-                break;
-              case 'importCertificate':
-                _importCertificateFile = File(pickedFile.path);
-                break;
-              case 'exportCard':
-                _exportCardFile = File(pickedFile.path);
-                break;
-            }
-          });
-        }
-      } catch (e) {
-        AlNoranPopups.showError(
-          context: context,
-          message: 'حدث خطأ أثناء اختيار الملف',
-        );
+      if (pickedFile != null) {
+        setState(() {
+          switch (fileType) {
+            case 'contract':
+              _contractFile = pickedFile;
+              break;
+            case 'taxCard':
+              _taxCardFile = pickedFile;
+              break;
+            case 'commercialRegister':
+              _commercialRegisterFile = pickedFile;
+              break;
+            case 'valueAddedCertificate':
+              _valueAddedCertificateFile = pickedFile;
+              break;
+            case 'importCertificate':
+              _importCertificateFile = pickedFile;
+              break;
+            case 'exportCard':
+              _exportCardFile = pickedFile;
+              break;
+          }
+        });
       }
+    } catch (e) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'حدث خطأ أثناء اختيار الملف',
+      );
     }
   }
 
@@ -541,97 +445,92 @@ class _CommercialRegistrationPageState
         return;
       }
 
-      // Get user ID from response
-      final userId = registerResult['data']?['user']?['_id'];
+      // JWT Token is automatically saved by ApiService.register
+      // Now upload all required documents to S3
 
-      if (userId != null) {
-        // Upload all required documents
-        final List<Map<String, dynamic>> documentsToUpload = [
-          {
-            'file': _contractFile!,
-            'description': 'العقد - حساب تجاري',
-            'tags': ['contract', 'commercial', 'registration'],
-          },
-          {
-            'file': _taxCardFile!,
-            'description': 'البطاقة الضريبية - حساب تجاري',
-            'tags': ['tax_card', 'commercial', 'registration'],
-          },
-          {
-            'file': _commercialRegisterFile!,
-            'description': 'السجل التجاري - حساب تجاري',
-            'tags': ['commercial_register', 'commercial', 'registration'],
-          },
-          {
-            'file': _valueAddedCertificateFile!,
-            'description': 'شهادة القيمة المضافة - حساب تجاري',
-            'tags': ['value_added_certificate', 'commercial', 'registration'],
-          },
-          {
-            'file': _importCertificateFile!,
-            'description': 'الشهادة الاستيرادية - حساب تجاري',
-            'tags': ['import_certificate', 'commercial', 'registration'],
-          },
-        ];
+      // Prepare documents list with their metadata
+      final List<Map<String, dynamic>> documentsToUpload = [
+        {
+          'file': _contractFile!,
+          'type': 'contract',
+          'description': 'العقد - حساب تجاري',
+        },
+        {
+          'file': _taxCardFile!,
+          'type': 'tax_card',
+          'description': 'البطاقة الضريبية - حساب تجاري',
+        },
+        {
+          'file': _commercialRegisterFile!,
+          'type': 'commercial_register',
+          'description': 'السجل التجاري - حساب تجاري',
+        },
+        {
+          'file': _valueAddedCertificateFile!,
+          'type': 'certificate_vat', // Fixed: match backend enum
+          'description': 'شهادة القيمة المضافة - حساب تجاري',
+        },
+        {
+          'file': _importCertificateFile!,
+          'type': 'import_export_card', // Fixed: match backend enum
+          'description': 'الشهادة الاستيرادية - حساب تجاري',
+        },
+      ];
 
-        // Add optional export card if provided
-        if (_exportCardFile != null) {
-          documentsToUpload.add({
-            'file': _exportCardFile!,
-            'description': 'بطاقة التصدير - حساب تجاري',
-            'tags': ['export_card', 'commercial', 'registration', 'optional'],
-          });
-        }
-
-        // Upload documents
-        bool allUploadsSuccessful = true;
-        for (var doc in documentsToUpload) {
-          final uploadResult = await ApiService.uploadDocument(
-            file: doc['file'],
-            uploadType: 'users',
-            userId: userId,
-            relatedTo: {'model': 'User', 'id': userId},
-            description: doc['description'],
-            tags: List<String>.from(doc['tags']),
-          );
-
-          if (!uploadResult['success']) {
-            allUploadsSuccessful = false;
-            break;
-          }
-        }
-
-        setState(() {
-          _isLoading = false;
+      // Add optional export card if provided
+      if (_exportCardFile != null) {
+        documentsToUpload.add({
+          'file': _exportCardFile!,
+          'type': 'import_export_card', // Fixed: same as import (combined card)
+          'description': 'بطاقة التصدير - حساب تجاري',
         });
+      }
 
-        if (allUploadsSuccessful) {
-          await AlNoranPopups.showSuccess(
-            context: context,
-            title: 'تم التسجيل بنجاح',
-            message:
-                'تم إنشاء حسابك التجاري بنجاح. سيتم مراجعة المستندات وتفعيل حسابك خلال 24-48 ساعة',
-          );
+      // Upload documents to S3
+      bool allUploadsSuccessful = true;
+      String? failedDocType;
 
-          if (mounted) {
-            Navigator.of(
-              context,
-            ).pushNamedAndRemoveUntil('/login', (route) => false);
-          }
-        } else {
-          AlNoranPopups.showError(
-            context: context,
-            message:
-                'تم إنشاء الحساب ولكن فشل رفع بعض المستندات. يرجى المحاولة مرة أخرى',
-          );
+      for (var doc in documentsToUpload) {
+        final uploadResult = await ApiService.uploadToS3(
+          file: doc['file'],
+          category: 'registration',
+          documentType: doc['type'],
+          description: doc['description'],
+          tags: [doc['type'], 'commercial', 'registration'],
+          userType: 'client',
+          clientType: 'commercial',
+        );
+
+        if (!uploadResult['success']) {
+          allUploadsSuccessful = false;
+          failedDocType = doc['type'];
+          break;
+        }
+      }
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (allUploadsSuccessful) {
+        await AlNoranPopups.showSuccess(
+          context: context,
+          title: 'تم التسجيل بنجاح',
+          message:
+              'تم إنشاء حسابك التجاري وتحميل جميع المستندات إلى السحابة بنجاح. سيتم مراجعة حسابك وتفعيله خلال 24-48 ساعة',
+        );
+
+        if (mounted) {
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil('/login', (route) => false);
         }
       } else {
-        setState(() {
-          _isLoading = false;
-        });
         AlNoranPopups.showError(
           context: context,
-          message: 'حدث خطأ أثناء إنشاء الحساب',
+          title: 'تحذير',
+          message:
+              'تم إنشاء الحساب ولكن فشل رفع مستند: $failedDocType. يرجى تسجيل الدخول ورفع المستند من الإعدادات',
         );
       }
     } catch (e) {

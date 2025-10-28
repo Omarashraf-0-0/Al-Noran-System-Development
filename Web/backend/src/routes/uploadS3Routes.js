@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const upload = require("../middleware/multerS3");
 const { protect } = require("../middleware/auth");
+
+// Always use S3 controller (AWS credentials are configured)
 const {
 	uploadFile,
 	uploadMultipleFiles,
