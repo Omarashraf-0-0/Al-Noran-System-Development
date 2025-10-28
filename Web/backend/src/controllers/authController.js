@@ -52,6 +52,8 @@ const login = asyncHandler(async (req, res) => {
       email: user.email,
       type: user.type,
       phone: user.phone,
+      clientDetails: user.clientDetails,
+      employeeDetails: user.employeeDetails
     }
   });
 });
@@ -164,6 +166,56 @@ const signup = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Check username/email availability
+// @route   POST /api/auth/check-availability
+// @access  Public
+const checkAvailability = asyncHandler(async (req, res) => {
+  const { username, email } = req.body;
+  
+  console.log('🔍🔍🔍 [Check Availability] Request:', { username, email });
+
+  if (!username && !email) {
+    res.status(400);
+    throw new Error('يجب إدخال اسم المستخدم أو البريد الإلكتروني');
+  }
+
+  // Build OR conditions array
+  const conditions = [];
+  if (username) conditions.push({ username });
+  if (email) conditions.push({ email: email.toLowerCase() });
+  
+  console.log('📋 Query conditions:', conditions);
+
+  const existingUser = await User.findOne({ $or: conditions }).lean().exec();
+  
+  console.log('👤 Found user:', existingUser ? `Yes (${existingUser.username})` : 'No');
+
+  if (existingUser) {
+    let field = 'unknown';
+    if (existingUser.username === username) {
+      field = 'username';
+    } else if (existingUser.email === email.toLowerCase()) {
+      field = 'email';
+    }
+    
+    console.log('❌ Data NOT available - Field:', field);
+
+    return res.status(200).json({
+      success: true,
+      available: false,
+      field,
+      message: field === 'username' ? 'اسم المستخدم مستخدم بالفعل' : 'البريد الإلكتروني مستخدم بالفعل'
+    });
+  }
+  
+  console.log('✅ Data IS available - user can proceed');
+
+  res.status(200).json({
+    success: true,
+    available: true,
+    message: 'البيانات متاحة للاستخدام'
+  });
+});
 // @desc    Get current user info
 // @route   GET /api/auth/me
 // @access  Private
@@ -197,6 +249,7 @@ const getMe = asyncHandler(async (req, res) => {
 module.exports = {
   login,
   signup,
+  checkAvailability,
   getMe
 };
 

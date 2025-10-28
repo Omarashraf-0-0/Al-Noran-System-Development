@@ -368,6 +368,23 @@ class AlNoranPopups {
         false;
   }
 
+  /// Alias for showConfirmation (for consistency)
+  static Future<bool> showConfirmDialog({
+    required BuildContext context,
+    String title = 'تأكيد',
+    required String message,
+    String confirmText = 'نعم',
+    String cancelText = 'لا',
+  }) {
+    return showConfirmation(
+      context: context,
+      title: title,
+      message: message,
+      confirmText: confirmText,
+      cancelText: cancelText,
+    );
+  }
+
   /// Loading Dialog (شاشة تحميل)
   static void showLoading({
     required BuildContext context,

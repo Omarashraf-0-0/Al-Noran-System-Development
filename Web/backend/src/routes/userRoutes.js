@@ -5,17 +5,27 @@ const {
   createUser,
   updateUser,
   deleteUser,
-  addUsers,
+  changePassword,
+  addUsers
 } = require('../controllers/userController');
 
-router.route('/getAll')
+// Base routes for user operations
+router.route('/')
   .get(getAllUsers)
   .post(createUser);
+
+// Batch user creation
+router.route('/addUsers')
+  .post(addUsers);
+
+// User-specific operations
 router.route('/:id')
   .patch(updateUser)
+  .put(updateUser) // Add PUT support for mobile app
   .delete(deleteUser);
-router.route('/addUsers')
-  .post(addUsers)
 
+// Password management
+router.route('/:id/change-password')
+  .put(changePassword);
 
 module.exports = router;

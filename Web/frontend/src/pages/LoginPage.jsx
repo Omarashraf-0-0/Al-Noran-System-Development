@@ -22,10 +22,10 @@ const LoginPage = () => {
 				toast.success("تم تسجيل الدخول بنجاح");
 				localStorage.setItem("user", JSON.stringify(response.data.user));
 				localStorage.setItem("token", response.data.token);
-				// we need to wait to abit before redirecting
+				// console.log(localStorage.getItem("token"));
+				// we need to wait a bit before redirecting
 				setTimeout(() => {
-					// TODO: Change to /dashboard when dashboard is ready
-					window.location.href = "/upload-documents";
+					window.location.href = "/home";
 				}, 2000);
 			})
 			.catch((error) => {

@@ -22,44 +22,68 @@ const {
  */
 const uploadFile = async (req, res) => {
 	try {
+		console.log('🔵🔵🔵 [Backend Upload] بدء استقبال طلب رفع ملف');
+		console.log('📨 Request Headers:', req.headers.authorization ? 'Bearer token present ✅' : 'No token ❌');
+		console.log('📋 Request Body:', req.body);
+		
 		// Check if file exists
 		if (!req.file) {
+			console.log('❌ No file in request');
 			return res.status(400).json({ message: "No file uploaded" });
 		}
+		
+		console.log('📁 File received:', req.file.originalname);
+		console.log('📦 File size:', (req.file.size / 1024).toFixed(2), 'KB');
+		console.log('📄 File type:', req.file.mimetype);
 
 		// Validate file
 		const validation = validateFile(req.file);
 		if (!validation.valid) {
+			console.log('❌ File validation failed:', validation.error);
 			return res.status(400).json({ message: validation.error });
 		}
+		
+		console.log('✅ File validation passed');
 
 		// Extract user info from JWT (req.user should be populated by auth middleware)
 		const userId = req.user?.id || req.user?._id;
 		if (!userId) {
+			console.log('❌ User not authenticated - no userId');
 			return res.status(401).json({ message: "User not authenticated" });
 		}
+		
+		console.log('👤 User ID:', userId);
 
 		// Fetch user details
 		const user = await User.findById(userId);
 		if (!user) {
+			console.log('❌ User not found in database');
 			return res.status(404).json({ message: "User not found" });
 		}
+		
+		console.log('✅ User found:', user.username, '|', user.email);
 
 		const { category, relatedId, documentType, description, tags, userType: reqUserType, clientType: reqClientType } = req.body;
 
 		// Validate required fields
 		if (!category) {
+			console.log('❌ Category missing');
 			return res.status(400).json({ message: "Category is required" });
 		}
+		
+		console.log('📂 Category:', category);
+		console.log('📄 Document Type:', documentType);
 
 		const validCategories = [
 			"registration",
+			"acidrequest",
 			"acid",
 			"shipment",
 			"invoice",
 			"archive",
 		];
 		if (!validCategories.includes(category)) {
+			console.log('❌ Invalid category:', category);
 			return res
 				.status(400)
 				.json({ message: `Invalid category. Must be one of: ${validCategories.join(", ")}` });
@@ -70,6 +94,7 @@ const uploadFile = async (req, res) => {
 			["acid", "shipment", "invoice"].includes(category) &&
 			!relatedId
 		) {
+			console.log('❌ relatedId required for category:', category);
 			return res
 				.status(400)
 				.json({
@@ -88,6 +113,7 @@ const uploadFile = async (req, res) => {
 
 			// For registration category, validate required documents
 			if (category === "registration" && !clientType) {
+				console.log('❌ clientType required for registration');
 				return res
 					.status(400)
 					.json({
@@ -98,6 +124,7 @@ const uploadFile = async (req, res) => {
 
 			// Validate clientType is valid
 			if (clientType && !["factory", "commercial", "personal"].includes(clientType)) {
+				console.log('❌ Invalid clientType:', clientType);
 				return res
 					.status(400)
 					.json({
@@ -105,6 +132,9 @@ const uploadFile = async (req, res) => {
 					});
 			}
 		}
+		
+		console.log('👥 User Type:', userType);
+		console.log('🏭 Client Type:', clientType);
 
 		// Generate S3 key (path)
 		const s3Key = generateS3Key({
@@ -115,8 +145,11 @@ const uploadFile = async (req, res) => {
 			filename: req.file.originalname,
 			clientType,
 		});
+		
+		console.log('🔑 Generated S3 Key:', s3Key);
 
 		// Upload to S3
+		console.log('⏳ جاري رفع الملف إلى S3...');
 		const uploadResult = await uploadToS3({
 			fileBuffer: req.file.buffer,
 			s3Key,
@@ -124,10 +157,15 @@ const uploadFile = async (req, res) => {
 		});
 
 		if (!uploadResult.success) {
+			console.log('❌❌❌ فشل رفع الملف إلى S3');
 			return res.status(500).json({ message: "Failed to upload file to S3" });
 		}
+		
+		console.log('✅✅ تم رفع الملف إلى S3 بنجاح');
+		console.log('🔗 S3 URL:', uploadResult.url);
 
 		// Create database record
+		console.log('💾 جاري حفظ البيانات في MongoDB...');
 		const uploadRecord = new Upload({
 			userId,
 			userType,
@@ -147,10 +185,21 @@ const uploadFile = async (req, res) => {
 		});
 
 		await uploadRecord.save();
+		console.log('✅✅ تم حفظ البيانات في MongoDB بنجاح');
+		console.log('🆔 Upload Record ID:', uploadRecord._id);
 
 		// Generate presigned URL for immediate access
 		const presignedUrl = await getPresignedUrl(uploadResult.s3Key, 3600); // 1 hour
 
+		console.log('✅✅✅ [Backend Upload SUCCESS] عملية الرفع اكتملت بنجاح!');
+		console.log('📊 Summary:');
+		console.log('   - User:', user.username);
+		console.log('   - File:', req.file.originalname);
+		console.log('   - Category:', category);
+		console.log('   - Document Type:', documentType);
+		console.log('   - S3 Key:', uploadResult.s3Key);
+		console.log('   - Database ID:', uploadRecord._id);
+		
 		res.status(201).json({
 			success: true,
 			message: "File uploaded successfully",
@@ -168,7 +217,8 @@ const uploadFile = async (req, res) => {
 			},
 		});
 	} catch (error) {
-		console.error("Upload Error:", error);
+		console.error('💥💥💥 [Backend Upload ERROR]:', error);
+		console.error('Error Stack:', error.stack);
 		res.status(500).json({ message: error.message || "Server error during upload" });
 	}
 };
@@ -297,7 +347,9 @@ const uploadMultipleFiles = async (req, res) => {
  */
 const getUploads = async (req, res) => {
 	try {
-		const { userId, category, relatedId, userType, documentType } = req.query;
+		// Get userId from params (for /user/:userId route) or query
+		const userId = req.params.userId || req.query.userId;
+		const { category, relatedId, userType, documentType } = req.query;
 
 		// Build query
 		const query = { isActive: true };
@@ -308,15 +360,19 @@ const getUploads = async (req, res) => {
 		if (userType) query.userType = userType;
 		if (documentType) query.documentType = documentType;
 
-		// If no userId in query, use authenticated user's ID
+		// If no userId in query/params, use authenticated user's ID
 		if (!userId && req.user) {
 			query.userId = req.user.id || req.user._id;
 		}
+
+		console.log('🔍 [getUploads] Query:', query);
 
 		const uploads = await Upload.find(query)
 			.sort({ uploadedAt: -1 })
 			.populate("userId", "fullname email username type")
 			.lean();
+
+		console.log(`📦 [getUploads] Found ${uploads.length} uploads`);
 
 		// Generate presigned URLs for each upload
 		const uploadsWithPresignedUrls = await Promise.all(
@@ -406,6 +462,64 @@ const getUploadById = async (req, res) => {
 };
 
 /**
+ * @route   PUT /api/uploads/:id
+ * @desc    Update upload metadata (description, tags, etc.)
+ * @access  Private (JWT required)
+ */
+const updateUpload = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { description, tags } = req.body;
+
+		console.log('📝 [updateUpload] Updating upload:', id);
+		console.log('📝 [updateUpload] New description:', description);
+		console.log('📝 [updateUpload] New tags:', tags);
+
+		const upload = await Upload.findById(id);
+
+		if (!upload) {
+			return res.status(404).json({ 
+				success: false,
+				message: "Upload not found" 
+			});
+		}
+
+		// Check if user owns this upload (or is admin)
+		const userId = req.user?.id || req.user?._id;
+		if (upload.userId.toString() !== userId.toString() && req.user?.type !== "admin") {
+			return res.status(403).json({ 
+				success: false,
+				message: "Not authorized to update this upload" 
+			});
+		}
+
+		// Update fields
+		if (description !== undefined) upload.description = description;
+		if (tags !== undefined) upload.tags = tags;
+
+		await upload.save();
+
+		console.log('✅ [updateUpload] Upload updated successfully');
+
+		res.status(200).json({
+			success: true,
+			message: "Upload updated successfully",
+			upload: {
+				id: upload._id,
+				description: upload.description,
+				tags: upload.tags,
+			},
+		});
+	} catch (error) {
+		console.error('❌ [updateUpload] Error:', error.message);
+		res.status(500).json({ 
+			success: false,
+			message: "Server error updating upload" 
+		});
+}
+};
+
+/**
  * @route   DELETE /api/uploads/:id
  * @desc    Delete upload from S3 and database
  * @access  Private (JWT required)
@@ -487,6 +601,7 @@ module.exports = {
 	uploadMultipleFiles,
 	getUploads,
 	getUploadById,
+	updateUpload,
 	deleteUpload,
 	checkRequiredDocuments,
 };

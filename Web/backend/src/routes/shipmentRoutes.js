@@ -1,4 +1,5 @@
 const express = require("express");
+const { protect } = require("../middleware/auth");
 const {
   createShipment,
   getAllShipments,
@@ -13,13 +14,13 @@ const {
 
 const router = express.Router();
 
-router.post("/", createShipment);
-router.post("/addShipments", addShipments);
-router.get("/getAll", getAllShipments);
-router.get("/status/:acid", getShipmentStatusByAcid);
-router.get("/:acid", getShipmentByAcid);
-router.get("/status/number46/:number46", getShipmentStatusByNumber46);
-router.patch("/:acid", updateShipmentStatus);
-router.delete("/:acid", deleteShipment);
-router.get("/employee/:employeeId", getShipmentrelatedToEmployee);
+router.post("/", protect, createShipment);
+router.post("/addShipments", protect, addShipments);
+router.get("/getAll", protect, getAllShipments);
+router.get("/status/:acid", protect, getShipmentStatusByAcid);
+router.get("/:acid", protect, getShipmentByAcid);
+router.get("/status/number46/:number46", protect, getShipmentStatusByNumber46);
+router.patch("/:acid", protect, updateShipmentStatus);
+router.delete("/:acid", protect, deleteShipment);
+router.get("/employee/:employeeId", protect, getShipmentrelatedToEmployee);
 module.exports = router;
