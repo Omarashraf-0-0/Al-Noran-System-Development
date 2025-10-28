@@ -136,29 +136,47 @@ const getShipmentByAcid = async (req, res) => {
 };
 
 // ✅ تحديث حالة الشحنة
-const updateShipmentStatus = async (req, res) => {
-	try {
-		const { acid } = req.params;
-		const updateData = req.body;
+// (افترض أن هذا الكود داخل ملف controllers/shipmentController.js)
 
-		// If file was uploaded, add the file URL to update data
-		if (req.file) {
-			updateData.invoiceUrl = `/uploads/shipments/${req.file.filename}`;
+// (تأكد من استيراد الموديل الخاص بك، مثلاً: const Shipment = require('../models/Shipment');)
+
+const updateShipmentStatus = async (req, res) => {
+	 try {
+  const { acid } = req.params;
+  const updateData = req.body;
+
+	 if (req.file) {
+          updateData.invoiceUrl = `/uploads/shipments/${req.file.filename}`;
 		}
 
+        // (هنا يتم تحديث الداتا بيز)
 		const shipment = await Shipment.findOneAndUpdate({ acid }, updateData, {
-			new: true,
-			runValidators: true,
+			 new: true, // (مهم جداً لإرجاع الداتا بعد التحديث)
+		 runValidators: true,
 		});
 
-		if (!shipment)
-			return res.status(404).json({ message: "Shipment not found" });
+		 if (!shipment)
+		 return res.status(404).json({ message: "Shipment not found" });
 
-		res.json(shipment);
-	} catch (error) {
-		res.status(500).json({ message: error.message });
-	}
+        if (updateData.status) { 
+            const { io } = req; 
+            io.to(acid).emit("shipmentStatusUpdate", { 
+                acid: acid, 
+                status: shipment.status 
+            });
+            console.log(`Socket event emitted for ACID: ${acid} with status: ${shipment.status}`);
+        }
+
+
+	 res.json(shipment); // إرسال الرد الطبيعي للـ API
+ } catch (error) {
+        console.error("Error in updateShipmentStatus:", error); // (يفضل طباعة الخطأ)
+	    res.status(500).json({ message: error.message });
+   }
 };
+
+// (تأكد من عمل export للدالة)
+// module.exports = { updateShipmentStatus, ... };
 
 // ✅ حذف شحنة
 const deleteShipment = async (req, res) => {

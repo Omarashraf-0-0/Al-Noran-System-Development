@@ -5,7 +5,6 @@ import FormContainer from "../components/FormContainer";
 import LoginForm from "../components/LoginForm";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-import { href } from "react-router";
 
 const LoginPage = () => {
 	const handleLogin = (formData) => {
@@ -25,7 +24,8 @@ const LoginPage = () => {
 				localStorage.setItem("token", response.data.token);
 				// we need to wait to abit before redirecting
 				setTimeout(() => {
-					window.location.href = "/home";
+					// TODO: Change to /dashboard when dashboard is ready
+					window.location.href = "/upload-documents";
 				}, 2000);
 			})
 			.catch((error) => {
