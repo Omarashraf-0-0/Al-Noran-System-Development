@@ -12,31 +12,17 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
- * Simple REST-based sync client.
- *
- * Behavior:
- * - Fetches users from remote REST endpoint (assumed JSON array of user objects).
- * - Reads local users from SQLite and compares by email (recommended unique key).
- * - Pushes local-only users to remote via POST (one-by-one or bulk depending on backend).
- * - Inserts remote-only users into SQLite database.
- *
- * NOTE: Configure the remote endpoints below to match your backend API.
+ * REST-based sync client for syncing users between a remote REST API and local SQLite database.
+ * Supports nested structures and MongoDB-style fields like {_id: {$oid: ...}, createdAt: {$date: {...}}}
  */
 public class RestMongoSyncClient {
 
-    // Configure these to match your server API
-    private static final String REMOTE_USERS_GET_URL = "http://localhost:3500/api/users/getAll"; // should return JSON array or { users: [...] }
-    private static final String REMOTE_USERS_CREATE_URL = "http://localhost:3500/api/users"; // POST a single user JSON or adjust for bulk
+    private static final String REMOTE_USERS_GET_URL = "http://localhost:3500/api/users/getAll";
+    private static final String REMOTE_USERS_CREATE_URL = "http://localhost:3500/api/users";
 
-    /**
-     * Entry for manual runs.
-     */
     public static void main(String[] args) {
         try {
             syncUsersWithRemote();
@@ -65,12 +51,12 @@ public class RestMongoSyncClient {
         List<JSONObject> localUsersList = new ArrayList<>();
 
         try (Connection conn = DatabaseConnection.connect()) {
-            String sql = "SELECT id, fullname, username, phone, email, password, type, active, clientType, ssn, employeeType, verified, createdAt, updatedAt, version FROM users";
+            String sql = "SELECT _id, fullname, username, phone, email, password, type, active, taxNumber, rank, clientType, ssn, employeeType, verified, createdAt, updatedAt, version FROM users";
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ResultSet rs = ps.executeQuery();
                 while (rs.next()) {
                     JSONObject u = new JSONObject();
-                    u.put("id", rs.getString("id"));
+                    u.put("_id", rs.getString("_id"));
                     u.put("fullname", rs.getString("fullname"));
                     u.put("username", rs.getString("username"));
                     u.put("phone", rs.getString("phone"));
@@ -78,6 +64,8 @@ public class RestMongoSyncClient {
                     u.put("password", rs.getString("password"));
                     u.put("type", rs.getString("type"));
                     u.put("active", rs.getInt("active"));
+                    u.put("taxNumber", rs.getString("taxNumber"));
+                    u.put("rank", rs.getString("rank"));
                     u.put("clientType", rs.getString("clientType"));
                     u.put("ssn", rs.getString("ssn"));
                     u.put("employeeType", rs.getString("employeeType"));
@@ -95,7 +83,7 @@ public class RestMongoSyncClient {
             }
         }
 
-        // Determine local-only (present locally but not at remote)
+        // Local-only users to push
         List<JSONObject> toPushRemote = new ArrayList<>();
         for (JSONObject local : localUsersList) {
             String email = local.optString("email", null);
@@ -106,9 +94,7 @@ public class RestMongoSyncClient {
         }
 
         System.out.println("Local-only users to push to remote: " + toPushRemote.size());
-        // Push one-by-one (adjust if backend supports bulk)
         for (JSONObject u : toPushRemote) {
-            // Build minimal payload expected by backend. Adjust fields as necessary.
             JSONObject payload = new JSONObject();
             payload.put("fullname", u.optString("fullname", ""));
             payload.put("username", u.optString("username", ""));
@@ -116,83 +102,129 @@ public class RestMongoSyncClient {
             payload.put("phone", u.optString("phone", ""));
             payload.put("password", u.optString("password", ""));
             payload.put("type", u.optString("type", "client"));
+            payload.put("taxNumber", u.optString("taxNumber", ""));
+            payload.put("rank", u.optString("rank", null));
 
             String response = APIService.post(REMOTE_USERS_CREATE_URL, payload.toString());
             System.out.println("Pushed user " + payload.optString("email") + " -> response: " + response);
         }
 
-        // Determine remote-only (present remotely but not locally)
+        // Remote-only users to insert locally
         List<JSONObject> toInsertLocal = new ArrayList<>();
         for (Map.Entry<String, JSONObject> entry : remoteByEmail.entrySet()) {
-            String email = entry.getKey();
-            if (!localByEmail.containsKey(email)) {
+            if (!localByEmail.containsKey(entry.getKey())) {
                 toInsertLocal.add(entry.getValue());
             }
         }
 
         System.out.println("Remote-only users to insert locally: " + toInsertLocal.size());
 
-        // Insert remote-only into local SQLite
+        // Insert new remote users
         if (!toInsertLocal.isEmpty()) {
             try (Connection sqliteConn = DatabaseConnection.connect()) {
                 String insertSQL = "INSERT OR REPLACE INTO users (" +
-                        "id, fullname, username, phone, email, password, type, active, " +
-                        "clientType, ssn, employeeType, verified, createdAt, updatedAt, version" +
-                        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                        "_id, fullname, username, phone, email, password, type, active, taxNumber, rank, clientType, ssn, employeeType, verified, createdAt, updatedAt, version" +
+                        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
                 PreparedStatement pstmt = sqliteConn.prepareStatement(insertSQL);
 
-                int count = 0;
                 for (JSONObject doc : toInsertLocal) {
-                    // Attempt to map fields safely
-                    String id = doc.optString("_id", doc.optString("id", ""));
+                    // _id
+                    String id = null;
+                    if (doc.has("_id")) {
+                        Object idObj = doc.get("_id");
+                        if (idObj instanceof JSONObject && ((JSONObject) idObj).has("$oid")) {
+                            id = ((JSONObject) idObj).optString("$oid", null);
+                        } else {
+                            id = doc.optString("_id", null);
+                        }
+                    }
                     pstmt.setString(1, id);
-                    pstmt.setString(2, doc.optString("fullname", doc.optString("name", null)));
-                    pstmt.setString(3, doc.optString("username", null));
-                    pstmt.setString(4, doc.optString("phone", null));
-                    pstmt.setString(5, doc.optString("email", null));
-                    pstmt.setString(6, doc.optString("password", null));
-                    pstmt.setString(7, doc.optString("type", null));
+
+                    // Basic info
+                    pstmt.setString(2, doc.optString("fullname", ""));
+                    pstmt.setString(3, doc.optString("username", ""));
+                    pstmt.setString(4, doc.optString("phone", ""));
+                    pstmt.setString(5, doc.optString("email", ""));
+                    pstmt.setString(6, doc.optString("password", ""));
+                    pstmt.setString(7, doc.optString("type", "client"));
                     pstmt.setInt(8, doc.optBoolean("active", true) ? 1 : 0);
 
-                    // clientDetails
+                    // Tax & rank (sanitize invalid rank values)
+                    pstmt.setString(9, doc.optString("taxNumber", ""));
+                    String rank = doc.optString("rank", null);
+                    if (rank == null || rank.equalsIgnoreCase("null") || rank.isBlank()) {
+                        rank = null;
+                    } else {
+                        rank = rank.toLowerCase(Locale.ROOT);
+                        if (!Arrays.asList("low", "med", "high").contains(rank)) {
+                            rank = null;
+                        }
+                    }
+                    pstmt.setString(10, rank);
+
+                    // Client details
                     JSONObject clientDetails = doc.optJSONObject("clientDetails");
                     if (clientDetails != null) {
-                        pstmt.setString(9, clientDetails.optString("clientType", null));
-                        pstmt.setString(10, clientDetails.optString("ssn", null));
+                        pstmt.setString(11, clientDetails.optString("clientType", ""));
+                        pstmt.setString(12, clientDetails.optString("ssn", ""));
                     } else {
-                        pstmt.setNull(9, java.sql.Types.VARCHAR);
-                        pstmt.setNull(10, java.sql.Types.VARCHAR);
+                        pstmt.setString(11, "");
+                        pstmt.setString(12, "");
                     }
 
-                    // employeeDetails
+                    // Employee details
                     JSONObject employeeDetails = doc.optJSONObject("employeeDetails");
                     if (employeeDetails != null) {
-                        pstmt.setString(11, employeeDetails.optString("employeeType", null));
-                        pstmt.setInt(12, employeeDetails.optBoolean("verified", false) ? 1 : 0);
+                        pstmt.setString(13, employeeDetails.optString("employeeType", ""));
+                        pstmt.setInt(14, employeeDetails.optBoolean("verified", false) ? 1 : 0);
                     } else {
-                        pstmt.setNull(11, java.sql.Types.VARCHAR);
-                        pstmt.setInt(12, 0);
+                        pstmt.setString(13, "");
+                        pstmt.setInt(14, 0);
                     }
 
-                    pstmt.setLong(13, doc.optLong("createdAt", System.currentTimeMillis()));
-                    pstmt.setLong(14, doc.optLong("updatedAt", System.currentTimeMillis()));
-                    pstmt.setInt(15, doc.optInt("__v", 0));
+                    // createdAt & updatedAt
+                    long createdAt = parseMongoDate(doc.opt("createdAt"));
+                    long updatedAt = parseMongoDate(doc.opt("updatedAt"));
+                    pstmt.setLong(15, createdAt);
+                    pstmt.setLong(16, updatedAt);
+
+                    // version
+                    pstmt.setInt(17, parseMongoInt(doc.opt("__v")));
 
                     pstmt.executeUpdate();
-                    count++;
+                    System.out.println("✅ Inserted user: " + doc.optString("fullname"));
                 }
 
-                System.out.println("✅ Inserted " + count + " remote users into local SQLite.");
+                System.out.println("✅ Successfully inserted remote users into local SQLite.");
             }
         }
 
         System.out.println("Sync complete.");
     }
 
+    private static long parseMongoDate(Object obj) {
+        long now = System.currentTimeMillis();
+        if (obj instanceof JSONObject) {
+            JSONObject dateObj = ((JSONObject) obj).optJSONObject("$date");
+            if (dateObj != null) {
+                return Long.parseLong(dateObj.optString("$numberLong", String.valueOf(now)));
+            }
+        }
+        return now;
+    }
+
+    private static int parseMongoInt(Object obj) {
+        if (obj instanceof JSONObject) {
+            return Integer.parseInt(((JSONObject) obj).optString("$numberInt", "0"));
+        } else if (obj instanceof Number) {
+            return ((Number) obj).intValue();
+        }
+        return 0;
+    }
+
     private static JSONArray fetchRemoteUsers() {
         try {
-            // Basic GET using HttpURLConnection (APIService currently only has POST helper)
             URL url = new URL(REMOTE_USERS_GET_URL);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
@@ -209,23 +241,15 @@ public class RestMongoSyncClient {
             String response = sb.toString();
             if (response.isBlank()) return new JSONArray();
 
-            // REST APIs sometimes wrap array into { users: [...] }
-            try {
-                Object parsed = new org.json.JSONTokener(response).nextValue();
-                if (parsed instanceof JSONArray) return (JSONArray) parsed;
-                if (parsed instanceof JSONObject) {
-                    JSONObject obj = (JSONObject) parsed;
-                    if (obj.has("users") && obj.get("users") instanceof JSONArray) {
-                        return obj.getJSONArray("users");
-                    }
-                    // If response is a single object, wrap it
-                    return new JSONArray().put(obj);
+            Object parsed = new org.json.JSONTokener(response).nextValue();
+            if (parsed instanceof JSONArray) return (JSONArray) parsed;
+            if (parsed instanceof JSONObject) {
+                JSONObject obj = (JSONObject) parsed;
+                if (obj.has("users") && obj.get("users") instanceof JSONArray) {
+                    return obj.getJSONArray("users");
                 }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                return new JSONArray();
+                return new JSONArray().put(obj);
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
