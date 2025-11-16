@@ -31,13 +31,13 @@ const Header = () => {
               <div className="flex items-baseline space-x-4 space-x-reverse">
                 <a
                   href="#"
-                  className="text-gray-700 hover:text-red-800 px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-red-800 font-bold px-3 py-2 rounded-md text-sm"
                 >
                   لوحة التحكم
                 </a>
                 <a
                   href="#"
-                  className="text-gray-700 hover:text-red-800 px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-red-800 font-bold px-3 py-2 rounded-md text-sm"
                 >
                   إدارة الموظفين
                 </a>
