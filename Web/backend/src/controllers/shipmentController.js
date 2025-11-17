@@ -216,7 +216,7 @@ const getShipmentrelatedToEmployee = async (req, res) => {
 		const employeeId = req.params.employeeId;
 		console.log("Fetching shipments for employee:", employeeId);
 		
-		const shipments = await Shipment.find({ user_id: employeeId }).sort({ createdAt: -1 });
+		const shipments = await Shipment.find({ employee_id: employeeId }).sort({ createdAt: -1 });
 		
 		console.log(`Found ${shipments.length} shipments for employee ${employeeId}`);
 		res.json(shipments);
