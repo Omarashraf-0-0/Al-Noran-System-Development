@@ -16,7 +16,8 @@ import ClientShipments from "./pages/ClientShipments";
 import AdminDashboard from "./pages/AdminDashboard";
 import EmployeeNotifications from "./pages/EmployeeNotifications";
 import EmployeeManagement from "./pages/EmployeeManagement";
-import CustomerManagement from "./pages/CustomerManagement";
+import CustomerManagement from "./pages/CustomerManagement";import EmployeeShipmentManagement from "./pages/EmployeeShipmentManagement";
+
 const App = () => {
 	return (
 		<div>
@@ -31,7 +32,14 @@ const App = () => {
 				<Route path="/acidrequest" element={<ACIDRequestPage />} />
 				<Route path="/upload-documents" element={<DocumentUploadPage />} />
 				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
-				<Route path="/shipmentstatus/:shipmentId" element={<ShipmentStatus />} />
+				<Route
+					path="/shipmentstatus/:shipmentId"
+					element={<ShipmentStatus />}
+				/>
+				<Route
+					path="/employee-shipment/:shipmentId"
+					element={<EmployeeShipmentManagement />}
+				/>
 				<Route path="/client-shipments" element={<ClientShipments />} />
 				<Route path="/admindashboard" element={<AdminDashboard />} />
 				<Route path="/EmployeeNotifications" element={<EmployeeNotifications />} />

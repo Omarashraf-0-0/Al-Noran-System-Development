@@ -8,3 +8,4 @@ Web/backend/package-lock.json
 *.env
 ./Web/backend/package-lock.json
 
+Web/frontend/.env
