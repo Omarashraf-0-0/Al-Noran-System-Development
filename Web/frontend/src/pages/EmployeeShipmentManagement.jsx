@@ -43,16 +43,20 @@ const EmployeeShipmentManagement = () => {
 			color: "bg-yellow-100 text-yellow-800",
 		},
 		{
+			value: "في انتظار الشحن",
+			label: "في انتظار الشحن",
+			color: "bg-orange-100 text-orange-800",
+		},
+		{
 			value: "In Transit",
 			label: "في الطريق",
 			color: "bg-blue-100 text-blue-800",
 		},
 		{
-			value: "في انتظار الشحن",
-			label: "في انتظار الشحن",
-			color: "bg-orange-100 text-orange-800",
+			value: "Arrived",
+			label: "تم وصول البضاعة",
+			color: "bg-green-100 text-green-800",
 		},
-		{ value: "Arrived", label: "وصلت", color: "bg-green-100 text-green-800" },
 		{
 			value: "في انتظار وصول الإذن",
 			label: "في انتظار وصول الإذن",
@@ -112,21 +116,22 @@ const EmployeeShipmentManagement = () => {
 
 				// Fetch shipment details
 				const shipmentResponse = await axios.get(
-					`${import.meta.env.VITE_API_URL}/api/shipments/${shipmentId}`,
+					`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
 					{
 						headers: {
 							Authorization: `Bearer ${token}`,
 						},
 					}
 				);
-
 				setShipment(shipmentResponse.data);
 				setSelectedStatus(shipmentResponse.data.status);
 
-				// Fetch shipment files
+				// Fetch existing required documents
 				try {
-					const filesResponse = await axios.get(
-						`${import.meta.env.VITE_API_URL}/api/uploads?category=shipment`,
+					const reqDocsResponse = await axios.get(
+						`${import.meta.env.VITE_API_URL}/api/shipments/id/${
+							shipmentResponse.data._id
+						}/required-documents`,
 						{
 							headers: {
 								Authorization: `Bearer ${token}`,
@@ -134,20 +139,55 @@ const EmployeeShipmentManagement = () => {
 						}
 					);
 
-					const shipmentFiles = (filesResponse.data || [])
-						.filter((file) => file.shipmentId === shipmentResponse.data._id)
-						.map((file) => ({
-							name: file.fileName || file.originalName || "ملف",
-							date: new Date(file.createdAt).toLocaleDateString("ar-EG", {
-								day: "numeric",
-								month: "long",
-								year: "numeric",
-							}),
-							url: file.presignedUrl || file.url,
-							id: file._id,
-							documentType: file.documentType,
-						}));
+					const existingDocs =
+						reqDocsResponse.data?.data?.requiredDocuments || [];
+					console.log("Existing required documents:", existingDocs);
+					// Note: Don't set these to the requiredDocuments state as that's for new documents being added
+					// They're stored in the shipment itself
+				} catch (reqDocsError) {
+					console.log(
+						"Note: Could not fetch required documents:",
+						reqDocsError.message
+					);
+				}
 
+				// Fetch shipment files
+				try {
+					const filesResponse = await axios.get(
+						`${
+							import.meta.env.VITE_API_URL
+						}/api/uploads?category=shipment&relatedId=${
+							shipmentResponse.data._id
+						}`,
+						{
+							headers: {
+								Authorization: `Bearer ${token}`,
+							},
+						}
+					);
+
+					console.log("Files response:", filesResponse.data);
+
+					// API returns { success, count, uploads: [...] }
+					const uploads =
+						filesResponse.data?.uploads || filesResponse.data || [];
+
+					const shipmentFiles = uploads.map((file) => ({
+						name: file.filename || file.originalname || "ملف",
+						date: new Date(
+							file.uploadedAt || file.createdAt
+						).toLocaleDateString("ar-EG", {
+							day: "numeric",
+							month: "long",
+							year: "numeric",
+						}),
+						url: file.presignedUrl || file.url,
+						id: file._id,
+						documentType: file.documentType,
+						description: file.description,
+					}));
+
+					console.log("Formatted shipment files:", shipmentFiles);
 					setFileItems(shipmentFiles);
 				} catch (fileError) {
 					console.log("Note: Could not fetch files:", fileError.message);
@@ -187,7 +227,7 @@ const EmployeeShipmentManagement = () => {
 			toast.loading("جاري تحديث حالة الشحنة...");
 
 			await axios.put(
-				`${import.meta.env.VITE_API_URL}/api/shipments/${shipmentId}`,
+				`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
 				{ status: selectedStatus },
 				{
 					headers: {
@@ -228,17 +268,32 @@ const EmployeeShipmentManagement = () => {
 	const handleSaveRequiredDocuments = async () => {
 		try {
 			setUploadingDoc(true);
+			toast.loading("جاري إرسال طلب المستندات...");
 
-			// TODO: Send required documents to backend
-			// This would typically involve sending a notification to the client
-			// For now, we'll just show a success message
+			// Send required documents to backend
+			await axios.post(
+				`${
+					import.meta.env.VITE_API_URL
+				}/api/shipments/id/${shipmentId}/required-documents`,
+				{ documents: requiredDocuments },
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
+				}
+			);
 
+			toast.dismiss();
 			toast.success("تم حفظ المستندات المطلوبة وإرسال إشعار للعميل");
 			setShowDocumentModal(false);
 			setRequiredDocuments([]);
 		} catch (error) {
 			console.error("Error saving required documents:", error);
-			toast.error("فشل حفظ المستندات المطلوبة");
+			toast.dismiss();
+			toast.error(
+				error.response?.data?.message || "فشل حفظ المستندات المطلوبة"
+			);
 		} finally {
 			setUploadingDoc(false);
 		}
@@ -474,6 +529,182 @@ const EmployeeShipmentManagement = () => {
 								/>
 							</div>
 
+							{/* Required Documents Status Section (for Employee) */}
+							{shipment.requiredDocuments &&
+								shipment.requiredDocuments.length > 0 && (
+									<div className="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
+										<div className="flex items-center justify-between mb-6">
+											<h2 className="text-2xl font-bold text-blue-900 flex items-center gap-2">
+												<span>📋</span>
+												<span>المستندات المطلوبة من العميل</span>
+												<span className="text-sm font-normal text-gray-600">
+													(
+													{
+														shipment.requiredDocuments.filter(
+															(doc) => doc.uploaded
+														).length
+													}{" "}
+													/ {shipment.requiredDocuments.length} مرفوعة)
+												</span>
+											</h2>
+											<button
+												onClick={async () => {
+													try {
+														toast.loading("جاري تحديث البيانات...");
+														const response = await axios.get(
+															`${
+																import.meta.env.VITE_API_URL
+															}/api/shipments/id/${shipmentId}`,
+															{
+																headers: {
+																	Authorization: `Bearer ${token}`,
+																},
+															}
+														);
+														setShipment(response.data);
+														toast.dismiss();
+														toast.success("تم تحديث البيانات بنجاح");
+													} catch (error) {
+														toast.dismiss();
+														toast.error("فشل تحديث البيانات");
+														console.error("Refresh error:", error);
+													}
+												}}
+												className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
+											>
+												<span>🔄</span>
+												<span>تحديث</span>
+											</button>
+										</div>
+
+										<div className="space-y-3">
+											{shipment.requiredDocuments.map((doc, index) => (
+												<div
+													key={doc._id || index}
+													className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
+														doc.uploaded
+															? "bg-green-50 border-green-300"
+															: "bg-yellow-50 border-yellow-300"
+													}`}
+												>
+													<div className="flex items-center gap-3 flex-1">
+														{doc.uploaded ? (
+															<span className="text-2xl">✅</span>
+														) : (
+															<span className="text-2xl animate-pulse">⏳</span>
+														)}
+														<div>
+															<p className="font-bold text-gray-800">
+																{doc.name}
+															</p>
+															<p className="text-sm text-gray-500">
+																{doc.uploaded
+																	? `تم الرفع: ${new Date(
+																			doc.uploadedAt
+																	  ).toLocaleDateString("ar-EG")}`
+																	: `تم الطلب: ${new Date(
+																			doc.requestedAt
+																	  ).toLocaleDateString("ar-EG")}`}
+															</p>
+														</div>
+													</div>
+
+													{doc.uploaded &&
+														doc.fileId &&
+														doc.fileId !== "temp-file-id" && (
+															<button
+																onClick={async () => {
+																	try {
+																		// Validate fileId before making request
+																		if (
+																			!doc.fileId ||
+																			doc.fileId === "temp-file-id"
+																		) {
+																			toast.error("معرف الملف غير صالح");
+																			console.error(
+																				"Invalid fileId:",
+																				doc.fileId
+																			);
+																			return;
+																		}
+
+																		toast.loading("جاري تحميل الملف...");
+																		console.log(
+																			"Fetching file with ID:",
+																			doc.fileId
+																		);
+
+																		const fileResponse = await axios.get(
+																			`${
+																				import.meta.env.VITE_API_URL
+																			}/api/uploads/${doc.fileId}`,
+																			{
+																				headers: {
+																					Authorization: `Bearer ${token}`,
+																				},
+																			}
+																		);
+																		toast.dismiss();
+
+																		const fileUrl =
+																			fileResponse.data?.upload?.presignedUrl ||
+																			fileResponse.data?.presignedUrl;
+																		if (fileUrl) {
+																			window.open(fileUrl, "_blank");
+																		} else {
+																			toast.error(
+																				"لم يتم العثور على رابط الملف"
+																			);
+																			console.error(
+																				"No presigned URL in response:",
+																				fileResponse.data
+																			);
+																		}
+																	} catch (error) {
+																		toast.dismiss();
+																		const errorMsg =
+																			error.response?.data?.message ||
+																			error.message ||
+																			"فشل تحميل الملف";
+																		toast.error(errorMsg);
+																		console.error("File fetch error:", {
+																			fileId: doc.fileId,
+																			error:
+																				error.response?.data || error.message,
+																			fullError: error,
+																		});
+																	}
+																}}
+																className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-1"
+															>
+																<span>عرض المستند</span>
+																<svg
+																	className="w-4 h-4"
+																	fill="currentColor"
+																	viewBox="0 0 20 20"
+																>
+																	<path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+																	<path
+																		fillRule="evenodd"
+																		d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+																		clipRule="evenodd"
+																	/>
+																</svg>
+															</button>
+														)}
+												</div>
+											))}
+										</div>
+
+										<div className="mt-4 p-3 bg-blue-100 border border-blue-300 rounded-lg">
+											<p className="text-sm text-blue-800 text-center">
+												💡 يمكنك رؤية حالة المستندات المطلوبة التي طلبتها من
+												العميل
+											</p>
+										</div>
+									</div>
+								)}
+
 							{/* Files Section */}
 							<div className="mt-16">
 								<h2 className="text-2xl font-bold text-center text-red-900 mb-8">
@@ -490,7 +721,14 @@ const EmployeeShipmentManagement = () => {
 												key={index}
 												className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
 											>
-												<FileRow name={item.name} date={item.date} />
+												<FileRow
+													name={item.name}
+													date={item.date}
+													documentType={item.documentType}
+													description={item.description}
+													url={item.url}
+													id={item.id}
+												/>
 												{item.url && (
 													<a
 														href={item.url}

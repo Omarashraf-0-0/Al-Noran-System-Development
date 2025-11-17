@@ -34,7 +34,7 @@ export default function ShipmentsList() {
         }
 
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/shipments/employee/${userID}`,
+          `${import.meta.env.VITE_API_URL}/api/shipments/user/${userID}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

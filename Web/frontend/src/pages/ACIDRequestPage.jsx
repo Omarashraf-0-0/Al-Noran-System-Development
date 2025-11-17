@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Navbar from "../components/Navbar";
+import Header from "../components/Header";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import ACIDRequestForm from "../components/ACIDRequestForm";
@@ -28,7 +28,12 @@ const ACIDRequestPage = () => {
 		if (!file) return;
 
 		// Validate file type
-		const allowedTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+		const allowedTypes = [
+			"application/pdf",
+			"image/jpeg",
+			"image/jpg",
+			"image/png",
+		];
 		if (!allowedTypes.includes(file.type)) {
 			toast.error("نوع الملف غير مدعوم. الرجاء رفع PDF أو صورة فقط");
 			return;
@@ -183,19 +188,19 @@ const ACIDRequestPage = () => {
 
 	return (
 		<>
-			<Navbar />
+			<Header />
 			<BackgroundContainer>
 				<FormContainer>
-				<ACIDRequestForm 
-					onSubmit={handleACIDRequest}
-					selectedFile={selectedFile}
-					uploadedInvoice={uploadedInvoice}
-					uploading={uploading}
-					progress={progress}
-					onFileSelect={handleFileSelect}
-					onDeleteUpload={handleDeleteUpload}
-					onViewDocument={handleViewDocument}
-				/>
+					<ACIDRequestForm
+						onSubmit={handleACIDRequest}
+						selectedFile={selectedFile}
+						uploadedInvoice={uploadedInvoice}
+						uploading={uploading}
+						progress={progress}
+						onFileSelect={handleFileSelect}
+						onDeleteUpload={handleDeleteUpload}
+						onViewDocument={handleViewDocument}
+					/>
 				</FormContainer>
 			</BackgroundContainer>
 		</>
