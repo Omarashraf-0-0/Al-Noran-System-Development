@@ -14,6 +14,7 @@ import EmployeeDashboard from "./pages/EmployeeDashboard";
 import WelcomeBanner from "./pages/WelcomeBanner";
 import ShipmentStatus from "./pages/ShipmentStatus";
 import ClientShipments from "./pages/ClientShipments";
+import EmployeeShipmentManagement from "./pages/EmployeeShipmentManagement";
 
 const App = () => {
 	return (
@@ -30,6 +31,7 @@ const App = () => {
 				<Route path="/upload-documents" element={<DocumentUploadPage />} />
 				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
 				<Route path="/shipmentstatus/:shipmentId" element={<ShipmentStatus />} />
+				<Route path="/employee-shipment/:shipmentId" element={<EmployeeShipmentManagement />} />
 				<Route path="/client-shipments" element={<ClientShipments />} />
 				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
 				<Route path="*" element={<NotFound404 />} />
