@@ -18,6 +18,7 @@ class PersonalRegistrationPage extends StatefulWidget {
 class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
   final TextEditingController _nationalIdController = TextEditingController();
   File? _powerOfAttorneyFile;
+  File? _nationalIdCardFile; // صورة البطاقة الشخصية
   bool _isLoading = false;
 
   @override
@@ -99,6 +100,20 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 24),
+
+                // National ID Card Image Upload
+                _buildDocumentUpload(
+                  title: 'صورة البطاقة الشخصية',
+                  subtitle: 'صورة واضحة للبطاقة من الوجهين',
+                  file: _nationalIdCardFile,
+                  onTap: _pickNationalIdCard,
+                  onRemove: () {
+                    setState(() {
+                      _nationalIdCardFile = null;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
 
                 // Power of Attorney Upload
                 _buildDocumentUpload(
@@ -316,6 +331,24 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
     );
   }
 
+  Future<void> _pickNationalIdCard() async {
+    try {
+      // استخدام FilePickerHelper الجديد اللي بيدعم القص
+      final File? pickedFile = await FilePickerHelper.pickFile(context);
+
+      if (pickedFile != null) {
+        setState(() {
+          _nationalIdCardFile = pickedFile;
+        });
+      }
+    } catch (e) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'حدث خطأ أثناء اختيار الصورة',
+      );
+    }
+  }
+
   Future<void> _pickPowerOfAttorney() async {
     try {
       // استخدام FilePickerHelper الجديد اللي بيدعم PDF
@@ -353,6 +386,14 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
         message: AlNoranValidators.getNationalIdErrorMessage(
           _nationalIdController.text,
         ),
+      );
+      return;
+    }
+
+    if (_nationalIdCardFile == null) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'من فضلك قم بإرفاق صورة البطاقة الشخصية',
       );
       return;
     }
@@ -395,6 +436,17 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
       // JWT Token is automatically saved by ApiService.register
       // Now we can upload to S3 using the token
 
+      // Upload National ID Card image to S3
+      final idCardUploadResult = await ApiService.uploadToS3(
+        file: _nationalIdCardFile!,
+        category: 'registration',
+        documentType: 'national_id',
+        description: 'صورة البطاقة الشخصية - حساب شخصي',
+        tags: ['national_id', 'personal', 'registration'],
+        userType: 'client',
+        clientType: 'personal',
+      );
+
       // Upload power of attorney document to S3
       final uploadResult = await ApiService.uploadToS3(
         file: _powerOfAttorneyFile!,
@@ -410,12 +462,12 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
         _isLoading = false;
       });
 
-      if (uploadResult['success']) {
+      if (uploadResult['success'] && idCardUploadResult['success']) {
         await AlNoranPopups.showSuccess(
           context: context,
           title: 'تم التسجيل بنجاح',
           message:
-              'تم إنشاء حسابك وتحميل المستندات إلى السحابة بنجاح. سيتم مراجعة حسابك وتفعيله خلال 24 ساعة',
+              'تم إنشاء حسابك وتحميل جميع المستندات إلى السحابة بنجاح. سيتم مراجعة حسابك وتفعيله خلال 24 ساعة',
         );
 
         if (mounted) {
@@ -425,11 +477,15 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
           ).pushNamedAndRemoveUntil('/login', (route) => false);
         }
       } else {
+        String failedDoc = '';
+        if (!uploadResult['success']) failedDoc = 'التوكيل';
+        if (!idCardUploadResult['success']) failedDoc = failedDoc.isEmpty ? 'صورة البطاقة' : '$failedDoc وصورة البطاقة';
+        
         AlNoranPopups.showError(
           context: context,
           title: 'تحذير',
           message:
-              'تم إنشاء الحساب ولكن فشل رفع التوكيل إلى السحابة. يرجى تسجيل الدخول ورفع المستندات من الإعدادات\n\nالخطأ: ${uploadResult['message']}',
+              'تم إنشاء الحساب ولكن فشل رفع: $failedDoc. يرجى تسجيل الدخول ورفع المستندات من الإعدادات',
         );
       }
     } catch (e) {
