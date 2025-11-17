@@ -2,11 +2,14 @@ const express = require("express");
 const router = express.Router();
 const upload = require("../middleware/multerS3");
 const { protect } = require("../middleware/auth");
+
+// Always use S3 controller (AWS credentials are configured)
 const {
 	uploadFile,
 	uploadMultipleFiles,
 	getUploads,
 	getUploadById,
+	updateUpload,
 	deleteUpload,
 	checkRequiredDocuments,
 } = require("../controllers/uploadS3Controller");
@@ -36,6 +39,14 @@ router.post("/multiple", protect, upload.array("files", 10), uploadMultipleFiles
 router.get("/", protect, getUploads);
 
 /**
+ * @route   GET /api/uploads/user/:userId
+ * @desc    Get uploads for specific user
+ * @access  Private
+ * @query   category (optional)
+ */
+router.get("/user/:userId", protect, getUploads);
+
+/**
  * @route   GET /api/uploads/check-required/:userId
  * @desc    Check if user completed required registration documents
  * @access  Private
@@ -48,6 +59,13 @@ router.get("/check-required/:userId", protect, checkRequiredDocuments);
  * @access  Private
  */
 router.get("/:id", protect, getUploadById);
+
+/**
+ * @route   PUT /api/uploads/:id
+ * @desc    Update upload metadata (description, tags, etc.)
+ * @access  Private
+ */
+router.put("/:id", protect, updateUpload);
 
 /**
  * @route   DELETE /api/uploads/:id

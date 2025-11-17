@@ -22,7 +22,7 @@ const uploadSchema = new mongoose.Schema(
 		// File categorization
 		category: {
 			type: String,
-			enum: ["registration", "acid", "shipment", "invoice", "archive"],
+			enum: ["registration", "acidrequest", "acid", "shipment", "invoice", "archive"],
 			required: true,
 		},
 		documentType: {

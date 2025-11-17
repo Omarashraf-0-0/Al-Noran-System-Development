@@ -56,6 +56,7 @@ app.use(
     "/",
     express.static(path.join(__dirname, "..", "..", "frontend", "public"))
 );
+// Serve uploaded files (both legacy local uploads and new local uploads)
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 app.use("/", require("./routes/root"));
@@ -99,7 +100,12 @@ io.on("connection", (socket) => {
 
 mongoose.connection.once("open", () => {
     console.log("Connected to MongoDB");
-    server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    // Listen on all network interfaces (0.0.0.0) to allow mobile access
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(`Local: http://localhost:${PORT}`);
+        console.log(`Network: http://192.168.1.8:${PORT}`);
+    });
 });
 mongoose.connection.on("error", (err) => {
     console.log(err);

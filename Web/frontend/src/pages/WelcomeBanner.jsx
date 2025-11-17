@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import bannerImage from "../assets/images/Untitled design (7) 1.png";
 import contractImage from "../assets/images/contract.png"; 
 import groupImage from "../assets/images/Group 275.png";
+import axios from "axios";
+import { toast } from "react-hot-toast";
 
 const StatCard = ({ value, label }) => (
   <div className="bg-white rounded-lg shadow-md p-4 flex-1 flex items-center justify-between">
@@ -29,11 +31,56 @@ StatCard.propTypes = {
 };
 
 const WelcomeBanner = () => {
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const userName = user?.username || user?.fullname || user?.name || "الزائر";
+  const userID = user?.id;
+  const token = localStorage.getItem("token");
+
+  const [stats, setStats] = useState({
+    completed: 0,
+    inProgress: 0,
+    total: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        if (!userID) {
+          console.error("User ID not found");
+          setLoading(false);
+          return;
+        }
+
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/shipments/employee/${userID}/stats`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.data.success) {
+          setStats(response.data.stats);
+        }
+      } catch (error) {
+        console.error("Error fetching shipment stats:", error);
+        toast.error("فشل في تحميل إحصائيات الشحنات");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [userID, token]);
+  
   return (
     <section className="flex flex-col items-center py-8 px-4">
       {/* 🟥 Greeting Above the Card */}
       <div className="w-full max-w-4xl mb-4 text-right">
-        <h1 className="text-2xl font-bold text-red-800">مرحباً, الأسم!</h1>
+        <h1 className="text-2xl font-bold text-red-800">مرحباً, {userName}!</h1>
       </div>
 
       {/* 🟫 Card Section */}
@@ -48,9 +95,14 @@ const WelcomeBanner = () => {
 
         <div className="flex flex-col md:flex-row gap-4">
           {/* Cards  have icons on the right */}
-          <StatCard value="120" label="عدد الشحنات المكتملة" />
-          <StatCard value="100" label="عدد الشحنات قيد التوصيل" />
-          <StatCard value="130" label="عدد الشحنات في المخزن" />
+          <StatCard 
+            value={loading ? "..." : stats.completed.toString()} 
+            label="عدد الشحنات المكتملة" 
+          />
+          <StatCard 
+            value={loading ? "..." : stats.inProgress.toString()} 
+            label="عدد الشحنات قيد التوصيل" 
+          />
         </div>
       </div>
     </section>
