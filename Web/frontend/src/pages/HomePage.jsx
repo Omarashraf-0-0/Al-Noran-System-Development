@@ -164,11 +164,17 @@ const CurrentShipments = () => {
 
 				// Determine endpoint based on user type
 				const userType = user?.type;
-				const endpoint = userType === 'employee' 
-					? `${import.meta.env.VITE_API_URL}/api/shipments/employee/${userID}`
-					: `${import.meta.env.VITE_API_URL}/api/shipments/user/${userID}`;
+				const endpoint =
+					userType === "employee"
+						? `${import.meta.env.VITE_API_URL}/api/shipments/employee/${userID}`
+						: `${import.meta.env.VITE_API_URL}/api/shipments/user/${userID}`;
 
-				console.log("Fetching shipments for user type:", userType, "from:", endpoint);
+				console.log(
+					"Fetching shipments for user type:",
+					userType,
+					"from:",
+					endpoint
+				);
 
 				const response = await axios.get(endpoint, {
 					headers: {

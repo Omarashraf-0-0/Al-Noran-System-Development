@@ -39,7 +39,11 @@ router.post(
 	requestRequiredDocuments
 );
 router.get("/id/:shipmentId/required-documents", protect, getRequiredDocuments);
-router.patch("/id/:shipmentId/required-documents/:documentId", protect, markDocumentAsUploaded);
+router.patch(
+	"/id/:shipmentId/required-documents/:documentId",
+	protect,
+	markDocumentAsUploaded
+);
 router.get("/id/:shipmentId", protect, getShipmentById);
 
 // ACID-based routes (more generic, must come after specific routes)

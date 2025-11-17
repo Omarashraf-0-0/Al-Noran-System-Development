@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Navbar from "../components/Navbar";
+import Header from "../components/Header";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import { toast } from "react-hot-toast";
@@ -24,16 +24,28 @@ const DocumentUploadPage = () => {
 			{ key: "certificate_vat", label: "شهادة القيمة المضافة", required: true },
 			{ key: "production_supplies", label: "مستلزمات الإنتاج", required: true },
 			{ key: "power_of_attorney", label: "التوكيل", required: true },
-			{ key: "personal_id_of_representative", label: "بطاقة ممثل", required: true },
+			{
+				key: "personal_id_of_representative",
+				label: "بطاقة ممثل",
+				required: true,
+			},
 		],
 		commercial: [
 			{ key: "commercial_register", label: "السجل التجاري", required: true },
 			{ key: "tax_card", label: "البطاقة الضريبية", required: true },
 			{ key: "contract", label: "العقد", required: true },
 			{ key: "certificate_vat", label: "شهادة القيمة المضافة", required: true },
-			{ key: "import_export_card", label: "بطاقة استيراد/تصدير", required: true },
+			{
+				key: "import_export_card",
+				label: "بطاقة استيراد/تصدير",
+				required: true,
+			},
 			{ key: "power_of_attorney", label: "التوكيل", required: true },
-			{ key: "personal_id_of_representative", label: "بطاقة ممثل", required: true },
+			{
+				key: "personal_id_of_representative",
+				label: "بطاقة ممثل",
+				required: true,
+			},
 			{ key: "trade_certificates", label: "شهادات تجارية", required: true },
 		],
 		personal: [
@@ -112,7 +124,12 @@ const DocumentUploadPage = () => {
 		if (!file) return;
 
 		// Validate file type
-		const allowedTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+		const allowedTypes = [
+			"application/pdf",
+			"image/jpeg",
+			"image/jpg",
+			"image/png",
+		];
 		if (!allowedTypes.includes(file.type)) {
 			toast.error("نوع الملف غير مدعوم. الرجاء رفع PDF أو صورة فقط");
 			return;
@@ -149,7 +166,10 @@ const DocumentUploadPage = () => {
 						const percentCompleted = Math.round(
 							(progressEvent.loaded * 100) / progressEvent.total
 						);
-						setProgress((prev) => ({ ...prev, [documentKey]: percentCompleted }));
+						setProgress((prev) => ({
+							...prev,
+							[documentKey]: percentCompleted,
+						}));
 					},
 				}
 			);
@@ -202,7 +222,7 @@ const DocumentUploadPage = () => {
 		try {
 			const token = localStorage.getItem("token");
 			console.log("Fetching document with ID:", uploadId);
-			
+
 			// Fetch fresh presigned URL from backend
 			const response = await axios.get(
 				`${import.meta.env.VITE_API_URL}/api/uploads/${uploadId}`,
@@ -244,8 +264,8 @@ const DocumentUploadPage = () => {
 			});
 		}
 
-		// TODO: When dashboard is ready, change this to navigate("/dashboard")
-		navigate("/shipmentstatus");
+		// Redirect to home page
+		navigate("/home");
 	};
 
 	if (!clientType) {
@@ -266,7 +286,7 @@ const DocumentUploadPage = () => {
 
 	return (
 		<>
-			<Navbar />
+			<Header />
 			<BackgroundContainer>
 				<FormContainer>
 					<div className="w-full max-w-4xl mx-auto p-6" dir="rtl">
@@ -398,7 +418,10 @@ const DocumentUploadPage = () => {
 											<div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded">
 												<p>📄 {isUploaded.filename}</p>
 												<p className="text-gray-500">
-													تم الرفع: {new Date(isUploaded.uploadedAt).toLocaleDateString("ar-EG")}
+													تم الرفع:{" "}
+													{new Date(isUploaded.uploadedAt).toLocaleDateString(
+														"ar-EG"
+													)}
 												</p>
 											</div>
 										)}

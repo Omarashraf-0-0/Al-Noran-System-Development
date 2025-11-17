@@ -260,9 +260,7 @@ const getShipmentsByUserId = async (req, res) => {
 			createdAt: -1,
 		});
 
-		console.log(
-			`Found ${shipments.length} shipments for user ${userId}`
-		);
+		console.log(`Found ${shipments.length} shipments for user ${userId}`);
 		res.json(shipments);
 	} catch (error) {
 		console.error("Error fetching user shipments:", error);
@@ -383,17 +381,17 @@ const requestRequiredDocuments = async (req, res) => {
 		}
 
 		// Store required documents in shipment
-		const formattedDocuments = documents.map(doc => ({
+		const formattedDocuments = documents.map((doc) => ({
 			name: doc.name || doc,
 			uploaded: false,
-			requestedAt: new Date()
+			requestedAt: new Date(),
 		}));
-		
+
 		shipment.requiredDocuments = [
 			...(shipment.requiredDocuments || []),
-			...formattedDocuments
+			...formattedDocuments,
 		];
-		
+
 		await shipment.save();
 
 		// Prepare email content
@@ -501,19 +499,36 @@ const getRequiredDocuments = async (req, res) => {
 	try {
 		const { shipmentId } = req.params;
 
-		const shipment = await Shipment.findById(shipmentId).select('requiredDocuments acid');
+		const shipment = await Shipment.findById(shipmentId).select(
+			"requiredDocuments acid"
+		);
 
 		if (!shipment) {
 			return res.status(404).json({ message: "Shipment not found" });
 		}
+
+		// Convert to plain object to ensure all fields are included
+		const requiredDocs = shipment.requiredDocuments.map((doc) => ({
+			_id: doc._id,
+			name: doc.name,
+			uploaded: doc.uploaded,
+			fileId: doc.fileId || null,
+			requestedAt: doc.requestedAt,
+			uploadedAt: doc.uploadedAt || null,
+		}));
+
+		console.log(
+			"📋 Returning required documents:",
+			JSON.stringify(requiredDocs, null, 2)
+		);
 
 		res.json({
 			success: true,
 			data: {
 				shipmentId: shipment._id,
 				acid: shipment.acid,
-				requiredDocuments: shipment.requiredDocuments || []
-			}
+				requiredDocuments: requiredDocs,
+			},
 		});
 	} catch (error) {
 		console.error("Error fetching required documents:", error);
@@ -527,6 +542,12 @@ const markDocumentAsUploaded = async (req, res) => {
 		const { shipmentId, documentId } = req.params;
 		const { fileId } = req.body;
 
+		console.log("📝 Marking document as uploaded:", {
+			shipmentId,
+			documentId,
+			fileId,
+		});
+
 		const shipment = await Shipment.findById(shipmentId);
 
 		if (!shipment) {
@@ -539,13 +560,30 @@ const markDocumentAsUploaded = async (req, res) => {
 			return res.status(404).json({ message: "Document not found" });
 		}
 
+		console.log("Before update:", {
+			name: document.name,
+			uploaded: document.uploaded,
+			fileId: document.fileId,
+		});
+
+		// Update document fields
 		document.uploaded = true;
 		document.uploadedAt = new Date();
-		if (fileId) {
-			document.fileId = fileId;
-		}
+		document.fileId = fileId; // Always set fileId, even if it's undefined/null it should be set
+
+		console.log("After update:", {
+			name: document.name,
+			uploaded: document.uploaded,
+			fileId: document.fileId,
+		});
 
 		await shipment.save();
+
+		console.log("After save:", {
+			name: document.name,
+			uploaded: document.uploaded,
+			fileId: document.fileId,
+		});
 
 		// Emit socket event
 		if (req.io) {
@@ -553,14 +591,26 @@ const markDocumentAsUploaded = async (req, res) => {
 				shipmentId: shipment._id,
 				acid: shipment.acid,
 				documentId: documentId,
-				documentName: document.name
+				documentName: document.name,
 			});
 		}
+
+		// Return the document as plain object to ensure all fields are included
+		const updatedDoc = {
+			_id: document._id,
+			name: document.name,
+			uploaded: document.uploaded,
+			fileId: document.fileId,
+			requestedAt: document.requestedAt,
+			uploadedAt: document.uploadedAt,
+		};
+
+		console.log("✅ Returning updated document:", updatedDoc);
 
 		res.json({
 			success: true,
 			message: "Document marked as uploaded successfully",
-			data: document
+			data: updatedDoc,
 		});
 	} catch (error) {
 		console.error("Error marking document as uploaded:", error);

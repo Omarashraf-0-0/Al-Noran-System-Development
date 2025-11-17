@@ -22,57 +22,68 @@ const {
  */
 const uploadFile = async (req, res) => {
 	try {
-		console.log('🔵🔵🔵 [Backend Upload] بدء استقبال طلب رفع ملف');
-		console.log('📨 Request Headers:', req.headers.authorization ? 'Bearer token present ✅' : 'No token ❌');
-		console.log('📋 Request Body:', req.body);
-		
+		console.log("🔵🔵🔵 [Backend Upload] بدء استقبال طلب رفع ملف");
+		console.log(
+			"📨 Request Headers:",
+			req.headers.authorization ? "Bearer token present ✅" : "No token ❌"
+		);
+		console.log("📋 Request Body:", req.body);
+
 		// Check if file exists
 		if (!req.file) {
-			console.log('❌ No file in request');
+			console.log("❌ No file in request");
 			return res.status(400).json({ message: "No file uploaded" });
 		}
-		
-		console.log('📁 File received:', req.file.originalname);
-		console.log('📦 File size:', (req.file.size / 1024).toFixed(2), 'KB');
-		console.log('📄 File type:', req.file.mimetype);
+
+		console.log("📁 File received:", req.file.originalname);
+		console.log("📦 File size:", (req.file.size / 1024).toFixed(2), "KB");
+		console.log("📄 File type:", req.file.mimetype);
 
 		// Validate file
 		const validation = validateFile(req.file);
 		if (!validation.valid) {
-			console.log('❌ File validation failed:', validation.error);
+			console.log("❌ File validation failed:", validation.error);
 			return res.status(400).json({ message: validation.error });
 		}
-		
-		console.log('✅ File validation passed');
+
+		console.log("✅ File validation passed");
 
 		// Extract user info from JWT (req.user should be populated by auth middleware)
 		const userId = req.user?.id || req.user?._id;
 		if (!userId) {
-			console.log('❌ User not authenticated - no userId');
+			console.log("❌ User not authenticated - no userId");
 			return res.status(401).json({ message: "User not authenticated" });
 		}
-		
-		console.log('👤 User ID:', userId);
+
+		console.log("👤 User ID:", userId);
 
 		// Fetch user details
 		const user = await User.findById(userId);
 		if (!user) {
-			console.log('❌ User not found in database');
+			console.log("❌ User not found in database");
 			return res.status(404).json({ message: "User not found" });
 		}
-		
-		console.log('✅ User found:', user.username, '|', user.email);
 
-		const { category, relatedId, documentType, description, tags, userType: reqUserType, clientType: reqClientType } = req.body;
+		console.log("✅ User found:", user.username, "|", user.email);
+
+		const {
+			category,
+			relatedId,
+			documentType,
+			description,
+			tags,
+			userType: reqUserType,
+			clientType: reqClientType,
+		} = req.body;
 
 		// Validate required fields
 		if (!category) {
-			console.log('❌ Category missing');
+			console.log("❌ Category missing");
 			return res.status(400).json({ message: "Category is required" });
 		}
-		
-		console.log('📂 Category:', category);
-		console.log('📄 Document Type:', documentType);
+
+		console.log("📂 Category:", category);
+		console.log("📄 Document Type:", documentType);
 
 		const validCategories = [
 			"registration",
@@ -83,23 +94,20 @@ const uploadFile = async (req, res) => {
 			"archive",
 		];
 		if (!validCategories.includes(category)) {
-			console.log('❌ Invalid category:', category);
-			return res
-				.status(400)
-				.json({ message: `Invalid category. Must be one of: ${validCategories.join(", ")}` });
+			console.log("❌ Invalid category:", category);
+			return res.status(400).json({
+				message: `Invalid category. Must be one of: ${validCategories.join(
+					", "
+				)}`,
+			});
 		}
 
 		// Validate relatedId for specific categories
-		if (
-			["acid", "shipment", "invoice"].includes(category) &&
-			!relatedId
-		) {
-			console.log('❌ relatedId required for category:', category);
-			return res
-				.status(400)
-				.json({
-					message: `relatedId is required for category: ${category}`,
-				});
+		if (["acid", "shipment", "invoice"].includes(category) && !relatedId) {
+			console.log("❌ relatedId required for category:", category);
+			return res.status(400).json({
+				message: `relatedId is required for category: ${category}`,
+			});
 		}
 
 		// Determine userType and clientType
@@ -113,28 +121,28 @@ const uploadFile = async (req, res) => {
 
 			// For registration category, validate required documents
 			if (category === "registration" && !clientType) {
-				console.log('❌ clientType required for registration');
-				return res
-					.status(400)
-					.json({
-						message:
-							"Client type is required for registration documents (factory, commercial, or personal)",
-					});
+				console.log("❌ clientType required for registration");
+				return res.status(400).json({
+					message:
+						"Client type is required for registration documents (factory, commercial, or personal)",
+				});
 			}
 
 			// Validate clientType is valid
-			if (clientType && !["factory", "commercial", "personal"].includes(clientType)) {
-				console.log('❌ Invalid clientType:', clientType);
-				return res
-					.status(400)
-					.json({
-						message: "Invalid clientType. Must be: factory, commercial, or personal",
-					});
+			if (
+				clientType &&
+				!["factory", "commercial", "personal"].includes(clientType)
+			) {
+				console.log("❌ Invalid clientType:", clientType);
+				return res.status(400).json({
+					message:
+						"Invalid clientType. Must be: factory, commercial, or personal",
+				});
 			}
 		}
-		
-		console.log('👥 User Type:', userType);
-		console.log('🏭 Client Type:', clientType);
+
+		console.log("👥 User Type:", userType);
+		console.log("🏭 Client Type:", clientType);
 
 		// Generate S3 key (path)
 		const s3Key = generateS3Key({
@@ -145,11 +153,11 @@ const uploadFile = async (req, res) => {
 			filename: req.file.originalname,
 			clientType,
 		});
-		
-		console.log('🔑 Generated S3 Key:', s3Key);
+
+		console.log("🔑 Generated S3 Key:", s3Key);
 
 		// Upload to S3
-		console.log('⏳ جاري رفع الملف إلى S3...');
+		console.log("⏳ جاري رفع الملف إلى S3...");
 		const uploadResult = await uploadToS3({
 			fileBuffer: req.file.buffer,
 			s3Key,
@@ -157,15 +165,23 @@ const uploadFile = async (req, res) => {
 		});
 
 		if (!uploadResult.success) {
-			console.log('❌❌❌ فشل رفع الملف إلى S3');
+			console.log("❌❌❌ فشل رفع الملف إلى S3");
 			return res.status(500).json({ message: "Failed to upload file to S3" });
 		}
-		
-		console.log('✅✅ تم رفع الملف إلى S3 بنجاح');
-		console.log('🔗 S3 URL:', uploadResult.url);
+
+		console.log("✅✅ تم رفع الملف إلى S3 بنجاح");
+		console.log("🔗 S3 URL:", uploadResult.url);
+
+		// Generate unique filename for storage (prevents duplicates)
+		const timestamp = Date.now();
+		const sanitizedOriginalName = req.file.originalname.replace(
+			/[^a-zA-Z0-9._-]/g,
+			"_"
+		);
+		const uniqueFilename = `${timestamp}_${sanitizedOriginalName}`;
 
 		// Create database record
-		console.log('💾 جاري حفظ البيانات في MongoDB...');
+		console.log("💾 جاري حفظ البيانات في MongoDB...");
 		const uploadRecord = new Upload({
 			userId,
 			userType,
@@ -173,8 +189,8 @@ const uploadFile = async (req, res) => {
 			category,
 			documentType: documentType || null,
 			relatedId: relatedId || null,
-			filename: req.file.originalname,
-			originalname: req.file.originalname,
+			filename: uniqueFilename, // Unique filename to prevent duplicates
+			originalname: req.file.originalname, // Keep original for display
 			s3Key: uploadResult.s3Key,
 			url: uploadResult.url,
 			mimetype: req.file.mimetype,
@@ -185,21 +201,21 @@ const uploadFile = async (req, res) => {
 		});
 
 		await uploadRecord.save();
-		console.log('✅✅ تم حفظ البيانات في MongoDB بنجاح');
-		console.log('🆔 Upload Record ID:', uploadRecord._id);
+		console.log("✅✅ تم حفظ البيانات في MongoDB بنجاح");
+		console.log("🆔 Upload Record ID:", uploadRecord._id);
 
 		// Generate presigned URL for immediate access
 		const presignedUrl = await getPresignedUrl(uploadResult.s3Key, 3600); // 1 hour
 
-		console.log('✅✅✅ [Backend Upload SUCCESS] عملية الرفع اكتملت بنجاح!');
-		console.log('📊 Summary:');
-		console.log('   - User:', user.username);
-		console.log('   - File:', req.file.originalname);
-		console.log('   - Category:', category);
-		console.log('   - Document Type:', documentType);
-		console.log('   - S3 Key:', uploadResult.s3Key);
-		console.log('   - Database ID:', uploadRecord._id);
-		
+		console.log("✅✅✅ [Backend Upload SUCCESS] عملية الرفع اكتملت بنجاح!");
+		console.log("📊 Summary:");
+		console.log("   - User:", user.username);
+		console.log("   - File:", req.file.originalname);
+		console.log("   - Category:", category);
+		console.log("   - Document Type:", documentType);
+		console.log("   - S3 Key:", uploadResult.s3Key);
+		console.log("   - Database ID:", uploadRecord._id);
+
 		res.status(201).json({
 			success: true,
 			message: "File uploaded successfully",
@@ -217,9 +233,11 @@ const uploadFile = async (req, res) => {
 			},
 		});
 	} catch (error) {
-		console.error('💥💥💥 [Backend Upload ERROR]:', error);
-		console.error('Error Stack:', error.stack);
-		res.status(500).json({ message: error.message || "Server error during upload" });
+		console.error("💥💥💥 [Backend Upload ERROR]:", error);
+		console.error("Error Stack:", error.stack);
+		res
+			.status(500)
+			.json({ message: error.message || "Server error during upload" });
 	}
 };
 
@@ -288,6 +306,14 @@ const uploadMultipleFiles = async (req, res) => {
 					mimetype: file.mimetype,
 				});
 
+				// Generate unique filename for storage (prevents duplicates)
+				const timestamp = Date.now();
+				const sanitizedOriginalName = file.originalname.replace(
+					/[^a-zA-Z0-9._-]/g,
+					"_"
+				);
+				const uniqueFilename = `${timestamp}_${sanitizedOriginalName}`;
+
 				// Create database record
 				const uploadRecord = new Upload({
 					userId,
@@ -295,8 +321,8 @@ const uploadMultipleFiles = async (req, res) => {
 					clientType,
 					category,
 					relatedId: relatedId || null,
-					filename: file.originalname,
-					originalname: file.originalname,
+					filename: uniqueFilename, // Unique filename to prevent duplicates
+					originalname: file.originalname, // Keep original for display
 					s3Key: uploadResult.s3Key,
 					url: uploadResult.url,
 					mimetype: file.mimetype,
@@ -335,7 +361,9 @@ const uploadMultipleFiles = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Multiple Upload Error:", error);
-		res.status(500).json({ message: error.message || "Server error during upload" });
+		res
+			.status(500)
+			.json({ message: error.message || "Server error during upload" });
 	}
 };
 
@@ -365,7 +393,7 @@ const getUploads = async (req, res) => {
 			query.userId = req.user.id || req.user._id;
 		}
 
-		console.log('🔍 [getUploads] Query:', query);
+		console.log("🔍 [getUploads] Query:", query);
 
 		const uploads = await Upload.find(query)
 			.sort({ uploadedAt: -1 })
@@ -384,7 +412,10 @@ const getUploads = async (req, res) => {
 						presignedUrl,
 					};
 				} catch (error) {
-					console.error(`Error generating presigned URL for ${upload.s3Key}:`, error);
+					console.error(
+						`Error generating presigned URL for ${upload.s3Key}:`,
+						error
+					);
 					return {
 						id: upload._id,
 						_id: upload._id,
@@ -401,7 +432,9 @@ const getUploads = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Get Uploads Error:", error);
-		res.status(500).json({ message: error.message || "Server error fetching uploads" });
+		res
+			.status(500)
+			.json({ message: error.message || "Server error fetching uploads" });
 	}
 };
 
@@ -416,11 +449,11 @@ const getUploadById = async (req, res) => {
 		console.log("Fetching upload by ID:", id);
 
 		// Validate ObjectId format
-		if (!id || id === 'temp-file-id' || !id.match(/^[0-9a-fA-F]{24}$/)) {
+		if (!id || id === "temp-file-id" || !id.match(/^[0-9a-fA-F]{24}$/)) {
 			console.log("Invalid upload ID format:", id);
-			return res.status(400).json({ 
+			return res.status(400).json({
 				message: "Invalid upload ID format",
-				providedId: id 
+				providedId: id,
 			});
 		}
 
@@ -463,9 +496,9 @@ const getUploadById = async (req, res) => {
 	} catch (error) {
 		console.error("Get Upload By ID Error:", error);
 		console.error("Error stack:", error.stack);
-		res.status(500).json({ 
+		res.status(500).json({
 			message: error.message || "Server error",
-			error: process.env.NODE_ENV === 'development' ? error.message : undefined
+			error: process.env.NODE_ENV === "development" ? error.message : undefined,
 		});
 	}
 };
@@ -480,25 +513,28 @@ const updateUpload = async (req, res) => {
 		const { id } = req.params;
 		const { description, tags } = req.body;
 
-		console.log('📝 [updateUpload] Updating upload:', id);
-		console.log('📝 [updateUpload] New description:', description);
-		console.log('📝 [updateUpload] New tags:', tags);
+		console.log("📝 [updateUpload] Updating upload:", id);
+		console.log("📝 [updateUpload] New description:", description);
+		console.log("📝 [updateUpload] New tags:", tags);
 
 		const upload = await Upload.findById(id);
 
 		if (!upload) {
-			return res.status(404).json({ 
+			return res.status(404).json({
 				success: false,
-				message: "Upload not found" 
+				message: "Upload not found",
 			});
 		}
 
 		// Check if user owns this upload (or is admin)
 		const userId = req.user?.id || req.user?._id;
-		if (upload.userId.toString() !== userId.toString() && req.user?.type !== "admin") {
-			return res.status(403).json({ 
+		if (
+			upload.userId.toString() !== userId.toString() &&
+			req.user?.type !== "admin"
+		) {
+			return res.status(403).json({
 				success: false,
-				message: "Not authorized to update this upload" 
+				message: "Not authorized to update this upload",
 			});
 		}
 
@@ -508,7 +544,7 @@ const updateUpload = async (req, res) => {
 
 		await upload.save();
 
-		console.log('✅ [updateUpload] Upload updated successfully');
+		console.log("✅ [updateUpload] Upload updated successfully");
 
 		res.status(200).json({
 			success: true,
@@ -520,10 +556,10 @@ const updateUpload = async (req, res) => {
 			},
 		});
 	} catch (error) {
-		console.error('❌ [updateUpload] Error:', error.message);
-		res.status(500).json({ 
+		console.error("❌ [updateUpload] Error:", error.message);
+		res.status(500).json({
 			success: false,
-			message: "Server error updating upload" 
+			message: "Server error updating upload",
 		});
 	}
 };
@@ -545,8 +581,13 @@ const deleteUpload = async (req, res) => {
 
 		// Check if user owns this upload (or is admin)
 		const userId = req.user?.id || req.user?._id;
-		if (upload.userId.toString() !== userId.toString() && req.user?.type !== "admin") {
-			return res.status(403).json({ message: "Not authorized to delete this upload" });
+		if (
+			upload.userId.toString() !== userId.toString() &&
+			req.user?.type !== "admin"
+		) {
+			return res
+				.status(403)
+				.json({ message: "Not authorized to delete this upload" });
 		}
 
 		// Delete from S3
@@ -565,7 +606,9 @@ const deleteUpload = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Delete Upload Error:", error);
-		res.status(500).json({ message: error.message || "Server error deleting upload" });
+		res
+			.status(500)
+			.json({ message: error.message || "Server error deleting upload" });
 	}
 };
 
@@ -584,7 +627,9 @@ const checkRequiredDocuments = async (req, res) => {
 		}
 
 		if (user.type !== "client") {
-			return res.status(400).json({ message: "Only applicable for client users" });
+			return res
+				.status(400)
+				.json({ message: "Only applicable for client users" });
 		}
 
 		const clientType = user.clientDetails?.clientType;
