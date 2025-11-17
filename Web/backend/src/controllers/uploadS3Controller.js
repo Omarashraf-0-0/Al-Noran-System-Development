@@ -415,6 +415,15 @@ const getUploadById = async (req, res) => {
 		const { id } = req.params;
 		console.log("Fetching upload by ID:", id);
 
+		// Validate ObjectId format
+		if (!id || id === 'temp-file-id' || !id.match(/^[0-9a-fA-F]{24}$/)) {
+			console.log("Invalid upload ID format:", id);
+			return res.status(400).json({ 
+				message: "Invalid upload ID format",
+				providedId: id 
+			});
+		}
+
 		const upload = await Upload.findById(id).populate(
 			"userId",
 			"fullname email username type"

@@ -100,7 +100,7 @@ const ShipmentStatus = () => {
         // Fetch shipment files/uploads
         try {
           const filesResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/uploads?category=shipment`,
+            `${import.meta.env.VITE_API_URL}/api/uploads?category=shipment&relatedId=${shipmentResponse.data._id}`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -110,20 +110,23 @@ const ShipmentStatus = () => {
 
           console.log("Fetched files:", filesResponse.data);
 
-          // Filter files for this shipment and format them
-          const shipmentFiles = (filesResponse.data || [])
-            .filter(file => file.shipmentId === shipmentResponse.data._id)
-            .map((file) => ({
-              name: file.fileName || file.originalName || "ملف",
-              date: new Date(file.createdAt).toLocaleDateString("ar-EG", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              }),
-              url: file.presignedUrl || file.url,
-              id: file._id,
-            }));
+          // API returns { success, count, uploads: [...] }
+          const uploads = filesResponse.data?.uploads || filesResponse.data || [];
+          
+          const shipmentFiles = uploads.map((file) => ({
+            name: file.filename || file.originalname || "ملف",
+            date: new Date(file.uploadedAt || file.createdAt).toLocaleDateString("ar-EG", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }),
+            url: file.presignedUrl || file.url,
+            id: file._id,
+            documentType: file.documentType,
+            description: file.description,
+          }));
 
+          console.log("Formatted shipment files:", shipmentFiles);
           setFileItems(shipmentFiles);
 
           if (shipmentFiles.length === 0) {
@@ -241,7 +244,7 @@ const ShipmentStatus = () => {
               </div>
 
               {/*  Stepper: shipment status progress */}
-              <Stepper />
+              <Stepper currentStatus={shipment.status} />
 
               {/*  Input fields section - Display real shipment data */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mt-12 mb-12">
@@ -293,7 +296,15 @@ const ShipmentStatus = () => {
                   </div>
 
                   <div className="space-y-3">
-                    {requiredDocuments.map((doc, index) => (
+                    {requiredDocuments.map((doc, index) => {
+                      // Debug logging
+                      console.log(`Document "${doc.name}":`, {
+                        uploaded: doc.uploaded,
+                        fileId: doc.fileId,
+                        showViewButton: doc.uploaded && doc.fileId
+                      });
+                      
+                      return (
                       <div 
                         key={doc._id || index}
                         className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
@@ -302,7 +313,7 @@ const ShipmentStatus = () => {
                             : 'bg-white border-orange-300 hover:border-orange-400'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1">
                           {doc.uploaded ? (
                             <span className="text-2xl">✅</span>
                           ) : (
@@ -319,18 +330,54 @@ const ShipmentStatus = () => {
                           </div>
                         </div>
                         
-                        {!doc.uploaded && (
-                          <button
-                            onClick={() => {
-                              setShowRequiredDocsModal(true);
-                            }}
-                            className="bg-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-700 transition"
-                          >
-                            رفع الآن
-                          </button>
-                        )}
+                        <div className="flex gap-2">
+                          {doc.uploaded && doc.fileId ? (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  toast.loading('جاري تحميل الملف...');
+                                  const fileResponse = await axios.get(
+                                    `${import.meta.env.VITE_API_URL}/api/uploads/${doc.fileId}`,
+                                    {
+                                      headers: {
+                                        Authorization: `Bearer ${token}`,
+                                      },
+                                    }
+                                  );
+                                  toast.dismiss();
+                                  const fileUrl = fileResponse.data?.upload?.presignedUrl || fileResponse.data?.presignedUrl;
+                                  if (fileUrl) {
+                                    window.open(fileUrl, '_blank');
+                                  } else {
+                                    toast.error('لم يتم العثور على رابط الملف');
+                                  }
+                                } catch (error) {
+                                  toast.dismiss();
+                                  toast.error('فشل تحميل الملف');
+                                  console.error('File fetch error:', error);
+                                }
+                              }}
+                              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-1"
+                            >
+                              <span>عرض</span>
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setShowRequiredDocsModal(true);
+                              }}
+                              className="bg-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-700 transition"
+                            >
+                              رفع الآن
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
 
                   {requiredDocuments.filter(doc => !doc.uploaded).length > 0 && (
@@ -351,7 +398,13 @@ const ShipmentStatus = () => {
                 ) : (
                   <div className="space-y-4">
                     {fileItems.map((item, index) => (
-                      <FileRow key={index} name={item.name} date={item.date} />
+                      <FileRow 
+                        key={index} 
+                        name={item.name} 
+                        date={item.date} 
+                        documentType={item.documentType}
+                        description={item.description}
+                      />
                     ))}
                   </div>
                 )}
@@ -420,11 +473,31 @@ const ShipmentStatus = () => {
                         try {
                           toast.loading('جاري رفع المستند...');
                           
-                          // Upload file first (you'll need to implement the upload logic)
-                          // For now, we'll just mark it as uploaded
+                          // Step 1: Upload file to S3
+                          const formData = new FormData();
+                          formData.append('file', file);
+                          formData.append('category', 'shipment');
+                          formData.append('relatedId', shipment._id);
+                          formData.append('documentType', 'other'); // Use 'other' as document type
+                          formData.append('description', `Required document: ${doc.name}`);
+
+                          const uploadResponse = await axios.post(
+                            `${import.meta.env.VITE_API_URL}/api/uploads`,
+                            formData,
+                            {
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                                'Content-Type': 'multipart/form-data',
+                              },
+                            }
+                          );
+
+                          const uploadedFileId = uploadResponse.data?.upload?._id || uploadResponse.data?._id;
+
+                          // Step 2: Mark document as uploaded in shipment
                           await axios.patch(
                             `${import.meta.env.VITE_API_URL}/api/shipments/id/${shipment._id}/required-documents/${doc._id}`,
-                            { fileId: 'temp-file-id' }, // Replace with actual file ID after upload
+                            { fileId: uploadedFileId },
                             {
                               headers: {
                                 Authorization: `Bearer ${token}`,
@@ -435,15 +508,52 @@ const ShipmentStatus = () => {
                           toast.dismiss();
                           toast.success('تم رفع المستند بنجاح');
                           
-                          // Refresh required documents
-                          const updatedDocs = requiredDocuments.map(d => 
-                            d._id === doc._id ? { ...d, uploaded: true, uploadedAt: new Date() } : d
+                          // Refresh required documents from backend to get updated data
+                          const updatedReqDocsResponse = await axios.get(
+                            `${import.meta.env.VITE_API_URL}/api/shipments/id/${shipment._id}/required-documents`,
+                            {
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                              },
+                            }
                           );
+                          
+                          const updatedDocs = updatedReqDocsResponse.data?.data?.requiredDocuments || [];
                           setRequiredDocuments(updatedDocs);
+                          console.log('Updated required documents:', updatedDocs);
+
+                          // Refresh files list
+                          const filesResponse = await axios.get(
+                            `${import.meta.env.VITE_API_URL}/api/uploads?category=shipment&relatedId=${shipment._id}`,
+                            {
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                              },
+                            }
+                          );
+
+                          const uploads = filesResponse.data?.uploads || filesResponse.data || [];
+                          const shipmentFiles = uploads.map((file) => ({
+                            name: file.filename || file.originalname || "ملف",
+                            date: new Date(file.uploadedAt || file.createdAt).toLocaleDateString("ar-EG", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            }),
+                            url: file.presignedUrl || file.url,
+                            id: file._id,
+                            documentType: file.documentType,
+                            description: file.description,
+                          }));
+
+                          setFileItems(shipmentFiles);
+                          
+                          // Close the modal after successful upload
+                          setShowRequiredDocsModal(false);
 
                         } catch (error) {
                           toast.dismiss();
-                          toast.error('فشل رفع المستند');
+                          toast.error('فشل رفع المستند: ' + (error.response?.data?.message || error.message));
                           console.error('Upload error:', error);
                         }
                       }}
