@@ -16,6 +16,7 @@ const {
 	requestRequiredDocuments,
 	getRequiredDocuments,
 	markDocumentAsUploaded,
+	getEmployeeShipmentStats,
 } = require("../controllers/shipmentController");
 
 const router = express.Router();
@@ -25,6 +26,7 @@ router.post("/", protect, createShipment);
 router.post("/addShipments", protect, addShipments);
 router.get("/getAll", protect, getAllShipments);
 router.get("/employee/:employeeId", protect, getShipmentrelatedToEmployee);
+router.get("/employee/:employeeId/stats", protect, getEmployeeShipmentStats);
 router.get("/user/:userId", protect, getShipmentsByUserId);
 router.get("/status/:acid", protect, getShipmentStatusByAcid);
 router.get("/status/number46/:number46", protect, getShipmentStatusByNumber46);
