@@ -22,7 +22,10 @@ public class DatabaseConnection {
             conn = DriverManager.getConnection(url);
 
             try (Statement stmt = conn.createStatement()) {
-                // ✅ Recreate the users table
+
+                // ============================================================
+                // ✅ USERS TABLE
+                // ============================================================
                 String usersTable = """
                     CREATE TABLE IF NOT EXISTS users (
                         _id TEXT PRIMARY KEY,
@@ -47,14 +50,19 @@ public class DatabaseConnection {
                 stmt.execute(usersTable);
                 System.out.println("✅ 'users' table ready.");
 
-                // ✅ Recreate the shipments table (with clientId)
+                // ============================================================
+                // ✅ SHIPMENTS TABLE (UPDATED TO MATCH MONGO DOCUMENT)
+                // ============================================================
                 String shipmentsTable = """
                     CREATE TABLE IF NOT EXISTS shipments (
                         shipment_id INTEGER PRIMARY KEY AUTOINCREMENT,
                         port_name TEXT NOT NULL,
                         num_of_containers INTEGER CHECK (num_of_containers >= 0),
-                        type_of_containers TEXT,
-                        third_gomroky TEXT,
+
+                        -- Arrays stored as JSON
+                        type_of_containers_json TEXT,
+                        third_gomroky_json TEXT,
+
                         country TEXT,
                         status TEXT,
                         policy TEXT,
@@ -62,22 +70,65 @@ public class DatabaseConnection {
                         clearance_fees REAL DEFAULT 0.00,
                         expenses_and_tips REAL DEFAULT 0.00,
                         sundries REAL DEFAULT 0.00,
+
+                        -- Added Mongo-like fields
+                        acid TEXT,
+                        importerName TEXT,
+                        number46 TEXT,
+                        employerName TEXT,
+                        shipmentDescription TEXT,
+                        arrivalDate TEXT,
+                        invoiceUrl TEXT,
+                        createdAt TEXT,
+                        updatedAt TEXT,
+                        employee_id TEXT,
+                        requiredDocuments TEXT,  -- JSON array
+
                         clientId TEXT,
                         FOREIGN KEY (clientId) REFERENCES users(_id)
                     );
                 """;
                 stmt.execute(shipmentsTable);
-                System.out.println("✅ 'shipments' table ready with 'clientId'.");
+                System.out.println("✅ 'shipments' table updated to match MongoDB schema.");
+
+                // ============================================================
+                // ✅ SHIPMENT FEES TABLE (NEW)
+                // ============================================================
+                String shipmentFeesTable = """
+                    CREATE TABLE IF NOT EXISTS shipment_fees (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        invoiceNumber TEXT,
+                        unsupportedItemName TEXT,
+                        unsupportedItemPrice REAL,
+                        shipmentId INTEGER,
+                        feeName TEXT,
+                        feePrice REAL,
+                        createdAt TEXT,
+
+                        Port_fee_price REAL DEFAULT 0,
+                        Additional_Services_price REAL DEFAULT 0,
+                        Clearance_Fees_price REAL DEFAULT 0,
+                        Expense_Tips_price REAL DEFAULT 0,
+                        Sundries_price REAL DEFAULT 0,
+
+                        FOREIGN KEY (shipmentId) REFERENCES shipments(shipment_id)
+                    );
+                """;
+                stmt.execute(shipmentFeesTable);
+                System.out.println("✅ 'shipment_fees' table created.");
+
             }
 
-            // ✅ Insert two shipments for clientId = 69000ca02bbdd9014e8996eb
+            // ============================================================
+            // ✅ INSERT SAMPLE SHIPMENTS
+            // ============================================================
             try (Statement stmt = conn.createStatement()) {
                 String insertShipments = """
                     INSERT INTO shipments (
                         port_name,
                         num_of_containers,
-                        type_of_containers,
-                        third_gomroky,
+                        type_of_containers_json,
+                        third_gomroky_json,
                         country,
                         status,
                         policy,
@@ -91,7 +142,7 @@ public class DatabaseConnection {
                         'Damietta Port',
                         10,
                         '["20ft"]',
-                        'Alex Customs',
+                        '["Alex Customs"]',
                         'Egypt',
                         'Pending',
                         'Policy-56789',
@@ -105,7 +156,7 @@ public class DatabaseConnection {
                         'Port Said',
                         15,
                         '["40ft HC", "20ft"]',
-                        'Suez Customs',
+                        '["Suez Customs"]',
                         'Egypt',
                         'Delivered',
                         'Policy-98765',
@@ -134,6 +185,6 @@ public class DatabaseConnection {
     }
 
     public static void main(String[] args) {
-        connect(); // Run once to recreate tables and insert data
+        connect(); // Run once to recreate/update tables and insert data
     }
 }

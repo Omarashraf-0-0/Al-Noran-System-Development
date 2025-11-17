@@ -40,7 +40,7 @@ import javafx.scene.control.TableCell;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import noran.desktop.Controllers.User;
-import noran.desktop.Controllers.Shipment;
+import noran.desktop.models.Shipment;
 import noran.desktop.models.InvoiceItem;
 import noran.desktop.Database.DatabaseConnection;
 
