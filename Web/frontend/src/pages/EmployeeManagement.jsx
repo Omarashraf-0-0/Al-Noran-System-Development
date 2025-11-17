@@ -3,11 +3,14 @@ import AdminHeader from "../components/AdminHeader";
 import Footer from "../components/Footer";
 import bannerPic from "../assets/images/Untitled design (8) 2.png";
 import searchIcon from "../assets/images/search.svg";
-import plus from "../assets/images/add_2.png";
+import AddEmployeePopUp from "../pages/AddEmployeePopUp";
+
 
 export default function EmployeesUI() {
   const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
+
 
   // --------------------------------------
   // Backend API placeholder (edit later)
@@ -149,13 +152,13 @@ const mockData = [
       {/* Add Employee Button */}
       <div className="flex justify-center mt-10">
         <button
-          onClick={() => console.log("Navigate to Add Employee Page")}
+          onClick={() => setShowPopup(true)}
           className="bg-[#1BA3B6] text-white px-6 py-3 rounded-md flex items-center gap-2 hover:opacity-90"
         >
           + إضافة موظف جديد
         </button>
       </div>
-      
+      {showPopup && <AddEmployeePopUp onClose={() => setShowPopup(false)} />}
 <div className="mt-16">
   <Footer />
 </div>
