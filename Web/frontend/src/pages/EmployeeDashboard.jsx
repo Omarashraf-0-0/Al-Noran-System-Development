@@ -262,9 +262,9 @@ export default function ShipmentsList() {
                       </td>
                     
                       <td className="py-3 px-4 align-top">
-                        <a href={`/shipmentstatus/${shipment.acid}`}>
+                        <a href={`/employee-shipment/${shipment.id}`}>
                           <span className="text-blue-600 text-sm font-medium underline cursor-pointer">
-                            عرض كل التفاصيل
+                            إدارة الشحنة
                           </span>
                         </a>
                       </td>
