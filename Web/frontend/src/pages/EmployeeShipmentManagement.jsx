@@ -43,16 +43,20 @@ const EmployeeShipmentManagement = () => {
 			color: "bg-yellow-100 text-yellow-800",
 		},
 		{
+			value: "في انتظار الشحن",
+			label: "في انتظار الشحن",
+			color: "bg-orange-100 text-orange-800",
+		},
+		{
 			value: "In Transit",
 			label: "في الطريق",
 			color: "bg-blue-100 text-blue-800",
 		},
 		{
-			value: "في انتظار الشحن",
-			label: "في انتظار الشحن",
-			color: "bg-orange-100 text-orange-800",
+			value: "Arrived",
+			label: "تم وصول البضاعة",
+			color: "bg-green-100 text-green-800",
 		},
-		{ value: "Arrived", label: "وصلت", color: "bg-green-100 text-green-800" },
 		{
 			value: "في انتظار وصول الإذن",
 			label: "في انتظار وصول الإذن",
