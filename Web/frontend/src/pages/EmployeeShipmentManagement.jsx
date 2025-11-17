@@ -112,14 +112,13 @@ const EmployeeShipmentManagement = () => {
 
 				// Fetch shipment details
 				const shipmentResponse = await axios.get(
-					`${import.meta.env.VITE_API_URL}/api/shipments/${shipmentId}`,
+					`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
 					{
 						headers: {
 							Authorization: `Bearer ${token}`,
 						},
 					}
 				);
-
 				setShipment(shipmentResponse.data);
 				setSelectedStatus(shipmentResponse.data.status);
 
@@ -187,7 +186,7 @@ const EmployeeShipmentManagement = () => {
 			toast.loading("جاري تحديث حالة الشحنة...");
 
 			await axios.put(
-				`${import.meta.env.VITE_API_URL}/api/shipments/${shipmentId}`,
+				`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
 				{ status: selectedStatus },
 				{
 					headers: {
@@ -228,17 +227,32 @@ const EmployeeShipmentManagement = () => {
 	const handleSaveRequiredDocuments = async () => {
 		try {
 			setUploadingDoc(true);
+			toast.loading("جاري إرسال طلب المستندات...");
 
-			// TODO: Send required documents to backend
-			// This would typically involve sending a notification to the client
-			// For now, we'll just show a success message
+			// Send required documents to backend
+			await axios.post(
+				`${
+					import.meta.env.VITE_API_URL
+				}/api/shipments/id/${shipmentId}/required-documents`,
+				{ documents: requiredDocuments },
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
+				}
+			);
 
+			toast.dismiss();
 			toast.success("تم حفظ المستندات المطلوبة وإرسال إشعار للعميل");
 			setShowDocumentModal(false);
 			setRequiredDocuments([]);
 		} catch (error) {
 			console.error("Error saving required documents:", error);
-			toast.error("فشل حفظ المستندات المطلوبة");
+			toast.dismiss();
+			toast.error(
+				error.response?.data?.message || "فشل حفظ المستندات المطلوبة"
+			);
 		} finally {
 			setUploadingDoc(false);
 		}

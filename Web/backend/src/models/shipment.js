@@ -8,7 +8,11 @@ const shipmentSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    
+    employee_id: {
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "User",
+      required: true,
+    },
     // Basic shipment info
     acid: {
       type: String,
@@ -115,6 +119,38 @@ const shipmentSchema = new mongoose.Schema(
     invoiceUrl: {
       type: String,
       trim: true,
+    },
+    
+    // Required documents system
+    requiredDocuments: [
+      {
+        name: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        uploaded: {
+          type: Boolean,
+          default: false,
+        },
+        fileId: {
+          type: String,
+          trim: true,
+        },
+        requestedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        uploadedAt: {
+          type: Date,
+        },
+      }
+    ],
+    
+    // Employee assigned to shipment
+    employee_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
   },
   { 

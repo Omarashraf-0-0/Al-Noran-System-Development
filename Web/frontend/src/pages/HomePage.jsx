@@ -162,14 +162,19 @@ const CurrentShipments = () => {
 					return;
 				}
 
-				const response = await axios.get(
-					`${import.meta.env.VITE_API_URL}/api/shipments/employee/${userID}`,
-					{
-						headers: {
-							Authorization: `Bearer ${token}`,
-						},
-					}
-				);
+				// Determine endpoint based on user type
+				const userType = user?.type;
+				const endpoint = userType === 'employee' 
+					? `${import.meta.env.VITE_API_URL}/api/shipments/employee/${userID}`
+					: `${import.meta.env.VITE_API_URL}/api/shipments/user/${userID}`;
+
+				console.log("Fetching shipments for user type:", userType, "from:", endpoint);
+
+				const response = await axios.get(endpoint, {
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				});
 
 				console.log("Fetched shipments:", response.data);
 

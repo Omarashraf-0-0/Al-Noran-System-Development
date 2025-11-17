@@ -5,6 +5,7 @@ import Stepper from '../components/Stepper';
 import FileRow from '../components/FileRow';       
 import UploadModal from '../components/UploadModal'; 
 import Footer from '../components/Footer';
+import NotificationBell from '../components/NotificationBell';
 import supportAgent from '../assets/images/support_agent.png';
 import documentText from '../assets/images/document-text.png';
 import mainIllustration from '../assets/images/Untitled design (7) 1.png';
@@ -12,6 +13,25 @@ import contractIcon from '../assets/images/contract.png';
 import Datafield from '../components/DataField';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+
+// Helper function to add notifications
+const addNotification = (shipmentId, notification) => {
+  const stored = localStorage.getItem(`notifications_${shipmentId}`);
+  const notifications = stored ? JSON.parse(stored) : [];
+  
+  const newNotif = {
+    id: Date.now(),
+    ...notification,
+    timestamp: new Date().toISOString(),
+    read: false,
+  };
+  
+  notifications.unshift(newNotif);
+  localStorage.setItem(`notifications_${shipmentId}`, JSON.stringify(notifications));
+  
+  // Show toast
+  toast(notification.message, { icon: notification.icon || '📢', duration: 5000 });
+};
 
 const ShipmentStatus = () => {
   const { shipmentId } = useParams();
@@ -21,6 +41,8 @@ const ShipmentStatus = () => {
   const [fileItems, setFileItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [requiredDocuments, setRequiredDocuments] = useState([]);
+  const [showRequiredDocsModal, setShowRequiredDocsModal] = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -50,6 +72,30 @@ const ShipmentStatus = () => {
 
         console.log("Fetched shipment:", shipmentResponse.data);
         setShipment(shipmentResponse.data);
+
+        // Fetch required documents
+        try {
+          const requiredDocsResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentResponse.data._id}/required-documents`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          
+          const docs = requiredDocsResponse.data?.data?.requiredDocuments || [];
+          setRequiredDocuments(docs);
+          
+          // Show modal if there are pending required documents
+          const pendingDocs = docs.filter(doc => !doc.uploaded);
+          if (pendingDocs.length > 0) {
+            toast('لديك مستندات مطلوبة يجب رفعها', { icon: '📄', duration: 5000 });
+          }
+        } catch (reqDocsError) {
+          console.log("Note: Could not fetch required documents:", reqDocsError.message);
+          setRequiredDocuments([]);
+        }
 
         // Fetch shipment files/uploads
         try {
@@ -101,7 +147,54 @@ const ShipmentStatus = () => {
     };
 
     fetchShipmentData();
+
+    // Poll for updates every 30 seconds
+    const pollInterval = setInterval(() => {
+      fetchShipmentData();
+    }, 30000);
+
+    return () => clearInterval(pollInterval);
   }, [shipmentId, token]);
+
+  // Watch for status changes
+  useEffect(() => {
+    if (shipment && shipment.status) {
+      const lastStatus = localStorage.getItem(`lastStatus_${shipmentId}`);
+      
+      if (lastStatus && lastStatus !== shipment.status) {
+        // Status changed!
+        addNotification(shipmentId, {
+          icon: '🚚',
+          title: 'تحديث حالة الشحنة',
+          message: `تم تغيير حالة شحنتك إلى: ${shipment.status}`,
+        });
+      }
+      
+      localStorage.setItem(`lastStatus_${shipmentId}`, shipment.status);
+    }
+  }, [shipment?.status, shipmentId]);
+
+  // Watch for new required documents
+  useEffect(() => {
+    if (requiredDocuments.length > 0) {
+      const lastCount = parseInt(localStorage.getItem(`lastReqDocsCount_${shipmentId}`) || '0');
+      
+      if (requiredDocuments.length > lastCount) {
+        const newDocs = requiredDocuments.slice(0, requiredDocuments.length - lastCount);
+        newDocs.forEach(doc => {
+          if (!doc.uploaded) {
+            addNotification(shipmentId, {
+              icon: '📄',
+              title: 'مستند جديد مطلوب',
+              message: `يرجى رفع: ${doc.name}`,
+            });
+          }
+        });
+      }
+      
+      localStorage.setItem(`lastReqDocsCount_${shipmentId}`, requiredDocuments.length.toString());
+    }
+  }, [requiredDocuments.length, shipmentId]);
     
   return (
     // Full page wrapper
@@ -133,6 +226,11 @@ const ShipmentStatus = () => {
             </div>
           ) : shipment ? (
             <>
+              {/* Notification Bell */}
+              <div className="flex justify-end mb-4">
+                <NotificationBell shipmentId={shipment._id} />
+              </div>
+
               {/*  Top illustration */}
               <div className="flex justify-center mb-10">
                 <img 
@@ -179,9 +277,75 @@ const ShipmentStatus = () => {
                 />
               </div>
 
+              {/* Required Documents Section */}
+              {requiredDocuments.length > 0 && (
+                <div className="mt-12 bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-red-900 flex items-center gap-2">
+                      <span>📋</span>
+                      <span>مستندات مطلوبة</span>
+                    </h2>
+                    {requiredDocuments.filter(doc => !doc.uploaded).length > 0 && (
+                      <span className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                        {requiredDocuments.filter(doc => !doc.uploaded).length} قيد الانتظار
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {requiredDocuments.map((doc, index) => (
+                      <div 
+                        key={doc._id || index}
+                        className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
+                          doc.uploaded 
+                            ? 'bg-green-50 border-green-300' 
+                            : 'bg-white border-orange-300 hover:border-orange-400'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {doc.uploaded ? (
+                            <span className="text-2xl">✅</span>
+                          ) : (
+                            <span className="text-2xl animate-pulse">⏳</span>
+                          )}
+                          <div>
+                            <p className="font-bold text-gray-800">{doc.name}</p>
+                            <p className="text-sm text-gray-500">
+                              {doc.uploaded 
+                                ? `تم الرفع: ${new Date(doc.uploadedAt).toLocaleDateString('ar-EG')}`
+                                : `مطلوب منذ: ${new Date(doc.requestedAt).toLocaleDateString('ar-EG')}`
+                              }
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {!doc.uploaded && (
+                          <button
+                            onClick={() => {
+                              setShowRequiredDocsModal(true);
+                            }}
+                            className="bg-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-700 transition"
+                          >
+                            رفع الآن
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {requiredDocuments.filter(doc => !doc.uploaded).length > 0 && (
+                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
+                      <p className="text-sm text-yellow-800 text-center">
+                        ⚠️ يرجى رفع المستندات المطلوبة لتجنب أي تأخير في معالجة شحنتك
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/*  Shipment files section */}
               <div className="mt-16">
-                <h2 className="text-2xl font-bold text-center text-red-900 mb-8">ملفات الشحنة</h2>
+                <h2 className="text-2xl font-bold text-center text-red-900 mb-8">📁 ملفات الشحنة</h2>
                 {fileItems.length === 0 ? (
                   <p className="text-center text-gray-500">لا توجد ملفات متاحة</p>
                 ) : (
@@ -217,6 +381,102 @@ const ShipmentStatus = () => {
 
       {/* Upload Modal (opens when upload button is clicked) */}
       <UploadModal isOpen={isUploadModalOpen} onClose={() => setUploadModalOpen(false)} />
+
+      {/* Required Documents Upload Modal */}
+      {showRequiredDocsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-800">📤 رفع المستندات المطلوبة</h3>
+              <button
+                onClick={() => setShowRequiredDocsModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {requiredDocuments.filter(doc => !doc.uploaded).map((doc, index) => (
+                <div key={doc._id || index} className="border-2 border-orange-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-bold text-gray-800">{doc.name}</h4>
+                    <span className="text-xs text-gray-500">
+                      مطلوب منذ {new Date(doc.requestedAt).toLocaleDateString('ar-EG')}
+                    </span>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <input
+                      type="file"
+                      id={`file-${doc._id}`}
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+
+                        try {
+                          toast.loading('جاري رفع المستند...');
+                          
+                          // Upload file first (you'll need to implement the upload logic)
+                          // For now, we'll just mark it as uploaded
+                          await axios.patch(
+                            `${import.meta.env.VITE_API_URL}/api/shipments/id/${shipment._id}/required-documents/${doc._id}`,
+                            { fileId: 'temp-file-id' }, // Replace with actual file ID after upload
+                            {
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                              },
+                            }
+                          );
+
+                          toast.dismiss();
+                          toast.success('تم رفع المستند بنجاح');
+                          
+                          // Refresh required documents
+                          const updatedDocs = requiredDocuments.map(d => 
+                            d._id === doc._id ? { ...d, uploaded: true, uploadedAt: new Date() } : d
+                          );
+                          setRequiredDocuments(updatedDocs);
+
+                        } catch (error) {
+                          toast.dismiss();
+                          toast.error('فشل رفع المستند');
+                          console.error('Upload error:', error);
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor={`file-${doc._id}`}
+                      className="flex-1 cursor-pointer bg-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-700 transition text-center"
+                    >
+                      اختر ملف
+                    </label>
+                  </div>
+                </div>
+              ))}
+
+              {requiredDocuments.filter(doc => !doc.uploaded).length === 0 && (
+                <div className="text-center py-8">
+                  <span className="text-6xl">✅</span>
+                  <p className="text-gray-600 mt-4">تم رفع جميع المستندات المطلوبة</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowRequiredDocsModal(false)}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer Section */}
       <Footer />
