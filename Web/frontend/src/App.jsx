@@ -14,6 +14,7 @@ import EmployeeDashboard from "./pages/EmployeeDashboard";
 import ShipmentStatus from "./pages/ShipmentStatus";
 import ClientShipments from "./pages/ClientShipments";
 import AdminDashboard from "./pages/AdminDashboard";
+import EmployeeNotifications from "./pages/EmployeeNotifications";
 
 const App = () => {
 	return (
@@ -32,6 +33,7 @@ const App = () => {
 				<Route path="/shipmentstatus/:shipmentId" element={<ShipmentStatus />} />
 				<Route path="/client-shipments" element={<ClientShipments />} />
 				<Route path="/admindashboard" element={<AdminDashboard />} />
+				<Route path="/EmployeeNotifications" element={<EmployeeNotifications />} />
 				<Route path="*" element={<NotFound404 />} />
 			</Routes>
 		</div>
