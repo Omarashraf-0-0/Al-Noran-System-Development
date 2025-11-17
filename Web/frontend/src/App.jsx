@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router";
+import { Routes, Route } from "react-router-dom";
 import TrackingPage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -15,6 +15,7 @@ import WelcomeBanner from "./pages/WelcomeBanner";
 import ShipmentStatus from "./pages/ShipmentStatus";
 import ClientShipments from "./pages/ClientShipments";
 import EmployeeShipmentManagement from "./pages/EmployeeShipmentManagement";
+import Chat from "./pages/Chat";
 
 const App = () => {
 	return (
@@ -38,9 +39,10 @@ const App = () => {
 					path="/employee-shipment/:shipmentId"
 					element={<EmployeeShipmentManagement />}
 				/>
-				<Route path="/client-shipments" element={<ClientShipments />} />
-				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
-				<Route path="*" element={<NotFound404 />} />
+			<Route path="/client-shipments" element={<ClientShipments />} />
+			<Route path="/chat" element={<Chat />} />
+			{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
+			<Route path="*" element={<NotFound404 />} />
 			</Routes>
 		</div>
 	);
