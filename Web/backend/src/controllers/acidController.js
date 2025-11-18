@@ -4,14 +4,14 @@ const AcidRequest = require("../models/acid");
 const createAcidRequest = async (req, res) => {
 	try {
 		const { supplier, goods, uploads } = req.body;
-		
+
 		// Get userId from authenticated user (from protect middleware)
 		const userId = req.user ? req.user._id : null;
-		
+
 		if (!userId) {
-			return res.status(401).json({ 
+			return res.status(401).json({
 				success: false,
-				message: "User not authenticated" 
+				message: "User not authenticated",
 			});
 		}
 
@@ -19,14 +19,14 @@ const createAcidRequest = async (req, res) => {
 		if (!supplier || !supplier.name || !supplier.taxNum) {
 			return res.status(400).json({
 				success: false,
-				message: "Supplier name and tax number are required"
+				message: "Supplier name and tax number are required",
 			});
 		}
 
 		if (!goods || !goods.description) {
 			return res.status(400).json({
 				success: false,
-				message: "Goods description is required"
+				message: "Goods description is required",
 			});
 		}
 
@@ -38,10 +38,10 @@ const createAcidRequest = async (req, res) => {
 		});
 
 		await newRequest.save();
-		
+
 		// Populate uploads to return full upload details
-		await newRequest.populate('uploads');
-		
+		await newRequest.populate("uploads");
+
 		res.status(201).json({
 			success: true,
 			message: "ACID request created successfully",
@@ -49,20 +49,31 @@ const createAcidRequest = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error creating ACID request:", error);
-		res
-			.status(500)
-			.json({ 
-				success: false,
-				message: "Server error while creating ACID request",
-				error: error.message 
-			});
+		res.status(500).json({
+			success: false,
+			message: "Server error while creating ACID request",
+			error: error.message,
+		});
 	}
 };
 
 // ✅ عرض كل الطلبات
 const getAllRequests = async (req, res) => {
 	try {
-		const requests = await AcidRequest.find().sort({ requestDate: -1 });
+		// Get userId from authenticated user (from protect middleware)
+		const userId = req.user ? req.user._id : null;
+
+		if (!userId) {
+			return res.status(401).json({
+				success: false,
+				message: "User not authenticated",
+			});
+		}
+
+		// Filter requests by userId to show only current user's requests
+		const requests = await AcidRequest.find({ userId }).sort({
+			requestDate: -1,
+		});
 		res.json(requests);
 	} catch (error) {
 		console.error(error);
@@ -70,11 +81,23 @@ const getAllRequests = async (req, res) => {
 	}
 };
 
-// ✅ عرض طلب واحد برقم ACID
+// ✅ عرض طلب واحد برقم ACID أو ID
 const getRequestByAcid = async (req, res) => {
 	try {
 		const { acid } = req.params;
-		const request = await AcidRequest.findOne({ acidCode: acid });
+		const mongoose = require("mongoose");
+		let request;
+
+		// Check if the parameter is a valid MongoDB ObjectId
+		if (mongoose.Types.ObjectId.isValid(acid)) {
+			// Try to find by ID first
+			request = await AcidRequest.findById(acid);
+		}
+
+		// If not found by ID, try to find by acidCode
+		if (!request) {
+			request = await AcidRequest.findOne({ acidCode: acid });
+		}
 
 		if (!request) {
 			return res.status(404).json({ message: "ACID request not found" });
@@ -91,7 +114,7 @@ const getRequestByAcid = async (req, res) => {
 const updateAcidStatus = async (req, res) => {
 	try {
 		const { id } = req.params;
-		const { status, acidCode } = req.body;
+		const { status, acidCode, supplier, goods, uploads } = req.body;
 
 		const request = await AcidRequest.findById(id);
 
@@ -99,8 +122,21 @@ const updateAcidStatus = async (req, res) => {
 			return res.status(404).json({ message: "Request not found" });
 		}
 
+		// Check if user owns this request
+		const userId = req.user ? req.user._id : null;
+		if (userId && request.userId.toString() !== userId.toString()) {
+			return res.status(403).json({
+				success: false,
+				message: "You don't have permission to update this request",
+			});
+		}
+
+		// Update fields
 		if (status) request.status = status;
 		if (acidCode) request.acidCode = acidCode;
+		if (supplier) request.supplier = supplier;
+		if (goods) request.goods = goods;
+		if (uploads) request.uploads = uploads;
 
 		await request.save();
 

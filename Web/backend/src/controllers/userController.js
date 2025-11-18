@@ -1,6 +1,8 @@
 const User = require('../models/user');
+const Notification = require('../models/notifications');
 const asyncHandler = require('express-async-handler');
 const bcrypt = require('bcrypt');
+const notifications = require('../models/notifications');
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -253,11 +255,67 @@ const addUsers = async (req, res) => {
   }
 };
 
+
+const getNotifications = async (req,res) => {
+    const id = req.body.id ;// todo there is a better practices here like using JWT
+    try{
+      const userNotifications = await Notification.find({receiverId:id,isRead:false}).sort({ createdAt: -1 });;
+      return res.status(200).json({
+        notifications : userNotifications
+      });
+    }catch(err)
+    {
+      return res.status(500).json({error:err.message});
+    }
+}
+
+
+const sendNotification = async (req, res) => {
+  try {
+    const senderId = req.body.senderId;
+    const { receiverId, category, content } = req.body;
+
+    
+    if (!receiverId) return res.status(400).json({ message: "No receiver ID provided" });
+    if (!category) return res.status(400).json({ message: "No category provided" });
+    if (!content) return res.status(400).json({ message: "Notification content is empty" });
+
+    
+    const userReceiver = await User.findById(receiverId);
+    if (!userReceiver) return res.status(404).json({ message: "Receiver user not found" });
+
+
+    const notification = await Notification.create({
+      senderId,
+      receiverId,
+      category,
+      content
+    });
+
+    // TODO: Add real-time notification via Socket.io here
+
+    return res.status(201).json({
+      message: "Notification sent successfully",
+      data: notification
+    });
+
+  } catch (err) {
+    return res.status(501).json({ message: err.message });
+  }
+};
+
+
+
+
+
+
 module.exports = {
   getAllUsers,
   createUser,
   updateUser,
   deleteUser,
   changePassword,
-  addUsers
+  addUsers,
+  getNotifications,
+  sendNotification
 };

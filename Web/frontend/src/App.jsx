@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router";
+import { Routes, Route } from "react-router-dom";
 import TrackingPage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -11,11 +11,19 @@ import ACIDRequestPage from "./pages/ACIDRequestPage";
 import DocumentUploadPage from "./pages/DocumentUploadPage";
 import NotFound404 from "./pages/NotFound404";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
-import WelcomeBanner from "./pages/WelcomeBanner";
 import ShipmentStatus from "./pages/ShipmentStatus";
 import ClientShipments from "./pages/ClientShipments";
+import AdminDashboard from "./pages/AdminDashboard";
+import EmployeeNotifications from "./pages/EmployeeNotifications";
+import EmployeeManagement from "./pages/EmployeeManagement";
+import CustomerManagement from "./pages/CustomerManagement";
 import EmployeeShipmentManagement from "./pages/EmployeeShipmentManagement";
+import CertificatesManagement from "./pages/CertificatesManagement";
 import AdminShipmentManagement from "./pages/AdminShipmentManagement";
+import Chat from "./pages/Chat";
+import AcidRequestsPage from "./pages/AcidRequestsPage";
+import AcidRequestDetailsPage from "./pages/AcidRequestDetailsPage";
+import EditAcidRequestPage from "./pages/EditAcidRequestPage";
 
 const App = () => {
 	return (
@@ -29,6 +37,15 @@ const App = () => {
 				<Route path="/resetpassword" element={<ResetPasswordPage />} />
 				<Route path="/home" element={<TrackingPage />} />
 				<Route path="/acidrequest" element={<ACIDRequestPage />} />
+				<Route path="/acidrequests" element={<AcidRequestsPage />} />
+				<Route
+					path="/acidrequest/:requestId"
+					element={<AcidRequestDetailsPage />}
+				/>
+				<Route
+					path="/acidrequest/:requestId/edit"
+					element={<EditAcidRequestPage />}
+				/>
 				<Route path="/upload-documents" element={<DocumentUploadPage />} />
 				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
 				<Route
@@ -44,8 +61,21 @@ const App = () => {
 					element={<AdminShipmentManagement />}
 				/>
 				<Route path="/client-shipments" element={<ClientShipments />} />
-				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
+				<Route path="/admindashboard" element={<AdminDashboard />} />
+				<Route
+					path="/EmployeeNotifications"
+					element={<EmployeeNotifications />}
+				/>
+				<Route path="/employeemanagement" element={<EmployeeManagement />} />
+				<Route path="/customermanagement" element={<CustomerManagement />} />
+				<Route
+					path="/certificatesmanagement"
+					element={<CertificatesManagement />}
+				/>
 				<Route path="*" element={<NotFound404 />} />
+				<Route path="/chat" element={<Chat />} />
+				{/* NEW */}
+				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
 			</Routes>
 		</div>
 	);

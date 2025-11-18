@@ -8,11 +8,13 @@ const shipmentSchema = new mongoose.Schema(
 			ref: "User",
 			required: true,
 		},
+
+		// Employee assigned to shipment (optional)
 		employee_id: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
-			required: true,
 		},
+
 		// Basic shipment info
 		acid: {
 			type: String,
@@ -30,6 +32,7 @@ const shipmentSchema = new mongoose.Schema(
 			required: true,
 			trim: true,
 		},
+
 		// Container details
 		num_of_containers: {
 			type: Number,
@@ -148,10 +151,11 @@ const shipmentSchema = new mongoose.Schema(
 			},
 		],
 
-		// Employee assigned to shipment
-		employee_id: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: "User",
+		// Additional identifier
+		shipmentCode: {
+			type: String,
+			trim: true,
+			default: "",
 		},
 	},
 	{
