@@ -116,6 +116,11 @@ const shipmentSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    shipmentCode: {
+      type : String,
+      required : true,
+      trim : true
+    }
   },
   { 
     timestamps: true 
