@@ -1,10 +1,7 @@
 package noran.desktop.Database;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.io.File;
-import java.sql.Statement;
+import java.sql.*;
 
 public class DatabaseConnection {
 
@@ -13,19 +10,16 @@ public class DatabaseConnection {
     public static Connection connect() {
         Connection conn = null;
         try {
-            // ✅ Ensure folder exists
+            // Ensure folder exists
             File dbFile = new File(DB_PATH);
             dbFile.getParentFile().mkdirs();
 
-            // ✅ Create or open database
             String url = "jdbc:sqlite:" + DB_PATH;
             conn = DriverManager.getConnection(url);
 
             try (Statement stmt = conn.createStatement()) {
 
-                // ============================================================
-                // ✅ USERS TABLE
-                // ============================================================
+                // Create users table
                 String usersTable = """
                     CREATE TABLE IF NOT EXISTS users (
                         _id TEXT PRIMARY KEY,
@@ -50,19 +44,14 @@ public class DatabaseConnection {
                 stmt.execute(usersTable);
                 System.out.println("✅ 'users' table ready.");
 
-                // ============================================================
-                // ✅ SHIPMENTS TABLE (UPDATED TO MATCH MONGO DOCUMENT)
-                // ============================================================
+                // Create shipments table (base schema)
                 String shipmentsTable = """
                     CREATE TABLE IF NOT EXISTS shipments (
                         shipment_id INTEGER PRIMARY KEY AUTOINCREMENT,
                         port_name TEXT NOT NULL,
                         num_of_containers INTEGER CHECK (num_of_containers >= 0),
-
-                        -- Arrays stored as JSON
                         type_of_containers_json TEXT,
                         third_gomroky_json TEXT,
-
                         country TEXT,
                         status TEXT,
                         policy TEXT,
@@ -70,8 +59,6 @@ public class DatabaseConnection {
                         clearance_fees REAL DEFAULT 0.00,
                         expenses_and_tips REAL DEFAULT 0.00,
                         sundries REAL DEFAULT 0.00,
-
-                        -- Added Mongo-like fields
                         acid TEXT,
                         importerName TEXT,
                         number46 TEXT,
@@ -82,18 +69,15 @@ public class DatabaseConnection {
                         createdAt TEXT,
                         updatedAt TEXT,
                         employee_id TEXT,
-                        requiredDocuments TEXT,  -- JSON array
-
+                        requiredDocuments TEXT,
                         clientId TEXT,
                         FOREIGN KEY (clientId) REFERENCES users(_id)
                     );
                 """;
                 stmt.execute(shipmentsTable);
-                System.out.println("✅ 'shipments' table updated to match MongoDB schema.");
+                System.out.println("✅ 'shipments' table ensured (created if missing).");
 
-                // ============================================================
-                // ✅ SHIPMENT FEES TABLE (NEW)
-                // ============================================================
+                // Create shipment_fees table (base)
                 String shipmentFeesTable = """
                     CREATE TABLE IF NOT EXISTS shipment_fees (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,87 +88,77 @@ public class DatabaseConnection {
                         feeName TEXT,
                         feePrice REAL,
                         createdAt TEXT,
-
                         Port_fee_price REAL DEFAULT 0,
                         Additional_Services_price REAL DEFAULT 0,
                         Clearance_Fees_price REAL DEFAULT 0,
                         Expense_Tips_price REAL DEFAULT 0,
-                        Sundries_price REAL DEFAULT 0,
-
-                        FOREIGN KEY (shipmentId) REFERENCES shipments(shipment_id)
+                        Sundries_price REAL DEFAULT 0
                     );
                 """;
                 stmt.execute(shipmentFeesTable);
-                System.out.println("✅ 'shipment_fees' table created.");
-
+                System.out.println("✅ 'shipment_fees' table ensured (created if missing).");
             }
 
-            // ============================================================
-            // ✅ INSERT SAMPLE SHIPMENTS
-            // ============================================================
-            try (Statement stmt = conn.createStatement()) {
-                String insertShipments = """
-                    INSERT INTO shipments (
-                        port_name,
-                        num_of_containers,
-                        type_of_containers_json,
-                        third_gomroky_json,
-                        country,
-                        status,
-                        policy,
-                        dragt,
-                        clearance_fees,
-                        expenses_and_tips,
-                        sundries,
-                        clientId
-                    ) VALUES
-                    (
-                        'Damietta Port',
-                        10,
-                        '["20ft"]',
-                        '["Alex Customs"]',
-                        'Egypt',
-                        'Pending',
-                        'Policy-56789',
-                        0,
-                        250.00,
-                        100.00,
-                        50.00,
-                        '69000ca02bbdd9014e8996eb'
-                    ),
-                    (
-                        'Port Said',
-                        15,
-                        '["40ft HC", "20ft"]',
-                        '["Suez Customs"]',
-                        'Egypt',
-                        'Delivered',
-                        'Policy-98765',
-                        1,
-                        600.00,
-                        300.00,
-                        120.00,
-                        '69000ca02bbdd9014e8996eb'
-                    );
-                """;
-                stmt.execute(insertShipments);
-                System.out.println("✅ Two shipments inserted successfully for clientId 69000ca02bbdd9014e8996eb.");
-            } catch (SQLException e) {
-                System.err.println("❌ Insert failed: " + e.getMessage());
-            }
+            // Schema migrations: add missing columns if the table exists but lacks them
+            ensureColumnExists(conn, "shipments", "type_of_containers_json", "TEXT");
+            ensureColumnExists(conn, "shipments", "third_gomroky_json", "TEXT");
+            ensureColumnExists(conn, "shipments", "clientId", "TEXT");
+            ensureColumnExists(conn, "shipments", "dragt", "BOOLEAN DEFAULT 0");
+            ensureColumnExists(conn, "shipments", "clearance_fees", "REAL DEFAULT 0.00");
+            ensureColumnExists(conn, "shipments", "expenses_and_tips", "REAL DEFAULT 0.00");
+            ensureColumnExists(conn, "shipments", "sundries", "REAL DEFAULT 0.00");
 
+            ensureColumnExists(conn, "shipment_fees", "invoiceStatus", "TEXT CHECK (invoiceStatus IN ('pending','accepted','rejected')) DEFAULT 'pending'");
+
+            System.out.println("✅ Schema migration checks complete.");
             System.out.println("✅ Database ready at: " + new File(DB_PATH).getAbsolutePath());
 
         } catch (SQLException e) {
             System.err.println("❌ SQL Error: " + e.getMessage());
+            e.printStackTrace();
         } catch (Exception e) {
             System.err.println("❌ Database connection failed: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return conn;
     }
 
+    /**
+     * Adds the specified column to the table if it's missing.
+     * columnDef should be the column type and optional default/check fragment.
+     */
+    private static void ensureColumnExists(Connection conn, String tableName, String columnName, String columnDef) {
+        try {
+            boolean hasColumn = false;
+            try (PreparedStatement ps = conn.prepareStatement("PRAGMA table_info('" + tableName + "')");
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String col = rs.getString("name");
+                    if (columnName.equalsIgnoreCase(col)) {
+                        hasColumn = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hasColumn) {
+                String sql = "ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDef + ";";
+                try (Statement alter = conn.createStatement()) {
+                    alter.execute(sql);
+                    System.out.println("🔧 Added missing column '" + columnName + "' to table '" + tableName + "'.");
+                }
+            } else {
+                System.out.println("ℹ Column '" + columnName + "' already exists in '" + tableName + "'.");
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Failed to ensure column '" + columnName + "' in table '" + tableName + "': " + e.getMessage());
+            // continue without rethrowing
+        }
+    }
+
+    // Run as a standalone migration helper if desired
     public static void main(String[] args) {
-        connect(); // Run once to recreate/update tables and insert data
+        connect();
     }
 }

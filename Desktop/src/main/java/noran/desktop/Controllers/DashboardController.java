@@ -13,7 +13,6 @@ import javafx.scene.control.Label;
 import javafx.stage.Stage;
 import javafx.event.ActionEvent;
 import noran.desktop.AppSession;
-import noran.desktop.Controllers.User;
 
 import java.io.IOException;
 import java.net.URL;
@@ -96,7 +95,7 @@ public class DashboardController implements Initializable {
     public void onSearch(ActionEvent actionEvent) { }
 
     public void invoice_management_btn_handle(ActionEvent event) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/client-data.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/client-data-invoice.fxml"));
         Parent root = loader.load();
         Scene scene = new Scene(root);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
