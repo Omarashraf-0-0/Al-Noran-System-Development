@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
+<VBox spacing="15" alignment="CENTER" xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="noran.desktop.Controllers.ClientPopupController"
+      style="-fx-padding: 25; -fx-background-color: #f5f5f5;">
+
+    <Label text="إضافة عميل جديد"
+           style="-fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: #333;" />
+
+    <TextField fx:id="fullnameField" promptText="اسم العميل"
+               style="-fx-pref-width: 300; -fx-font-size: 14;"/>
+
+    <TextField fx:id="passwordField" promptText="كلمة السر"
+               style="-fx-pref-width: 300; -fx-font-size: 14;"/>
+
+    <TextField fx:id="phoneField" promptText="رقم الهاتف"
+               style="-fx-pref-width: 300; -fx-font-size: 14;"/>
+
+    <TextField fx:id="ssnField" promptText="الرقم التعريفي / الرقم القومي"
+               style="-fx-pref-width: 300; -fx-font-size: 14;"/>
+
+    <ComboBox fx:id="clientTypeField" promptText="نوع العميل" editable="false"
+              style="-fx-background-color:#c91e2b; -fx-pref-width: 300; -fx-font-size: 14;">
+        <items>
+            <FXCollections fx:factory="observableArrayList">
+                <String fx:value="personal"/>
+                <String fx:value="business"/>
+            </FXCollections>
+        </items>
+    </ComboBox>
+
+    <TextField fx:id="emailField" promptText="البريد الإلكتروني"
+               style="-fx-pref-width: 300; -fx-font-size: 14;"/>
+
+    <HBox spacing="20" alignment="CENTER">
+        <Button text="إلغاء" onAction="#cancel"
+                style="-fx-pref-width: 120; -fx-background-color: #aaa; -fx-text-fill: white; -fx-font-weight: bold;"/>
+        <Button text="إضافة" onAction="#save"
+                style="-fx-pref-width: 120; -fx-background-color:#c91e2b; -fx-text-fill:white; -fx-font-weight: bold;"/>
+    </HBox>
+</VBox>

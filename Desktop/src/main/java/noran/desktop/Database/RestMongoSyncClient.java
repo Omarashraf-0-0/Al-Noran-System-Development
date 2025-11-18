@@ -1,6 +1,7 @@
 package noran.desktop.Database;
 
 import noran.desktop.Services.APIService;
+import noran.desktop.models.Client;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -16,12 +17,11 @@ import java.util.*;
 
 /**
  * REST-based sync client for syncing users between a remote REST API and local SQLite database.
- * Supports nested structures and MongoDB-style fields like {_id: {$oid: ...}, createdAt: {$date: {...}}}
  */
 public class RestMongoSyncClient {
 
     private static final String REMOTE_USERS_GET_URL = "http://localhost:3500/api/users/getAll";
-    private static final String REMOTE_USERS_CREATE_URL = "http://localhost:3500/api/users";
+    private static final String REMOTE_USERS_CREATE_URL = "http://localhost:3500/api/users/getAll";
 
     public static void main(String[] args) {
         try {
@@ -83,7 +83,7 @@ public class RestMongoSyncClient {
             }
         }
 
-        // Local-only users to push
+        // Local-only users to push to remote
         List<JSONObject> toPushRemote = new ArrayList<>();
         for (JSONObject local : localUsersList) {
             String email = local.optString("email", null);
@@ -95,19 +95,91 @@ public class RestMongoSyncClient {
 
         System.out.println("Local-only users to push to remote: " + toPushRemote.size());
         for (JSONObject u : toPushRemote) {
+
+            // Skip users with missing email (email is required)
+            String email = u.optString("email", "").trim();
+            if (email.isBlank()) {
+                System.out.println("⚠ Skipping user with missing email: " + u.optString("fullname", ""));
+                continue;
+            }
+
             JSONObject payload = new JSONObject();
-            payload.put("fullname", u.optString("fullname", ""));
-            payload.put("username", u.optString("username", ""));
-            payload.put("email", u.optString("email", ""));
-            payload.put("phone", u.optString("phone", ""));
-            payload.put("password", u.optString("password", ""));
-            payload.put("type", u.optString("type", "client"));
-            payload.put("taxNumber", u.optString("taxNumber", ""));
-            payload.put("rank", u.optString("rank", null));
+
+            // Fullname
+            String fullname = u.optString("fullname", "").trim();
+            if (fullname.isBlank()) fullname = "Unknown";
+            payload.put("fullname", fullname);
+
+            // Username
+            String username = u.optString("username", "").trim();
+            if (username.isBlank()) username = email.split("@")[0]; // use part of email
+            payload.put("username", username);
+
+            payload.put("email", email);
+
+            // Phone
+            String phone = u.optString("phone", "").trim();
+            if (phone.isBlank()) phone = "01000000000";
+            payload.put("phone", phone);
+
+            // Password
+            String password = u.optString("password", "").trim();
+            if (password.isBlank()) password = "123456";
+            payload.put("password", password);
+
+            // Type
+            String type = u.optString("type", "client").trim().toLowerCase();
+            if (!type.equals("client") && !type.equals("employee")) type = "client";
+            payload.put("type", type);
+
+            if (type.equals("client")) {
+                // ClientType
+                String clientType = u.optString("clientType", "personal").trim();
+                if (!clientType.equalsIgnoreCase("personal") && !clientType.equalsIgnoreCase("business")) {
+                    clientType = "personal";
+                }
+                payload.put("clientType", clientType);
+
+                // SSN for personal clients
+                if (clientType.equalsIgnoreCase("personal")) {
+                    String ssn = u.optString("ssn", "").trim();
+                    if (ssn.isBlank()) ssn = "0000000000000";
+                    payload.put("ssn", ssn);
+                }
+
+                // TaxNumber for business clients
+                if (clientType.equalsIgnoreCase("business")) {
+                    String tax = u.optString("taxNumber", "").trim();
+                    if (tax.isBlank()) tax = "000000000";
+                    payload.put("taxNumber", tax);
+                } else {
+                    payload.put("taxNumber", u.optString("taxNumber", "").trim());
+                }
+            }
+
+            if (type.equals("employee")) {
+                String empType = u.optString("employeeType", "").trim();
+                if (empType.isBlank()) empType = "staff";
+                payload.put("employeeType", empType);
+            }
+
+            System.out.println("\n--- SENDING PAYLOAD ---\n" + payload.toString(2));
 
             String response = APIService.post(REMOTE_USERS_CREATE_URL, payload.toString());
             System.out.println("Pushed user " + payload.optString("email") + " -> response: " + response);
+
+            // Handle duplicate
+            if (response.contains("already exists")) {
+                System.out.println("⚠ Duplicate detected. Deleting local user: " + payload.optString("email"));
+                try (Connection conn = DatabaseConnection.connect()) {
+                    String deleteSql = "DELETE FROM users WHERE email = ?";
+                    PreparedStatement ps = conn.prepareStatement(deleteSql);
+                    ps.setString(1, payload.optString("email"));
+                    ps.executeUpdate();
+                }
+            }
         }
+
 
         // Remote-only users to insert locally
         List<JSONObject> toInsertLocal = new ArrayList<>();
@@ -119,7 +191,7 @@ public class RestMongoSyncClient {
 
         System.out.println("Remote-only users to insert locally: " + toInsertLocal.size());
 
-        // Insert new remote users
+        // Insert new remote users into SQLite
         if (!toInsertLocal.isEmpty()) {
             try (Connection sqliteConn = DatabaseConnection.connect()) {
                 String insertSQL = "INSERT OR REPLACE INTO users (" +
@@ -129,7 +201,7 @@ public class RestMongoSyncClient {
                 PreparedStatement pstmt = sqliteConn.prepareStatement(insertSQL);
 
                 for (JSONObject doc : toInsertLocal) {
-                    // _id
+
                     String id = null;
                     if (doc.has("_id")) {
                         Object idObj = doc.get("_id");
@@ -140,8 +212,6 @@ public class RestMongoSyncClient {
                         }
                     }
                     pstmt.setString(1, id);
-
-                    // Basic info
                     pstmt.setString(2, doc.optString("fullname", ""));
                     pstmt.setString(3, doc.optString("username", ""));
                     pstmt.setString(4, doc.optString("phone", ""));
@@ -150,20 +220,16 @@ public class RestMongoSyncClient {
                     pstmt.setString(7, doc.optString("type", "client"));
                     pstmt.setInt(8, doc.optBoolean("active", true) ? 1 : 0);
 
-                    // Tax & rank (sanitize invalid rank values)
                     pstmt.setString(9, doc.optString("taxNumber", ""));
                     String rank = doc.optString("rank", null);
                     if (rank == null || rank.equalsIgnoreCase("null") || rank.isBlank()) {
                         rank = null;
                     } else {
                         rank = rank.toLowerCase(Locale.ROOT);
-                        if (!Arrays.asList("low", "med", "high").contains(rank)) {
-                            rank = null;
-                        }
+                        if (!Arrays.asList("low", "med", "high").contains(rank)) rank = null;
                     }
                     pstmt.setString(10, rank);
 
-                    // Client details
                     JSONObject clientDetails = doc.optJSONObject("clientDetails");
                     if (clientDetails != null) {
                         pstmt.setString(11, clientDetails.optString("clientType", ""));
@@ -173,7 +239,6 @@ public class RestMongoSyncClient {
                         pstmt.setString(12, "");
                     }
 
-                    // Employee details
                     JSONObject employeeDetails = doc.optJSONObject("employeeDetails");
                     if (employeeDetails != null) {
                         pstmt.setString(13, employeeDetails.optString("employeeType", ""));
@@ -183,20 +248,17 @@ public class RestMongoSyncClient {
                         pstmt.setInt(14, 0);
                     }
 
-                    // createdAt & updatedAt
                     long createdAt = parseMongoDate(doc.opt("createdAt"));
                     long updatedAt = parseMongoDate(doc.opt("updatedAt"));
                     pstmt.setLong(15, createdAt);
                     pstmt.setLong(16, updatedAt);
-
-                    // version
                     pstmt.setInt(17, parseMongoInt(doc.opt("__v")));
 
                     pstmt.executeUpdate();
                     System.out.println("✅ Inserted user: " + doc.optString("fullname"));
                 }
 
-                System.out.println("✅ Successfully inserted remote users into local SQLite.");
+                System.out.println("✔ Successfully inserted remote users into local SQLite.");
             }
         }
 
@@ -255,4 +317,80 @@ public class RestMongoSyncClient {
         }
         return new JSONArray();
     }
+    public static String addClientRemotely(Client client) {
+        try {
+            JSONObject payload = new JSONObject();
+            payload.put("fullname", client.getFullname().isBlank() ? "No Name" : client.getFullname());
+            payload.put("username", client.getEmail().isBlank() ? "user" + System.currentTimeMillis()
+                    : client.getEmail().split("@")[0]);
+            payload.put("email", client.getEmail().isBlank() ? "user" + System.currentTimeMillis() + "@example.com"
+                    : client.getEmail());
+            payload.put("phone", client.getPhone().isBlank() ? "01000000000" : client.getPhone());
+            payload.put("password", client.getPassword().isBlank() ? "123456" : client.getPassword());
+            payload.put("type", "client");
+            payload.put("clientType", client.getClientType().isBlank() ? "personal" : client.getClientType());
+            payload.put("ssn", client.getSsn().isBlank() ? "0000000000000" : client.getSsn());
+
+            System.out.println("Sending payload to server:\n" + payload.toString(2));
+
+            String response = APIService.post(REMOTE_USERS_CREATE_URL, payload.toString());
+            JSONObject respJson = new JSONObject(response);
+
+            // Extract ID from "user.id"
+            if (respJson.has("user") && respJson.getJSONObject("user").has("id")) {
+                return respJson.getJSONObject("user").getString("id");
+            }
+
+            System.out.println("Server response did not contain user.id: " + response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+    public static boolean updateClientRemotely(Client client) {
+        try {
+            JSONObject payload = new JSONObject();
+            payload.put("_id", client.getId());
+            payload.put("fullname", client.getFullname());
+            payload.put("username", client.getEmail().split("@")[0]);
+            payload.put("email", client.getEmail());
+            payload.put("phone", client.getPhone());
+            payload.put("password", client.getPassword());
+            payload.put("type", "client");
+            payload.put("clientType", client.getClientType());
+            payload.put("ssn", client.getSsn());
+
+            String response = APIService.post(REMOTE_USERS_CREATE_URL, payload.toString());
+
+            JSONObject respJson = new JSONObject(response);
+            return !respJson.has("error"); // Return true if no error
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean deleteClientRemotely(String clientId) {
+        if (clientId == null || clientId.isBlank()) return false;
+
+        try {
+            String deleteUrl = "http://localhost:3500/api/users/" + clientId;
+            String response = APIService.delete(deleteUrl); // uses DELETE method
+            System.out.println("Remote delete response: " + response);
+
+            // Optional: check response message
+            JSONObject respJson = new JSONObject(response);
+            return respJson.has("message") && respJson.getString("message").toLowerCase().contains("deleted");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
+
 }

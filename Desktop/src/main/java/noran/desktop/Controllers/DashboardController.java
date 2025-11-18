@@ -94,6 +94,15 @@ public class DashboardController implements Initializable {
     // ========== EVENT HANDLERS ==========
     public void onSearch(ActionEvent actionEvent) { }
 
+    public void client_management_btn_handle(ActionEvent event) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/client-data.fxml"));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(scene);
+        stage.show();
+    }
+
     public void invoice_management_btn_handle(ActionEvent event) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/client-data-invoice.fxml"));
         Parent root = loader.load();

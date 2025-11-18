@@ -11,7 +11,7 @@
             style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;"
             xmlns="http://javafx.com/javafx/17.0.12"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="noran.desktop.Controllers.ClientDataInvoiceController">
+            fx:controller="noran.desktop.Controllers.ClientDataController">
 
     <!-- RIGHT SIDEBAR -->
     <left>
@@ -30,12 +30,12 @@
                         maxWidth="Infinity"
                         style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
                 <Button text="إدارة العملاء"
-                        onAction="#onClientManagementClick"
-                        maxWidth="Infinity"
-                        style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
-                <Button text="إدارة الفواتير"
                         maxWidth="Infinity"
                         style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12; -fx-background-radius: 8;" />
+                <Button text="إدارة الفواتير"
+                        onAction="#onInvoiceManagementClick"
+                        maxWidth="Infinity"
+                        style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
                 <Button text="إدارة الشحنات"
                         maxWidth="Infinity"
                         style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
@@ -113,45 +113,49 @@
     <center>
         <VBox spacing="24" alignment="TOP_CENTER" style="-fx-padding: 32 24;">
 
-            <!-- زر الانتقال إلى الفواتير المقبولة -->
-            <HBox alignment="CENTER_LEFT" spacing="12">
-                <Button fx:id="btnViewAcceptedInvoices"
-                        text="عرض الفواتير المقبولة والمرسلة"
-                        onAction="#openAcceptedInvoices"
-                        style="-fx-background-color: #1e90ff; -fx-text-fill: white; -fx-padding: 14 32; -fx-font-size: 15; -fx-background-radius: 10; -fx-font-weight: bold; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);">
-                    <graphic>
-                        <ImageView fitHeight="20" fitWidth="20">
-                            <image>
-                                <Image url="@images/checklist.png" /> <!-- أيقونة اختيارية -->
-                            </image>
-                        </ImageView>
-                    </graphic>
-                </Button>
-            </HBox>
 
-            <!-- Illustration -->
             <ImageView fitHeight="220" preserveRatio="true">
                 <image>
                     <Image url="@images/invoice-illustration.png" />
                 </image>
             </ImageView>
-
             <!-- Table container -->
             <StackPane style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 12;">
-                <TableView fx:id="invoicesTable"
+                <TableView fx:id="clientTable"
                            prefHeight="380"
                            prefWidth="880"
                            stylesheets="@invoices-table.css"
                            style="-fx-background-color: transparent;">
 
                     <columns>
-                        <TableColumn fx:id="colClientName" text="اسم العميل" prefWidth="220"/>
-                        <TableColumn fx:id="colClientNumber" text="الرقم التعريفي" prefWidth="220"/>
-                        <TableColumn fx:id="colClientType" text="نوع العميل" prefWidth="220"/>
-                        <TableColumn fx:id="colClientRank" text="رتبة العميل" prefWidth="220"/>
+                        <TableColumn fx:id="colName" text="اسم العميل" prefWidth="220"/>
+                        <TableColumn fx:id="colEmail" text="البريد الالكتروني" prefWidth="220"/>
+                        <TableColumn fx:id="colPhone" text="رقم الهاتف" prefWidth="220"/>
+                        <TableColumn fx:id="colSSN" text="الرقم القومي" prefWidth="220"/>
+                        <TableColumn fx:id="colType" text="نوع العميل" prefWidth="220"/>
+                        <TableColumn fx:id="colRank" text="رتبة العميل" prefWidth="220"/>
                     </columns>
                 </TableView>
             </StackPane>
+            <!-- Buttons -->
+            <HBox alignment="CENTER_RIGHT" spacing="12" style="-fx-padding: 12 0 0 0;">
+                <Button fx:id="addClientBtn"
+                        onAction="#addClient"
+                        style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;"
+                        text="إضافة عميل جديد +" />
+
+                <Button fx:id="deleteClientBtn"
+                        onAction="#deleteClient"
+                        style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;"
+                        text="مسح العميل" />
+
+                <Button fx:id="updateClientBtn"
+                        onAction="#editClient"
+                        style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;"
+                        text="تعديل العميل" />
+
+                <Region HBox.hgrow="ALWAYS" />
+            </HBox>
         </VBox>
     </center>
 </BorderPane>

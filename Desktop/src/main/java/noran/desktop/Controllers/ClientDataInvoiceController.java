@@ -135,6 +135,8 @@ public class ClientDataInvoiceController implements Initializable {
         stage.show();
     }
 
+
+
     @FXML
     private void openAcceptedInvoices() {
         try {
@@ -182,6 +184,15 @@ public class ClientDataInvoiceController implements Initializable {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    public void onClientManagementClick(ActionEvent event)throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/client-data.fxml"));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(scene);
+        stage.show();
     }
 
     // Updated UserRow with proper getters
