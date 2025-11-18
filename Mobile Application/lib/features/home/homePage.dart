@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
+import '../../core/storage/secure_storage.dart';
 import '../profile/profile_page.dart';
 import '../profile/profile_settings_page.dart';
-import '../profile/settings_menu_page.dart';
 
 class HomePage extends StatefulWidget {
   final String userName;
@@ -43,6 +42,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadRecentShipments() async {
     try {
+      if (!mounted) return;
       setState(() => _isLoadingShipments = true);
 
       print('🏠 [HomePage] Loading recent shipments...');
@@ -72,6 +72,7 @@ class _HomePageState extends State<HomePage> {
               };
             }).toList();
 
+        if (!mounted) return;
         setState(() {
           _recentShipments = recent;
           _isLoadingShipments = false;
@@ -87,10 +88,12 @@ class _HomePageState extends State<HomePage> {
 
         print('🏠 [HomePage] Recent shipments loaded: ${recent.length}');
       } else {
+        if (!mounted) return;
         setState(() => _isLoadingShipments = false);
       }
     } catch (e) {
       print('❌ [HomePage] Error loading shipments: $e');
+      if (!mounted) return;
       setState(() => _isLoadingShipments = false);
     }
   }
@@ -213,12 +216,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               InkWell(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ProfilePage(),
-                    ),
-                  );
+                  Navigator.pushNamed(context, '/profile');
                 },
                 borderRadius: BorderRadius.circular(50),
                 child: Container(
@@ -423,113 +421,114 @@ class _HomePageState extends State<HomePage> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder:
           (context) => Directionality(
             textDirection: TextDirection.rtl,
             child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.75,
+              ),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Handle Bar
-                  Container(
-                    margin: const EdgeInsets.only(top: 12),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Handle Bar
+                    Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                  // Menu Header
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: const [
-                        Icon(
-                          Icons.menu_rounded,
-                          color: Color(0xFF690000),
-                          size: 28,
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'القائمة',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Cairo',
+                    // Menu Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: const [
+                          Icon(
+                            Icons.menu_rounded,
                             color: Color(0xFF690000),
+                            size: 28,
                           ),
-                        ),
-                      ],
+                          SizedBox(width: 12),
+                          Text(
+                            'القائمة',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
+                              color: Color(0xFF690000),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 16),
-                  const Divider(height: 1),
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 16),
+                    const Divider(height: 1),
+                    const SizedBox(height: 8),
 
-                  // Menu Items
-                  _buildMenuItem(
-                    Icons.person_rounded,
-                    'الملف الشخصي',
-                    const Color(0xFF690000),
-                    () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ProfilePage(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildMenuItem(
-                    Icons.settings_rounded,
-                    'الإعدادات',
-                    const Color(0xFF690000),
-                    () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsMenuPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildMenuItem(
-                    Icons.help_outline_rounded,
-                    'المساعدة',
-                    const Color(0xFF1ba3b6),
-                    () {
-                      Navigator.pop(context);
-                      // TODO: Navigate to help
-                    },
-                  ),
+                    // Menu Items
+                    _buildMenuItem(
+                      Icons.person_rounded,
+                      'الملف الشخصي',
+                      const Color(0xFF690000),
+                      () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfilePage(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildMenuItem(
+                      Icons.settings_rounded,
+                      'الإعدادات',
+                      const Color(0xFF690000),
+                      () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/settings');
+                      },
+                    ),
+                    _buildMenuItem(
+                      Icons.help_outline_rounded,
+                      'المساعدة',
+                      const Color(0xFF1ba3b6),
+                      () {
+                        Navigator.pop(context);
+                        // TODO: Navigate to help
+                      },
+                    ),
 
-                  const SizedBox(height: 8),
-                  const Divider(height: 1),
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 8),
+                    const Divider(height: 1),
+                    const SizedBox(height: 8),
 
-                  _buildMenuItem(
-                    Icons.logout_rounded,
-                    'تسجيل الخروج',
-                    Colors.red,
-                    () {
-                      Navigator.pop(context);
-                      _handleLogout();
-                    },
-                  ),
+                    _buildMenuItem(
+                      Icons.logout_rounded,
+                      'تسجيل الخروج',
+                      Colors.red,
+                      () {
+                        Navigator.pop(context);
+                        _handleLogout();
+                      },
+                    ),
 
-                  const SizedBox(height: 20),
-                ],
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
           ),
@@ -679,12 +678,19 @@ class _HomePageState extends State<HomePage> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                Navigator.of(context).pushNamedAndRemoveUntil(
-                                  '/login',
-                                  (route) => false,
-                                );
+                              onPressed: () async {
+                                // حذف جميع بيانات المستخدم والـ Token
+                                await ApiService.removeToken();
+                                await SecureStorage.clearAll();
+
+                                // إغلاق الـ dialog ثم الانتقال لصفحة تسجيل الدخول
+                                if (mounted) {
+                                  Navigator.pop(context); // Close dialog
+                                  Navigator.of(context).pushNamedAndRemoveUntil(
+                                    '/login',
+                                    (route) => false,
+                                  );
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red,
@@ -874,6 +880,16 @@ class _HomePageState extends State<HomePage> {
                     child: _buildServiceCard(
                       'طلب رقم ACID',
                       Icons.description_outlined,
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/acid-request',
+                          arguments: {
+                            'userName': widget.userName,
+                            'userEmail': widget.userEmail,
+                          },
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -1269,11 +1285,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _handleShipmentTap(Map<String, dynamic> shipment) {
-    // TODO: Navigate to shipment details
-    AlNoranPopups.showInfo(
-      context: context,
-      title: 'تفاصيل الشحنة',
-      message: 'رقم الشحنة: ${shipment['id']}',
+    Navigator.pushNamed(
+      context,
+      '/shipment-details',
+      arguments: {'shipmentId': shipment['id']},
     );
   }
 
@@ -1326,6 +1341,7 @@ class _HomePageState extends State<HomePage> {
     return Expanded(
       child: InkWell(
         onTap: () {
+          if (!mounted) return;
           setState(() {
             _selectedIndex = index;
           });
@@ -1408,6 +1424,7 @@ class _HomePageState extends State<HomePage> {
           },
         ).then((_) {
           // إعادة تعيين الـ selected index عند الرجوع
+          if (!mounted) return;
           setState(() {
             _selectedIndex = 0;
           });
@@ -1423,11 +1440,9 @@ class _HomePageState extends State<HomePage> {
         break;
       case 4:
         // حسابي - Navigate to Profile Page
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfilePage()),
-        ).then((_) {
+        Navigator.pushNamed(context, '/profile').then((_) {
           // إعادة تعيين الـ selected index عند الرجوع
+          if (!mounted) return;
           setState(() {
             _selectedIndex = 0;
           });
