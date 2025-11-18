@@ -257,4 +257,12 @@ public class ClientDataController {
         stage.show();
     }
 
+    public void employee_management_btn_handle(ActionEvent event) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/shipments-management.fxml"));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(scene);
+        stage.show();
+    }
 }

@@ -2,6 +2,7 @@ package noran.desktop.Database;
 
 import noran.desktop.Services.APIService;
 import noran.desktop.models.Client;
+import noran.desktop.models.Employee;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -19,7 +20,7 @@ import java.util.*;
  * REST-based sync client for syncing users between a remote REST API and local SQLite database.
  */
 public class RestMongoSyncClient {
-
+    private static final String REMOTE_USERS_BASE_URL = "http://localhost:3500/api/users/";
     private static final String REMOTE_USERS_GET_URL = "http://localhost:3500/api/users/getAll";
     private static final String REMOTE_USERS_CREATE_URL = "http://localhost:3500/api/users/getAll";
 
@@ -389,6 +390,106 @@ public class RestMongoSyncClient {
             e.printStackTrace();
             return false;
         }
+    }
+
+    // ---------------------------------------------------
+    // EMPLOYEE SPECIFIC REMOTE METHODS
+    // ---------------------------------------------------
+
+    public static String addEmployeeRemotely(Employee emp) {
+        try {
+            JSONObject payload = new JSONObject();
+
+            // Basic User Data
+            payload.put("fullname", emp.getFullname().isBlank() ? "No Name" : emp.getFullname());
+            String generatedUsername = emp.getEmail().contains("@") ? emp.getEmail().split("@")[0] : emp.getEmail();
+            payload.put("username", generatedUsername);
+            payload.put("email", emp.getEmail());
+            payload.put("phone", emp.getPhone().isBlank() ? "01000000000" : emp.getPhone());
+            payload.put("password", emp.getPassword().isBlank() ? "123456" : emp.getPassword());
+
+            // Specific Employee Data
+            payload.put("type", "employee");
+            // Mapping 'jobType' from UI to 'employeeType' for Backend
+            payload.put("employeeType", emp.getJobType().isBlank() ? "staff" : emp.getJobType());
+            // Default Active status
+            payload.put("active", emp.isActive());
+
+            System.out.println("Sending Employee payload to server:\n" + payload.toString(2));
+
+            // Send Request
+            String response = APIService.post(REMOTE_USERS_CREATE_URL, payload.toString());
+            JSONObject respJson = new JSONObject(response);
+
+            // Extract ID from "user.id" or "id" depending on your API response structure
+            if (respJson.has("user") && respJson.getJSONObject("user").has("id")) {
+                return respJson.getJSONObject("user").getString("id");
+            } else if (respJson.has("_id")) {
+                return respJson.getString("_id");
+            } else if (respJson.has("id")) {
+                return respJson.getString("id");
+            }
+
+            System.out.println("Server response did not contain ID: " + response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("Failed to add employee remotely: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public static boolean updateEmployeeRemotely(Employee emp) {
+        try {
+            // 1. FIX: Target the specific User ID URL
+            String updateUrl = REMOTE_USERS_BASE_URL + emp.getId();
+
+            JSONObject payload = new JSONObject();
+
+            // Standard fields
+            payload.put("fullname", emp.getFullname());
+            payload.put("email", emp.getEmail());
+            payload.put("phone", emp.getPhone());
+            // Only send password if it's actually needed/changed
+            if (emp.getPassword() != null && !emp.getPassword().isBlank()) {
+                payload.put("password", emp.getPassword());
+            }
+            payload.put("type", "employee");
+
+            // 2. FIX: Send 'active' status (Crucial for Freeze/Unfreeze)
+            payload.put("active", emp.isActive());
+
+            // 3. FIX: Nest employeeType inside employeeDetails to match Mongoose Schema
+            JSONObject empDetails = new JSONObject();
+            // Ensure emp.getJobType() matches one of your Mongoose ENUMS:
+            // ['Regular Employee', 'Certified Employee', 'Department Manager', 'System Admin']
+            empDetails.put("employeeType", emp.getJobType());
+            payload.put("employeeDetails", empDetails);
+
+            System.out.println("Sending Update Payload to: " + updateUrl);
+            System.out.println(payload.toString(2));
+
+            // 4. FIX: Use PATCH instead of POST
+            String response = APIService.patch(updateUrl, payload.toString());
+
+            System.out.println("Update Response: " + response);
+
+            // Validation: If response is null or contains error/message indicating failure
+            if (response == null) return false;
+            JSONObject respJson = new JSONObject(response);
+
+            // Depending on your backend, successful updates usually return the updated doc or a success message
+            return !respJson.has("error");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("Failed to update employee remotely: " + e.getMessage());
+            return false;
+        }
+    }
+    // Re-use the delete logic since ID is unique across both types
+    public static boolean deleteUserRemotely(String userId) {
+        return deleteClientRemotely(userId);
     }
 
 

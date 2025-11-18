@@ -42,6 +42,7 @@
                         style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12; -fx-background-radius: 8;" />
                 <Button text="إدارة الصلاحيات"
                         maxWidth="Infinity"
+                        onAction="#employee_management_btn_handle"
                         style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
                 <Button text="أرشيف الملفات"
                         maxWidth="Infinity"

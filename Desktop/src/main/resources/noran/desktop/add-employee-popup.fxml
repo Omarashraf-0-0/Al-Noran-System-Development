@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
+
+<VBox spacing="15" alignment="CENTER" xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="noran.desktop.Controllers.EmployeePopupController"
+      style="-fx-padding: 25; -fx-background-color: #f5f5f5; -fx-pref-width: 400;">
+
+    <Label text="بيانات الموظف"
+           style="-fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: #333;" />
+
+    <TextField fx:id="fullnameField" promptText="اسم الموظف"
+               style="-fx-font-size: 14; -fx-padding: 8;"/>
+
+    <TextField fx:id="emailField" promptText="البريد الإلكتروني"
+               style="-fx-font-size: 14; -fx-padding: 8;"/>
+
+    <TextField fx:id="phoneField" promptText="رقم الهاتف"
+               style="-fx-font-size: 14; -fx-padding: 8;"/>
+
+    <TextField fx:id="passwordField" promptText="كلمة المرور"
+               style="-fx-font-size: 14; -fx-padding: 8;"/>
+
+    <ComboBox fx:id="jobTypeField" promptText="المسمى الوظيفي"
+              style="-fx-background-color: white; -fx-border-color: #ccc; -fx-font-size: 14; -fx-pref-width: 350;">
+        <items>
+            <FXCollections fx:factory="observableArrayList">
+                <String fx:value="Regular Employee"/>
+                <String fx:value="Certified Employee"/>
+                <String fx:value="Department Manager"/>
+                <String fx:value="System Admin"/>
+            </FXCollections>
+        </items>
+    </ComboBox>
+
+    <HBox spacing="20" alignment="CENTER" style="-fx-padding: 15 0 0 0;">
+        <Button text="إلغاء" onAction="#cancel"
+                style="-fx-pref-width: 120; -fx-background-color: #aaa; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"/>
+        <Button text="حفظ البيانات" onAction="#save"
+                style="-fx-pref-width: 120; -fx-background-color:#c91e2b; -fx-text-fill:white; -fx-font-weight: bold; -fx-cursor: hand;"/>
+    </HBox>
+
+</VBox>
