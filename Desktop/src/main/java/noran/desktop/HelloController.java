@@ -223,20 +223,39 @@ public class HelloController implements Initializable {
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
+
+
     @FXML
-    public void addNewInvoiceRow() {  // ← كانت private قبل كده
+    public void addNewInvoiceRow() {
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("إضافة عنصر يدوي");
         dialog.setHeaderText("أدخل اسم العنصر والسعر");
         dialog.setContentText("الاسم:");
 
         dialog.showAndWait().ifPresent(name -> {
-            TextInputDialog priceDialog = new TextInputDialog("0");
+
+            // 🔍 التحقق من أن الاسم يحتوي على حرف واحد على الأقل وليس أرقامًا فقط
+            if (name == null || name.trim().isEmpty() || name.trim().matches("\\d+")) {
+                Alert a = new Alert(Alert.AlertType.ERROR, "يجب إدخال اسم صحيح يحتوي على حرف واحد على الأقل!");
+                a.show();
+                return;
+            }
+
+            TextInputDialog priceDialog = new TextInputDialog("100");
             priceDialog.setTitle("السعر");
             priceDialog.setContentText("السعر:");
+
             priceDialog.showAndWait().ifPresent(p -> {
                 try {
                     double price = Double.parseDouble(p);
+
+                    // 🔍 شرط أن السعر يجب أن يكون 1 أو أكثر
+                    if (price < 100) {
+                        Alert a = new Alert(Alert.AlertType.ERROR, "السعر يجب أن يكون 100 أو أكثر!");
+                        a.show();
+                        return;
+                    }
+
                     invoiceItems.add(new InvoiceItem(name, price, "يدوي"));
                     updateTotal();
                 } catch (Exception ex) {
