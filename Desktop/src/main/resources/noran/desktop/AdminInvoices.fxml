@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250"
+            style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;"
+            xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="noran.desktop.Controllers.AdminInvoicesController">
+
+    <top>
+        <HBox alignment="CENTER" spacing="75" style="-fx-padding: 12 0; -fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0.0, 0, 2);">
+            <ImageView fitHeight="112" fitWidth="200" preserveRatio="true">
+                <image><Image url="@images/Logo.png" /></image>
+            </ImageView>
+            <Label style="-fx-font-size: 22; -fx-font-weight: bold;" text="لوحة تحكم المدير - الفواتير" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Button onAction="#goBack" text="رجوع" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 30; -fx-font-size: 14; -fx-background-radius: 8;" />
+        </HBox>
+    </top>
+
+    <center>
+        <VBox spacing="30" style="-fx-padding: 30 40;">
+            <Label style="-fx-font-size: 26; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;" text="جميع الفواتير في النظام" />
+
+            <!-- فلتر الحالة -->
+            <HBox spacing="15" alignment="CENTER_LEFT">
+                <Label text="فلتر الحالة:" style="-fx-font-size: 16;" />
+                <ComboBox fx:id="statusFilter" prefWidth="200" promptText="جميع الحالات">
+                    <items>
+                        <FXCollections fx:factory="observableArrayList">
+                            <String fx:value="الكل" />
+                            <String fx:value="pending" />
+                            <String fx:value="accepted" />
+                            <String fx:value="rejected" />
+                        </FXCollections>
+                    </items>
+                </ComboBox>
+                <Button text="تحديث" onAction="#refreshTable" style="-fx-background-color: #0078d4; -fx-text-fill: white; -fx-padding: 8 20;" />
+            </HBox>
+
+            <!-- الجدول -->
+            <StackPane style="-fx-background-color: white; -fx-background-radius: 14; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 4);">
+                <TableView fx:id="adminInvoicesTable" prefHeight="580" prefWidth="1160">
+                    <columns>
+                        <TableColumn fx:id="colInvoiceNumber" prefWidth="180" text="رقم الفاتورة" />
+                        <TableColumn fx:id="colClientName" prefWidth="280" text="اسم العميل" />
+                        <TableColumn fx:id="colTotal" prefWidth="150" text="المجموع" />
+                        <TableColumn fx:id="colDate" prefWidth="200" text="تاريخ الإنشاء" />
+                        <TableColumn fx:id="colStatus" prefWidth="140" text="الحالة" />
+                        <TableColumn fx:id="colActions" prefWidth="220" text="إجراءات" />
+                    </columns>
+                </TableView>
+            </StackPane>
+        </VBox>
+    </center>
+</BorderPane>

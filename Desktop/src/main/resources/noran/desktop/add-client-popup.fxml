@@ -26,7 +26,7 @@
                style="-fx-pref-width: 300; -fx-font-size: 14;"/>
 
     <ComboBox fx:id="clientTypeField" promptText="نوع العميل" editable="false"
-              style="-fx-background-color:#c91e2b; -fx-pref-width: 300; -fx-font-size: 14;">
+              style="-fx-background-color:#ffffff; -fx-pref-width: 300; -fx-font-size: 14;">
         <items>
             <FXCollections fx:factory="observableArrayList">
                 <String fx:value="personal"/>
