@@ -22,8 +22,8 @@
                 <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="آخر العمليات المنفذة" />
                 <Button onAction="#client_management_btn_handle" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="إدارة العملاء" />
                 <Button onAction="#invoice_management_btn_handle" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="إدارة الفواتير" />
-                <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="إدارة الصلاحيات" />
-                <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="إدارة الشحنات" />
+                <Button onAction="#employee_management" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="إدارة الصلاحيات" />
+                <Button onAction="#shipments_management" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="إدارة الشحنات" />
                 <Button onAction="#onTa5les" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="تخليص الفواتير" />
             </VBox>
         </VBox>

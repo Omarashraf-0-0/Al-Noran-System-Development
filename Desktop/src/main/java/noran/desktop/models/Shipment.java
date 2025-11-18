@@ -6,7 +6,7 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.property.IntegerProperty;
 
 public class Shipment {
-    private final StringProperty id;         // local Mongo _id or server id
+    private  int id = 0;         // local Mongo _id or server id
     private StringProperty acid = new SimpleStringProperty("");// unique acid identifier
     private final StringProperty portName;
     private final IntegerProperty numOfContainers;
@@ -16,8 +16,8 @@ public class Shipment {
     private String typeOfContainersJson; // <- add this
 
 
-    public Shipment(String id, String acid, String portName, int numOfContainers, String country, String status, String policy) {
-        this.id = new SimpleStringProperty(id == null ? "" : id);
+    public Shipment(int id, String acid, String portName, int numOfContainers, String country, String status, String policy) {
+        this.id = id;
         this.acid = new SimpleStringProperty(acid == null ? "" : acid);
         this.portName = new SimpleStringProperty(portName == null ? "" : portName);
         this.numOfContainers = new SimpleIntegerProperty(numOfContainers);
@@ -25,16 +25,16 @@ public class Shipment {
         this.status = new SimpleStringProperty(status == null ? "" : status);
         this.policy = new SimpleStringProperty(policy == null ? "" : policy);
     }
-    public Shipment(String id,  String portName, int numOfContainers, String country, String status, String policy) {
-        this.id = new SimpleStringProperty(id == null ? "" : id);
+    public Shipment(int id,  String portName, int numOfContainers, String country, String status, String policy) {
+        this.id = id;
         this.portName = new SimpleStringProperty(portName == null ? "" : portName);
         this.numOfContainers = new SimpleIntegerProperty(numOfContainers);
         this.country = new SimpleStringProperty(country == null ? "" : country);
         this.status = new SimpleStringProperty(status == null ? "" : status);
         this.policy = new SimpleStringProperty(policy == null ? "" : policy);
     }
-    public Shipment(String id, String portName, int numOfContainers, String status) {
-        this.id = new SimpleStringProperty(id == null ? "" : id);
+    public Shipment(int id, String portName, int numOfContainers, String status) {
+        this.id = id;
         this.acid = new SimpleStringProperty("0000000000");
         this.portName = new SimpleStringProperty(portName == null ? "" : portName);
         this.numOfContainers = new SimpleIntegerProperty(numOfContainers);
@@ -44,9 +44,9 @@ public class Shipment {
     }
 
     // id
-    public String getId() { return id.get(); }
-    public void setId(String v) { id.set(v); }
-    public StringProperty idProperty() { return id; }
+    public int getId() { return id; }
+    public void setId(int v) { id=v; }
+    public int idProperty() { return id; }
 
     // acid
     public String getAcid() { return acid.get(); }

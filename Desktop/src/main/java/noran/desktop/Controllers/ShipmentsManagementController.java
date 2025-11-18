@@ -53,7 +53,7 @@ public class ShipmentsManagementController {
 
             while (rs.next()) {
                 shipments.add(new Shipment(
-                        rs.getString("shipment_id"),
+                        rs.getInt("shipment_id"),
                         rs.getString("port_name"),
                         rs.getInt("num_of_containers"),
                         rs.getString("country"),
@@ -78,14 +78,14 @@ public class ShipmentsManagementController {
             Stage stage = new Stage();
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setScene(new Scene(root));
-            stage.setTitle(shipment.getId().isBlank() ? "Add Shipment" : "Edit Shipment");
+            stage.setTitle(shipment.getId()==0 ? "Add Shipment" : "Edit Shipment");
             stage.showAndWait();
 
             if (popupController.isSaved()) {
-                if (shipment.getId().isBlank()) {
+                if (shipment.getId()==0) {
                     // Create remotely first
-                    String remoteId = addShipmentRemotely(shipment);
-                    if (remoteId == null) {
+                    int remoteId = addShipmentRemotely(shipment);
+                    if (remoteId == 0) {
                         showAlert("Failed to add shipment on remote server.");
                         return;
                     }
@@ -122,7 +122,7 @@ public class ShipmentsManagementController {
         try (Connection conn = DatabaseConnection.connect()) {
             String sql = "DELETE FROM shipments WHERE shipment_id = ?";
             PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setString(1, selected.getId());
+            ps.setInt(1, selected.getId());
             int deleted = ps.executeUpdate();
 
             if (deleted > 0) {
@@ -183,7 +183,7 @@ public class ShipmentsManagementController {
             String sql = "INSERT INTO shipments (shipment_id, port_name, country, num_of_containers, status, policy) VALUES (?, ?, ?, ?, ?, ?)";
             PreparedStatement ps = conn.prepareStatement(sql);
             long now = System.currentTimeMillis();
-            ps.setString(1, s.getId());
+            ps.setInt(1, s.getId());
             ps.setString(2, s.getPortName());
             ps.setString(3, s.getCountry());
             ps.setInt(4, s.getNumOfContainers());
@@ -205,7 +205,7 @@ public class ShipmentsManagementController {
             ps.setInt(3, s.getNumOfContainers());
             ps.setString(4, s.getStatus());
             ps.setString(5, s.getPolicy());
-            ps.setString(6, s.getId());
+            ps.setInt(6, s.getId());
             ps.executeUpdate();
             System.out.println("✔ Updated shipment locally");
         } catch (Exception e) {
@@ -227,30 +227,35 @@ public class ShipmentsManagementController {
     // --- existing user methods omitted for brevity ---
 
     // Add shipment remotely
-    public static String addShipmentRemotely(Shipment shipment) {
+    public static int addShipmentRemotely(Shipment shipment) {
         try {
             JSONObject payload = new JSONObject();
             payload.put("acid", shipment.getAcid());
             payload.put("port_name", shipment.getPortName());
             payload.put("country", shipment.getCountry());
             payload.put("num_of_containers", shipment.getNumOfContainers());
-            payload.put("status", shipment.getStatus().isBlank() ? "Pending" : shipment.getStatus());
+            payload.put("status", shipment.getStatus() == null || shipment.getStatus().isBlank() ? "Pending" : shipment.getStatus());
             payload.put("policy", shipment.getPolicy());
 
             System.out.println("Sending shipment payload:\n" + payload.toString(2));
 
             String response = APIService.post(REMOTE_SHIPMENTS_URL, payload.toString());
+
+            if (response == null) return 0;
+
             JSONObject respJson = new JSONObject(response);
 
             if (respJson.has("shipment") && respJson.getJSONObject("shipment").has("id")) {
-                return respJson.getJSONObject("shipment").getString("id");
+                // CHANGE: use getInt instead of getString
+                return respJson.getJSONObject("shipment").getInt("id");
             }
 
             System.out.println("Server response did not contain shipment.id: " + response);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return null;
+        // CHANGE: Return 0 to indicate failure (int cannot be null)
+        return 0;
     }
 
     public static boolean updateShipmentRemotely(Shipment shipment) {
