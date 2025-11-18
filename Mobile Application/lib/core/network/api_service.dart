@@ -18,7 +18,7 @@ class ApiService {
     if (Platform.isAndroid) {
       // للموبايل الحقيقي - استخدم IP اللابتوب على نفس الشبكة
       // تأكد إن اللابتوب والموبايل على نفس WiFi
-      return 'http://172.20.10.2:3500';
+      return 'http://192.168.1.14:3500';
 
       // لو Emulator فقط، استخدم:
       // return 'http://10.0.2.2:3500';
@@ -41,14 +41,21 @@ class ApiService {
     try {
       print('🔐 [API] Login request to: $baseUrl/api/auth/login');
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/login'),
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true', // مهم لـ ngrok
-        },
-        body: jsonEncode({'email': email, 'password': password}),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/auth/login'),
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true', // مهم لـ ngrok
+            },
+            body: jsonEncode({'email': email, 'password': password}),
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception('انتهت مهلة الاتصال - يرجى المحاولة مرة أخرى');
+            },
+          );
 
       print('🔐 [API] Login response status: ${response.statusCode}');
       print('🔐 [API] Login response body: ${response.body}');
@@ -245,7 +252,9 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     return {
       'id': prefs.getString('user_id'),
-      'name': prefs.getString('user_name'),
+      'fullname': prefs.getString(
+        'user_name',
+      ), // استخدام fullname بدلاً من name
       'email': prefs.getString('user_email'),
       'type': prefs.getString('user_type'),
       'username': prefs.getString('username'),
@@ -1199,6 +1208,50 @@ class ApiService {
     }
   }
 
+  /// Get Required Documents for Shipment
+  /// Retrieves the list of documents requested by employee for specific shipment
+  static Future<Map<String, dynamic>> getRequiredDocuments({
+    required String shipmentId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📋 [getRequiredDocuments] Fetching for shipment: $shipmentId');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/shipments/id/$shipmentId/required-documents'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📋 [getRequiredDocuments] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'requiredDocuments': data['data']?['requiredDocuments'] ?? [],
+        };
+      } else if (response.statusCode == 404) {
+        return {'success': false, 'message': 'الشحنة غير موجودة'};
+      } else {
+        return {'success': false, 'message': 'فشل تحميل المستندات المطلوبة'};
+      }
+    } catch (e) {
+      print('❌ [getRequiredDocuments] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل المستندات المطلوبة',
+        'error': e.toString(),
+      };
+    }
+  }
+
   /// Create Shipment
   /// Creates a new shipment
   static Future<Map<String, dynamic>> createShipment({
@@ -1317,6 +1370,120 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في تحديث الشحنة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // ============================================
+  // ACID Request API
+  // ============================================
+
+  /// Create ACID Request
+  static Future<Map<String, dynamic>> createAcidRequest(
+    Map<String, dynamic> requestData,
+  ) async {
+    try {
+      final token = await SecureStorage.getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'لم يتم تسجيل الدخول'};
+      }
+
+      print('📦 [createAcidRequest] Sending request...');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/acid'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: jsonEncode(requestData),
+      );
+
+      print('📦 [createAcidRequest] Response status: ${response.statusCode}');
+      print('📦 [createAcidRequest] Response body: ${response.body}');
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم إرسال الطلب بنجاح',
+          'request': data['request'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل إرسال الطلب',
+        };
+      }
+    } catch (e) {
+      print('❌ [createAcidRequest] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في إرسال الطلب',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Upload file (general purpose)
+  static Future<Map<String, dynamic>> uploadFile({
+    required String filePath,
+    required String category,
+    String? documentType,
+    String? relatedId,
+  }) async {
+    try {
+      final token = await SecureStorage.getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'لم يتم تسجيل الدخول'};
+      }
+
+      print('📤 [uploadFile] Uploading: $filePath');
+
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/uploads/upload'),
+      );
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'ngrok-skip-browser-warning': 'true',
+      });
+
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+
+      request.fields['category'] = category;
+      if (documentType != null) request.fields['documentType'] = documentType;
+      if (relatedId != null) request.fields['relatedId'] = relatedId;
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('📤 [uploadFile] Response status: ${response.statusCode}');
+      print('📤 [uploadFile] Response body: ${response.body}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم رفع الملف بنجاح',
+          'upload': data['upload'] ?? data['data'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل رفع الملف',
+        };
+      }
+    } catch (e) {
+      print('❌ [uploadFile] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في رفع الملف',
         'error': e.toString(),
       };
     }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
 import '../../core/storage/secure_storage.dart';
-import '../auth/login_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -93,28 +92,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _logout() async {
-    final confirm = await AlNoranPopups.showConfirmDialog(
-      context: context,
-      title: 'تسجيل الخروج',
-      message: 'هل أنت متأكد من تسجيل الخروج؟',
-      confirmText: 'تسجيل الخروج',
-      cancelText: 'إلغاء',
-    );
-
-    if (confirm == true) {
-      await SecureStorage.deleteToken();
-      await SecureStorage.deleteUserData();
-
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-          (route) => false,
-        );
-      }
-    }
-  }
-
   String _getClientTypeName(String? type) {
     if (type == null || type.isEmpty) return 'حساب عام';
 
@@ -176,15 +153,11 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_forward_ios, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
+          automaticallyImplyLeading: false,
           actions: [
             IconButton(
-              icon: const Icon(Icons.logout, color: Colors.white),
-              onPressed: _logout,
-              tooltip: 'تسجيل الخروج',
+              icon: const Icon(Icons.arrow_forward, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
             ),
           ],
         ),

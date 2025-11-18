@@ -479,8 +479,10 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
       } else {
         String failedDoc = '';
         if (!uploadResult['success']) failedDoc = 'التوكيل';
-        if (!idCardUploadResult['success']) failedDoc = failedDoc.isEmpty ? 'صورة البطاقة' : '$failedDoc وصورة البطاقة';
-        
+        if (!idCardUploadResult['success'])
+          failedDoc =
+              failedDoc.isEmpty ? 'صورة البطاقة' : '$failedDoc وصورة البطاقة';
+
         AlNoranPopups.showError(
           context: context,
           title: 'تحذير',
