@@ -80,6 +80,7 @@ const Header = () => {
 			return [
 				{ label: "الرئيسية", path: "/home", icon: "🏠" },
 				{ label: "شحناتي", path: "/client-shipments", icon: "📦" },
+				{ label: "طلبات ACID", path: "/acidrequests", icon: "📋" },
 				{ label: "طلب رقم acid", path: "/acidrequest", icon: "🔢" },
 				{ label: "رفع المستندات", path: "/upload-documents", icon: "📄" },
 				{ label: "الدعم", path: "/support", icon: "🆘" },

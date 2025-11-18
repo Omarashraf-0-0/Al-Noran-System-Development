@@ -21,6 +21,9 @@ import EmployeeShipmentManagement from "./pages/EmployeeShipmentManagement";
 import CertificatesManagement from "./pages/CertificatesManagement";
 import AdminShipmentManagement from "./pages/AdminShipmentManagement";
 import Chat from "./pages/Chat";
+import AcidRequestsPage from "./pages/AcidRequestsPage";
+import AcidRequestDetailsPage from "./pages/AcidRequestDetailsPage";
+import EditAcidRequestPage from "./pages/EditAcidRequestPage";
 
 const App = () => {
 	return (
@@ -34,6 +37,15 @@ const App = () => {
 				<Route path="/resetpassword" element={<ResetPasswordPage />} />
 				<Route path="/home" element={<TrackingPage />} />
 				<Route path="/acidrequest" element={<ACIDRequestPage />} />
+				<Route path="/acidrequests" element={<AcidRequestsPage />} />
+				<Route
+					path="/acidrequest/:requestId"
+					element={<AcidRequestDetailsPage />}
+				/>
+				<Route
+					path="/acidrequest/:requestId/edit"
+					element={<EditAcidRequestPage />}
+				/>
 				<Route path="/upload-documents" element={<DocumentUploadPage />} />
 				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
 				<Route
@@ -67,7 +79,6 @@ const App = () => {
 			</Routes>
 		</div>
 	);
-	
 };
 
 export default App;
