@@ -16,36 +16,38 @@ import ShipmentStatus from "./pages/ShipmentStatus";
 import ClientShipments from "./pages/ClientShipments";
 import EmployeeShipmentManagement from "./pages/EmployeeShipmentManagement";
 import Chat from "./pages/Chat";
+import EmployeeManagement from "./pages/EmployeeManagement";
 
 const App = () => {
-	return (
-		<div>
-			<Routes>
-				<Route path="/" element={<LandingPage />} />
-				<Route path="/login" element={<LoginPage />} />
-				<Route path="/register" element={<RegisterPage />} />
-				<Route path="/forgetpassword" element={<ForgetPasswordPage />} />
-				<Route path="/verify-otp" element={<OTPPage />} />
-				<Route path="/resetpassword" element={<ResetPasswordPage />} />
-				<Route path="/home" element={<TrackingPage />} />
-				<Route path="/acidrequest" element={<ACIDRequestPage />} />
-				<Route path="/upload-documents" element={<DocumentUploadPage />} />
-				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
-				<Route
-					path="/shipmentstatus/:shipmentId"
-					element={<ShipmentStatus />}
-				/>
-				<Route
-					path="/employee-shipment/:shipmentId"
-					element={<EmployeeShipmentManagement />}
-				/>
-			<Route path="/client-shipments" element={<ClientShipments />} />
-			<Route path="/chat" element={<Chat />} />
-			{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
-			<Route path="*" element={<NotFound404 />} />
-			</Routes>
-		</div>
-	);
+  return (
+    <div>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgetpassword" element={<ForgetPasswordPage />} />
+        <Route path="/verify-otp" element={<OTPPage />} />
+        <Route path="/resetpassword" element={<ResetPasswordPage />} />
+        <Route path="/home" element={<TrackingPage />} />
+        <Route path="/acidrequest" element={<ACIDRequestPage />} />
+        <Route path="/upload-documents" element={<DocumentUploadPage />} />
+        <Route path="/employeedashboard" element={<EmployeeDashboard />} />
+        <Route
+          path="/shipmentstatus/:shipmentId"
+          element={<ShipmentStatus />}
+        />
+        <Route
+          path="/employee-shipment/:shipmentId"
+          element={<EmployeeShipmentManagement />}
+        />
+        <Route path="/client-shipments" element={<ClientShipments />} />
+        <Route path="/chat" element={<Chat />} />
+        <Route path="/employee-management" element={<EmployeeManagement />} /> {/* NEW */}
+        {/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
+        <Route path="*" element={<NotFound404 />} />
+      </Routes>
+    </div>
+  );
 };
 
 export default App;
