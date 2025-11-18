@@ -1,4 +1,5 @@
 const Shipment = require("../models/shipment");
+const Invoice = require("../models/invoice");
 const mailSender = require("../services/mailer");
 const jwt = require("jsonwebtoken");
 
@@ -653,6 +654,154 @@ const getEmployeeShipmentStats = async (req, res) => {
 	}
 };
 
+
+
+
+
+const mostActiveClients = async (req, res) => {
+	console.log("here");
+  try {
+    const result = await Shipment.aggregate([
+      {
+        $group: {
+          _id: "$user_id",
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      {
+        $unwind: "$user"
+      },
+      {
+        $project: {
+          _id: 1,
+          count: 1,
+          name: "$user.fullname" 
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    return res.status(200).json({ result });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+
+const cleanFacet = (facetResult, field, key = "count") => {
+  return facetResult[field]?.[0]?.[key] || 0;
+};
+
+const getDashboardStats = async (req, res) => {
+  try {
+    const invoiceStats = await Invoice.aggregate([
+      {
+        $facet: {
+          ongoingInvoices: [
+            { $match: { status: "ongoing" } },
+            { $count: "count" }
+          ],
+
+          completedInvoices: [
+            { $match: { status: "completed" } },
+            { $count: "count" }
+          ],
+
+          poundRevenue: [
+            { $match: { currency: "EGP" } },
+            {
+              $group: {
+                _id: null,
+                total: { $sum: { $toDouble: "$feePrice" } }
+              }
+            }
+          ],
+
+          dollarRevenue: [
+            { $match: { currency: "USD" } },
+            {
+              $group: {
+                _id: null,
+                total: { $sum: { $toDouble: "$feePrice" } }
+              }
+            }
+          ],
+
+          totalPayments: [
+            {
+              $group: {
+                _id: null,
+                totalPaid: {
+                  $sum: {
+                    $add: [
+                      { $toDouble: "$feePrice" },
+                      { $toDouble: "$Port_fee_price" },
+                      { $toDouble: "$Additional_Services_price" },
+                      { $toDouble: "$Clearance_Fees_price" },
+                      { $toDouble: "$Expense_Tips_price" },
+                      { $toDouble: "$Sundries_price" }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]);
+
+    const shipmentStats = await Shipment.aggregate([
+      {
+        $facet: {
+          ongoingSeaShipments: [
+            { $match: { status: "ongoing", shipmentType: "sea" } },
+            { $count: "count" }
+          ],
+
+          ongoingAirShipments: [
+            { $match: { status: "ongoing", shipmentType: "air" } },
+            { $count: "count" }
+          ],
+
+          completedShipments: [
+            { $match: { status: "completed" } },
+            { $count: "count" }
+          ]
+        }
+      }
+    ]);
+
+    return res.status(200).json({
+      ongoingInvoices: cleanFacet(invoiceStats[0], "ongoingInvoices"),
+      completedInvoices: cleanFacet(invoiceStats[0], "completedInvoices"),
+
+      poundRevenue: cleanFacet(invoiceStats[0], "poundRevenue", "total"),
+      dollarRevenue: cleanFacet(invoiceStats[0], "dollarRevenue", "total"),
+
+      totalPayments: cleanFacet(invoiceStats[0], "totalPayments", "totalPaid"),
+
+      ongoingSeaShipments: cleanFacet(shipmentStats[0], "ongoingSeaShipments"),
+      ongoingAirShipments: cleanFacet(shipmentStats[0], "ongoingAirShipments"),
+      completedShipments: cleanFacet(shipmentStats[0], "completedShipments")
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+
+
+
+
 module.exports = {
 	createShipment,
 	getAllShipments,
@@ -664,10 +813,12 @@ module.exports = {
 	getShipmentStatusByAcid,
 	getShipmentrelatedToEmployee,
 	getShipmentsByUserId,
-	addShipments,
 	updateShipmentStatusById,
 	requestRequiredDocuments,
 	getRequiredDocuments,
 	markDocumentAsUploaded,
 	getEmployeeShipmentStats,
+	addShipments,
+	mostActiveClients,
+	getDashboardStats
 };

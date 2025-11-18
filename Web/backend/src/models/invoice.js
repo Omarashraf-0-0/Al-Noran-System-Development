@@ -33,6 +33,11 @@ const invoiceSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    currencyType : {
+      type: String,
+      enum: ["pound","dollar"],
+      required: true,
+    }
   },
   {
     timestamps: { createdAt: true, updatedAt: false },

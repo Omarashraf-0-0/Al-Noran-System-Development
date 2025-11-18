@@ -6,7 +6,9 @@ const {
   updateUser,
   deleteUser,
   changePassword,
-  addUsers
+  addUsers,
+  getNotifications,
+  sendNotification
 } = require('../controllers/userController');
 
 router.route('/getAll')
@@ -23,5 +25,9 @@ router.route('/:id')
 
 router.route('/addUsers')
   .post(addUsers);
+
+router.route('/notifications/sendNotification').post(sendNotification)
+router.route('/notifications/getAllNotifications').get(getNotifications)
+
 
 module.exports = router;
