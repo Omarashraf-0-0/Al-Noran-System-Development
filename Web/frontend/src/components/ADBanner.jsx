@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
+import axios from "axios";
+import { toast } from "react-hot-toast";
 
 import bannerPic from "../assets/images/Untitled design (8) 2.png";
 import contract from "../assets/images/contract(1).png";
@@ -31,30 +33,59 @@ const DashboardStatsWelcome = () => {
   const adminName = user?.username || user?.fullname || user?.name || "المدير";
 
   const [stats, setStats] = useState({
-    seaCurrent: 100,
-    airCurrent: 100,
-    customsCompleted: 100,
-    pendingInvoices: 100,
-    approvedInvoices: 100,
-    revenueEGP: 100,
-    revenueUSD: 100,
-    totalPayments: 100,
+    seaCurrent: 0,
+    airCurrent: 0,
+    customsCompleted: 0,
+    pendingInvoices: 0,
+    approvedInvoices: 0,
+    revenueEGP: 0,
+    revenueUSD: 0,
+    totalPayments: 0,
   });
 
   const [loading, setLoading] = useState(true);
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     const loadStats = async () => {
       try {
-        setTimeout(() => setLoading(false), 400);
+        setLoading(true);
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/shipments/get-dashboard-stats`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = response.data;
+        console.log("Dashboard stats:", data);
+
+        setStats({
+          seaCurrent: data.ongoingSeaShipments || 0,
+          airCurrent: data.ongoingAirShipments || 0,
+          customsCompleted: data.completedShipments || 0,
+          pendingInvoices: data.ongoingInvoices || 0,
+          approvedInvoices: data.completedInvoices || 0,
+          revenueEGP: data.poundRevenue || 0,
+          revenueUSD: data.dollarRevenue || 0,
+          totalPayments: data.totalPayments || 0,
+        });
+        setLoading(false);
       } catch (err) {
         console.error("Failed to load stats:", err);
+        toast.error("فشل تحميل الإحصائيات");
         setLoading(false);
       }
     };
 
-    loadStats();
-  }, []);
+    if (token) {
+      loadStats();
+    } else {
+      setLoading(false);
+    }
+  }, [token]);
 
   const show = (v) => (loading ? "..." : v);
 

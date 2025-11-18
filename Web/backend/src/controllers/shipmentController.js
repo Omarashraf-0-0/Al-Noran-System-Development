@@ -716,7 +716,7 @@ const getDashboardStats = async (req, res) => {
           ],
 
           poundRevenue: [
-            { $match: { currency: "EGP" } },
+            { $match: { currencyType: "pound" } },
             {
               $group: {
                 _id: null,
@@ -726,7 +726,7 @@ const getDashboardStats = async (req, res) => {
           ],
 
           dollarRevenue: [
-            { $match: { currency: "USD" } },
+            { $match: { currencyType: "dollar" } },
             {
               $group: {
                 _id: null,
@@ -761,8 +761,7 @@ const getDashboardStats = async (req, res) => {
     const shipmentStats = await Shipment.aggregate([
       {
         $facet: {
-          ongoingSeaShipments: [
-            { $match: { status: "ongoing", shipmentType: "sea" } },
+          totalShipments: [
             { $count: "count" }
           ],
 
@@ -772,12 +771,17 @@ const getDashboardStats = async (req, res) => {
           ],
 
           completedShipments: [
-            { $match: { status: "completed" } },
+            { $match: { status: { $in: ["completed", "Completed", "مكتملة", "تمت بنجاح"] } } },
             { $count: "count" }
           ]
         }
       }
     ]);
+
+    // Calculate ongoing sea shipments = total - completed
+    const totalShipments = cleanFacet(shipmentStats[0], "totalShipments");
+    const completedShipments = cleanFacet(shipmentStats[0], "completedShipments");
+    const ongoingSeaShipments = totalShipments - completedShipments;
 
     return res.status(200).json({
       ongoingInvoices: cleanFacet(invoiceStats[0], "ongoingInvoices"),
@@ -788,9 +792,9 @@ const getDashboardStats = async (req, res) => {
 
       totalPayments: cleanFacet(invoiceStats[0], "totalPayments", "totalPaid"),
 
-      ongoingSeaShipments: cleanFacet(shipmentStats[0], "ongoingSeaShipments"),
+      ongoingSeaShipments: ongoingSeaShipments,
       ongoingAirShipments: cleanFacet(shipmentStats[0], "ongoingAirShipments"),
-      completedShipments: cleanFacet(shipmentStats[0], "completedShipments")
+      completedShipments: completedShipments
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

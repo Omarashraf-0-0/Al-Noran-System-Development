@@ -3,7 +3,6 @@ import AdminHeader from "../components/AdminHeader";
 import ADBanner from "../components/ADBanner";
 import RevenueComparison from "../components/RevenueComparison";
 import MostActiveCustomers from "../components/MostActiveCustomers";
-import AdminAlert from "../components/AdminAlert";
 import Footer from "../components/Footer";
 
 
@@ -24,7 +23,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-     <AdminAlert />
      <Footer />
     </div>
   );
