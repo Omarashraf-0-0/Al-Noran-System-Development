@@ -1,98 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.PieChart?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<?import javafx.scene.chart.PieChart?>
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.DashboardController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250"
+            style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;"
+            xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="noran.desktop.Controllers.DashboardController">
 
-    <!-- RIGHT SIDEBAR (moved to right side for RTL layout) -->
+    <!-- LEFT SIDEBAR -->
     <left>
-    <VBox fx:id="sidebar" alignment="TOP_RIGHT" prefWidth="260" spacing="14" style="-fx-background-color: white; -fx-padding: 18; -fx-border-color: transparent;">
+        <VBox fx:id="sidebar" alignment="TOP_RIGHT" prefWidth="260" spacing="14"
+              style="-fx-background-color: white; -fx-padding: 18; -fx-border-color: transparent;">
 
-        <!-- menu as buttons -->
-        <VBox alignment="TOP_CENTER" spacing="16">
-            <Button maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 8 16; -fx-font-size: 14; -fx-background-radius: 8; -fx-alignment: CENTER_LEFT;" text="لوحة التحكم" />
-            <Button fx:id="btnCurrentOps" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="العمليات الحالية" />
-            <Button fx:id="btnRecentOps" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="آخر العمليات المنفذة" />
-            <Button fx:id="btnClients" onAction="#client_management_btn_handle" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أدارة العملاء" />
-            <Button fx:id="btnInvoices" onAction="#invoice_management_btn_handle" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الفواتير" />
-            <Button fx:id="btnPermissions" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الصلاحيات" />
-            <Button fx:id="btnShipments" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الشحنات" />
-            <Button fx:id="btnFiles" onAction="#onTa5les" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="تخليص الفواتير" />
+            <VBox alignment="TOP_CENTER" spacing="16">
+                <Button maxWidth="Infinity" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 12 20; -fx-font-size: 15; -fx-background-radius: 10; -fx-font-weight: bold;" text="لوحة التحكم" />
+                <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="العمليات الحالية" />
+                <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="آخر العمليات المنفذة" />
+                <Button onAction="#client_management_btn_handle" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="إدارة العملاء" />
+                <Button onAction="#invoice_management_btn_handle" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="إدارة الفواتير" />
+                <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="إدارة الصلاحيات" />
+                <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="إدارة الشحنات" />
+                <Button onAction="#onTa5les" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="تخليص الفواتير" />
+            </VBox>
         </VBox>
-
-
-
-    </VBox>
     </left>
 
     <!-- TOP BAR -->
     <top>
-    <HBox alignment="CENTER" maxWidth="Infinity" spacing="75" style="-fx-padding: 12 0; -fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0.0, 0, 2); -fx-background-radius: 0;">
-
-            <!-- logo in top bar (right side) -->
-                <ImageView fx:id="logoImage" fitHeight="112" fitWidth="200" pickOnBounds="true" preserveRatio="true" style="-fx-alignment: LEFT">
-                <image>
-                    <Image url="@images/Logo.png" />
-                </image>
+        <HBox alignment="CENTER" spacing="75" style="-fx-padding: 12 0; -fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0, 0, 2);">
+            <ImageView fitHeight="112" fitWidth="200" preserveRatio="true">
+                <image><Image url="@images/Logo.png" /></image>
             </ImageView>
 
-            <!-- small page title -->
             <HBox alignment="CENTER_RIGHT" spacing="8" style="-fx-background-color: #ffffff; -fx-padding: 6 10; -fx-background-radius: 20;">
-
-                <ImageView fitHeight="18" fitWidth="18">
-                    <image>
-                        <Image url="@images/menu.png" />
-                    </image>
-                </ImageView>
-                <Label style="-fx-font-size: 15; -fx-text-fill: #111; -fx-padding: 0 12 0 12;" text="لوحة التحكم" />
-
+                <ImageView fitHeight="18" fitWidth="18"><image><Image url="@images/menu.png" /></image></ImageView>
+                <Label style="-fx-font-size: 15; -fx-text-fill: #111;" text="لوحة التحكم" />
             </HBox>
 
-
-            <!-- Search -->
             <HBox alignment="CENTER_RIGHT" spacing="8" maxHeight="40" style="-fx-background-color: #f3f4f6; -fx-padding: 6 10; -fx-background-radius: 20;">
-                <TextField fx:id="searchField" onAction="#onSearch" prefWidth="380" promptText="ابحث برقم الشحنة" style="-fx-background-color: transparent; -fx-border-width: 0;" />
-                <ImageView fitHeight="18" fitWidth="18">
-                    <image>
-                        <Image url="@images/search.png" />
-                    </image>
-                </ImageView>
+                <TextField fx:id="searchField" prefWidth="380" promptText="ابحث برقم الشحنة أو اسم العميل" style="-fx-background-color: transparent;" />
+                <ImageView fitHeight="18" fitWidth="18"><image><Image url="@images/search.png" /></image></ImageView>
             </HBox>
 
-            <!-- notification icon -->
-            <StackPane fx:id="notifBtn" alignment="CENTER" maxHeight="40" style="-fx-padding: 6; -fx-background-radius: 18; -fx-background-color: #f3f4f6;">
-                <ImageView fitHeight="18" fitWidth="18">
-                    <image>
-                        <Image url="@images/notification.png" />
-                    </image>
-                </ImageView>
+            <StackPane alignment="CENTER" maxHeight="40" style="-fx-padding: 6; -fx-background-radius: 18; -fx-background-color: #f3f4f6;">
+                <ImageView fitHeight="18" fitWidth="18"><image><Image url="@images/notification.png" /></image></ImageView>
             </StackPane>
 
-            <!-- user avatar + name + id -->
-            <HBox alignment="CENTER" spacing="10" style="-fx-padding: 0 8;">
+            <HBox alignment="CENTER" spacing="10">
                 <VBox alignment="CENTER_LEFT" spacing="2">
-                    <Label fx:id="userNameLabel" style="-fx-font-weight: 600; -fx-font-size: 14;" text="ياسمين" />
+                    <Label fx:id="userNameLabel" style="-fx-font-weight: 600; -fx-font-size: 14;" text="Amr" />
                     <Label fx:id="userIdLabel" style="-fx-text-fill: #9b9b9b; -fx-font-size: 11;" text="ID: 1234567" />
                 </VBox>
-
                 <ImageView fitHeight="44" fitWidth="44" preserveRatio="true">
-                    <image>
-                        <Image url="@images/avatar.png" />
-                    </image>
+                    <image><Image url="@images/avatar.png" /></image>
                 </ImageView>
             </HBox>
-
         </HBox>
     </top>
 
     <!-- CENTER CONTENT -->
     <center>
-        <VBox spacing="18" style="-fx-padding: 18 24;">
-            <!-- top stat cards -->
-            <GridPane hgap="18" vgap="12">
+        <VBox spacing="25" style="-fx-padding: 25 40;">
+
+            <!-- TOP STAT CARDS -->
+            <GridPane hgap="20" vgap="15">
                 <columnConstraints>
                     <ColumnConstraints percentWidth="25" />
                     <ColumnConstraints percentWidth="25" />
@@ -100,70 +75,71 @@
                     <ColumnConstraints percentWidth="25" />
                 </columnConstraints>
 
-                <!-- Card 1 -->
-                <StackPane style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 10;" GridPane.columnIndex="0">
-                    <VBox alignment="TOP_LEFT">
-                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="إجمالى الإيرادات" />
-                        <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #222; -fx-padding: 12 0 0 0;" text="100" />
+                <!-- Card 1: إجمالي الإيرادات -->
+                <StackPane style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 10, 0, 0, 4);" GridPane.columnIndex="0">
+                    <VBox alignment="TOP_LEFT" spacing="8">
+                        <Label style="-fx-text-fill: #666; -fx-font-size: 14;" text="إجمالي الإيرادات" />
+                        <Label fx:id="totalRevenueLabel" style="-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: #1fb5b5;" text="0.00" />
+                        <Label style="-fx-text-fill: #888; -fx-font-size: 12;" text="جنيه مصري" />
                     </VBox>
                 </StackPane>
 
-                <!-- Card 2 -->
-                <StackPane style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 10;" GridPane.columnIndex="1">
-                    <VBox alignment="TOP_LEFT">
-                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="عدد الفواتير المعلقة" />
-                        <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #222; -fx-padding: 12 0 0 0;" text="100" />
+                <!-- Card 2: الفواتير المعلقة -->
+                <StackPane style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 10, 0, 0, 4);" GridPane.columnIndex="1">
+                    <VBox alignment="TOP_LEFT" spacing="8">
+                        <Label style="-fx-text-fill: #666; -fx-font-size: 14;" text="عدد الفواتير المعلقة" />
+                        <Label fx:id="pendingInvoicesLabel" style="-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: #ffc107;" text="0" />
                     </VBox>
                 </StackPane>
 
-                <!-- Card 3 -->
-                <StackPane style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 10;" GridPane.columnIndex="2">
-                    <VBox alignment="TOP_LEFT">
-                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="عدد الشهادات المكتملة" />
-                        <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #222; -fx-padding: 12 0 0 0;" text="100" />
+                <!-- Card 3: الشهادات المكتملة (الفواتير المقبولة) -->
+                <StackPane style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 10, 0, 0, 4);" GridPane.columnIndex="2">
+                    <VBox alignment="TOP_LEFT" spacing="8">
+                        <Label style="-fx-text-fill: #666; -fx-font-size: 14;" text="عدد الشهادات المكتملة" />
+                        <Label fx:id="completedInvoicesLabel" style="-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: #28a745;" text="0" />
                     </VBox>
                 </StackPane>
 
-                <!-- Card 4 -->
-                <StackPane style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 10;" GridPane.columnIndex="3">
-                    <VBox alignment="TOP_LEFT">
-                        <Label style="-fx-text-fill: #666; -fx-font-size: 13;" text="عدد الشهادات الجارية" />
-                        <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #222; -fx-padding: 12 0 0 0;" text="100" />
+                <!-- Card 4: الشحنات الجارية -->
+                <StackPane style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 10, 0, 0, 4);" GridPane.columnIndex="3">
+                    <VBox alignment="TOP_LEFT" spacing="8">
+                        <Label style="-fx-text-fill: #666; -fx-font-size: 14;" text="عدد الشهادات الجارية" />
+                        <Label fx:id="ongoingShipmentsLabel" style="-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: #0078d4;" text="0" />
                     </VBox>
                 </StackPane>
             </GridPane>
 
-            <!-- big statistics panel -->
-            <StackPane style="-fx-padding: 18; -fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #f0f0f0; -fx-border-radius: 12;">
-                <VBox alignment="TOP_CENTER" spacing="32" style="-fx-padding: 28;">
-                    <Label style="-fx-font-size: 20; -fx-font-weight: 700; -fx-text-fill: #333;" text="الإحصائيات" />
+            <!-- CHARTS SECTION -->
+            <StackPane style="-fx-background-color: white; -fx-background-radius: 16; -fx-padding: 30; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 15, 0, 0, 6);">
+                <VBox alignment="TOP_CENTER" spacing="30">
+                    <Label style="-fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: #222;" text="الإحصائيات والتقارير" />
 
-                    <!-- 3 Chart Containers -->
-                    <HBox alignment="CENTER" spacing="40">
-                        <!-- Chart 1 -->
-                        <VBox alignment="CENTER">
-                            <Label style="-fx-font-weight: 600; -fx-font-size: 14;" text="مقارنة بين الإيرادات" />
-                            <PieChart fx:id="chartRevenueComparison" prefHeight="180" prefWidth="180" />
+                    <HBox alignment="CENTER" spacing="50">
+                        <!-- Chart 1: نسبة المقبولة vs المعلقة -->
+                        <VBox alignment="CENTER" spacing="12">
+                            <Label style="-fx-font-weight: bold; -fx-font-size: 15;" text="نسبة الفواتير المقبولة والمعلقة" />
+                            <PieChart fx:id="chartAcceptedVsPending" prefHeight="220" prefWidth="220" />
                         </VBox>
 
-                        <!-- Chart 2 -->
-                        <VBox alignment="CENTER">
-                            <Label style="-fx-font-weight: 600; -fx-font-size: 14;" text="إجمالي المدفوعات الشهرية" />
-                            <PieChart fx:id="chartMonthlyPayments" prefHeight="180" prefWidth="180" />
+                        <!-- Chart 2: نسبة الفواتير المعلقة فقط -->
+                        <VBox alignment="CENTER" spacing="12">
+                            <Label style="-fx-font-weight: bold; -fx-font-size: 15;" text="الفواتير المعلقة مقابل المعالجة" />
+                            <PieChart fx:id="chartPendingInvoicesRatio" prefHeight="220" prefWidth="220" />
                         </VBox>
 
-                        <!-- Chart 3 -->
-                        <VBox alignment="CENTER">
-                            <Label style="-fx-font-weight: 600; -fx-font-size: 14;" text="أكثر العملاء نشاطًا" />
-                            <PieChart fx:id="chartActiveClients" prefHeight="180" prefWidth="180" />
+                        <!-- Chart 3: توزيع العملاء حسب الإصدار -->
+                        <VBox alignment="CENTER" spacing="12">
+                            <Label style="-fx-font-weight: bold; -fx-font-size: 15;" text="توزيع العملاء حسب الإصدار" />
+                            <PieChart fx:id="chartClientsByVersion" prefHeight="220" prefWidth="220" />
                         </VBox>
                     </HBox>
+                    <Button fx:id="downloadReportBtn" onAction="#downloadDashboardReport"
+                            text="تحميل تقرير الإحصائيات كـ PDF"
+                            style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-padding: 14 40; -fx-background-radius: 12; -fx-cursor: hand;" />
 
-                    <!-- Download Button -->
-                    <Button style="-fx-background-color: #eef2ff; -fx-text-fill: #2a2a2a; -fx-font-size: 14; -fx-padding: 10 18; -fx-background-radius: 8;" text="تحميل الإحصائيات" />
+<!--                    <Button text="تحميل تقرير شامل PDF" style="-fx-background-color: #1fb5b5; -fx-text-fill: white; -fx-font-size: 15; -fx-padding: 12 30; -fx-background-radius: 10; -fx-font-weight: bold;" />-->
                 </VBox>
             </StackPane>
         </VBox>
     </center>
-
 </BorderPane>
