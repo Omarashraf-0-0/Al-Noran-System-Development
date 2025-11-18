@@ -1,25 +1,28 @@
 package noran.desktop.models;
 
 public class Shipment {
-    private final int shipmentId;
-    private final String portName;
-    private final int numContainers;
-    private final String status;
+    private int shipmentId;
+    private String portName;
+    private int numOfContainers;
+    private String status;
+    private String typeOfContainersJson;
 
-    public Shipment(int shipmentId, String portName, int numContainers, String status) {
+    public Shipment(int shipmentId, String portName, int numOfContainers, String status) {
         this.shipmentId = shipmentId;
         this.portName = portName;
-        this.numContainers = numContainers;
+        this.numOfContainers = numOfContainers;
         this.status = status;
     }
 
     public int getShipmentId() { return shipmentId; }
     public String getPortName() { return portName; }
-    public int getNumContainers() { return numContainers; }
+    public int getNumOfContainers() { return numOfContainers; }
     public String getStatus() { return status; }
+    public String getTypeOfContainersJson() { return typeOfContainersJson; }
+    public void setTypeOfContainersJson(String json) { this.typeOfContainersJson = json; }
 
     @Override
     public String toString() {
-        return "شحنة #" + shipmentId + " - " + portName + " (" + numContainers + " حاوية)";
+        return "شحنة #" + shipmentId + " - " + portName + " (" + numOfContainers + " حاوية)";
     }
 }

@@ -23,7 +23,8 @@
 
             <!-- menu as buttons -->
             <VBox alignment="TOP_CENTER" spacing="16">
-                <Button fx:id="btnInvoices" onAction="#onDashboardClick" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="لوحة التحكم" />
+                <!-- removed onAction="#onDashboardClick" to avoid FXMLLoader error if handler is not present -->
+                <Button onAction="#onDashboardClick" fx:id="btnInvoices" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="لوحة التحكم" />
                 <Button fx:id="btnCurrentOps" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="العمليات الحالية" />
                 <Button fx:id="btnRecentOps" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="آخر العمليات المنفذة" />
                 <Button fx:id="btnClients" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أرشيف العملاء" />
@@ -31,7 +32,7 @@
                 <Button maxWidth="Infinity" onAction="#invoice_management_btn_handle" mnemonicParsing="false" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 8 16; -fx-font-size: 14; -fx-background-radius: 8; -fx-alignment: CENTER_LEFT;" text="إدارة الفواتير" />
                 <Button fx:id="btnPermissions" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الصلاحيات" />
             </VBox>
-
+<!--dashboard-->
 
         </VBox>
     </left>
@@ -148,14 +149,32 @@
 
             <!-- Buttons -->
             <HBox alignment="CENTER_RIGHT" spacing="12" style="-fx-padding: 12 0 0 0;">
-                <Button onAction="#addNewInvoiceRow" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="اضافة عنصر جديد +" />
-                <Button style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="تغيير حالة الفاتورة" />
-                <Button fx:id="deleteRowBtn"
-                        onAction="#deleteSelectedRow"
-                        style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="مسح العنصر" />
-                <Region HBox.hgrow="ALWAYS" />
-                <Label fx:id="totalCost" style="-fx-font-weight: 600; -fx-font-size: 14;" text="المجموع الكلي :" />
-                <Button onAction="#downloadInvoicePDF" style="-fx-background-color: #eef2ff; -fx-text-fill: #2a2a2a; -fx-padding: 10 18; -fx-background-radius: 8;" text="تحميل الفاتورة" />
+                <!-- Buttons -->
+                <HBox alignment="CENTER_RIGHT" spacing="12" style="-fx-padding: 12 0 0 0;">
+                    <Button fx:id="addRowBtn"
+                            onAction="#addNewInvoiceRow"
+                            style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;"
+                            text="إضافة عنصر جديد +" />
+
+                    <Button fx:id="deleteRowBtn"
+                            onAction="#deleteSelectedRow"
+                            style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;"
+                            text="مسح العنصر" />
+
+                    <Button fx:id="sendInvoiceBtn"
+                            onAction="#sendInvoiceToDatabase"
+                            style="-fx-background-color: #1e90ff; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;"
+                            text="إرسال الفاتورة" />
+
+                    <Region HBox.hgrow="ALWAYS" />
+
+                    <Label fx:id="totalCost" style="-fx-font-weight: bold; -fx-font-size: 16;" text="المجموع الكلي: 0.00 جنيه" />
+
+<!--                    <Button fx:id="downloadPdfBtn"-->
+<!--                            onAction="#downloadInvoicePDF"-->
+<!--                            style="-fx-background-color: #28a745; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;"-->
+<!--                            text="تحميل PDF" />-->
+                </HBox>
             </HBox>
 
         </VBox>

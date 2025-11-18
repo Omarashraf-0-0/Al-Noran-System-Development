@@ -11,7 +11,7 @@
             style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;"
             xmlns="http://javafx.com/javafx/17.0.12"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="noran.desktop.Controllers.ClientDataController">
+            fx:controller="noran.desktop.Controllers.ClientDataInvoiceController">
 
     <!-- RIGHT SIDEBAR -->
     <left>
@@ -108,6 +108,23 @@
     <!-- CENTER CONTENT -->
     <center>
         <VBox spacing="24" alignment="TOP_CENTER" style="-fx-padding: 32 24;">
+
+            <!-- زر الانتقال إلى الفواتير المقبولة -->
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <Button fx:id="btnViewAcceptedInvoices"
+                        text="عرض الفواتير المقبولة والمرسلة"
+                        onAction="#openAcceptedInvoices"
+                        style="-fx-background-color: #1e90ff; -fx-text-fill: white; -fx-padding: 14 32; -fx-font-size: 15; -fx-background-radius: 10; -fx-font-weight: bold; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);">
+                    <graphic>
+                        <ImageView fitHeight="20" fitWidth="20">
+                            <image>
+                                <Image url="@images/checklist.png" /> <!-- أيقونة اختيارية -->
+                            </image>
+                        </ImageView>
+                    </graphic>
+                </Button>
+            </HBox>
+
             <!-- Illustration -->
             <ImageView fitHeight="220" preserveRatio="true">
                 <image>
