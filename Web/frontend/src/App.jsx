@@ -19,6 +19,8 @@ import EmployeeManagement from "./pages/EmployeeManagement";
 import CustomerManagement from "./pages/CustomerManagement";
 import EmployeeShipmentManagement from "./pages/EmployeeShipmentManagement";
 import CertificatesManagement from "./pages/CertificatesManagement";
+import AdminShipmentManagement from "./pages/AdminShipmentManagement";
+
 const App = () => {
 	return (
 		<div>
@@ -40,6 +42,10 @@ const App = () => {
 				<Route
 					path="/employee-shipment/:shipmentId"
 					element={<EmployeeShipmentManagement />}
+				/>
+				<Route
+					path="/admin-shipment/:shipmentId"
+					element={<AdminShipmentManagement />}
 				/>
 				<Route path="/client-shipments" element={<ClientShipments />} />
 				<Route path="/admindashboard" element={<AdminDashboard />} />

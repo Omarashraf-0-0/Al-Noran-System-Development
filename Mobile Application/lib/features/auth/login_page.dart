@@ -404,15 +404,15 @@ class _LoginPageState extends State<LoginPage> {
             '🔐 [Login] ClientDetails: ${result['data']?['user']?['clientDetails']}',
           );
 
-          // Save token and user data to SecureStorage
+          // Save token and user data in parallel for faster performance
           if (result['data'] != null) {
-            if (result['data']['token'] != null) {
-              await ApiService.saveToken(result['data']['token']);
-            }
-            if (result['data']['user'] != null) {
-              await ApiService.saveUserData(result['data']['user']);
-              print('✅ [Login] User data saved to storage');
-            }
+            await Future.wait([
+              if (result['data']['token'] != null)
+                ApiService.saveToken(result['data']['token']),
+              if (result['data']['user'] != null)
+                ApiService.saveUserData(result['data']['user']),
+            ]);
+            print('✅ [Login] Token and user data saved to storage');
           }
 
           // الحصول على اسم المستخدم من البيانات
