@@ -114,7 +114,7 @@ public class HelloController implements Initializable {
             ps.setString(1, clientId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    int id = rs.getInt("shipment_id");
+                    String id = rs.getString("shipment_id");
                     String port = rs.getString("port_name");
                     int num = rs.getInt("num_of_containers");
                     String types = rs.getString("type_of_containers_json");
@@ -176,11 +176,12 @@ public class HelloController implements Initializable {
         invoiceItems.add(new InvoiceItem("رسوم اضافية للحاويات الزائدة", adjExtra, "مُحسب"));
         invoiceItems.add(new InvoiceItem("رسوم النافذة الواحدة", adjSingle, "مُحسب"));
 
-        invoiceNumberLabel.setText("رقم الفاتورة: INV-" + shipment.getShipmentId() + "-" + (System.currentTimeMillis() % 10000));
+        invoiceNumberLabel.setText("رقم الفاتورة: INV-" + shipment.getId() + "-" + (System.currentTimeMillis() % 10000));
         updateTotal();
 
-        markShipmentAsInvoiced(shipment.getShipmentId());
-        saveInvoiceToDatabase(shipment.getShipmentId(), adjPort, adjClearance, adjExpenses, adjSundries, adjExtra, adjSingle);
+        markShipmentAsInvoiced(shipment.getId());
+        saveInvoiceToDatabase(shipment.getId(), adjPort, adjClearance, adjExpenses, adjSundries, adjExtra, adjSingle);
+
     }
 
     private double getPortPrice(String port) {
@@ -199,27 +200,40 @@ public class HelloController implements Initializable {
         };
     }
 
-    private void markShipmentAsInvoiced(int shipmentId) {
+    private void markShipmentAsInvoiced(String shipmentId) {
         String sql = "UPDATE shipments SET dragt = 1 WHERE shipment_id = ?";
-        try (Connection c = DatabaseConnection.connect(); PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setInt(1, shipmentId);
+        try (Connection c = DatabaseConnection.connect();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, shipmentId);
             ps.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
-    private void saveInvoiceToDatabase(int shipmentId, double port, double clearance, double expenses, double sundries, double extra, double single) {
+
+    private void saveInvoiceToDatabase(String shipmentId, double port, double clearance, double expenses, double sundries, double extra, double single) {
         String invoiceNum = invoiceNumberLabel.getText().replace("رقم الفاتورة: ", "");
         String sql = "INSERT INTO shipment_fees (invoiceNumber, shipmentId, feeName, feePrice, " +
                 "Port_fee_price, Clearance_Fees_price, Expense_Tips_price, Sundries_price, " +
                 "Additional_Services_price, invoiceStatus, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)";
         Timestamp now = new Timestamp(System.currentTimeMillis());
         try (Connection c = DatabaseConnection.connect();
-             PreparedStatement ps = c.prepareStatement(sql)) {
-            // Insert each row...
-            // (your existing logic unchanged)
-            ps.setString(1, invoiceNum); ps.setInt(2, shipmentId);
-            // ... rest of your batch logic
-        } catch (SQLException e) { e.printStackTrace(); }
+             PreparedStatement ps = c.prepareStatement(
+                     "INSERT INTO shipment_fees(invoiceNumber, shipmentId, feeName, feePrice, createdAt) VALUES (?, ?, ?, ?, ?)"
+             )) {
+            Timestamp now1 = new Timestamp(System.currentTimeMillis());
+            for (InvoiceItem item : invoiceItems) {
+                ps.setString(1, invoiceNumberLabel.getText().replace("رقم الفاتورة: ", ""));
+                ps.setString(2, shipmentId);
+                ps.setString(3, item.getDescription());
+                ps.setDouble(4, item.getPrice());
+                ps.setTimestamp(5, now);
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
     }
 
     @FXML
@@ -375,7 +389,7 @@ public class HelloController implements Initializable {
         }
 
         String invoiceNum = invoiceNumberLabel.getText().replace("رقم الفاتورة: ", "").trim();
-        int shipmentId = selectedShipment.getShipmentId();
+        String  shipmentId = selectedShipment.getId();
         Timestamp now = new Timestamp(System.currentTimeMillis());
 
         // متغيرات لتجميع القيم
@@ -421,7 +435,7 @@ public class HelloController implements Initializable {
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, invoiceNum);
-            ps.setInt(2, shipmentId);
+            ps.setString(2, shipmentId);
             ps.setDouble(3, portFee);
             ps.setDouble(4, clearanceFee);
             ps.setDouble(5, expenseTips);
@@ -446,7 +460,7 @@ public class HelloController implements Initializable {
     }
 
 
-    private void showSuccessDialog(String invoiceNum, int shipmentId, double port, double clearance,
+    private void showSuccessDialog(String invoiceNum, String shipmentId, double port, double clearance,
                                    double expenses, double sundries, double additional, String manualName, double manualTotal) {
 
         String content = String.format("""

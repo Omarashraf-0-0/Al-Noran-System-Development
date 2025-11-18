@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
+<VBox spacing="12" alignment="CENTER" xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="noran.desktop.Controllers.ShipmentPopupController"
+      style="-fx-padding: 18; -fx-background-color: #f7f7f7;">
+
+    <Label text="إضافة / تعديل شحنة" style="-fx-font-size: 18; -fx-font-weight: bold;" />
+
+    <TextField fx:id="acidField" promptText="ACID" style="-fx-pref-width: 360;" />
+    <TextField fx:id="portField" promptText="اسم الميناء" style="-fx-pref-width: 360;" />
+    <TextField fx:id="countryField" promptText="الدولة" style="-fx-pref-width: 360;" />
+    <TextField fx:id="containersField" promptText="عدد الحاويات" style="-fx-pref-width: 360;" />
+    <ComboBox fx:id="statusCombo" promptText="الحالة" style="-fx-pref-width: 360;">
+        <items>
+            <FXCollections fx:factory="observableArrayList">
+                <String fx:value="Pending" />
+                <String fx:value="In Transit" />
+                <String fx:value="Arrived" />
+                <String fx:value="Customs Clearance" />
+                <String fx:value="Completed" />
+                <String fx:value="في انتظار الشحن" />
+                <String fx:value="تمت بنجاح" />
+            </FXCollections>
+        </items>
+    </ComboBox>
+    <TextField fx:id="policyField" promptText="رقم البوليصة / ملاحظات" style="-fx-pref-width: 360;" />
+
+    <HBox spacing="12" alignment="CENTER">
+        <Button text="إلغاء" onAction="#cancel" style="-fx-pref-width: 120; -fx-background-color: #aaa; -fx-text-fill: white;" />
+        <Button text="حفظ" onAction="#save" style="-fx-pref-width: 120; -fx-background-color: #c91e2b; -fx-text-fill: white;" />
+    </HBox>
+</VBox>

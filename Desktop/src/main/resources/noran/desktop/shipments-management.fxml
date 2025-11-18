@@ -11,7 +11,7 @@
             style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;"
             xmlns="http://javafx.com/javafx/17.0.12"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="noran.desktop.Controllers.ClientDataController">
+            fx:controller="noran.desktop.Controllers.ShipmentsManagementController">
 
     <!-- RIGHT SIDEBAR -->
     <left>
@@ -30,15 +30,16 @@
                         maxWidth="Infinity"
                         style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
                 <Button text="إدارة العملاء"
+                        onAction="#client_management_btn_handle"
                         maxWidth="Infinity"
-                        style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12; -fx-background-radius: 8;" />
+                        style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
                 <Button text="إدارة الفواتير"
                         onAction="#onInvoiceManagementClick"
                         maxWidth="Infinity"
                         style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
                 <Button text="إدارة الشحنات"
                         maxWidth="Infinity"
-                        style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
+                        style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12; -fx-background-radius: 8;" />
                 <Button text="إدارة الصلاحيات"
                         maxWidth="Infinity"
                         style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
@@ -67,7 +68,7 @@
                         <Image url="@images/menu.png" />
                     </image>
                 </ImageView>
-                <Label text="إدارة العملاء"
+                <Label text="إدارة الشحنات"
                        style="-fx-font-size: 15; -fx-text-fill: #111; -fx-padding: 0 12 0 12;" />
             </HBox>
 
@@ -128,31 +129,26 @@
                            style="-fx-background-color: transparent;">
 
                     <columns>
-                        <TableColumn fx:id="colName" text="اسم العميل" prefWidth="220"/>
-                        <TableColumn fx:id="colEmail" text="البريد الالكتروني" prefWidth="220"/>
-                        <TableColumn fx:id="colPhone" text="رقم الهاتف" prefWidth="220"/>
-                        <TableColumn fx:id="colSSN" text="الرقم القومي" prefWidth="220"/>
-                        <TableColumn fx:id="colType" text="نوع العميل" prefWidth="220"/>
-                        <TableColumn fx:id="colRank" text="رتبة العميل" prefWidth="220"/>
+                        <TableColumn fx:id="colPortName" text="اسم الميناء" prefWidth="220"/>
+                        <TableColumn fx:id="colContainerNumber" text="عدد الحاويات" prefWidth="220"/>
+                        <TableColumn fx:id="colCounrty" text="الدولة" prefWidth="220"/>
+                        <TableColumn fx:id="colShipmentStatus" text="حالة الشحنة" prefWidth="220"/>
+                        <TableColumn fx:id="colPolicy" text="البوليصة" prefWidth="220"/>
                     </columns>
                 </TableView>
             </StackPane>
             <!-- Buttons -->
             <HBox alignment="CENTER_RIGHT" spacing="12" style="-fx-padding: 12 0 0 0;">
-                <Button fx:id="addClientBtn"
-                        onAction="#addClient"
-                        style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;"
-                        text="إضافة عميل جديد +" />
 
                 <Button fx:id="deleteClientBtn"
-                        onAction="#deleteClient"
+                        onAction="#deleteShipment"
                         style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;"
-                        text="مسح العميل" />
+                        text="مسح الشحنة" />
 
                 <Button fx:id="updateClientBtn"
-                        onAction="#editClient"
+                        onAction="#editShipment"
                         style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;"
-                        text="تعديل العميل" />
+                        text="تعديل الشحنة" />
 
                 <Region HBox.hgrow="ALWAYS" />
             </HBox>

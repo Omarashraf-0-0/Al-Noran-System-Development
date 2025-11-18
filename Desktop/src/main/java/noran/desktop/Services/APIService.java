@@ -22,6 +22,11 @@ public class APIService {
         return sendRequest(urlString, "DELETE", null);
     }
 
+    // PATCH request (if needed)
+    public static String patch(String urlString, String jsonBody) {
+        return sendRequest(urlString, "PATCH", jsonBody);
+    }
+
     // Common method for sending requests
     private static String sendRequest(String urlString, String method, String jsonBody) {
         HttpURLConnection conn = null;
@@ -35,7 +40,7 @@ public class APIService {
             conn.setDoOutput(true);
             conn.setDoInput(true);
 
-            // Send JSON body if provided
+            // For DELETE we generally don't send a body; send only if provided
             if (jsonBody != null && !jsonBody.isBlank()) {
                 try (OutputStream os = conn.getOutputStream()) {
                     byte[] input = jsonBody.getBytes(StandardCharsets.UTF_8);
@@ -44,7 +49,6 @@ public class APIService {
                 }
             }
 
-            // Read response
             int status = conn.getResponseCode();
             InputStream inputStream = (status >= 200 && status < 300)
                     ? conn.getInputStream()

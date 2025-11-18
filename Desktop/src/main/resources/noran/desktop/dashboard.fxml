@@ -19,7 +19,7 @@
             <Button fx:id="btnClients" onAction="#client_management_btn_handle" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أدارة العملاء" />
             <Button fx:id="btnInvoices" onAction="#invoice_management_btn_handle" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الفواتير" />
             <Button fx:id="btnPermissions" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الصلاحيات" />
-            <Button fx:id="btnShipments" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الشحنات" />
+            <Button fx:id="btnShipments" onAction="#shipments_management_btn_handle" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الشحنات" />
             <Button fx:id="btnFiles" maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="أرشيف الملفات" />
         </VBox>
 
