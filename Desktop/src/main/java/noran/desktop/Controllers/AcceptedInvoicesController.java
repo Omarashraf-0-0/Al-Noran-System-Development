@@ -105,15 +105,21 @@ public class AcceptedInvoicesController {
     private void loadAcceptedInvoices() {
         invoiceList.clear();
         String sql = """
-            SELECT sf.invoiceNumber, sf.createdAt, u.fullname, u.taxNumber,
-                   (COALESCE(sf.Port_fee_price, 0) + COALESCE(sf.Clearance_Fees_price, 0) +
-                    COALESCE(sf.Expense_Tips_price, 0) + COALESCE(sf.Sundries_price, 0) +
-                    COALESCE(sf.Additional_Services_price, 0) + COALESCE(sf.unsupportedItemPrice, 0)) AS total
-            FROM shipment_fees sf
-            JOIN shipments s ON sf.shipmentId = s.shipment_id
-            JOIN users u ON s.clientId = u._id
-            GROUP BY sf.invoiceNumber
-            ORDER BY sf.createdAt DESC
+           
+                SELECT sf.invoiceNumber, sf.createdAt, u.fullname, u.taxNumber,
+                  (COALESCE(sf.Port_fee_price, 0) +
+                   COALESCE(sf.Clearance_Fees_price, 0) +
+                   COALESCE(sf.Expense_Tips_price, 0) +
+                   COALESCE(sf.Sundries_price, 0) +
+                   COALESCE(sf.Additional_Services_price, 0) +
+                   COALESCE(sf.unsupportedItemPrice, 0)) AS total
+           FROM shipment_fees sf
+           JOIN shipments s ON sf.shipmentId = s.shipment_id
+           JOIN users u ON s.clientId = u._id
+           WHERE sf.invoiceStatus = 'accepted'
+           GROUP BY sf.invoiceNumber
+           ORDER BY sf.createdAt DESC;
+           
             """;
 
         try (Connection conn = DatabaseConnection.connect();

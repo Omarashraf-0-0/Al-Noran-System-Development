@@ -40,6 +40,7 @@ import noran.desktop.models.Shipment;
 import noran.desktop.Database.DatabaseConnection;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.sql.*;
 import java.text.SimpleDateFormat;
@@ -524,6 +525,15 @@ public class HelloController implements Initializable {
         Parent root = loader.load();
         Stage stage = (Stage)((Node)e.getSource()).getScene().getWindow();
         stage.setScene(new Scene(root));
+        stage.show();
+    }
+    @FXML
+    public void onTa5les(ActionEvent event) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/AdminInvoices.fxml"));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(scene);
         stage.show();
     }
 }
