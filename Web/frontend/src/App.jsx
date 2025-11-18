@@ -15,6 +15,7 @@ import WelcomeBanner from "./pages/WelcomeBanner";
 import ShipmentStatus from "./pages/ShipmentStatus";
 import ClientShipments from "./pages/ClientShipments";
 import EmployeeShipmentManagement from "./pages/EmployeeShipmentManagement";
+import AdminShipmentManagement from "./pages/AdminShipmentManagement";
 
 const App = () => {
 	return (
@@ -37,6 +38,10 @@ const App = () => {
 				<Route
 					path="/employee-shipment/:shipmentId"
 					element={<EmployeeShipmentManagement />}
+				/>
+				<Route
+					path="/admin-shipment/:shipmentId"
+					element={<AdminShipmentManagement />}
 				/>
 				<Route path="/client-shipments" element={<ClientShipments />} />
 				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}

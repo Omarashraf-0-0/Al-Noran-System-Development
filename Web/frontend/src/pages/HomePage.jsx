@@ -47,23 +47,21 @@ const TrackingHero = ({ onSearch }) => {
 					</h1>
 
 					<form onSubmit={handleSubmit} className="space-y-6">
-						<div className="relative">
-							<input
-								type="text"
-								value={trackingNumber}
-								onChange={(e) => setTrackingNumber(e.target.value)}
-								placeholder="ادخل رقم الشحنة"
-								className="w-full px-6 py-4 pr-12 rounded-full text-right text-gray-700 text-lg focus:outline-none focus:ring-4 focus:ring-white/30 transition-all"
-							/>
-							<button
-								type="submit"
-								className="absolute left-2 top-1/2 -translate-y-1/2 bg-red-700 text-white p-3 rounded-full hover:bg-red-800 transition-colors"
-							>
-								<Search size={20} />
-							</button>
-						</div>
-
+					<div className="relative">
+						<input
+							type="text"
+							value={trackingNumber}
+							onChange={(e) => setTrackingNumber(e.target.value)}
+							placeholder="ادخل رقم الشحنة"
+							className="w-full px-6 py-4 pr-12 rounded-full text-right text-gray-900 text-lg focus:outline-none focus:ring-4 focus:ring-white/30 transition-all bg-white"
+						/>
 						<button
+							type="submit"
+							className="absolute left-2 top-1/2 -translate-y-1/2 bg-red-700 text-white p-3 rounded-full hover:bg-red-800 transition-colors"
+						>
+							<Search size={20} />
+						</button>
+					</div>						<button
 							type="submit"
 							className="w-full max-w-xs mx-auto block bg-white text-red-900 py-4 rounded-full font-bold text-lg hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg"
 						>
