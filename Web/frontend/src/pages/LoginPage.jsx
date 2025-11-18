@@ -35,6 +35,9 @@ const LoginPage = () => {
 						case "employee":
 							window.location.href = "/employeedashboard";
 							break;
+						case "admin":
+							window.location.href = "/admindashboard";
+							break;
 						default:
 							}
 					// window.location.href = "/";
