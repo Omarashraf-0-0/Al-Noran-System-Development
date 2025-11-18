@@ -12,7 +12,7 @@ import Datafield from "../components/DataField";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 
-const EmployeeShipmentManagement = () => {
+const AdminShipmentManagement = () => {
 	const { shipmentId } = useParams();
 	const navigate = useNavigate();
 
@@ -85,21 +85,24 @@ const EmployeeShipmentManagement = () => {
 	];
 
 	useEffect(() => {
-		// Get user from localStorage
+		// Get user from localStorage (optional for preview)
 		const storedUser = localStorage.getItem("user");
 		if (storedUser) {
 			const parsedUser = JSON.parse(storedUser);
 			setUser(parsedUser);
 
-			// Check if user is employee
-			if (parsedUser.type !== "employee") {
-				toast.error("غير مصرح لك بالوصول لهذه الصفحة");
-				navigate("/");
-			}
-		} else {
-			toast.error("يجب تسجيل الدخول أولاً");
-			navigate("/login");
+			// TODO: Uncomment this when admin authentication is ready
+			// Check if user is admin
+			// if (parsedUser.type !== "admin") {
+			// 	toast.error("غير مصرح لك بالوصول لهذه الصفحة");
+			// 	navigate("/");
+			// }
 		}
+		// TODO: Uncomment this when admin authentication is ready
+		// else {
+		// 	toast.error("يجب تسجيل الدخول أولاً");
+		// 	navigate("/login");
+		// }
 	}, [navigate]);
 
 	useEffect(() => {
@@ -111,6 +114,62 @@ const EmployeeShipmentManagement = () => {
 				if (!shipmentId) {
 					setError("معرف الشحنة غير موجود");
 					toast.error("معرف الشحنة غير موجود");
+					return;
+				}
+
+				// If no token, use mock data for preview
+				if (!token) {
+					console.log("No token found - using mock data for preview");
+					setTimeout(() => {
+						setShipment({
+							_id: shipmentId,
+							acid: "ACID-2024-12345",
+							importerName: "شركة الاستيراد المثالية",
+							employerName: "محمد أحمد",
+							status: "In Transit",
+							shipmentDescription: "شحنة أجهزة إلكترونية",
+							country: "الصين",
+							number46: "BL-2024-5678",
+							num_of_containers: "2",
+							port_name: "ميناء الإسكندرية",
+							requiredDocuments: [
+								{
+									_id: "doc1",
+									name: "شهادة المنشأ",
+									uploaded: true,
+									uploadedAt: new Date(),
+									requestedAt: new Date(Date.now() - 86400000),
+									fileId: "file123",
+								},
+								{
+									_id: "doc2",
+									name: "الفاتورة التجارية",
+									uploaded: false,
+									requestedAt: new Date(Date.now() - 172800000),
+								},
+							],
+						});
+						setSelectedStatus("In Transit");
+						setFileItems([
+							{
+								name: "invoice.pdf",
+								date: "١٥ نوفمبر ٢٠٢٤",
+								url: "#",
+								id: "file1",
+								documentType: "فاتورة",
+								description: "الفاتورة الأصلية",
+							},
+							{
+								name: "packing_list.pdf",
+								date: "١٤ نوفمبر ٢٠٢٤",
+								url: "#",
+								id: "file2",
+								documentType: "قائمة التعبئة",
+								description: "قائمة التعبئة والشحن",
+							},
+						]);
+						setLoading(false);
+					}, 500);
 					return;
 				}
 
@@ -206,9 +265,7 @@ const EmployeeShipmentManagement = () => {
 			}
 		};
 
-		if (token) {
-			fetchShipmentData();
-		}
+		fetchShipmentData();
 	}, [shipmentId, token]);
 
 	const getStatusColor = (status) => {
@@ -347,18 +404,18 @@ const EmployeeShipmentManagement = () => {
 				<div className="max-w-5xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-sm">
 					{shipment && (
 						<>
-							{/* Employee Badge */}
+							{/* Admin Badge */}
 							<div className="flex justify-between items-center mb-6">
-								<div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
-									<p className="text-sm text-blue-800 font-medium">
-										👔 وضع الموظف - إدارة الشحنة
+								<div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-2">
+									<p className="text-sm text-purple-800 font-medium">
+										👑 وضع المسؤول - إدارة الشحنة
 									</p>
 								</div>
 								<button
-									onClick={() => navigate("/employeedashboard")}
+									onClick={() => navigate("/")}
 									className="text-gray-600 hover:text-red-800 text-sm font-medium"
 								>
-									← العودة للوحة التحكم
+									← العودة للصفحة الرئيسية
 								</button>
 							</div>
 
@@ -529,7 +586,7 @@ const EmployeeShipmentManagement = () => {
 								/>
 							</div>
 
-							{/* Required Documents Status Section (for Employee) */}
+							{/* Required Documents Status Section (for Admin) */}
 							{shipment.requiredDocuments &&
 								shipment.requiredDocuments.length > 0 && (
 									<div className="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
@@ -940,4 +997,4 @@ const EmployeeShipmentManagement = () => {
 	);
 };
 
-export default EmployeeShipmentManagement;
+export default AdminShipmentManagement;
