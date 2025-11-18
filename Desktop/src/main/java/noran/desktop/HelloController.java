@@ -177,11 +177,11 @@ public class HelloController implements Initializable {
         invoiceItems.add(new InvoiceItem("رسوم اضافية للحاويات الزائدة", adjExtra, "مُحسب"));
         invoiceItems.add(new InvoiceItem("رسوم النافذة الواحدة", adjSingle, "مُحسب"));
 
-        invoiceNumberLabel.setText("رقم الفاتورة: INV-" + shipment.getShipmentId() + "-" + (System.currentTimeMillis() % 10000));
+        invoiceNumberLabel.setText("رقم الفاتورة: INV-" + shipment.getId() + "-" + (System.currentTimeMillis() % 10000));
         updateTotal();
 
-        markShipmentAsInvoiced(shipment.getShipmentId());
-        saveInvoiceToDatabase(shipment.getShipmentId(), adjPort, adjClearance, adjExpenses, adjSundries, adjExtra, adjSingle);
+        markShipmentAsInvoiced(shipment.getId());
+        saveInvoiceToDatabase(shipment.getId(), adjPort, adjClearance, adjExpenses, adjSundries, adjExtra, adjSingle);
     }
 
     private double getPortPrice(String port) {
@@ -395,7 +395,7 @@ public class HelloController implements Initializable {
         }
 
         String invoiceNum = invoiceNumberLabel.getText().replace("رقم الفاتورة: ", "").trim();
-        int shipmentId = selectedShipment.getShipmentId();
+        int shipmentId = selectedShipment.getId();
         Timestamp now = new Timestamp(System.currentTimeMillis());
 
         // متغيرات لتجميع القيم
