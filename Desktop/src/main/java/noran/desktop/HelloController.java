@@ -534,8 +534,21 @@ public class HelloController implements Initializable {
     }
 
     @FXML
-    private void invoice_management_btn_handle(ActionEvent event) {
-        // unchanged
+    private void invoice_management_btn_handle(ActionEvent event)throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/invoices-management.fxml"));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(scene);
+        stage.show();
+    }
+    @FXML public void client_management(ActionEvent event)throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/client-data.fxml"));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(scene);
+        stage.show();
     }
 
     // ================= Navigation =================
@@ -549,6 +562,15 @@ public class HelloController implements Initializable {
     @FXML
     public void onTa5les(ActionEvent event) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/AdminInvoices.fxml"));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    public void employee_management_btn_handle(ActionEvent event)throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/employee-management.fxml"));
         Parent root = loader.load();
         Scene scene = new Scene(root);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();

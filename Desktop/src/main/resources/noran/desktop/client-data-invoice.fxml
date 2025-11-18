@@ -35,12 +35,15 @@
                         style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
                 <Button text="إدارة الفواتير"
                         maxWidth="Infinity"
+                        onAction="#invoice_management"
                         style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12; -fx-background-radius: 8;" />
                 <Button text="إدارة الشحنات"
                         maxWidth="Infinity"
+                        onAction="#shipment_management"
                         style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
                 <Button text="إدارة الصلاحيات"
                         maxWidth="Infinity"
+                        onAction="#employee_management"
                         style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" />
                 <Button text="تخليص الفواتير"
                         onAction="#onTa5les"

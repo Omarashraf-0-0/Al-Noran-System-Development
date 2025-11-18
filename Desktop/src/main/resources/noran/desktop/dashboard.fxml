@@ -16,7 +16,7 @@
         <VBox fx:id="sidebar" alignment="TOP_RIGHT" prefWidth="260" spacing="14"
               style="-fx-background-color: white; -fx-padding: 18; -fx-border-color: transparent;">
 
-            <VBox alignment="TOP_CENTER" spacing="16">
+            <VBox alignment="TOP_LEFT" spacing="16">
                 <Button maxWidth="Infinity" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 12 20; -fx-font-size: 15; -fx-background-radius: 10; -fx-font-weight: bold;" text="لوحة التحكم" />
                 <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="العمليات الحالية" />
                 <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 14; -fx-alignment: CENTER_LEFT; -fx-padding: 12 20;" text="آخر العمليات المنفذة" />
