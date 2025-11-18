@@ -52,6 +52,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
   void _applyFiltersAndSearch() {
     final searchQuery = _searchController.text.toLowerCase().trim();
 
+    if (!mounted) return;
     setState(() {
       // Filter current shipments
       _currentShipments =
@@ -136,6 +137,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
 
   Future<void> _loadShipments() async {
     try {
+      if (!mounted) return;
       setState(() => _isLoading = true);
 
       print('🚢 [MyShipments] Loading shipments...');
@@ -180,6 +182,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
           }
         }
 
+        if (!mounted) return;
         setState(() {
           _allCurrentShipments = current;
           _allCompletedShipments = completed;
@@ -192,6 +195,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
           '🚢 [MyShipments] Current: ${current.length}, Completed: ${completed.length}',
         );
       } else {
+        if (!mounted) return;
         setState(() => _isLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -204,6 +208,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
       }
     } catch (e) {
       print('❌ [MyShipments] Error: $e');
+      if (!mounted) return;
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -600,7 +605,14 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
 
   Widget _buildShipmentCard(Map<String, dynamic> shipment) {
     return InkWell(
-      onTap: () {},
+      onTap: () {
+        // Navigate to shipment details page
+        Navigator.pushNamed(
+          context,
+          '/shipment-details',
+          arguments: {'shipmentId': shipment['id'].toString()},
+        );
+      },
       borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -822,17 +834,14 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
               const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.upload_file_rounded, size: 18),
-                  label: const Text(
-                    'رفع المستندات',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Cairo',
-                    ),
-                  ),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/shipment-details',
+                      arguments: {'shipmentId': shipment['id'].toString()},
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF690000),
                     foregroundColor: Colors.white,
@@ -841,6 +850,21 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     elevation: 0,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Text(
+                        'عرض تفاصيل الشحنة',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(Icons.visibility_rounded, size: 18),
+                    ],
                   ),
                 ),
               ),
@@ -919,8 +943,16 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
       child: InkWell(
         onTap: () {
           if (index == 0) {
-            Navigator.pop(context);
+            Navigator.pushReplacementNamed(
+              context,
+              '/home',
+              arguments: {
+                'userName': widget.userName,
+                'userEmail': widget.userEmail,
+              },
+            );
           } else {
+            if (!mounted) return;
             setState(() => _selectedIndex = index);
           }
         },
@@ -1043,6 +1075,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     final isSelected = _selectedFilter == title;
     return InkWell(
       onTap: () {
+        if (!mounted) return;
         setState(() {
           _selectedFilter = title;
         });
@@ -1253,16 +1286,29 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                       'طلب إدراج شهادة بحرية',
                       Icons.directions_boat_rounded,
                       const Color(0xFF1ba3b6),
+                      null,
                     ),
                     _buildAddShipmentOption(
                       'طلب إدراج شهادة جوية',
                       Icons.flight_takeoff_rounded,
                       Colors.orange,
+                      null,
                     ),
                     _buildAddShipmentOption(
                       'طلب رقم ACID',
                       Icons.description_rounded,
                       const Color(0xFF690000),
+                      () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(
+                          context,
+                          '/acid-request',
+                          arguments: {
+                            'userName': widget.userName,
+                            'userEmail': widget.userEmail,
+                          },
+                        );
+                      },
                     ),
                     const SizedBox(height: 20),
                   ],
@@ -1273,9 +1319,14 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     );
   }
 
-  Widget _buildAddShipmentOption(String title, IconData icon, Color color) {
+  Widget _buildAddShipmentOption(
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback? onTap,
+  ) {
     return InkWell(
-      onTap: () => Navigator.pop(context),
+      onTap: onTap ?? () => Navigator.pop(context),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
         padding: const EdgeInsets.all(16),

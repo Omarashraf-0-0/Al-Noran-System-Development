@@ -128,7 +128,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (token != null && token.isNotEmpty && userData['id'] != null) {
       // User is logged in, go directly to HomePage
       nextPage = HomePage(
-        userName: userData['name'] ?? 'مستخدم',
+        userName: userData['fullname'] ?? userData['username'] ?? 'مستخدم',
         userEmail: userData['email'] ?? '',
       );
     } else {
