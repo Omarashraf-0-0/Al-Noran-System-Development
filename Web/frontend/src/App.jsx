@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router";
+import { Routes, Route } from "react-router-dom";
 import TrackingPage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -20,6 +20,7 @@ import CustomerManagement from "./pages/CustomerManagement";
 import EmployeeShipmentManagement from "./pages/EmployeeShipmentManagement";
 import CertificatesManagement from "./pages/CertificatesManagement";
 import AdminShipmentManagement from "./pages/AdminShipmentManagement";
+import Chat from "./pages/Chat";
 
 const App = () => {
 	return (
@@ -49,14 +50,24 @@ const App = () => {
 				/>
 				<Route path="/client-shipments" element={<ClientShipments />} />
 				<Route path="/admindashboard" element={<AdminDashboard />} />
-				<Route path="/EmployeeNotifications" element={<EmployeeNotifications />} />
+				<Route
+					path="/EmployeeNotifications"
+					element={<EmployeeNotifications />}
+				/>
 				<Route path="/employeemanagement" element={<EmployeeManagement />} />
 				<Route path="/customermanagement" element={<CustomerManagement />} />
-				<Route path="/certificatesmanagement" element={<CertificatesManagement />} />
+				<Route
+					path="/certificatesmanagement"
+					element={<CertificatesManagement />}
+				/>
 				<Route path="*" element={<NotFound404 />} />
+				<Route path="/chat" element={<Chat />} />
+				{/* NEW */}
+				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
 			</Routes>
 		</div>
 	);
+	
 };
 
 export default App;
