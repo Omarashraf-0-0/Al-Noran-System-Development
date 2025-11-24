@@ -25,7 +25,8 @@ const protect = async (req, res, next) => {
 				id: decoded.id || decoded._id,
 				_id: decoded.id || decoded._id,
 				email: decoded.email,
-				userType: decoded.userType,
+				userType: decoded.userType || decoded.type,
+				type: decoded.type || decoded.userType,
 				clientType: decoded.clientType,
 			};
 

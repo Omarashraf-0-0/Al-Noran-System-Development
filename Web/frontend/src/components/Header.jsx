@@ -129,7 +129,7 @@ const Header = () => {
 				{ label: "طلبات ACID", path: "/acidrequests", icon: "📋" },
 				{ label: "طلب رقم acid", path: "/acidrequest", icon: "🔢" },
 				{ label: "رفع المستندات", path: "/upload-documents", icon: "📄" },
-				{ label: "الدعم", path: "/support", icon: "🆘" },
+				{ label: "الدعم", path: "/chat", icon: "💬" },
 			];
 		}
 
@@ -139,7 +139,9 @@ const Header = () => {
 			const baseItems = [
 				{ label: "لوحة التحكم", path: "/employeedashboard", icon: "📊" },
 				{ label: "الشحنات", path: "/employee-shipments", icon: "📦" },
+				{ label: "طلبات ACID", path: "/employee/acid-requests", icon: "📋" },
 				{ label: "العملاء", path: "/clients", icon: "👥" },
+				{ label: "الدعم", path: "/chat", icon: "💬" },
 			];
 
 			// Add admin-specific items

@@ -25,14 +25,20 @@ const ChatList = ({ users, selectedUser, onSelectUser }) => {
           <h2 className="text-xl font-bold text-gray-800 text-center">المحادثات</h2>
       </div>
       <div className="flex-grow overflow-y-auto">
-        {users.map(user => (
-          <ChatListItem
-            key={user.id}
-            user={user}
-            isSelected={selectedUser.id === user.id}
-            onSelect={() => onSelectUser(user)}
-          />
-        ))}
+        {users.length === 0 ? (
+          <div className="p-4 text-center text-gray-500">
+            لا توجد محادثات
+          </div>
+        ) : (
+          users.map(user => (
+            <ChatListItem
+              key={user.id}
+              user={user}
+              isSelected={selectedUser?.id === user.id}
+              onSelect={() => onSelectUser(user)}
+            />
+          ))
+        )}
       </div>
     </div>
   );

@@ -12,11 +12,27 @@ const createShipment = async (req, res) => {
 		const decoded = jwt.verify(token, process.env.JWT_SECRET);
 		const shipmentData = req.body;
 
-		// Ensure invoice file exists
+		// Handle invoice file
 		if (req.file) {
+			// New file uploaded
 			shipmentData.invoiceUrl = `/uploads/shipments/${req.file.filename}`;
+		} else if (decoded.type === "employee" || decoded.userType === "employee") {
+			// Employee creating shipment - invoice comes from ACID request uploads
+			// Find invoice from uploads array if provided
+			if (shipmentData.uploads && Array.isArray(shipmentData.uploads)) {
+				const invoiceUpload = shipmentData.uploads.find(upload => 
+					upload.category === 'invoice' || upload.documentType === 'proforma_invoice'
+				);
+				if (invoiceUpload && invoiceUpload.s3Url) {
+					shipmentData.invoiceUrl = invoiceUpload.s3Url;
+				}
+			}
+			// If no invoice found in uploads, it can be added later
+			if (!shipmentData.invoiceUrl) {
+				shipmentData.invoiceUrl = null;
+			}
 		} else {
-			// hash this when tetsing with no invoice file
+			// Client must provide invoice file
 			return res.status(400).json({ message: "Invoice file is required" });
 		}
 

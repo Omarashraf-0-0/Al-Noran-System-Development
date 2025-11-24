@@ -152,9 +152,134 @@ const updateAcidStatus = async (req, res) => {
 	}
 };
 
+// ✅ Get all ACID requests for employees (admin view)
+const getAllRequestsForEmployee = async (req, res) => {
+	try {
+		// Check if user is employee (check both userType and type for compatibility)
+		const userType = req.user.userType || req.user.type;
+		if (userType !== "employee") {
+			return res.status(403).json({
+				success: false,
+				message: "Access denied. Employees only.",
+			});
+		}
+
+		// Get all requests without filtering by userId
+		const requests = await AcidRequest.find()
+			.populate("userId", "username email")
+			.populate("uploads")
+			.sort({ requestDate: -1 });
+		
+		res.json({
+			success: true,
+			requests,
+		});
+	} catch (error) {
+		console.error("Error fetching all ACID requests:", error);
+		res.status(500).json({ 
+			success: false,
+			message: "Server error while fetching requests" 
+		});
+	}
+};
+
+// ✅ Update ACID request status by employee
+const updateAcidStatusByEmployee = async (req, res) => {
+	try {
+		// Check if user is employee (check both userType and type for compatibility)
+		const userType = req.user.userType || req.user.type;
+		if (userType !== "employee") {
+			return res.status(403).json({
+				success: false,
+				message: "Access denied. Employees only.",
+			});
+		}
+
+		const { id } = req.params;
+		const { status, acidCode } = req.body;
+
+		const request = await AcidRequest.findById(id);
+
+		if (!request) {
+			return res.status(404).json({ 
+				success: false,
+				message: "Request not found" 
+			});
+		}
+
+		// Validate status
+		const validStatuses = ["Pending", "ACID Issued", "Rejected"];
+		if (status && !validStatuses.includes(status)) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid status value",
+			});
+		}
+
+		// Update fields
+		if (status) request.status = status;
+		if (acidCode) request.acidCode = acidCode;
+
+		await request.save();
+
+		res.json({
+			success: true,
+			message: "ACID request updated successfully",
+			request,
+		});
+	} catch (error) {
+		console.error("Error updating ACID request:", error);
+		res.status(500).json({ 
+			success: false,
+			message: "Server error while updating ACID request" 
+		});
+	}
+};
+
+// ✅ Delete ACID request (after shipment creation)
+const deleteAcidRequest = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const userType = req.user.userType || req.user.type;
+
+		const request = await AcidRequest.findById(id);
+
+		if (!request) {
+			return res.status(404).json({ 
+				success: false,
+				message: "Request not found" 
+			});
+		}
+
+		// Allow deletion by employee or by the user who created it
+		if (userType === "employee" || request.userId.toString() === req.user._id.toString()) {
+			await AcidRequest.findByIdAndDelete(id);
+			
+			return res.json({
+				success: true,
+				message: "ACID request deleted successfully",
+			});
+		} else {
+			return res.status(403).json({
+				success: false,
+				message: "You don't have permission to delete this request",
+			});
+		}
+	} catch (error) {
+		console.error("Error deleting ACID request:", error);
+		res.status(500).json({ 
+			success: false,
+			message: "Server error while deleting ACID request" 
+		});
+	}
+};
+
 module.exports = {
 	createAcidRequest,
 	getAllRequests,
 	getRequestByAcid,
 	updateAcidStatus,
+	getAllRequestsForEmployee,
+	updateAcidStatusByEmployee,
+	deleteAcidRequest,
 };
