@@ -1,27 +1,67 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="71fa68e8-5159-49fe-9ebe-37f5d135855b" name="Changes" comment="" />
+    <list default="true" id="71fa68e8-5159-49fe-9ebe-37f5d135855b" name="Changes" comment="GUI DESKTOP">
+      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/Al-Noran-System-Development.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AcceptedInvoicesView.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AcceptedInvoicesView.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AdminInvoices.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AdminInvoices.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/add-client-popup.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/add-client-popup.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/add-employee-popup.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/add-employee-popup.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data-invoice.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data-invoice.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/employee-management.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/employee-management.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/hello-view.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/hello-view.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/images/avatar.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-management.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-management.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-popup.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-popup.fxml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="Git.Settings">
+    <option name="PREVIOUS_COMMIT_AUTHORS">
+      <list>
+        <option value="m7mdfox &lt;fcb.mohamed2005@gmail.com&gt;" />
+      </list>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "Amr3bsme3"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;Amr3bsme3&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/Omarashraf-0-0/Al-Noran-System-Development.git",
-    "accountId": "42090b23-ac97-4282-9250-05494eab23a0"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/Omarashraf-0-0/Al-Noran-System-Development.git&quot;,
+    &quot;accountId&quot;: &quot;6a079c3b-78da-4884-bdc3-4b6aad69a185&quot;
   }
-}]]></component>
+}</component>
+  <component name="KotlinScriptingSettings">
+    <scriptDefinition className="org.jetbrains.kotlin.scripting.resolve.KotlinScriptDefinitionFromAnnotatedTemplate" definitionName="KotlinSettingsScript">
+      <order>2147483647</order>
+      <autoReloadConfigurations>true</autoReloadConfigurations>
+    </scriptDefinition>
+  </component>
+  <component name="PackageJsonUpdateNotifier">
+    <dismissed value="$PROJECT_DIR$/Web/backend/package.json" />
+    <dismissed value="$PROJECT_DIR$/Web/frontend/package.json" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
 }</component>
@@ -31,19 +71,34 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "junie.onboarding.icon.badge.shown": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/AAST/Term 5/Agile/Noran/Desktop",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Maven.Desktop Run.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;desktop/test-merge&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/Yasmine Shehata/IdeaProjects/Client/Al-Noran-System-Development/Desktop/src/main/resources/noran/desktop/images&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
-  <component name="RunManager">
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\Yasmine Shehata\IdeaProjects\Client\Al-Noran-System-Development\Desktop\src\main\resources\noran\desktop\images" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Maven.Desktop Run">
+    <configuration name="Run Desktop" type="Application" factoryName="Application">
+      <option name="MAIN_CLASS_NAME" value="noran.desktop.Applications.LoginApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration default="true" type="JetRunConfigurationType">
       <module name="Al-Noran" />
       <method v="2">
@@ -57,12 +112,46 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="Desktop Run" type="MavenRunConfiguration" factoryName="Maven">
+      <MavenSettings>
+        <option name="myGeneralSettings" />
+        <option name="myRunnerSettings" />
+        <option name="myRunnerParameters">
+          <MavenRunnerParameters>
+            <option name="cmdOptions" />
+            <option name="profiles">
+              <set />
+            </option>
+            <option name="goals">
+              <list>
+                <option value="javafx:run" />
+              </list>
+            </option>
+            <option name="multimoduleDir" />
+            <option name="pomFileName" />
+            <option name="profilesMap">
+              <map />
+            </option>
+            <option name="projectsCmdOptionValues">
+              <list />
+            </option>
+            <option name="resolveToWorkspace" value="false" />
+            <option name="workingDirPath" value="$PROJECT_DIR$/Desktop" />
+          </MavenRunnerParameters>
+        </option>
+      </MavenSettings>
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Application.Run Desktop" />
+      <item itemvalue="Maven.Desktop Run" />
+    </list>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-9823dce3aa75-125ca727e0f0-intellij.indexing.shared.core-IU-243.24978.46" />
-        <option value="bundled-js-predefined-d6986cc7102b-76f8388c3a79-JavaScript-IU-243.24978.46" />
+        <option value="bundled-jdk-9f38398b9061-39b83d9b5494-intellij.indexing.shared.core-IU-241.18968.26" />
+        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-IU-241.18968.26" />
       </set>
     </attachedChunks>
   </component>
@@ -77,10 +166,26 @@
       <workItem from="1760492224646" duration="469000" />
       <workItem from="1760492742675" duration="246000" />
       <workItem from="1763455521780" duration="41000" />
+      <workItem from="1764163878901" duration="4016000" />
+      <workItem from="1764344684472" duration="4353000" />
+      <workItem from="1764421548808" duration="1649000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="dependencySupport" implementationName="javascript:npm:react" />
+    <option featureType="dependencySupport" implementationName="javascript:npm:tailwindcss" />
+    <option featureType="dependencySupport" implementationName="java:org.openjfx:javafx-base" />
+    <option featureType="dependencySupport" implementationName="javascript:npm:vite" />
+    <option featureType="dependencySupport" implementationName="javascript:npm:cypress" />
+    <option featureType="dependencySupport" implementationName="javascript:npm:postcss" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Merged" />
+    <MESSAGE value="GUI DESKTOP" />
+    <option name="LAST_COMMIT_MESSAGE" value="GUI DESKTOP" />
   </component>
 </project>
