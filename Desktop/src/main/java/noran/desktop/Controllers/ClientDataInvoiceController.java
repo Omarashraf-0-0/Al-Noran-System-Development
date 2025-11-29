@@ -1,6 +1,7 @@
 package noran.desktop.Controllers;
 
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -28,31 +29,82 @@ public class ClientDataInvoiceController implements Initializable {
     @FXML private Label userNameLabel;
     @FXML private Label userIdLabel;
     @FXML private Button btnViewAcceptedInvoices;
+
+    // Table Setup
     @FXML private TableView<UserRow> invoicesTable;
     @FXML private TableColumn<UserRow, String> colClientName;
     @FXML private TableColumn<UserRow, String> colClientNumber;
     @FXML private TableColumn<UserRow, String> colClientType;
     @FXML private TableColumn<UserRow, String> colClientRank;
-    @FXML private TextField searchField;
 
+    // --- Data Lists ---
     private final ObservableList<UserRow> userList = FXCollections.observableArrayList();
+    private FilteredList<UserRow> filteredData;
+
+    // --- Injected Controllers ---
+    @FXML private SidebarController sidebarController;
+    @FXML private TopBarController topBarController;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        // Setup Table Columns
+        // 1. Setup Table Columns
         colClientName.setCellValueFactory(data -> data.getValue().usernameProperty());
         colClientNumber.setCellValueFactory(data -> data.getValue().taxNumberProperty());
         colClientType.setCellValueFactory(data -> data.getValue().clientTypeProperty());
         colClientRank.setCellValueFactory(data -> data.getValue().rankProperty());
 
-        loadUsersFromDatabase();
-        setupSearchFilter();
+        // 2. Wrap the ObservableList in a FilteredList (initially display all data)
+        filteredData = new FilteredList<>(userList, p -> true);
 
-        // Show current logged-in user info
-        var currentUser = AppSession.getInstance().getCurrentUser();
-        if (currentUser != null) {
-            if (userNameLabel != null) userNameLabel.setText(currentUser.getName() != null ? currentUser.getName() : "");
-            if (userIdLabel != null) userIdLabel.setText(currentUser.getId() != null ? "ID: " + currentUser.getId() : "");
+        // 3. Wrap the FilteredList in a SortedList (to allow sorting by clicking headers)
+        SortedList<UserRow> sortedData = new SortedList<>(filteredData);
+        sortedData.comparatorProperty().bind(invoicesTable.comparatorProperty());
+
+        // 4. Bind the table to the SortedList
+        invoicesTable.setItems(sortedData);
+
+        // 5. Load Data
+        loadUsersFromDatabase();
+
+        // 6. Setup Sidebar
+        if (sidebarController != null) {
+            sidebarController.setActivePage("invoices");
+        }
+
+        // 7. Setup TopBar (User Info + Search Logic)
+        User currentUser = AppSession.getInstance().getCurrentUser();
+        if (topBarController != null) {
+
+            // Set Page Title
+            topBarController.setPageTitle("إدارة الفواتير");
+
+            // Set User Info
+            if (currentUser != null) {
+                String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
+                String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
+                topBarController.setUserData(name, id);
+            }
+
+            // --- DYNAMIC SEARCH LOGIC ---
+            topBarController.setOnSearchAction(searchText -> {
+                filteredData.setPredicate(user -> {
+                    // If filter text is empty, display all users.
+                    if (searchText == null || searchText.isEmpty()) {
+                        return true;
+                    }
+
+                    String lowerCaseFilter = searchText.toLowerCase();
+
+                    // Search by Name or Tax Number
+                    if (user.getUsername() != null && user.getUsername().toLowerCase().contains(lowerCaseFilter)) {
+                        return true; // Match Name
+                    } else if (user.getTaxNumber() != null && user.getTaxNumber().contains(lowerCaseFilter)) {
+                        return true; // Match Tax Number
+                    }
+
+                    return false; // No Match
+                });
+            });
         }
 
         // Double-click to open invoice screen
@@ -67,8 +119,8 @@ public class ClientDataInvoiceController implements Initializable {
     }
 
     private void loadUsersFromDatabase() {
-        userList.clear();
-        // Fixed: Use fullname, taxNumber (not ssn), rank, and filter only active clients
+        userList.clear(); // Automatically updates the table because of binding
+
         String sql = """
             SELECT _id, fullname, taxNumber, clientType, rank 
             FROM users 
@@ -100,56 +152,23 @@ public class ClientDataInvoiceController implements Initializable {
                 userList.add(new UserRow(fullname, clientType, taxNumber != null ? taxNumber : "-", rank, id));
             }
 
-            invoicesTable.setItems(userList);
-
         } catch (SQLException e) {
             e.printStackTrace();
             showAlert("خطأ", "فشل تحميل بيانات العملاء: " + e.getMessage());
         }
     }
 
-    private void setupSearchFilter() {
-        FilteredList<UserRow> filteredData = new FilteredList<>(userList, p -> true);
-
-        searchField.textProperty().addListener((observable, oldValue, newValue) -> {
-            filteredData.setPredicate(user -> {
-                if (newValue == null || newValue.isBlank()) return true;
-                String lowerCaseFilter = newValue.toLowerCase();
-                return user.getUsername().toLowerCase().contains(lowerCaseFilter) ||
-                        (user.getTaxNumber() != null && user.getTaxNumber().contains(newValue));
-            });
-        });
-
-        SortedList<UserRow> sortedData = new SortedList<>(filteredData);
-        sortedData.comparatorProperty().bind(invoicesTable.comparatorProperty());
-        invoicesTable.setItems(sortedData);
-    }
+    // --- Navigation & Other Actions ---
 
     @FXML
     public void onDashboardClick(ActionEvent event) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/dashboard.fxml"));
-        Parent root = loader.load();
-        Scene scene = new Scene(root);
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
+        navigate(event, "/noran/desktop/dashboard.fxml");
     }
-
 
     @FXML
     public void onTa5les(ActionEvent event) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/AdminInvoices.fxml"));
-        Parent root = loader.load();
-        Scene scene = new Scene(root);
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
+        navigate(event, "/noran/desktop/AdminInvoices.fxml");
     }
-
-
-
-
-
 
     @FXML
     private void openAcceptedInvoices() {
@@ -178,7 +197,7 @@ public class ClientDataInvoiceController implements Initializable {
                     user.getTaxNumber(),
                     user.getClientType(),
                     user.getId(),
-                    user.getRank()  // This was missing before!
+                    user.getRank()
             );
 
             Scene scene = new Scene(root);
@@ -200,8 +219,25 @@ public class ClientDataInvoiceController implements Initializable {
         alert.showAndWait();
     }
 
-    public void onClientManagementClick(ActionEvent event)throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/client-data.fxml"));
+    public void onClientManagementClick(ActionEvent event) throws IOException {
+        navigate(event, "/noran/desktop/client-data.fxml");
+    }
+
+    public void invoice_management(ActionEvent event) throws IOException {
+        navigate(event, "/noran/desktop/client-data-invoice.fxml");
+    }
+
+    public void shipment_management(ActionEvent event) throws IOException {
+        navigate(event, "/noran/desktop/shipments-management.fxml");
+    }
+
+    public void employee_management(ActionEvent event) throws IOException {
+        navigate(event, "/noran/desktop/employee-management.fxml");
+    }
+
+    // Helper for navigation
+    private void navigate(ActionEvent event, String fxmlPath) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
         Parent root = loader.load();
         Scene scene = new Scene(root);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
@@ -209,13 +245,13 @@ public class ClientDataInvoiceController implements Initializable {
         stage.show();
     }
 
-    // Updated UserRow with proper getters
+    // --- Inner Class: UserRow ---
     public static class UserRow {
-        private final javafx.beans.property.SimpleStringProperty username;
-        private final javafx.beans.property.SimpleStringProperty clientType;
-        private final javafx.beans.property.SimpleStringProperty taxNumber;
-        private final javafx.beans.property.SimpleStringProperty rank;
-        private final javafx.beans.property.SimpleStringProperty id;
+        private final SimpleStringProperty username;
+        private final SimpleStringProperty clientType;
+        private final SimpleStringProperty taxNumber;
+        private final SimpleStringProperty rank;
+        private final SimpleStringProperty id;
 
         public UserRow(String username, String clientType, String taxNumber, String rank, String id) {
             this.username = new SimpleStringProperty(username != null ? username : "غير محدد");
@@ -231,15 +267,10 @@ public class ClientDataInvoiceController implements Initializable {
         public String getTaxNumber() { return taxNumber.get(); }
         public String getRank() { return rank.get(); }
 
-        public javafx.beans.property.StringProperty usernameProperty() { return username; }
-        public javafx.beans.property.StringProperty clientTypeProperty() { return clientType; }
-        public javafx.beans.property.StringProperty taxNumberProperty() { return taxNumber; }
-        public javafx.beans.property.StringProperty rankProperty() { return rank; }
-        public javafx.beans.property.StringProperty idProperty() { return id; }
-
+        public StringProperty usernameProperty() { return username; }
+        public StringProperty clientTypeProperty() { return clientType; }
+        public StringProperty taxNumberProperty() { return taxNumber; }
+        public StringProperty rankProperty() { return rank; }
+        public StringProperty idProperty() { return id; }
     }
-
-
-
-
 }

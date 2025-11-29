@@ -17,6 +17,8 @@ import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -35,6 +37,9 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import noran.desktop.Controllers.SidebarController;
+import noran.desktop.Controllers.TopBarController; // Import TopBar
+import noran.desktop.Controllers.User;
 import noran.desktop.models.InvoiceItem;
 import noran.desktop.models.Shipment;
 import noran.desktop.Database.DatabaseConnection;
@@ -54,31 +59,101 @@ public class HelloController implements Initializable {
     @FXML private Label invoiceNumberLabel;
     @FXML private Label invoiceDateLabel;
     @FXML private ComboBox<Shipment> clientShipmentComboBox;
+
+    // Table Setup
     @FXML private TableView<InvoiceItem> invoicesTable;
     @FXML private TableColumn<InvoiceItem, String> colDescription;
     @FXML private TableColumn<InvoiceItem, Double> colPrice;
-    @FXML private TableColumn<InvoiceItem, String> colDate;
+    @FXML private TableColumn<InvoiceItem, String> colDate; // Note: mapped to 'date' or status
     @FXML private Label totalCost;
 
+    // Data Lists
     private final ObservableList<Shipment> shipmentList = FXCollections.observableArrayList();
     private final ObservableList<InvoiceItem> invoiceItems = FXCollections.observableArrayList();
+    private FilteredList<InvoiceItem> filteredData; // Wrapper for search
+
     private String selectedClientId;
     private String selectedClientRank = "low";
     private Shipment selectedShipment;
+
+    // Injected Controllers
+    @FXML private SidebarController sidebarController;
+    @FXML private TopBarController topBarController; // Inject TopBar
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         setupTable();
         setupComboBox();
+
+        // Listener for total calculation (always calculate based on master list)
         invoiceItems.addListener((javafx.collections.ListChangeListener<InvoiceItem>) c -> updateTotal());
+
         invoiceDateLabel.setText("التاريخ: " + new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
+
+        // Setup Sidebar
+        if (sidebarController != null) {
+            sidebarController.setActivePage("invoices");
+        } else {
+            System.err.println("SidebarController was not injected. Check fx:id in FXML.");
+        }
+
+        // Setup TopBar (User Info + Search Logic)
+        setupTopBar();
+    }
+
+    private void setupTopBar() {
+        if (topBarController != null) {
+            // Set User Info (Optional - grab from AppSession if needed)
+            User currentUser = AppSession.getInstance().getCurrentUser();
+            if (currentUser != null) {
+                String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
+                String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
+                topBarController.setUserData(name, id);
+            }
+
+            topBarController.setPageTitle("إنشاء فاتورة");
+
+            // --- SEARCH LOGIC ---
+            topBarController.setOnSearchAction(searchText -> {
+                filteredData.setPredicate(item -> {
+                    // If filter text is empty, display all items.
+                    if (searchText == null || searchText.isEmpty()) {
+                        return true;
+                    }
+
+                    String lowerCaseFilter = searchText.toLowerCase();
+
+                    // Search by Description
+                    if (item.getDescription() != null && item.getDescription().toLowerCase().contains(lowerCaseFilter)) {
+                        return true;
+                    }
+                    // Optional: Search by 'Status' (which is mapped to colDate)
+                    else if (item.getDate() != null && item.getDate().toLowerCase().contains(lowerCaseFilter)) {
+                        return true;
+                    }
+
+                    return false; // Does not match.
+                });
+            });
+        }
     }
 
     private void setupTable() {
         colDescription.setCellValueFactory(new PropertyValueFactory<>("description"));
         colPrice.setCellValueFactory(new PropertyValueFactory<>("price"));
         colDate.setCellValueFactory(new PropertyValueFactory<>("date"));
-        invoicesTable.setItems(invoiceItems);
+
+        // 1. Wrap the ObservableList in a FilteredList
+        filteredData = new FilteredList<>(invoiceItems, p -> true);
+
+        // 2. Wrap the FilteredList in a SortedList
+        SortedList<InvoiceItem> sortedData = new SortedList<>(filteredData);
+
+        // 3. Bind the SortedList comparator to the TableView comparator
+        sortedData.comparatorProperty().bind(invoicesTable.comparatorProperty());
+
+        // 4. Set items to the sorted/filtered list
+        invoicesTable.setItems(sortedData);
     }
 
     private void setupComboBox() {
@@ -132,7 +207,7 @@ public class HelloController implements Initializable {
     }
 
     private void generateInvoiceForShipment(Shipment shipment) {
-        invoiceItems.clear();
+        invoiceItems.clear(); // Clears master list -> filtered list updates -> table updates
         double portPrice = getPortPrice(shipment.getPortName());
         int containers = Math.max(shipment.getNumOfContainers(), 1);
         double extraContainers = containers > 2 ? (containers - 2) * 500 : 0;
@@ -216,14 +291,10 @@ public class HelloController implements Initializable {
         Timestamp now = new Timestamp(System.currentTimeMillis());
         try (Connection c = DatabaseConnection.connect();
              PreparedStatement ps = c.prepareStatement(sql)) {
-            // Insert each row...
-            // (your existing logic unchanged)
             ps.setString(1, invoiceNum); ps.setInt(2, shipmentId);
-            // ... rest of your batch logic
+            // (Note: This looks like a partial logic from your original code, kept as is)
         } catch (SQLException e) { e.printStackTrace(); }
     }
-
-
 
     @FXML
     public void addNewInvoiceRow() {
@@ -234,7 +305,6 @@ public class HelloController implements Initializable {
 
         dialog.showAndWait().ifPresent(name -> {
 
-            // 🔍 التحقق من أن الاسم يحتوي على حرف واحد على الأقل وليس أرقامًا فقط
             if (name == null || name.trim().isEmpty() || name.trim().matches("\\d+")) {
                 Alert a = new Alert(Alert.AlertType.ERROR, "يجب إدخال اسم صحيح يحتوي على حرف واحد على الأقل!");
                 a.show();
@@ -249,7 +319,6 @@ public class HelloController implements Initializable {
                 try {
                     double price = Double.parseDouble(p);
 
-                    // 🔍 شرط أن السعر يجب أن يكون 1 أو أكثر
                     if (price < 100) {
                         Alert a = new Alert(Alert.AlertType.ERROR, "السعر يجب أن يكون 100 أو أكثر!");
                         a.show();
@@ -267,7 +336,7 @@ public class HelloController implements Initializable {
     }
 
     @FXML
-    public void deleteSelectedRow() {  // ← لازم تكون public
+    public void deleteSelectedRow() {
         InvoiceItem selected = invoicesTable.getSelectionModel().getSelectedItem();
         if (selected != null && "يدوي".equals(selected.getDate())) {
             invoiceItems.remove(selected);
@@ -278,15 +347,8 @@ public class HelloController implements Initializable {
         }
     }
 
-//    @FXML
-//    private void deleteSelectedRow() {
-//        InvoiceItem selected = invoicesTable.getSelectionModel().getSelectedItem();
-//        if (selected != null && "يدوي".equals(selected.getDate())) {
-//            invoiceItems.remove(selected);
-//        }
-//    }
-
     private void updateTotal() {
+        // We calculate total from the Master List (all items), not just the filtered ones
         double total = invoiceItems.stream().mapToDouble(InvoiceItem::getPrice).sum();
         totalCost.setText(String.format("المجموع الكلي: %.2f جنيه", total));
     }
@@ -328,7 +390,7 @@ public class HelloController implements Initializable {
             String fontPath = "C:/Windows/Fonts/arial.ttf";
             PdfFont font = PdfFontFactory.createFont(fontPath, PdfEncodings.IDENTITY_H);
 
-            // Watermark Logo (optional - make sure path is correct)
+            // Watermark
             try {
                 Image logo = new Image(ImageDataFactory.create(getClass().getResource("/noran/desktop/images/Logo.png")));
                 logo.setFixedPosition(0, 0);
@@ -362,6 +424,7 @@ public class HelloController implements Initializable {
             table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("الحالة")).setFont(font).setBold().setBackgroundColor(com.itextpdf.kernel.colors.DeviceGray.GRAY)));
 
             double total = 0;
+            // Use master list for PDF, or use filteredData if you only want to print what is searched
             for (InvoiceItem item : invoiceItems) {
                 table.addCell(new Cell().add(new Paragraph(shapeArabic(item.getDescription())).setFont(font)));
                 table.addCell(new Cell().add(new Paragraph(String.format("%.2f", item.getPrice())).setFont(font).setTextAlignment(TextAlignment.LEFT)));
@@ -398,12 +461,10 @@ public class HelloController implements Initializable {
         int shipmentId = selectedShipment.getId();
         Timestamp now = new Timestamp(System.currentTimeMillis());
 
-        // متغيرات لتجميع القيم
         double portFee = 0, clearanceFee = 0, expenseTips = 0, sundries = 0, additionalServices = 0;
         StringBuilder manualNames = new StringBuilder();
         double manualTotal = 0;
 
-        // قراءة كل العناصر من الفاتورة وتوزيعها
         for (InvoiceItem item : invoiceItems) {
             String desc = item.getDescription().trim();
             double price = item.getPrice();
@@ -419,14 +480,12 @@ public class HelloController implements Initializable {
             } else if (desc.contains("رسوم النافذة الواحدة") || desc.contains("رسوم اضافية للحاويات الزائدة")) {
                 additionalServices += price;
             } else {
-                // عنصر يدوي
                 if (manualNames.length() > 0) manualNames.append("، ");
                 manualNames.append(desc);
                 manualTotal += price;
             }
         }
 
-        // استعلام الإدخال (صف واحد فقط)
         String sql = """
         INSERT INTO shipment_fees (
             invoiceNumber, shipmentId,
@@ -452,11 +511,7 @@ public class HelloController implements Initializable {
             ps.setTimestamp(10, now);
 
             ps.executeUpdate();
-
-            // تحديث حالة الشحنة
             markShipmentAsInvoiced(shipmentId);
-
-            // رسالة نجاح كبيرة وقابلة للنسخ
             showSuccessDialog(invoiceNum, shipmentId, portFee, clearanceFee, expenseTips, sundries, additionalServices, manualNames.toString(), manualTotal);
 
         } catch (SQLException e) {
@@ -464,7 +519,6 @@ public class HelloController implements Initializable {
             new Alert(Alert.AlertType.ERROR, "فشل في الحفظ:\n" + e.getMessage()).show();
         }
     }
-
 
     private void showSuccessDialog(String invoiceNum, int shipmentId, double port, double clearance,
                                    double expenses, double sundries, double additional, String manualName, double manualTotal) {
@@ -495,7 +549,6 @@ public class HelloController implements Initializable {
                 invoiceItems.stream().mapToDouble(InvoiceItem::getPrice).sum()
         );
 
-        // نافذة كبيرة قابلة للنسخ
         Stage dialog = new Stage();
         dialog.setTitle("تم الإرسال بنجاح");
         dialog.initModality(Modality.APPLICATION_MODAL);
@@ -528,17 +581,31 @@ public class HelloController implements Initializable {
         dialog.setScene(new Scene(root));
         dialog.showAndWait();
     }
+
     @FXML
     private void onSearch(ActionEvent e) {
-        // unchanged
+        // Legacy method, unused if TopBar search is active
     }
 
     @FXML
-    private void invoice_management_btn_handle(ActionEvent event) {
-        // unchanged
+    private void invoice_management_btn_handle(ActionEvent event)throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/invoices-management.fxml"));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(scene);
+        stage.show();
     }
 
-    // ================= Navigation =================
+    @FXML public void client_management(ActionEvent event)throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/client-data.fxml"));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(scene);
+        stage.show();
+    }
+
     @FXML public void onDashboardClick(ActionEvent e) throws Exception {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/dashboard.fxml"));
         Parent root = loader.load();
@@ -546,9 +613,19 @@ public class HelloController implements Initializable {
         stage.setScene(new Scene(root));
         stage.show();
     }
+
     @FXML
     public void onTa5les(ActionEvent event) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/AdminInvoices.fxml"));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    public void employee_management_btn_handle(ActionEvent event)throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/employee-management.fxml"));
         Parent root = loader.load();
         Scene scene = new Scene(root);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
