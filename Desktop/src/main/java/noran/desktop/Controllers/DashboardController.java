@@ -60,14 +60,24 @@ public class DashboardController implements Initializable {
 
     @FXML private Button downloadReportBtn;
 
+    @FXML
+    private SidebarController sidebarController;
+
+    @FXML private TopBarController topBarController;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         User currentUser = AppSession.getInstance().getCurrentUser();
-        if (currentUser != null) {
-            userNameLabel.setText(currentUser.getName() != null ? currentUser.getName() : "مدير النظام");
-            userIdLabel.setText(currentUser.getId() != null ? "ID: " + currentUser.getId() : "");
-        }
+
         loadDashboardData();
+        sidebarController.setActivePage("dashboard");
+        if (topBarController != null && currentUser != null) {
+            String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
+            String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
+            topBarController.setUserData(name, id);
+        }
+        topBarController.setSearchBarVisible(false);
+
     }
 
     private void loadDashboardData() {

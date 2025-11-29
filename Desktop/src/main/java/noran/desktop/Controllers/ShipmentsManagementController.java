@@ -1,9 +1,12 @@
 package noran.desktop.Controllers;
 
+import noran.desktop.AppSession;
 import noran.desktop.Database.DatabaseConnection;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -15,6 +18,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import noran.desktop.Services.APIService;
 import noran.desktop.models.Shipment;
+
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -31,21 +35,78 @@ public class ShipmentsManagementController {
     @FXML private TableColumn<Shipment, String> colShipmentStatus;
     @FXML private TableColumn<Shipment, String> colPolicy;
 
+    // --- Data Lists ---
     private final ObservableList<Shipment> shipments = FXCollections.observableArrayList();
+    private FilteredList<Shipment> filteredData; // Wrapper for search
+
+    // --- Injected Controllers ---
+    @FXML private SidebarController sidebarController;
+    @FXML private TopBarController topBarController;
 
     @FXML
     public void initialize() {
+        // 1. Setup Columns
         colPortName.setCellValueFactory(data -> data.getValue().portNameProperty());
         colContainerNumber.setCellValueFactory(data -> data.getValue().numOfContainersProperty().asString());
         colCounrty.setCellValueFactory(data -> data.getValue().countryProperty());
         colShipmentStatus.setCellValueFactory(data -> data.getValue().statusProperty());
         colPolicy.setCellValueFactory(data -> data.getValue().policyProperty());
 
+        // 2. Wrap the ObservableList in a FilteredList (initially display all data)
+        filteredData = new FilteredList<>(shipments, p -> true);
+
+        // 3. Wrap the FilteredList in a SortedList (to allow sorting by clicking headers)
+        SortedList<Shipment> sortedData = new SortedList<>(filteredData);
+        sortedData.comparatorProperty().bind(clientTable.comparatorProperty());
+
+        // 4. Bind the table to the SortedList
+        clientTable.setItems(sortedData);
+
+        // 5. Load Data
         loadShipments();
+
+        // 6. Setup Sidebar
+        if (sidebarController != null) {
+            sidebarController.setActivePage("shipments");
+        }
+
+        // 7. Setup TopBar (User Info + Search Logic)
+        User currentUser = AppSession.getInstance().getCurrentUser();
+        if (topBarController != null) {
+
+            // Set Page Title
+            topBarController.setPageTitle("إدارة الشحنات");
+
+            // Set User Info
+            if (currentUser != null) {
+                String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
+                String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
+                topBarController.setUserData(name, id);
+            }
+
+            // --- DYNAMIC SEARCH LOGIC ---
+            topBarController.setOnSearchAction(searchText -> {
+                filteredData.setPredicate(shipment -> {
+                    // If filter text is empty, display all shipments.
+                    if (searchText == null || searchText.isEmpty()) {
+                        return true;
+                    }
+
+                    String lowerCaseFilter = searchText.toLowerCase();
+
+                    // Search specifically by Port Name
+                    if (shipment.getPortName() != null && shipment.getPortName().toLowerCase().contains(lowerCaseFilter)) {
+                        return true;
+                    }
+
+                    return false; // No Match
+                });
+            });
+        }
     }
 
     public void loadShipments() {
-        shipments.clear();
+        shipments.clear(); // Automatically updates the table because of binding
         try (Connection conn = DatabaseConnection.connect()) {
             String sql = "SELECT shipment_id, port_name, country, num_of_containers, status, policy FROM shipments";
             PreparedStatement stmt = conn.prepareStatement(sql);
@@ -61,7 +122,7 @@ public class ShipmentsManagementController {
                         rs.getString("policy")
                 ));
             }
-            clientTable.setItems(shipments);
+            // Note: clientTable.setItems(shipments) is REMOVED because it's bound to sortedData
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -92,7 +153,7 @@ public class ShipmentsManagementController {
                     // set server id and insert into local
                     shipment.setId(remoteId);
                     insertLocalShipment(shipment);
-                    shipments.add(shipment);
+                    shipments.add(shipment); // Updates UI
                 } else {
                     // update remote first
                     boolean ok = updateShipmentRemotely(shipment);
@@ -101,6 +162,7 @@ public class ShipmentsManagementController {
                         return;
                     }
                     updateLocalShipment(shipment);
+                    // No need to add to list, object is updated in place
                 }
                 clientTable.refresh();
             }
@@ -126,9 +188,9 @@ public class ShipmentsManagementController {
             int deleted = ps.executeUpdate();
 
             if (deleted > 0) {
-                shipments.remove(selected);
+                shipments.remove(selected); // Updates UI
                 clientTable.refresh();
-                showAlert("Shipment deleted locally.");
+                showAlert("Shipment deleted succesfully.");
             } else {
                 showAlert("Shipment not found in local database.");
             }
@@ -148,9 +210,14 @@ public class ShipmentsManagementController {
         openShipmentPopup(selected);
     }
 
-    @FXML
-    public void onDashboardClick(ActionEvent event) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/dashboard.fxml"));
+    // --- NAVIGATION ---
+    @FXML public void onDashboardClick(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/dashboard.fxml"); }
+    @FXML public void onInvoiceManagementClick(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/client-data-invoice.fxml"); }
+    @FXML public void client_management_btn_handle(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/client-data.fxml"); }
+    @FXML public void employee_management_btn_handle(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/employee-management.fxml"); }
+
+    private void navigate(ActionEvent event, String fxmlPath) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
         Parent root = loader.load();
         Scene scene = new Scene(root);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
@@ -158,26 +225,7 @@ public class ShipmentsManagementController {
         stage.show();
     }
 
-    @FXML
-    public void onInvoiceManagementClick(ActionEvent event) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/client-data-invoice.fxml"));
-        Parent root = loader.load();
-        Scene scene = new Scene(root);
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
-    }
-
-    @FXML
-    public void client_management_btn_handle(ActionEvent event) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/client-data.fxml"));
-        Parent root = loader.load();
-        Scene scene = new Scene(root);
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
-    }
-
+    // --- DB HELPERS ---
     private void insertLocalShipment(Shipment s) {
         try (Connection conn = DatabaseConnection.connect()) {
             String sql = "INSERT INTO shipments (shipment_id, port_name, country, num_of_containers, status, policy) VALUES (?, ?, ?, ?, ?, ?)";
@@ -220,13 +268,11 @@ public class ShipmentsManagementController {
         alert.showAndWait();
     }
 
+    // --- REMOTE API HELPERS ---
     private static final String REMOTE_USERS_GET_URL = "http://localhost:3500/api/users/getAll";
     private static final String REMOTE_USERS_CREATE_URL = "http://localhost:3500/api/users/getAll";
     private static final String REMOTE_SHIPMENTS_URL = "http://localhost:3500/api/shipments";
 
-    // --- existing user methods omitted for brevity ---
-
-    // Add shipment remotely
     public static int addShipmentRemotely(Shipment shipment) {
         try {
             JSONObject payload = new JSONObject();
@@ -246,7 +292,6 @@ public class ShipmentsManagementController {
             JSONObject respJson = new JSONObject(response);
 
             if (respJson.has("shipment") && respJson.getJSONObject("shipment").has("id")) {
-                // CHANGE: use getInt instead of getString
                 return respJson.getJSONObject("shipment").getInt("id");
             }
 
@@ -254,7 +299,6 @@ public class ShipmentsManagementController {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        // CHANGE: Return 0 to indicate failure (int cannot be null)
         return 0;
     }
 
@@ -291,14 +335,5 @@ public class ShipmentsManagementController {
             e.printStackTrace();
             return false;
         }
-    }
-
-    public void employee_management_btn_handle(ActionEvent event) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/shipments-management.fxml"));
-        Parent root = loader.load();
-        Scene scene = new Scene(root);
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
     }
 }

@@ -1,95 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.TableColumn?>
-<?import javafx.scene.control.TableView?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.StackPane?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.ClientDataInvoiceController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT"
+            prefHeight="780"
+            prefWidth="1250"
+            style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;"
+            xmlns="http://javafx.com/javafx/17.0.12"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="noran.desktop.Controllers.ClientDataInvoiceController">
 
-    <!-- RIGHT SIDEBAR -->
     <left>
-        <VBox fx:id="sidebar" alignment="TOP_RIGHT" prefWidth="260" spacing="14" style="-fx-background-color: white; -fx-padding: 18;">
-
-            <VBox alignment="TOP_CENTER" spacing="16">
-                <Button maxWidth="Infinity" onAction="#onDashboardClick" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="لوحة التحكم" />
-                <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="العمليات الحالية" />
-                <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="آخر العمليات المنفذة" />
-                <Button maxWidth="Infinity" onAction="#onClientManagementClick" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة العملاء" />
-                <Button maxWidth="Infinity" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12; -fx-background-radius: 8;" text="إدارة الفواتير" />
-                <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الشحنات" />
-                <Button maxWidth="Infinity" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="إدارة الصلاحيات" />
-                <Button maxWidth="Infinity" onAction="#onTa5les" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_LEFT; -fx-padding: 8 12;" text="تخليص الفواتير" />
-            </VBox>
-        </VBox>
+        <fx:include source="Sidebar.fxml" fx:id="sidebar" />
     </left>
 
-    <!-- TOP BAR -->
     <top>
-        <HBox alignment="CENTER" maxWidth="Infinity" spacing="75" style="-fx-padding: 12 0; -fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0.0, 0, 2);">
-
-            <ImageView fitHeight="112" fitWidth="200" preserveRatio="true">
-                <image>
-                    <Image url="@images/Logo.png" />
-                </image>
-            </ImageView>
-
-            <HBox alignment="CENTER_RIGHT" spacing="8" style="-fx-background-color: #ffffff; -fx-padding: 6 10; -fx-background-radius: 20;">
-                <ImageView fitHeight="18" fitWidth="18">
-                    <image>
-                        <Image url="@images/menu.png" />
-                    </image>
-                </ImageView>
-                <Label style="-fx-font-size: 15; -fx-text-fill: #111; -fx-padding: 0 12 0 12;" text="إدارة الفواتير" />
-            </HBox>
-
-            <HBox alignment="CENTER_RIGHT" maxHeight="40" spacing="8" style="-fx-background-color: #f3f4f6; -fx-padding: 6 10; -fx-background-radius: 20;">
-                <TextField fx:id="searchField" prefWidth="380" promptText="ابحث باسم العميل" style="-fx-background-color: transparent; -fx-border-width: 0;" />
-
-                <ImageView fitHeight="18" fitWidth="18">
-                    <image>
-                        <Image url="@images/search.png" />
-                    </image>
-                </ImageView>
-            </HBox>
-
-            <StackPane alignment="CENTER" maxHeight="40" style="-fx-padding: 6; -fx-background-radius: 18; -fx-background-color: #f3f4f6;">
-                <ImageView fitHeight="18" fitWidth="18">
-                    <image>
-                        <Image url="@images/notification.png" />
-                    </image>
-                </ImageView>
-            </StackPane>
-
-            <HBox alignment="CENTER" spacing="10" style="-fx-padding: 0 8;">
-                <VBox alignment="CENTER_LEFT" spacing="2">
-                    <Label fx:id="userNameLabel" style="-fx-font-weight: 600; -fx-font-size: 14;" text="ياسمين" />
-                    <Label fx:id="userIdLabel" style="-fx-text-fill: #9b9b9b; -fx-font-size: 11;" text="ID: 1234567" />
-                </VBox>
-
-                <ImageView fitHeight="44" fitWidth="44" preserveRatio="true">
-                    <image>
-                        <Image url="@images/avatar.png" />
-                    </image>
-                </ImageView>
-            </HBox>
-        </HBox>
+        <fx:include source="TopBar.fxml" fx:id="topBar"/>
     </top>
-
     <!-- CENTER CONTENT -->
     <center>
-        <VBox alignment="TOP_CENTER" spacing="24" style="-fx-padding: 32 24;">
+        <VBox spacing="24" alignment="TOP_CENTER" style="-fx-padding: 32 24;">
 
             <!-- زر الانتقال إلى الفواتير المقبولة -->
             <HBox alignment="CENTER_LEFT" spacing="12">
-                <Button fx:id="btnViewAcceptedInvoices" onAction="#openAcceptedInvoices" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 14 32; -fx-font-size: 15; -fx-background-radius: 10; -fx-font-weight: bold; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);" text="عرض الفواتير المقبولة والمرسلة">
+                <Button fx:id="btnViewAcceptedInvoices"
+                        text="عرض الفواتير المقبولة والمرسلة"
+                        onAction="#openAcceptedInvoices"
+                        style="-fx-background-color: #1e90ff; -fx-text-fill: white; -fx-padding: 14 32; -fx-font-size: 15; -fx-background-radius: 10; -fx-font-weight: bold; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);">
                     <graphic>
                         <ImageView fitHeight="20" fitWidth="20">
                             <image>
@@ -103,19 +43,23 @@
             <!-- Illustration -->
             <ImageView fitHeight="220" preserveRatio="true">
                 <image>
-                    <Image url="@images/Untitled%20design%20(8).png" />
+                    <Image url="@images/invoice-illustration.png" />
                 </image>
             </ImageView>
 
             <!-- Table container -->
             <StackPane style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 12;">
-                <TableView fx:id="invoicesTable" prefHeight="380" prefWidth="880" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css">
+                <TableView fx:id="invoicesTable"
+                           prefHeight="380"
+                           prefWidth="880"
+                           stylesheets="@invoices-table.css"
+                           style="-fx-background-color: transparent;">
 
                     <columns>
-                        <TableColumn fx:id="colClientName" prefWidth="220" text="اسم العميل" />
-                        <TableColumn fx:id="colClientNumber" prefWidth="220" text="الرقم التعريفي" />
-                        <TableColumn fx:id="colClientType" prefWidth="220" text="نوع العميل" />
-                        <TableColumn fx:id="colClientRank" prefWidth="220" text="رتبة العميل" />
+                        <TableColumn fx:id="colClientName" text="اسم العميل" prefWidth="220"/>
+                        <TableColumn fx:id="colClientNumber" text="الرقم التعريفي" prefWidth="220"/>
+                        <TableColumn fx:id="colClientType" text="نوع العميل" prefWidth="220"/>
+                        <TableColumn fx:id="colClientRank" text="رتبة العميل" prefWidth="220"/>
                     </columns>
                 </TableView>
             </StackPane>
