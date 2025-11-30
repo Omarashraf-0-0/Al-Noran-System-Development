@@ -816,8 +816,18 @@ const getRevenueComparison = async (req, res) => {
 
 		// Transform data for frontend
 		const monthNames = [
-			"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-			"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+			"Jan",
+			"Feb",
+			"Mar",
+			"Apr",
+			"May",
+			"Jun",
+			"Jul",
+			"Aug",
+			"Sep",
+			"Oct",
+			"Nov",
+			"Dec",
 		];
 
 		const dataMap = {};
