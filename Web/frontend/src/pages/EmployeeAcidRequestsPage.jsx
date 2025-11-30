@@ -3,6 +3,10 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import WelcomeBanner from "./WelcomeBanner";
+import filterListIcon from "../assets/images/filter_list.png";
+import filterAltIcon from "../assets/images/filter_alt.png";
+import searchIcon from "../assets/images/Search.svg";
 import "./EmployeeAcidRequestsPage.css";
 
 const EmployeeAcidRequestsPage = () => {
@@ -14,6 +18,10 @@ const EmployeeAcidRequestsPage = () => {
 	const [showConfirmModal, setShowConfirmModal] = useState(false);
 	const [confirmData, setConfirmData] = useState(null);
 	const [acidCodeInput, setAcidCodeInput] = useState("");
+	const [searchTerm, setSearchTerm] = useState("");
+	const [sortOption, setSortOption] = useState("newest");
+	const [isFilterOpen, setIsFilterOpen] = useState(false);
+	const [isSortOpen, setIsSortOpen] = useState(false);
 
 	// Shipment form data
 	const [shipmentData, setShipmentData] = useState({
@@ -35,7 +43,7 @@ const EmployeeAcidRequestsPage = () => {
 			setLoading(true);
 			const token = localStorage.getItem("token");
 			const response = await axios.get(
-				"http://localhost:3500/api/acid/employee/all",
+				`${import.meta.env.VITE_API_URL}/api/acid/employee/all`,
 				{
 					headers: { Authorization: `Bearer ${token}` },
 				}
@@ -65,7 +73,7 @@ const EmployeeAcidRequestsPage = () => {
 			}
 
 			const response = await axios.patch(
-				`http://localhost:3500/api/acid/employee/${requestId}/status`,
+				`${import.meta.env.VITE_API_URL}/api/acid/employee/${requestId}/status`,
 				payload,
 				{
 					headers: { Authorization: `Bearer ${token}` },
@@ -87,7 +95,7 @@ const EmployeeAcidRequestsPage = () => {
 		try {
 			const token = localStorage.getItem("token");
 			const response = await axios.post(
-				`http://localhost:3500/api/acid/employee/${requestId}/lock`,
+				`${import.meta.env.VITE_API_URL}/api/acid/employee/${requestId}/lock`,
 				{},
 				{
 					headers: { Authorization: `Bearer ${token}` },
@@ -113,7 +121,7 @@ const EmployeeAcidRequestsPage = () => {
 		try {
 			const token = localStorage.getItem("token");
 			const response = await axios.post(
-				`http://localhost:3500/api/acid/employee/${requestId}/unlock`,
+				`${import.meta.env.VITE_API_URL}/api/acid/employee/${requestId}/unlock`,
 				{},
 				{
 					headers: { Authorization: `Bearer ${token}` },
@@ -135,7 +143,7 @@ const EmployeeAcidRequestsPage = () => {
 		try {
 			const token = localStorage.getItem("token");
 			const response = await axios.post(
-				`http://localhost:3500/api/acid/employee/${requestId}/issue`,
+				`${import.meta.env.VITE_API_URL}/api/acid/employee/${requestId}/issue`,
 				{ confirmed: false },
 				{
 					headers: { Authorization: `Bearer ${token}` },
@@ -164,7 +172,9 @@ const EmployeeAcidRequestsPage = () => {
 		try {
 			const token = localStorage.getItem("token");
 			const response = await axios.post(
-				`http://localhost:3500/api/acid/employee/${confirmData.id}/issue`,
+				`${import.meta.env.VITE_API_URL}/api/acid/employee/${
+					confirmData.id
+				}/issue`,
 				{
 					confirmed: true,
 					acidCode: acidCodeInput,
@@ -247,7 +257,7 @@ const EmployeeAcidRequestsPage = () => {
 
 			// Create shipment via shipment endpoint
 			const response = await axios.post(
-				"http://localhost:3500/api/shipments",
+				`${import.meta.env.VITE_API_URL}/api/shipments`,
 				payload,
 				{
 					headers: { Authorization: `Bearer ${token}` },
@@ -274,7 +284,7 @@ const EmployeeAcidRequestsPage = () => {
 					console.log("Updating ACID request with payload:", updatePayload);
 
 					await axios.patch(
-						`http://localhost:3500/api/acid/${selectedRequest._id}`,
+						`${import.meta.env.VITE_API_URL}/api/acid/${selectedRequest._id}`,
 						updatePayload,
 						{
 							headers: { Authorization: `Bearer ${token}` },
@@ -339,270 +349,455 @@ const EmployeeAcidRequestsPage = () => {
 		}
 	};
 
-	const filteredRequests = requests.filter(
-		(req) => statusFilter === "All" || req.status === statusFilter
-	);
+	// Toggle functions for dropdowns
+	const toggleFilter = () => {
+		setIsFilterOpen(!isFilterOpen);
+		setIsSortOpen(false);
+	};
+
+	const toggleSort = () => {
+		setIsSortOpen(!isSortOpen);
+		setIsFilterOpen(false);
+	};
+
+	const handleFilterApply = () => {
+		setIsFilterOpen(false);
+	};
+
+	const handleSortApply = () => {
+		setIsSortOpen(false);
+	};
+
+	// Filter and search
+	let filteredRequests = requests.filter((req) => {
+		// Status filter
+		const matchesStatus = statusFilter === "All" || req.status === statusFilter;
+
+		// Search filter (ACID code, client name, supplier name)
+		const searchLower = searchTerm.toLowerCase();
+		const matchesSearch =
+			searchTerm === "" ||
+			req.acidCode?.toLowerCase().includes(searchLower) ||
+			req.userId?.username?.toLowerCase().includes(searchLower) ||
+			req.userId?.email?.toLowerCase().includes(searchLower) ||
+			req.supplier?.name?.toLowerCase().includes(searchLower);
+
+		return matchesStatus && matchesSearch;
+	});
+
+	// Sort requests
+	filteredRequests = [...filteredRequests].sort((a, b) => {
+		switch (sortOption) {
+			case "newest": {
+				const dateA = new Date(a.requestDate || a.createdAt).getTime();
+				const dateB = new Date(b.requestDate || b.createdAt).getTime();
+				return dateB - dateA;
+			}
+			case "oldest": {
+				const dateA = new Date(a.requestDate || a.createdAt).getTime();
+				const dateB = new Date(b.requestDate || b.createdAt).getTime();
+				return dateA - dateB;
+			}
+			case "clientAZ":
+				return (a.userId?.username || "").localeCompare(
+					b.userId?.username || "",
+					"ar"
+				);
+			case "clientZA":
+				return (b.userId?.username || "").localeCompare(
+					a.userId?.username || "",
+					"ar"
+				);
+			default:
+				return 0;
+		}
+	});
 
 	return (
-		<div className="employee-acid-page">
+		<div className="flex flex-col min-h-screen bg-gray-50 font-sans">
 			<Header />
-			<div className="employee-acid-container">
-				<h1>ACID Request Management</h1>
-				<p className="subtitle">Review and manage all client ACID requests</p>
+			<WelcomeBanner />
 
-				{/* Filter Section */}
-				<div className="filter-section-enhanced">
-					<div className="filter-header">
-						<h3 className="filter-title">📊 Filter Requests</h3>
-						<p className="filter-subtitle">Quick access by status</p>
+			<section className="flex-grow w-full bg-white py-12 px-8 shadow-inner">
+				<div className="max-w-7xl mx-auto">
+					<h1 className="text-3xl font-bold text-right text-red-800 mb-2">
+						إدارة طلبات ACID
+					</h1>
+					<p className="text-right text-gray-600 mb-8">
+						مراجعة وإدارة جميع طلبات ACID من العملاء
+					</p>
+					{/* Filter Section */}
+					<div className="filter-section-enhanced">
+						<div className="filter-header">
+							<h3 className="filter-title">📊 Filter Requests</h3>
+							<p className="filter-subtitle">Quick access by status</p>
+						</div>
+						<div className="filter-cards">
+							<button
+								className={`filter-card ${
+									statusFilter === "All" ? "active" : ""
+								}`}
+								onClick={() => setStatusFilter("All")}
+							>
+								<div className="filter-icon">📋</div>
+								<div className="filter-content">
+									<span className="filter-count">{requests.length}</span>
+									<span className="filter-label">All Requests</span>
+								</div>
+							</button>
+							<button
+								className={`filter-card ${
+									statusFilter === "Pending" ? "active" : ""
+								}`}
+								onClick={() => setStatusFilter("Pending")}
+							>
+								<div className="filter-icon">⏳</div>
+								<div className="filter-content">
+									<span className="filter-count">
+										{requests.filter((r) => r.status === "Pending").length}
+									</span>
+									<span className="filter-label">Pending</span>
+								</div>
+							</button>
+							<button
+								className={`filter-card ${
+									statusFilter === "Under Review" ? "active" : ""
+								}`}
+								onClick={() => setStatusFilter("Under Review")}
+							>
+								<div className="filter-icon">🔍</div>
+								<div className="filter-content">
+									<span className="filter-count">
+										{requests.filter((r) => r.status === "Under Review").length}
+									</span>
+									<span className="filter-label">Under Review</span>
+								</div>
+							</button>
+							<button
+								className={`filter-card ${
+									statusFilter === "ACID Issued" ? "active" : ""
+								}`}
+								onClick={() => setStatusFilter("ACID Issued")}
+							>
+								<div className="filter-icon">✅</div>
+								<div className="filter-content">
+									<span className="filter-count">
+										{requests.filter((r) => r.status === "ACID Issued").length}
+									</span>
+									<span className="filter-label">ACID Issued</span>
+								</div>
+							</button>
+							<button
+								className={`filter-card ${
+									statusFilter === "Rejected" ? "active" : ""
+								}`}
+								onClick={() => setStatusFilter("Rejected")}
+							>
+								<div className="filter-icon">❌</div>
+								<div className="filter-content">
+									<span className="filter-count">
+										{requests.filter((r) => r.status === "Rejected").length}
+									</span>
+									<span className="filter-label">Rejected</span>
+								</div>
+							</button>
+						</div>
 					</div>
-					<div className="filter-cards">
-						<button
-							className={`filter-card ${
-								statusFilter === "All" ? "active" : ""
-							}`}
-							onClick={() => setStatusFilter("All")}
-						>
-							<div className="filter-icon">📋</div>
-							<div className="filter-content">
-								<span className="filter-count">{requests.length}</span>
-								<span className="filter-label">All Requests</span>
-							</div>
-						</button>
-						<button
-							className={`filter-card ${
-								statusFilter === "Pending" ? "active" : ""
-							}`}
-							onClick={() => setStatusFilter("Pending")}
-						>
-							<div className="filter-icon">⏳</div>
-							<div className="filter-content">
-								<span className="filter-count">
-									{requests.filter((r) => r.status === "Pending").length}
-								</span>
-								<span className="filter-label">Pending</span>
-							</div>
-						</button>
-						<button
-							className={`filter-card ${
-								statusFilter === "Under Review" ? "active" : ""
-							}`}
-							onClick={() => setStatusFilter("Under Review")}
-						>
-							<div className="filter-icon">🔍</div>
-							<div className="filter-content">
-								<span className="filter-count">
-									{requests.filter((r) => r.status === "Under Review").length}
-								</span>
-								<span className="filter-label">Under Review</span>
-							</div>
-						</button>
-						<button
-							className={`filter-card ${
-								statusFilter === "ACID Issued" ? "active" : ""
-							}`}
-							onClick={() => setStatusFilter("ACID Issued")}
-						>
-							<div className="filter-icon">✅</div>
-							<div className="filter-content">
-								<span className="filter-count">
-									{requests.filter((r) => r.status === "ACID Issued").length}
-								</span>
-								<span className="filter-label">ACID Issued</span>
-							</div>
-						</button>
-						<button
-							className={`filter-card ${
-								statusFilter === "Rejected" ? "active" : ""
-							}`}
-							onClick={() => setStatusFilter("Rejected")}
-						>
-							<div className="filter-icon">❌</div>
-							<div className="filter-content">
-								<span className="filter-count">
-									{requests.filter((r) => r.status === "Rejected").length}
-								</span>
-								<span className="filter-label">Rejected</span>
-							</div>
-						</button>
-					</div>
-				</div>
+					{/* Search + Filter + Sort Controls */}
+					<div className="flex items-center justify-center mb-8 gap-4 relative">
+						{/* Left side — Filter + Sort */}
+						<div className="flex items-center gap-3">
+							{/* Filter Button */}
+							<button
+								onClick={toggleFilter}
+								className={`flex items-center gap-2 font-medium transition-colors ${
+									isFilterOpen
+										? "bg-red-800 text-white px-3 py-1 rounded-md"
+										: "text-red-800"
+								}`}
+							>
+								<img
+									src={filterAltIcon}
+									alt="Filter"
+									className="w-5 h-5 object-contain"
+								/>
+								تصفية
+							</button>
 
-				{/* Requests Table */}
-				{loading ? (
-					<div className="loading">Loading ACID requests...</div>
-				) : (
-					<div className="requests-table-container">
-						<table className="requests-table">
-							<thead>
-								<tr>
-									<th>Request ID</th>
-									<th>Client</th>
-									<th>Supplier</th>
-									<th>Goods</th>
-									<th>Request Date</th>
-									<th>Status</th>
-									<th>ACID Code</th>
-									<th>Actions</th>
-								</tr>
-							</thead>
-							<tbody>
-								{filteredRequests.length === 0 ? (
+							{/* Sort Button */}
+							<button
+								onClick={toggleSort}
+								className={`flex items-center gap-2 font-medium transition-colors ${
+									isSortOpen
+										? "bg-red-800 text-white px-3 py-1 rounded-md"
+										: "text-red-800"
+								}`}
+							>
+								<img
+									src={filterListIcon}
+									alt="Sort"
+									className="w-5 h-5 object-contain"
+								/>
+								ترتيب
+							</button>
+						</div>
+
+						{/* Search Bar */}
+						<div className="relative w-1/2">
+							<input
+								type="text"
+								placeholder="ابحث بواسطة كود ACID، اسم العميل، أو اسم المورد"
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								className="w-full bg-white shadow-md rounded-full py-2 px-4 pr-10 text-right focus:outline-none focus:ring-2 focus:ring-red-500 placeholder-gray-400 text-black"
+							/>
+							<img
+								src={searchIcon}
+								alt="Search"
+								className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+							/>
+						</div>
+
+						{/* Filter Dropdown */}
+						{isFilterOpen && (
+							<div className="absolute top-14 left-40 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
+								<h4 className="font-semibold text-red-800 mb-3">
+									تصفية حسب الحالة:
+								</h4>
+								<select
+									value={statusFilter}
+									onChange={(e) => setStatusFilter(e.target.value)}
+									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
+								>
+									<option value="All">الكل</option>
+									<option value="Pending">قيد الانتظار</option>
+									<option value="Under Review">قيد المراجعة</option>
+									<option value="ACID Issued">تم الإصدار</option>
+									<option value="Rejected">مرفوض</option>
+								</select>
+								<button
+									onClick={handleFilterApply}
+									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
+								>
+									تطبيق
+								</button>
+							</div>
+						)}
+
+						{/* Sort Dropdown */}
+						{isSortOpen && (
+							<div className="absolute top-14 left-20 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
+								<h4 className="font-semibold text-red-800 mb-3">ترتيب حسب:</h4>
+								<select
+									value={sortOption}
+									onChange={(e) => setSortOption(e.target.value)}
+									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
+								>
+									<option value="newest">الأحدث أولاً</option>
+									<option value="oldest">الأقدم أولاً</option>
+									<option value="clientAZ">العميل (أ-ي)</option>
+									<option value="clientZA">العميل (ي-أ)</option>
+								</select>
+								<button
+									onClick={handleSortApply}
+									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
+								>
+									تطبيق
+								</button>
+							</div>
+						)}
+					</div>{" "}
+					{/* Requests Table */}
+					{loading ? (
+						<div className="flex justify-center items-center py-12 gap-4">
+							<div className="spinner"></div>
+							<span className="text-gray-600 text-lg">
+								جاري تحميل الطلبات...
+							</span>
+						</div>
+					) : (
+						<div className="requests-table-container">
+							<table className="requests-table">
+								<thead>
 									<tr>
-										<td colSpan="8" className="no-data">
-											No ACID requests found
-										</td>
+										<th>Request ID</th>
+										<th>Client</th>
+										<th>Supplier</th>
+										<th>Goods</th>
+										<th>Request Date</th>
+										<th>Status</th>
+										<th>ACID Code</th>
+										<th>Actions</th>
 									</tr>
-								) : (
-									filteredRequests.map((request) => (
-										<tr key={request._id}>
-											<td>{request._id.substring(0, 8)}...</td>
-											<td>
-												<div className="client-info">
-													<strong>{request.userId?.username || "N/A"}</strong>
-													<br />
-													<small>{request.userId?.email || ""}</small>
-												</div>
-											</td>
-											<td>
-												<div className="supplier-info">
-													<strong>{request.supplier?.name}</strong>
-													<br />
-													<small>Tax: {request.supplier?.taxNum}</small>
-												</div>
-											</td>
-											<td>
-												<div className="goods-info">
-													<strong>{request.goods?.description}</strong>
-													<br />
-													<small>Weight: {request.goods?.weight}kg</small>
-												</div>
-											</td>
-											<td>
-												{new Date(request.requestDate).toLocaleDateString()}
-											</td>
-											<td>
-												<span
-													className={`status-badge ${getStatusBadgeClass(
-														request.status
-													)}`}
-												>
-													{request.status}
-												</span>
-											</td>
-											<td>
-												{request.acidCode ? (
-													<div className="acid-code-container">
-														<span className="acid-code">
-															{request.acidCode}
-														</span>
-														{request.hasShipment && (
-															<span className="shipment-badge">
-																✅ Shipment Created
-															</span>
-														)}
-													</div>
-												) : (
-													<span className="no-acid">Not Issued</span>
-												)}
-											</td>
-											<td>
-												<div className="action-buttons">
-													{request.status === "Pending" &&
-														!request.isLocked && (
-															<>
-																<button
-																	className="btn-lock"
-																	onClick={() => handleLockRequest(request._id)}
-																	title="Lock request to start review"
-																>
-																	🔒 Start Review
-																</button>
-																<button
-																	className="btn-reject"
-																	onClick={() =>
-																		handleStatusChange(request._id, "Rejected")
-																	}
-																>
-																	Reject
-																</button>
-															</>
-														)}
-													{request.status === "Under Review" &&
-														request.isLocked && (
-															<>
-																<button
-																	className="btn-approve"
-																	onClick={() =>
-																		requestIssueConfirmation(request._id)
-																	}
-																>
-																	Issue ACID
-																</button>
-																<button
-																	className="btn-unlock"
-																	onClick={() =>
-																		handleUnlockRequest(request._id)
-																	}
-																	title="Unlock request"
-																>
-																	🔓 Unlock
-																</button>
-																<button
-																	className="btn-reject"
-																	onClick={() =>
-																		handleStatusChange(request._id, "Rejected")
-																	}
-																>
-																	Reject
-																</button>
-															</>
-														)}
-													{request.status === "ACID Issued" &&
-														!request.hasShipment && (
-															<button
-																className="btn-shipment"
-																onClick={() => openShipmentModal(request)}
-															>
-																Create Shipment
-															</button>
-														)}
-													{request.status === "ACID Issued" &&
-														request.hasShipment && (
-															<div className="shipment-created-info">
-																<span className="shipment-status">
-																	🚢 Shipment Created
-																</span>
-																<small className="shipment-date">
-																	{new Date(
-																		request.shipmentCreatedAt
-																	).toLocaleDateString()}
-																</small>
-															</div>
-														)}
-													{request.status === "Rejected" && (
-														<span className="rejected-text">Rejected</span>
-													)}
-													{request.isLocked && (
-														<div
-															className="lock-indicator"
-															title={`Reviewing by ${
-																request.reviewingBy?.username || "Employee"
-															}`}
-														>
-															🔒 Locked
-														</div>
-													)}
-												</div>
+								</thead>
+								<tbody>
+									{filteredRequests.length === 0 ? (
+										<tr>
+											<td colSpan="8" className="no-data">
+												{searchTerm
+													? "لا توجد نتائج مطابقة للبحث"
+													: "لا توجد طلبات ACID"}
 											</td>
 										</tr>
-									))
-								)}
-							</tbody>
-						</table>
-					</div>
-				)}
-			</div>
+									) : (
+										filteredRequests.map((request) => (
+											<tr key={request._id}>
+												<td>{request._id.substring(0, 8)}...</td>
+												<td>
+													<div className="client-info">
+														<strong>{request.userId?.username || "N/A"}</strong>
+														<br />
+														<small>{request.userId?.email || ""}</small>
+													</div>
+												</td>
+												<td>
+													<div className="supplier-info">
+														<strong>{request.supplier?.name}</strong>
+														<br />
+														<small>Tax: {request.supplier?.taxNum}</small>
+													</div>
+												</td>
+												<td>
+													<div className="goods-info">
+														<strong>{request.goods?.description}</strong>
+														<br />
+														<small>Weight: {request.goods?.weight}kg</small>
+													</div>
+												</td>
+												<td>
+													{new Date(request.requestDate).toLocaleDateString()}
+												</td>
+												<td>
+													<span
+														className={`status-badge ${getStatusBadgeClass(
+															request.status
+														)}`}
+													>
+														{request.status}
+													</span>
+												</td>
+												<td>
+													{request.acidCode ? (
+														<div className="acid-code-container">
+															<span className="acid-code">
+																{request.acidCode}
+															</span>
+															{request.hasShipment && (
+																<span className="shipment-badge">
+																	✅ Shipment Created
+																</span>
+															)}
+														</div>
+													) : (
+														<span className="no-acid">Not Issued</span>
+													)}
+												</td>
+												<td>
+													<div className="action-buttons">
+														{request.status === "Pending" &&
+															!request.isLocked && (
+																<>
+																	<button
+																		className="btn-lock"
+																		onClick={() =>
+																			handleLockRequest(request._id)
+																		}
+																		title="Lock request to start review"
+																	>
+																		🔒 Start Review
+																	</button>
+																	<button
+																		className="btn-reject"
+																		onClick={() =>
+																			handleStatusChange(
+																				request._id,
+																				"Rejected"
+																			)
+																		}
+																	>
+																		Reject
+																	</button>
+																</>
+															)}
+														{request.status === "Under Review" &&
+															request.isLocked && (
+																<>
+																	<button
+																		className="btn-approve"
+																		onClick={() =>
+																			requestIssueConfirmation(request._id)
+																		}
+																	>
+																		Issue ACID
+																	</button>
+																	<button
+																		className="btn-unlock"
+																		onClick={() =>
+																			handleUnlockRequest(request._id)
+																		}
+																		title="Unlock request"
+																	>
+																		🔓 Unlock
+																	</button>
+																	<button
+																		className="btn-reject"
+																		onClick={() =>
+																			handleStatusChange(
+																				request._id,
+																				"Rejected"
+																			)
+																		}
+																	>
+																		Reject
+																	</button>
+																</>
+															)}
+														{request.status === "ACID Issued" &&
+															!request.hasShipment && (
+																<button
+																	className="btn-shipment"
+																	onClick={() => openShipmentModal(request)}
+																>
+																	Create Shipment
+																</button>
+															)}
+														{request.status === "ACID Issued" &&
+															request.hasShipment && (
+																<div className="shipment-created-info">
+																	<span className="shipment-status">
+																		🚢 Shipment Created
+																	</span>
+																	<small className="shipment-date">
+																		{new Date(
+																			request.shipmentCreatedAt
+																		).toLocaleDateString()}
+																	</small>
+																</div>
+															)}
+														{request.status === "Rejected" && (
+															<span className="rejected-text">Rejected</span>
+														)}
+														{request.isLocked && (
+															<div
+																className="lock-indicator"
+																title={`Reviewing by ${
+																	request.reviewingBy?.username || "Employee"
+																}`}
+															>
+																🔒 Locked
+															</div>
+														)}
+													</div>
+												</td>
+											</tr>
+										))
+									)}
+								</tbody>
+							</table>
+						</div>
+					)}
+				</div>
+			</section>
 
 			{/* Shipment Creation Modal */}
 			{showShipmentModal && selectedRequest && (
@@ -842,6 +1037,45 @@ const EmployeeAcidRequestsPage = () => {
 										document(s)
 									</p>
 								</div>
+
+								{confirmData.uploads && confirmData.uploads.length > 0 && (
+									<div className="detail-section">
+										<h4>📄 Uploaded Documents</h4>
+										<div className="documents-list">
+											{confirmData.uploads.map((upload, index) => {
+												const documentUrl =
+													upload.url || upload.s3Url || upload.presignedUrl;
+												return (
+													<div
+														key={upload._id || index}
+														className="document-item"
+													>
+														<span className="document-name">
+															{upload.documentType || "Document"} -{" "}
+															{upload.originalname || upload.filename}
+														</span>
+														<button
+															type="button"
+															className="btn-view-doc"
+															onClick={() => {
+																console.log("Upload object:", upload);
+																console.log("Document URL:", documentUrl);
+																if (documentUrl) {
+																	window.open(documentUrl, "_blank");
+																} else {
+																	toast.error("Document URL not available");
+																}
+															}}
+															disabled={!documentUrl}
+														>
+															👁️ View
+														</button>
+													</div>
+												);
+											})}
+										</div>
+									</div>
+								)}
 							</div>
 
 							<div className="acid-code-input">

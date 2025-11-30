@@ -9,7 +9,7 @@ import searchIcon from "../assets/images/Search.svg";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 
-export default function ShipmentsList() {
+export default function EmployeeShipments() {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [isSortOpen, setIsSortOpen] = useState(false);
@@ -179,7 +179,7 @@ export default function ShipmentsList() {
 			<section className="flex-grow w-full bg-white py-12 px-8 shadow-inner relative">
 				<div className="max-w-6xl mx-auto">
 					<h1 className="text-3xl font-bold text-right text-red-800 mb-8">
-						شحناتي
+						الشحنات
 					</h1>
 
 					{/* 🔍 Search + Filter + Sort */}
@@ -312,81 +312,67 @@ export default function ShipmentsList() {
 							<p className="text-gray-500 text-lg">لا توجد شحنات</p>
 						</div>
 					) : (
-						<>
-							<div className="overflow-x-auto">
-								<table className="w-full text-right border-separate border-spacing-y-3">
-									<tbody>
-										{filteredShipments.slice(0, 5).map((shipment) => (
-											<tr
-												key={shipment.id}
-												className="bg-gray-100 hover:bg-gray-200 rounded-xl transition text-right"
-											>
-												<td className="py-3 px-4 align-top">
-													<div className="flex flex-col text-sm">
-														<span className="text-gray-700 text-base font-semibold">
-															{shipment.clientName}
-														</span>
-														<span className="text-gray-500 text-xs">
-															{shipment.date}
-														</span>
-													</div>
-												</td>
-
-												{/* <td className="py-3 px-4 align-top">
-                        <div className="flex flex-col text-sm">
-                          <span className="text-gray-700 text-base font-semibold mb-1">
-                            رقم البوليصة
-                          </span>
-                        </div>
-                      </td> */}
-
-												<td className="py-3 px-4 align-top">
-													<div className="flex flex-col text-sm">
-														<span className="font-semibold text-gray-800">
-															{shipment.shipmentNo}
-														</span>
-													</div>
-												</td>
-
-												<td className="py-3 px-4 align-top">
-													<span
-														className="bg-blue-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit"
-														style={{ color: "#690000" }}
-													>
-														<img
-															src={quickReorderIcon}
-															alt="status icon"
-															className="w-4 h-4"
-														/>
-														{shipment.status}
+						<div className="overflow-x-auto">
+							<table className="w-full text-right border-separate border-spacing-y-3">
+								<tbody>
+									{filteredShipments.map((shipment) => (
+										<tr
+											key={shipment.id}
+											className="bg-gray-100 hover:bg-gray-200 rounded-xl transition text-right"
+										>
+											<td className="py-3 px-4 align-top">
+												<div className="flex flex-col text-sm">
+													<span className="text-gray-700 text-base font-semibold">
+														{shipment.clientName}
 													</span>
-												</td>
+													<span className="text-gray-500 text-xs">
+														{shipment.date}
+													</span>
+												</div>
+											</td>
 
-												<td className="py-3 px-4 align-top">
-													<a href={`/employee-shipment/${shipment.id}`}>
-														<span className="text-blue-600 text-sm font-medium underline cursor-pointer">
-															إدارة الشحنة
-														</span>
-													</a>
-												</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
+											<td className="py-3 px-4 align-top">
+												<div className="flex flex-col text-sm">
+													<span className="font-semibold text-gray-800">
+														{shipment.shipmentNo}
+													</span>
+												</div>
+											</td>
 
-							{/* View All Button */}
-							{filteredShipments.length > 5 && (
-								<div className="flex justify-center mt-8">
-									<a
-										href="/employee-shipments"
-										className="bg-red-800 text-white px-8 py-3 rounded-lg hover:bg-red-700 transition font-semibold"
-									>
-										عرض جميع الشحنات ({filteredShipments.length})
-									</a>
-								</div>
-							)}
-						</>
+											<td className="py-3 px-4 align-top">
+												<div className="flex flex-col text-sm">
+													<span className="text-gray-700 text-base">
+														{shipment.acid}
+													</span>
+												</div>
+											</td>
+
+											<td className="py-3 px-4 align-top">
+												<span
+													className="bg-blue-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit"
+													style={{ color: "#690000" }}
+												>
+													<img
+														src={quickReorderIcon}
+														alt="status icon"
+														className="w-4 h-4"
+													/>
+													{shipment.status}
+												</span>
+											</td>
+
+											<td className="py-3 px-4 align-top">
+												<a href={`/employee-shipment/${shipment.id}`}>
+													<span className="text-blue-600 text-sm font-medium underline cursor-pointer">
+														إدارة الشحنة
+													</span>
+												</a>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
 					)}
 				</div>
 			</section>

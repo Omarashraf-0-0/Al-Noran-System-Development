@@ -34,7 +34,7 @@ const WelcomeBanner = () => {
 	const user = JSON.parse(localStorage.getItem("user"));
 	const userName = user?.username || user?.fullname || user?.name || "الزائر";
 	const userID = user?.id;
-	const userRole = user?.role; // Get user role to determine endpoint
+	const userType = user?.type || user?.userType || user?.role; // Check multiple properties for user type
 	const token = localStorage.getItem("token");
 
 	const [stats, setStats] = useState({
@@ -53,8 +53,8 @@ const WelcomeBanner = () => {
 					return;
 				}
 
-				// Determine endpoint based on user role
-				const isEmployee = userRole === "employee" || userRole === "admin";
+				// Determine endpoint based on user type
+				const isEmployee = userType === "employee" || userType === "admin";
 				const endpoint = isEmployee
 					? `${
 							import.meta.env.VITE_API_URL
@@ -62,6 +62,10 @@ const WelcomeBanner = () => {
 					: `${
 							import.meta.env.VITE_API_URL
 					  }/api/shipments/user/${userID}/stats`;
+
+				console.log("User type:", userType);
+				console.log("Is employee:", isEmployee);
+				console.log("Fetching stats from:", endpoint);
 
 				const response = await axios.get(endpoint, {
 					headers: {
@@ -81,7 +85,7 @@ const WelcomeBanner = () => {
 		};
 
 		fetchStats();
-	}, [userID, userRole, token]);
+	}, [userID, userType, token]);
 
 	return (
 		<section className="flex flex-col items-center py-8 px-4">

@@ -1,31 +1,4 @@
-.employee-acid-page {
-	min-height: 100vh;
-	display: flex;
-	flex-direction: column;
-	background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-}
-
-.employee-acid-container {
-	flex: 1;
-	max-width: 1400px;
-	margin: 2rem auto;
-	padding: 2rem;
-	background: white;
-	border-radius: 12px;
-	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.employee-acid-container h1 {
-	color: #2c3e50;
-	margin-bottom: 0.5rem;
-	font-size: 2rem;
-}
-
-.subtitle {
-	color: #7f8c8d;
-	margin-bottom: 2rem;
-	font-size: 1rem;
-}
+/* Page styling now handled by Tailwind classes in JSX */
 
 /* Filter Section */
 .filter-section {
@@ -59,10 +32,10 @@
 /* Enhanced Filter Section */
 .filter-section-enhanced {
 	margin-bottom: 2rem;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
 	border-radius: 16px;
 	padding: 2rem;
-	box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+	box-shadow: 0 8px 24px rgba(153, 27, 27, 0.2);
 }
 
 .filter-header {
@@ -106,14 +79,14 @@
 .filter-card:hover {
 	transform: translateY(-4px);
 	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-	border-color: #667eea;
+	border-color: #dc2626;
 }
 
 .filter-card.active {
-	background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-	border-color: #f5576c;
+	background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+	border-color: #991b1b;
 	transform: translateY(-4px);
-	box-shadow: 0 8px 20px rgba(245, 87, 108, 0.3);
+	box-shadow: 0 8px 20px rgba(153, 27, 27, 0.3);
 }
 
 .filter-card.active .filter-content {
@@ -164,43 +137,53 @@
 /* Table Styles */
 .requests-table-container {
 	overflow-x: auto;
-	border-radius: 8px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+	margin-top: 1rem;
 }
 
 .requests-table {
 	width: 100%;
-	border-collapse: collapse;
-	background: white;
+	border-collapse: separate;
+	border-spacing: 0 0.75rem;
+	text-align: right;
 }
 
 .requests-table thead {
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
 	color: white;
 }
 
 .requests-table th {
-	padding: 1rem;
-	text-align: left;
+	padding: 1rem 1.25rem;
 	font-weight: 600;
 	font-size: 0.9rem;
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
+	text-align: right;
 }
 
 .requests-table tbody tr {
-	border-bottom: 1px solid #ecf0f1;
-	transition: background 0.2s;
+	background: #f3f4f6;
+	border-radius: 12px;
+	transition: all 0.3s;
 }
 
 .requests-table tbody tr:hover {
-	background: #f8f9fa;
+	background: #e5e7eb;
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .requests-table td {
-	padding: 1rem;
+	padding: 1rem 1.25rem;
 	font-size: 0.9rem;
 	color: #2c3e50;
+	vertical-align: top;
+}
+
+.requests-table td:first-child {
+	border-radius: 12px 0 0 12px;
+}
+
+.requests-table td:last-child {
+	border-radius: 0 12px 12px 0;
 }
 
 .no-data {
@@ -208,6 +191,44 @@
 	color: #95a5a6;
 	padding: 3rem !important;
 	font-style: italic;
+}
+
+.spinner {
+	border: 4px solid #f3f4f6;
+	border-top: 4px solid #991b1b;
+	border-radius: 50%;
+	width: 3rem;
+	height: 3rem;
+	animation: spin 1s linear infinite;
+	margin: 0 auto;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+.spinner {
+	border: 4px solid #f3f4f6;
+	border-top: 4px solid #991b1b;
+	border-radius: 50%;
+	width: 3rem;
+	height: 3rem;
+	animation: spin 1s linear infinite;
+	margin: 0 auto;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
 }
 
 /* Client & Supplier Info */
@@ -245,18 +266,21 @@
 }
 
 .badge-pending {
-	background: #fff3cd;
-	color: #856404;
+	background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+	color: #92400e;
+	border: 1px solid #fbbf24;
 }
 
 .badge-issued {
-	background: #d4edda;
-	color: #155724;
+	background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+	color: #065f46;
+	border: 1px solid #10b981;
 }
 
 .badge-rejected {
-	background: #f8d7da;
-	color: #721c24;
+	background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+	color: #991b1b;
+	border: 1px solid #ef4444;
 }
 
 /* ACID Code */
@@ -336,36 +360,36 @@
 }
 
 .btn-approve {
-	background: #27ae60;
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 	color: white;
 }
 
 .btn-approve:hover {
-	background: #229954;
+	background: linear-gradient(135deg, #059669 0%, #047857 100%);
 	transform: translateY(-2px);
-	box-shadow: 0 4px 8px rgba(39, 174, 96, 0.3);
+	box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .btn-reject {
-	background: #e74c3c;
+	background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
 	color: white;
 }
 
 .btn-reject:hover {
-	background: #c0392b;
+	background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
 	transform: translateY(-2px);
-	box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+	box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
 .btn-shipment {
-	background: #3498db;
+	background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
 	color: white;
 }
 
 .btn-shipment:hover {
-	background: #2980b9;
+	background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
 	transform: translateY(-2px);
-	box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+	box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .rejected-text {
@@ -765,6 +789,55 @@
 .required {
 	color: #e74c3c;
 	font-weight: bold;
+}
+
+/* Documents List in Confirmation Modal */
+.documents-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	margin-top: 0.75rem;
+}
+
+.document-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.75rem;
+	background: white;
+	border: 1px solid #dee2e6;
+	border-radius: 6px;
+	transition: all 0.3s;
+}
+
+.document-item:hover {
+	border-color: #3498db;
+	box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+}
+
+.document-name {
+	flex: 1;
+	color: #495057;
+	font-size: 0.9rem;
+	font-weight: 500;
+}
+
+.btn-view-doc {
+	background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+	color: white;
+	padding: 0.4rem 1rem;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+	transition: all 0.3s;
+	font-size: 0.85rem;
+	white-space: nowrap;
+}
+
+.btn-view-doc:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
 }
 
 .acid-input-field {

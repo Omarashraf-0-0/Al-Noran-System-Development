@@ -426,10 +426,9 @@ const issueAcidWithConfirmation = async (req, res) => {
 		const { acidCode, confirmed } = req.body;
 		const employeeId = req.user._id;
 
-		const request = await AcidRequest.findById(id).populate(
-			"userId",
-			"username email"
-		);
+		const request = await AcidRequest.findById(id)
+			.populate("userId", "username email")
+			.populate("uploads");
 
 		if (!request) {
 			return res.status(404).json({
