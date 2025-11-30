@@ -47,6 +47,8 @@ const App = () => {
 					path="/acidrequest/:requestId/edit"
 					element={<EditAcidRequestPage />}
 				/>
+				<Route path="/acidrequests" element={<AcidRequestsPage />} />
+				<Route path="/acidrequest/:requestId" element={<AcidRequestDetailsPage />} />
 				<Route path="/upload-documents" element={<DocumentUploadPage />} />
 				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
 				<Route

@@ -22,7 +22,12 @@ import { toast } from "react-hot-toast";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 // Tracking Hero Component
-const TrackingHero = ({ onSearch, recommendations, onSelectShipment, loading }) => {
+const TrackingHero = ({
+	onSearch,
+	recommendations,
+	onSelectShipment,
+	loading,
+}) => {
 	const [trackingNumber, setTrackingNumber] = useState("");
 	const [showDropdown, setShowDropdown] = useState(false);
 
@@ -110,7 +115,8 @@ const TrackingHero = ({ onSearch, recommendations, onSelectShipment, loading }) 
 																{shipment.acid || "N/A"}
 															</div>
 															<div className="text-sm text-gray-600 mt-1">
-																{shipment.port_name || "N/A"} • {shipment.country || "N/A"}
+																{shipment.port_name || "N/A"} •{" "}
+																{shipment.country || "N/A"}
 															</div>
 															{shipment.bl_number && (
 																<div className="text-xs text-gray-500 mt-1">
@@ -386,22 +392,27 @@ const SearchResults = ({ results, onClose, searchQuery }) => {
 	return (
 		<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
 			<div className="bg-white rounded-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden shadow-2xl">
-			<div className="bg-gradient-to-r from-red-900 to-red-800 p-6 flex justify-between items-center">
-				<h2 className="text-white text-2xl font-bold">
-					{searchQuery ? `نتائج البحث عن: "${searchQuery}"` : "الشحنات الأخيرة"}
-				</h2>
-				<button
-					onClick={onClose}
-					className="text-white hover:bg-white/20 p-2 rounded-full transition"
-				>
-					<X size={24} />
-				</button>
-			</div>				<div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)]" dir="rtl">
+				<div className="bg-gradient-to-r from-red-900 to-red-800 p-6 flex justify-between items-center">
+					<h2 className="text-white text-2xl font-bold">
+						{searchQuery
+							? `نتائج البحث عن: "${searchQuery}"`
+							: "الشحنات الأخيرة"}
+					</h2>
+					<button
+						onClick={onClose}
+						className="text-white hover:bg-white/20 p-2 rounded-full transition"
+					>
+						<X size={24} />
+					</button>
+				</div>{" "}
+				<div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)]" dir="rtl">
 					{results.length === 0 ? (
 						<div className="text-center py-12">
 							<Search size={48} className="mx-auto text-gray-400 mb-4" />
 							<p className="text-gray-600 text-lg">لم يتم العثور على نتائج</p>
-							<p className="text-gray-500 mt-2">جرب البحث برقم شحنة أو دولة أو حالة مختلفة</p>
+							<p className="text-gray-500 mt-2">
+								جرب البحث برقم شحنة أو دولة أو حالة مختلفة
+							</p>
 						</div>
 					) : (
 						<div className="space-y-4">
@@ -416,7 +427,9 @@ const SearchResults = ({ results, onClose, searchQuery }) => {
 												{shipment.acid || "N/A"}
 											</h3>
 											<p className="text-sm text-gray-600">
-												{shipment.user_id?.fullname || shipment.user_id?.username || "Unknown Client"}
+												{shipment.user_id?.fullname ||
+													shipment.user_id?.username ||
+													"Unknown Client"}
 											</p>
 										</div>
 										<span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
@@ -427,20 +440,28 @@ const SearchResults = ({ results, onClose, searchQuery }) => {
 									<div className="grid grid-cols-2 gap-3 text-sm">
 										<div>
 											<span className="text-gray-500">الميناء:</span>
-											<span className="font-semibold mr-2">{shipment.port_name}</span>
+											<span className="font-semibold mr-2">
+												{shipment.port_name}
+											</span>
 										</div>
 										<div>
 											<span className="text-gray-500">الدولة:</span>
-											<span className="font-semibold mr-2">{shipment.country}</span>
+											<span className="font-semibold mr-2">
+												{shipment.country}
+											</span>
 										</div>
 										<div>
 											<span className="text-gray-500">عدد الحاويات:</span>
-											<span className="font-semibold mr-2">{shipment.num_of_containers}</span>
+											<span className="font-semibold mr-2">
+												{shipment.num_of_containers}
+											</span>
 										</div>
 										{shipment.policy && (
 											<div>
 												<span className="text-gray-500">البوليصة:</span>
-												<span className="font-semibold mr-2">{shipment.policy}</span>
+												<span className="font-semibold mr-2">
+													{shipment.policy}
+												</span>
 											</div>
 										)}
 									</div>
@@ -486,7 +507,9 @@ const TrackingPage = () => {
 			}
 			setSearchQuery(trackingNumber);
 
-			const searchParam = trackingNumber.trim() ? `?query=${encodeURIComponent(trackingNumber)}` : '';
+			const searchParam = trackingNumber.trim()
+				? `?query=${encodeURIComponent(trackingNumber)}`
+				: "";
 			const response = await axios.get(
 				`${import.meta.env.VITE_API_URL}/api/shipments/search${searchParam}`,
 				{
@@ -535,7 +558,7 @@ const TrackingPage = () => {
 		<div className="min-h-screen flex flex-col bg-gray-50">
 			<Header />
 			<main className="flex-grow">
-				<TrackingHero 
+				<TrackingHero
 					onSearch={handleSearch}
 					recommendations={recommendations}
 					onSelectShipment={handleSelectShipment}

@@ -20,8 +20,10 @@ const createShipment = async (req, res) => {
 			// Employee creating shipment - invoice comes from ACID request uploads
 			// Find invoice from uploads array if provided
 			if (shipmentData.uploads && Array.isArray(shipmentData.uploads)) {
-				const invoiceUpload = shipmentData.uploads.find(upload => 
-					upload.category === 'invoice' || upload.documentType === 'proforma_invoice'
+				const invoiceUpload = shipmentData.uploads.find(
+					(upload) =>
+						upload.category === "invoice" ||
+						upload.documentType === "proforma_invoice"
 				);
 				if (invoiceUpload && invoiceUpload.s3Url) {
 					shipmentData.invoiceUrl = invoiceUpload.s3Url;
@@ -279,21 +281,22 @@ const getShipmentsByUserId = async (req, res) => {
 		const User = require("../models/user");
 		var formattedShipments = [];
 		for (let shipment of shipments) {
-			const user = await User.findById(shipment.employee_id).select("fullname username email");
+			const user = await User.findById(shipment.employee_id).select(
+				"fullname username email"
+			);
 			formattedShipments.push({
 				...shipment.toObject(),
-				employee_name: user ? user.fullname || user.username || user.email : "N/A",
+				employee_name: user
+					? user.fullname || user.username || user.email
+					: "N/A",
 			});
 		}
 		console.log(
 			`Found ${formattedShipments.length} shipments for user ${userId}`
 		);
 
-		
-
 		res.json(formattedShipments);
 	} catch (error) {
-
 		console.error("Error fetching user shipments:", error);
 		res.status(500).json({ message: error.message });
 	}
@@ -684,157 +687,154 @@ const getEmployeeShipmentStats = async (req, res) => {
 	}
 };
 
-
-
-
-
 const mostActiveClients = async (req, res) => {
 	console.log("here");
-  try {
-    const result = await Shipment.aggregate([
-      {
-        $group: {
-          _id: "$user_id",
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "_id",
-          foreignField: "_id",
-          as: "user"
-        }
-      },
-      {
-        $unwind: "$user"
-      },
-      {
-        $project: {
-          _id: 1,
-          count: 1,
-          name: "$user.fullname" 
-        }
-      },
-      { $sort: { count: -1 } }
-    ]);
+	try {
+		const result = await Shipment.aggregate([
+			{
+				$group: {
+					_id: "$user_id",
+					count: { $sum: 1 },
+				},
+			},
+			{
+				$lookup: {
+					from: "users",
+					localField: "_id",
+					foreignField: "_id",
+					as: "user",
+				},
+			},
+			{
+				$unwind: "$user",
+			},
+			{
+				$project: {
+					_id: 1,
+					count: 1,
+					name: "$user.fullname",
+				},
+			},
+			{ $sort: { count: -1 } },
+		]);
 
-    return res.status(200).json({ result });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
+		return res.status(200).json({ result });
+	} catch (err) {
+		return res.status(500).json({ message: err.message });
+	}
 };
 
-
 const cleanFacet = (facetResult, field, key = "count") => {
-  return facetResult[field]?.[0]?.[key] || 0;
+	return facetResult[field]?.[0]?.[key] || 0;
 };
 
 const getDashboardStats = async (req, res) => {
-  try {
-    const invoiceStats = await Invoice.aggregate([
-      {
-        $facet: {
-          ongoingInvoices: [
-            { $match: { status: "ongoing" } },
-            { $count: "count" }
-          ],
+	try {
+		const invoiceStats = await Invoice.aggregate([
+			{
+				$facet: {
+					ongoingInvoices: [
+						{ $match: { status: "ongoing" } },
+						{ $count: "count" },
+					],
 
-          completedInvoices: [
-            { $match: { status: "completed" } },
-            { $count: "count" }
-          ],
+					completedInvoices: [
+						{ $match: { status: "completed" } },
+						{ $count: "count" },
+					],
 
-          poundRevenue: [
-            { $match: { currencyType: "pound" } },
-            {
-              $group: {
-                _id: null,
-                total: { $sum: { $toDouble: "$feePrice" } }
-              }
-            }
-          ],
+					poundRevenue: [
+						{ $match: { currencyType: "pound" } },
+						{
+							$group: {
+								_id: null,
+								total: { $sum: { $toDouble: "$feePrice" } },
+							},
+						},
+					],
 
-          dollarRevenue: [
-            { $match: { currencyType: "dollar" } },
-            {
-              $group: {
-                _id: null,
-                total: { $sum: { $toDouble: "$feePrice" } }
-              }
-            }
-          ],
+					dollarRevenue: [
+						{ $match: { currencyType: "dollar" } },
+						{
+							$group: {
+								_id: null,
+								total: { $sum: { $toDouble: "$feePrice" } },
+							},
+						},
+					],
 
-          totalPayments: [
-            {
-              $group: {
-                _id: null,
-                totalPaid: {
-                  $sum: {
-                    $add: [
-                      { $toDouble: "$feePrice" },
-                      { $toDouble: "$Port_fee_price" },
-                      { $toDouble: "$Additional_Services_price" },
-                      { $toDouble: "$Clearance_Fees_price" },
-                      { $toDouble: "$Expense_Tips_price" },
-                      { $toDouble: "$Sundries_price" }
-                    ]
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    ]);
+					totalPayments: [
+						{
+							$group: {
+								_id: null,
+								totalPaid: {
+									$sum: {
+										$add: [
+											{ $toDouble: "$feePrice" },
+											{ $toDouble: "$Port_fee_price" },
+											{ $toDouble: "$Additional_Services_price" },
+											{ $toDouble: "$Clearance_Fees_price" },
+											{ $toDouble: "$Expense_Tips_price" },
+											{ $toDouble: "$Sundries_price" },
+										],
+									},
+								},
+							},
+						},
+					],
+				},
+			},
+		]);
 
-    const shipmentStats = await Shipment.aggregate([
-      {
-        $facet: {
-          totalShipments: [
-            { $count: "count" }
-          ],
+		const shipmentStats = await Shipment.aggregate([
+			{
+				$facet: {
+					totalShipments: [{ $count: "count" }],
 
-          ongoingAirShipments: [
-            { $match: { status: "ongoing", shipmentType: "air" } },
-            { $count: "count" }
-          ],
+					ongoingAirShipments: [
+						{ $match: { status: "ongoing", shipmentType: "air" } },
+						{ $count: "count" },
+					],
 
-          completedShipments: [
-            { $match: { status: { $in: ["completed", "Completed", "مكتملة", "تمت بنجاح"] } } },
-            { $count: "count" }
-          ]
-        }
-      }
-    ]);
+					completedShipments: [
+						{
+							$match: {
+								status: {
+									$in: ["completed", "Completed", "مكتملة", "تمت بنجاح"],
+								},
+							},
+						},
+						{ $count: "count" },
+					],
+				},
+			},
+		]);
 
-    // Calculate ongoing sea shipments = total - completed
-    const totalShipments = cleanFacet(shipmentStats[0], "totalShipments");
-    const completedShipments = cleanFacet(shipmentStats[0], "completedShipments");
-    const ongoingSeaShipments = totalShipments - completedShipments;
+		// Calculate ongoing sea shipments = total - completed
+		const totalShipments = cleanFacet(shipmentStats[0], "totalShipments");
+		const completedShipments = cleanFacet(
+			shipmentStats[0],
+			"completedShipments"
+		);
+		const ongoingSeaShipments = totalShipments - completedShipments;
 
-    return res.status(200).json({
-      ongoingInvoices: cleanFacet(invoiceStats[0], "ongoingInvoices"),
-      completedInvoices: cleanFacet(invoiceStats[0], "completedInvoices"),
+		return res.status(200).json({
+			ongoingInvoices: cleanFacet(invoiceStats[0], "ongoingInvoices"),
+			completedInvoices: cleanFacet(invoiceStats[0], "completedInvoices"),
 
-      poundRevenue: cleanFacet(invoiceStats[0], "poundRevenue", "total"),
-      dollarRevenue: cleanFacet(invoiceStats[0], "dollarRevenue", "total"),
+			poundRevenue: cleanFacet(invoiceStats[0], "poundRevenue", "total"),
+			dollarRevenue: cleanFacet(invoiceStats[0], "dollarRevenue", "total"),
 
-      totalPayments: cleanFacet(invoiceStats[0], "totalPayments", "totalPaid"),
+			totalPayments: cleanFacet(invoiceStats[0], "totalPayments", "totalPaid"),
 
-      ongoingSeaShipments: ongoingSeaShipments,
-      ongoingAirShipments: cleanFacet(shipmentStats[0], "ongoingAirShipments"),
-      completedShipments: completedShipments
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+			ongoingSeaShipments: ongoingSeaShipments,
+			ongoingAirShipments: cleanFacet(shipmentStats[0], "ongoingAirShipments"),
+			completedShipments: completedShipments,
+		});
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
 };
-
-
-
-
-
 
 // ✅ Search shipments by any field (user's shipments only)
 const searchShipments = async (req, res) => {
@@ -843,9 +843,9 @@ const searchShipments = async (req, res) => {
 		const userId = req.user?.id || req.user?._id;
 
 		if (!userId) {
-			return res.status(401).json({ 
+			return res.status(401).json({
 				success: false,
-				message: "User not authenticated" 
+				message: "User not authenticated",
 			});
 		}
 
@@ -869,7 +869,7 @@ const searchShipments = async (req, res) => {
 
 		// Build search criteria - search across multiple fields
 		const searchRegex = new RegExp(query, "i"); // case-insensitive
-		
+
 		const searchCriteria = {
 			...baseCriteria,
 			$or: [
@@ -881,7 +881,7 @@ const searchShipments = async (req, res) => {
 				{ third_gomroky: searchRegex },
 				{ number46: searchRegex },
 				{ bl_number: searchRegex },
-			]
+			],
 		};
 
 		const shipments = await Shipment.find(searchCriteria)
@@ -897,9 +897,9 @@ const searchShipments = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error searching shipments:", error);
-		res.status(500).json({ 
+		res.status(500).json({
 			success: false,
-			message: "Server error while searching shipments" 
+			message: "Server error while searching shipments",
 		});
 	}
 };
