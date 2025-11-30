@@ -169,16 +169,16 @@ const getAllRequestsForEmployee = async (req, res) => {
 			.populate("userId", "username email")
 			.populate("uploads")
 			.sort({ requestDate: -1 });
-		
+
 		res.json({
 			success: true,
 			requests,
 		});
 	} catch (error) {
 		console.error("Error fetching all ACID requests:", error);
-		res.status(500).json({ 
+		res.status(500).json({
 			success: false,
-			message: "Server error while fetching requests" 
+			message: "Server error while fetching requests",
 		});
 	}
 };
@@ -201,9 +201,9 @@ const updateAcidStatusByEmployee = async (req, res) => {
 		const request = await AcidRequest.findById(id);
 
 		if (!request) {
-			return res.status(404).json({ 
+			return res.status(404).json({
 				success: false,
-				message: "Request not found" 
+				message: "Request not found",
 			});
 		}
 
@@ -229,9 +229,9 @@ const updateAcidStatusByEmployee = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error updating ACID request:", error);
-		res.status(500).json({ 
+		res.status(500).json({
 			success: false,
-			message: "Server error while updating ACID request" 
+			message: "Server error while updating ACID request",
 		});
 	}
 };
@@ -245,16 +245,19 @@ const deleteAcidRequest = async (req, res) => {
 		const request = await AcidRequest.findById(id);
 
 		if (!request) {
-			return res.status(404).json({ 
+			return res.status(404).json({
 				success: false,
-				message: "Request not found" 
+				message: "Request not found",
 			});
 		}
 
 		// Allow deletion by employee or by the user who created it
-		if (userType === "employee" || request.userId.toString() === req.user._id.toString()) {
+		if (
+			userType === "employee" ||
+			request.userId.toString() === req.user._id.toString()
+		) {
 			await AcidRequest.findByIdAndDelete(id);
-			
+
 			return res.json({
 				success: true,
 				message: "ACID request deleted successfully",
@@ -267,9 +270,9 @@ const deleteAcidRequest = async (req, res) => {
 		}
 	} catch (error) {
 		console.error("Error deleting ACID request:", error);
-		res.status(500).json({ 
+		res.status(500).json({
 			success: false,
-			message: "Server error while deleting ACID request" 
+			message: "Server error while deleting ACID request",
 		});
 	}
 };

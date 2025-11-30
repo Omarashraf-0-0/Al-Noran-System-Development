@@ -55,7 +55,7 @@ const EmployeeAcidRequestsPage = () => {
 		try {
 			const token = localStorage.getItem("token");
 			const payload = { status: newStatus };
-			
+
 			// Add ACID code if issuing ACID
 			if (newStatus === "ACID Issued" && acidCode) {
 				payload.acidCode = acidCode;
@@ -75,9 +75,7 @@ const EmployeeAcidRequestsPage = () => {
 			}
 		} catch (error) {
 			console.error("Error updating status:", error);
-			toast.error(
-				error.response?.data?.message || "Failed to update status"
-			);
+			toast.error(error.response?.data?.message || "Failed to update status");
 		}
 	};
 
@@ -130,7 +128,7 @@ const EmployeeAcidRequestsPage = () => {
 
 		try {
 			const token = localStorage.getItem("token");
-			
+
 			// Create shipment payload
 			const user = JSON.parse(localStorage.getItem("user"));
 			const payload = {
@@ -166,16 +164,14 @@ const EmployeeAcidRequestsPage = () => {
 						headers: { Authorization: `Bearer ${token}` },
 					}
 				);
-				
+
 				toast.success("Shipment created successfully");
 				closeShipmentModal();
 				fetchAllRequests();
 			}
 		} catch (error) {
 			console.error("Error creating shipment:", error);
-			toast.error(
-				error.response?.data?.message || "Failed to create shipment"
-			);
+			toast.error(error.response?.data?.message || "Failed to create shipment");
 		}
 	};
 

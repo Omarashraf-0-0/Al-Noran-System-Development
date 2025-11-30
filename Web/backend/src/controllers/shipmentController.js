@@ -276,10 +276,24 @@ const getShipmentsByUserId = async (req, res) => {
 		const shipments = await Shipment.find({ user_id: userId }).sort({
 			createdAt: -1,
 		});
+		const User = require("../models/user");
+		var formattedShipments = [];
+		for (let shipment of shipments) {
+			const user = await User.findById(shipment.employee_id).select("fullname username email");
+			formattedShipments.push({
+				...shipment.toObject(),
+				employee_name: user ? user.fullname || user.username || user.email : "N/A",
+			});
+		}
+		console.log(
+			`Found ${formattedShipments.length} shipments for user ${userId}`
+		);
 
-		console.log(`Found ${shipments.length} shipments for user ${userId}`);
-		res.json(shipments);
+		
+
+		res.json(formattedShipments);
 	} catch (error) {
+
 		console.error("Error fetching user shipments:", error);
 		res.status(500).json({ message: error.message });
 	}
@@ -822,6 +836,74 @@ const getDashboardStats = async (req, res) => {
 
 
 
+// ✅ Search shipments by any field (user's shipments only)
+const searchShipments = async (req, res) => {
+	try {
+		const { query } = req.query;
+		const userId = req.user?.id || req.user?._id;
+
+		if (!userId) {
+			return res.status(401).json({ 
+				success: false,
+				message: "User not authenticated" 
+			});
+		}
+
+		// Base criteria - only user's shipments
+		const baseCriteria = { user_id: userId };
+
+		// If no query or very short, return recent shipments
+		if (!query || query.trim().length < 2) {
+			const recentShipments = await Shipment.find(baseCriteria)
+				.populate("user_id", "username email fullname")
+				.populate("employee_id", "username email fullname")
+				.sort({ createdAt: -1 })
+				.limit(10);
+
+			return res.json({
+				success: true,
+				count: recentShipments.length,
+				shipments: recentShipments,
+			});
+		}
+
+		// Build search criteria - search across multiple fields
+		const searchRegex = new RegExp(query, "i"); // case-insensitive
+		
+		const searchCriteria = {
+			...baseCriteria,
+			$or: [
+				{ acid: searchRegex },
+				{ port_name: searchRegex },
+				{ country: searchRegex },
+				{ status: searchRegex },
+				{ policy: searchRegex },
+				{ third_gomroky: searchRegex },
+				{ number46: searchRegex },
+				{ bl_number: searchRegex },
+			]
+		};
+
+		const shipments = await Shipment.find(searchCriteria)
+			.populate("user_id", "username email fullname")
+			.populate("employee_id", "username email fullname")
+			.sort({ createdAt: -1 })
+			.limit(20); // Limit results for recommendations
+
+		res.json({
+			success: true,
+			count: shipments.length,
+			shipments,
+		});
+	} catch (error) {
+		console.error("Error searching shipments:", error);
+		res.status(500).json({ 
+			success: false,
+			message: "Server error while searching shipments" 
+		});
+	}
+};
+
 module.exports = {
 	createShipment,
 	getAllShipments,
@@ -840,5 +922,6 @@ module.exports = {
 	getEmployeeShipmentStats,
 	addShipments,
 	mostActiveClients,
-	getDashboardStats
+	getDashboardStats,
+	searchShipments,
 };

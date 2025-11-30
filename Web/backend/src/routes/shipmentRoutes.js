@@ -19,6 +19,7 @@ const {
   addShipments,
   mostActiveClients,
   getDashboardStats,
+  searchShipments,
 } = require("../controllers/shipmentController");
 
 const router = express.Router();
@@ -33,6 +34,7 @@ router.post("/", protect, createShipment);
 router.post("/addShipments", protect, addShipments);
 router.get("/get-dashboard-stats", protect, getDashboardStats);
 router.get("/most-active-clients", mostActiveClients);
+router.get("/search", protect, searchShipments);
 router.get("/getAll", protect, getAllShipments);
 router.get("/employee/:employeeId", protect, getShipmentrelatedToEmployee);
 router.get("/employee/:employeeId/stats", protect, getEmployeeShipmentStats);
