@@ -3,7 +3,11 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import close from "../assets/images/close(1).png";
 
-export default function ShipmentDetailsModal({ shipmentId, onClose, onUpdate }) {
+export default function ShipmentDetailsModal({
+	shipmentId,
+	onClose,
+	onUpdate,
+}) {
 	const [shipment, setShipment] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [isEditing, setIsEditing] = useState(false);
@@ -34,7 +38,9 @@ export default function ShipmentDetailsModal({ shipmentId, onClose, onUpdate }) 
 			);
 
 			// Filter only employees
-			const employeeList = response.data.filter((user) => user.type === "employee");
+			const employeeList = response.data.filter(
+				(user) => user.type === "employee"
+			);
 			setEmployees(employeeList);
 		} catch (error) {
 			console.error("Error fetching employees:", error);
@@ -57,7 +63,8 @@ export default function ShipmentDetailsModal({ shipmentId, onClose, onUpdate }) 
 			setShipment(response.data);
 			setFormData({
 				status: response.data.status || "",
-				employee_id: response.data.employee_id?._id || response.data.employee_id || "",
+				employee_id:
+					response.data.employee_id?._id || response.data.employee_id || "",
 			});
 			setLoading(false);
 		} catch (error) {
@@ -176,30 +183,37 @@ export default function ShipmentDetailsModal({ shipmentId, onClose, onUpdate }) 
 							{/* Port */}
 							<div>
 								<p className="text-sm text-gray-500 mb-1">الميناء</p>
-								<p className="font-semibold text-gray-900">{shipment.port_name}</p>
+								<p className="font-semibold text-gray-900">
+									{shipment.port_name}
+								</p>
 							</div>
 
 							{/* Country */}
 							<div>
 								<p className="text-sm text-gray-500 mb-1">الدولة</p>
-								<p className="font-semibold text-gray-900">{shipment.country}</p>
+								<p className="font-semibold text-gray-900">
+									{shipment.country}
+								</p>
 							</div>
 
 							{/* Number of Containers */}
 							<div>
 								<p className="text-sm text-gray-500 mb-1">عدد الحاويات</p>
-								<p className="font-semibold text-gray-900">{shipment.num_of_containers}</p>
+								<p className="font-semibold text-gray-900">
+									{shipment.num_of_containers}
+								</p>
 							</div>
 
 							{/* Container Types */}
-							{shipment.type_of_containers && shipment.type_of_containers.length > 0 && (
-								<div>
-									<p className="text-sm text-gray-500 mb-1">أنواع الحاويات</p>
-									<p className="font-semibold text-gray-900">
-										{shipment.type_of_containers.join(", ")}
-									</p>
-								</div>
-							)}
+							{shipment.type_of_containers &&
+								shipment.type_of_containers.length > 0 && (
+									<div>
+										<p className="text-sm text-gray-500 mb-1">أنواع الحاويات</p>
+										<p className="font-semibold text-gray-900">
+											{shipment.type_of_containers.join(", ")}
+										</p>
+									</div>
+								)}
 
 							{/* Client Info */}
 							{shipment.user_id && (
@@ -207,11 +221,15 @@ export default function ShipmentDetailsModal({ shipmentId, onClose, onUpdate }) 
 									<div>
 										<p className="text-sm text-gray-500 mb-1">اسم العميل</p>
 										<p className="font-semibold text-gray-900">
-											{shipment.user_id.username || shipment.user_id.fullname || "غير متاح"}
+											{shipment.user_id.username ||
+												shipment.user_id.fullname ||
+												"غير متاح"}
 										</p>
 									</div>
 									<div>
-										<p className="text-sm text-gray-500 mb-1">البريد الإلكتروني</p>
+										<p className="text-sm text-gray-500 mb-1">
+											البريد الإلكتروني
+										</p>
 										<p className="font-semibold text-gray-900">
 											{shipment.user_id.email || "غير متاح"}
 										</p>
@@ -223,7 +241,9 @@ export default function ShipmentDetailsModal({ shipmentId, onClose, onUpdate }) 
 							<div>
 								<p className="text-sm text-gray-500 mb-1">الموظف المسؤول</p>
 								<p className="font-semibold text-gray-900">
-									{shipment.employee_id?.username || shipment.employee_id?.fullname || "لم يعين بعد"}
+									{shipment.employee_id?.username ||
+										shipment.employee_id?.fullname ||
+										"لم يعين بعد"}
 								</p>
 							</div>
 
@@ -238,7 +258,9 @@ export default function ShipmentDetailsModal({ shipmentId, onClose, onUpdate }) 
 					</div>
 
 					{/* Financial Details */}
-					{(shipment.clearance_fees || shipment.expenses_and_tips || shipment.sundries) && (
+					{(shipment.clearance_fees ||
+						shipment.expenses_and_tips ||
+						shipment.sundries) && (
 						<div className="mb-6">
 							<h3 className="text-lg font-bold text-[#690000] mb-3">
 								التفاصيل المالية
@@ -254,7 +276,9 @@ export default function ShipmentDetailsModal({ shipmentId, onClose, onUpdate }) 
 								)}
 								{shipment.expenses_and_tips > 0 && (
 									<div>
-										<p className="text-sm text-gray-500 mb-1">المصروفات والإكراميات</p>
+										<p className="text-sm text-gray-500 mb-1">
+											المصروفات والإكراميات
+										</p>
 										<p className="font-semibold text-gray-900">
 											{shipment.expenses_and_tips} جنيه
 										</p>
@@ -281,7 +305,9 @@ export default function ShipmentDetailsModal({ shipmentId, onClose, onUpdate }) 
 							{shipment.policy && (
 								<div>
 									<p className="text-sm text-gray-500 mb-1">السياسة</p>
-									<p className="font-semibold text-gray-900">{shipment.policy}</p>
+									<p className="font-semibold text-gray-900">
+										{shipment.policy}
+									</p>
 								</div>
 							)}
 							<div>
@@ -321,9 +347,13 @@ export default function ShipmentDetailsModal({ shipmentId, onClose, onUpdate }) 
 										<option value="في انتظار الشحن">في انتظار الشحن</option>
 										<option value="In Transit">في الطريق</option>
 										<option value="Arrived">وصلت</option>
-										<option value="في انتظار وصول الإذن">في انتظار وصول الإذن</option>
+										<option value="في انتظار وصول الإذن">
+											في انتظار وصول الإذن
+										</option>
 										<option value="Customs Clearance">التخليص الجمركي</option>
-										<option value="جاري الكشف والتثمين">جاري الكشف والتثمين</option>
+										<option value="جاري الكشف والتثمين">
+											جاري الكشف والتثمين
+										</option>
 										<option value="Completed">مكتملة</option>
 										<option value="تمت بنجاح">تمت بنجاح</option>
 									</select>

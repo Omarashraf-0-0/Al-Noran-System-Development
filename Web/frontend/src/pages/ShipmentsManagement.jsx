@@ -35,9 +35,13 @@ export default function ShipmentsManagement() {
 			const shipmentsData = response.data.map((ship) => ({
 				id: ship._id,
 				acid: ship.acid,
-				clientName: ship.user_id?.username || ship.user_id?.fullname || "غير متاح",
+				clientName:
+					ship.user_id?.username || ship.user_id?.fullname || "غير متاح",
 				clientEmail: ship.user_id?.email || "",
-				employeeName: ship.employee_id?.username || ship.employee_id?.fullname || "لم يعين بعد",
+				employeeName:
+					ship.employee_id?.username ||
+					ship.employee_id?.fullname ||
+					"لم يعين بعد",
 				status: ship.status,
 				port: ship.port_name,
 				country: ship.country,
@@ -195,7 +199,9 @@ export default function ShipmentsManagement() {
 											<td className="py-4 px-4 font-semibold text-red-900">
 												{index + 1}
 											</td>
-											<td className="py-4 px-4 font-mono text-sm">{ship.acid}</td>
+											<td className="py-4 px-4 font-mono text-sm">
+												{ship.acid}
+											</td>
 											<td className="py-4 px-4">{ship.clientName}</td>
 											<td className="py-4 px-4">{ship.employeeName}</td>
 											<td className="py-4 px-4">{ship.port}</td>
@@ -250,7 +256,8 @@ export default function ShipmentsManagement() {
 								<p className="text-2xl font-bold text-green-600">
 									{
 										shipments.filter(
-											(s) => s.status === "Completed" || s.status === "تمت بنجاح"
+											(s) =>
+												s.status === "Completed" || s.status === "تمت بنجاح"
 										).length
 									}
 								</p>
@@ -260,7 +267,8 @@ export default function ShipmentsManagement() {
 								<p className="text-2xl font-bold text-blue-600">
 									{
 										shipments.filter(
-											(s) => s.status === "In Transit" || s.status === "في الطريق"
+											(s) =>
+												s.status === "In Transit" || s.status === "في الطريق"
 										).length
 									}
 								</p>
@@ -270,7 +278,8 @@ export default function ShipmentsManagement() {
 								<p className="text-2xl font-bold text-gray-600">
 									{
 										shipments.filter(
-											(s) => s.status === "Pending" || s.status === "في انتظار الشحن"
+											(s) =>
+												s.status === "Pending" || s.status === "في انتظار الشحن"
 										).length
 									}
 								</p>
