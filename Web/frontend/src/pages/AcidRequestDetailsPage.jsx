@@ -127,21 +127,37 @@ const AcidRequestDetailsPage = () => {
 				icon = <XCircle className="w-5 h-5" />;
 				text = "مرفوض";
 				break;
+			case "Under Review":
+				bgColor = "bg-orange-100";
+				textColor = "text-orange-800";
+				icon = <Clock className="w-5 h-5" />;
+				text = "قيد المراجعة من قبل الموظف";
+				break;
 			case "Pending":
 			default:
 				bgColor = "bg-yellow-100";
 				textColor = "text-yellow-800";
 				icon = <Clock className="w-5 h-5" />;
-				text = "قيد المراجعة";
+				text = "في انتظار المراجعة";
 				break;
 		}
 
 		return (
-			<div
-				className={`${bgColor} ${textColor} px-4 py-2 rounded-full flex items-center gap-2 w-fit font-semibold`}
-			>
-				{icon}
-				<span>{text}</span>
+			<div className="flex flex-col gap-2">
+				<div
+					className={`${bgColor} ${textColor} px-4 py-2 rounded-full flex items-center gap-2 w-fit font-semibold`}
+				>
+					{icon}
+					<span>{text}</span>
+				</div>
+				{requestData.isLocked && (
+					<div className="bg-orange-50 border border-orange-300 px-4 py-2 rounded-lg flex items-center gap-2">
+						<span className="text-orange-800 font-semibold">🔒</span>
+						<span className="text-orange-800 text-sm">
+							الطلب قيد المعالجة حالياً من قبل أحد الموظفين ولا يمكن تعديله
+						</span>
+					</div>
+				)}
 			</div>
 		);
 	};

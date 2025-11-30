@@ -469,18 +469,33 @@ const getUploadById = async (req, res) => {
 
 		console.log("Upload found:", upload.s3Key);
 
-		// Generate fresh presigned URL (valid for 1 hour)
-		const presignedUrl = await getPresignedUrl(upload.s3Key, 3600);
-		console.log("Presigned URL generated successfully");
+		// Try to generate fresh presigned URL (valid for 1 hour)
+		let presignedUrl = null;
+		let permissionError = false;
+		try {
+			presignedUrl = await getPresignedUrl(upload.s3Key, 3600);
+			console.log("Presigned URL generated successfully");
+		} catch (urlError) {
+			if (urlError.message === "AWS_PERMISSION_ERROR") {
+				console.warn("⚠️ Cannot generate presigned URL due to AWS permissions");
+				permissionError = true;
+				// Continue with response but indicate the error
+			} else {
+				throw urlError; // Re-throw if it's a different error
+			}
+		}
 
 		res.status(200).json({
-			success: true,
+			success: !permissionError,
+			warning: permissionError
+				? "File cannot be viewed due to AWS permission restrictions. Please contact administrator."
+				: null,
 			upload: {
 				id: upload._id,
 				filename: upload.filename,
 				originalname: upload.originalname,
 				s3Key: upload.s3Key,
-				url: presignedUrl, // Fresh presigned URL
+				url: presignedUrl, // Will be null if permission error
 				presignedUrl, // Also include as presignedUrl for backward compatibility
 				category: upload.category,
 				documentType: upload.documentType,
@@ -491,6 +506,7 @@ const getUploadById = async (req, res) => {
 				uploadedAt: upload.uploadedAt,
 				uploadedBy: upload.uploadedBy,
 				userId: upload.userId,
+				permissionError, // Flag to indicate AWS permission issue
 			},
 		});
 	} catch (error) {
@@ -590,15 +606,21 @@ const deleteUpload = async (req, res) => {
 				.json({ message: "Not authorized to delete this upload" });
 		}
 
-		// Delete from S3
-		await deleteFromS3(upload.s3Key);
+		// Try to delete from S3, but continue if it fails due to permissions
+		try {
+			await deleteFromS3(upload.s3Key);
+		} catch (s3Error) {
+			console.warn(
+				"S3 deletion failed (permissions issue), continuing with soft delete:",
+				s3Error.message
+			);
+			// Continue with soft delete even if S3 delete fails
+			// The file will remain in S3 but won't be accessible through the app
+		}
 
-		// Soft delete from database
+		// Soft delete from database (mark as inactive)
 		upload.isActive = false;
 		await upload.save();
-
-		// Or hard delete:
-		// await upload.deleteOne();
 
 		res.status(200).json({
 			success: true,

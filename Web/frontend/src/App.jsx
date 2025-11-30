@@ -24,6 +24,8 @@ import Chat from "./pages/Chat";
 import AcidRequestsPage from "./pages/AcidRequestsPage";
 import AcidRequestDetailsPage from "./pages/AcidRequestDetailsPage";
 import EditAcidRequestPage from "./pages/EditAcidRequestPage";
+import EmployeeAcidRequestsPage from "./pages/EmployeeAcidRequestsPage";
+import EmployeeShipments from "./pages/EmployeeShipments";
 
 const App = () => {
 	return (
@@ -45,6 +47,11 @@ const App = () => {
 				<Route
 					path="/acidrequest/:requestId/edit"
 					element={<EditAcidRequestPage />}
+				/>
+				<Route path="/acidrequests" element={<AcidRequestsPage />} />
+				<Route
+					path="/acidrequest/:requestId"
+					element={<AcidRequestDetailsPage />}
 				/>
 				<Route path="/upload-documents" element={<DocumentUploadPage />} />
 				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
@@ -74,6 +81,11 @@ const App = () => {
 				/>
 				<Route path="*" element={<NotFound404 />} />
 				<Route path="/chat" element={<Chat />} />
+				<Route
+					path="/employee/acid-requests"
+					element={<EmployeeAcidRequestsPage />}
+				/>
+				<Route path="/employee-shipments" element={<EmployeeShipments />} />
 				{/* NEW */}
 				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
 			</Routes>

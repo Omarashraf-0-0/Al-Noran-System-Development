@@ -9,7 +9,7 @@ import searchIcon from "../assets/images/Search.svg";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 
-export default function ShipmentsList() {
+export default function EmployeeShipments() {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [isSortOpen, setIsSortOpen] = useState(false);
@@ -23,7 +23,7 @@ export default function ShipmentsList() {
 	const userID = user?.id;
 	const token = localStorage.getItem("token");
 
-	// Available shipment statuses (matching Stepper component)
+	// Available shipment statuses
 	const shipmentStatuses = [
 		{ value: "الكل", label: "الكل" },
 		{ value: "Pending", label: "قيد الانتظار" },
@@ -50,7 +50,7 @@ export default function ShipmentsList() {
 				}
 
 				const response = await axios.get(
-					`${import.meta.env.VITE_API_URL}/api/shipments/user/${userID}`,
+					`${import.meta.env.VITE_API_URL}/api/shipments/employee/${userID}`,
 					{
 						headers: {
 							Authorization: `Bearer ${token}`,
@@ -64,8 +64,8 @@ export default function ShipmentsList() {
 					id: shipment._id,
 					clientName: shipment.employerName || "Unknown Client",
 					shipmentNo: shipment.number46 || shipment.shipmentNumber || "N/A",
+					acid: shipment.acid || "N/A",
 					status: shipment.status || "pending",
-					acid: shipment.acid,
 					createdAt: shipment.createdAt, // Keep raw date for sorting
 					date: new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
 						day: "numeric",
@@ -112,27 +112,6 @@ export default function ShipmentsList() {
 		setIsSortOpen(false);
 	};
 
-	// Get display label for status (matching Stepper labels)
-	const getStatusLabel = (status) => {
-		const statusMap = {
-			Pending: "قيد الانتظار",
-			"في انتظار الشحن": "في انتظار الشحن",
-			"In Transit": "في الطريق",
-			"في الطريق": "في الطريق",
-			Arrived: "تم وصول البضاعة",
-			"في انتظار وصول الإذن": "في انتظار وصول الإذن",
-			"Customs Clearance": "التخليص الجمركي",
-			"جاري الكشف والتثمين": "جاري الكشف والتثمين",
-			Completed: "مكتملة",
-			مكتملة: "مكتملة",
-			"تمت بنجاح": "تمت بنجاح",
-			"قيد الانتظار": "قيد الانتظار",
-			"تم وصول البضاعة": "تم وصول البضاعة",
-			"التخليص الجمركي": "التخليص الجمركي",
-		};
-		return statusMap[status] || status;
-	};
-
 	// Normalize status for comparison (handles both English and Arabic)
 	const normalizeStatus = (status) => {
 		const statusNormalization = {
@@ -156,10 +135,11 @@ export default function ShipmentsList() {
 
 	// Filter and sort shipments
 	let filteredShipments = shipments.filter((shipment) => {
-		// Filter by search term
-		const matchesSearch = shipment.shipmentNo
-			.toLowerCase()
-			.includes(searchTerm.toLowerCase());
+		// Filter by search term (shipment number, client name, ACID)
+		const matchesSearch =
+			shipment.shipmentNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			shipment.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			shipment.acid.toLowerCase().includes(searchTerm.toLowerCase());
 
 		// Filter by status - normalize both the filter and shipment status for comparison
 		const matchesStatus =
@@ -172,10 +152,16 @@ export default function ShipmentsList() {
 	// Sort shipments
 	filteredShipments = [...filteredShipments].sort((a, b) => {
 		switch (sortOption) {
-			case "newest":
-				return new Date(b.createdAt) - new Date(a.createdAt);
-			case "oldest":
-				return new Date(a.createdAt) - new Date(b.createdAt);
+			case "newest": {
+				const dateA = new Date(a.createdAt).getTime();
+				const dateB = new Date(b.createdAt).getTime();
+				return dateB - dateA;
+			}
+			case "oldest": {
+				const dateA = new Date(a.createdAt).getTime();
+				const dateB = new Date(b.createdAt).getTime();
+				return dateA - dateB;
+			}
 			case "clientAZ":
 				return a.clientName.localeCompare(b.clientName, "ar");
 			case "clientZA":
@@ -193,7 +179,7 @@ export default function ShipmentsList() {
 			<section className="flex-grow w-full bg-white py-12 px-8 shadow-inner relative">
 				<div className="max-w-6xl mx-auto">
 					<h1 className="text-3xl font-bold text-right text-red-800 mb-8">
-						شحناتي
+						الشحنات
 					</h1>
 
 					{/* 🔍 Search + Filter + Sort */}
@@ -239,7 +225,7 @@ export default function ShipmentsList() {
 						<div className="relative w-1/2">
 							<input
 								type="text"
-								placeholder="ابحث برقم الشحنة"
+								placeholder="ابحث برقم الشحنة، اسم العميل، أو ACID"
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
 								className="w-full bg-white shadow-md rounded-full py-2 px-4 pr-10 text-right focus:outline-none focus:ring-2 focus:ring-red-500 placeholder-gray-400 text-black"
@@ -251,7 +237,7 @@ export default function ShipmentsList() {
 							/>
 						</div>
 
-						{/* 🧩 Filter Dropdown */}
+						{/* Filter Dropdown */}
 						{isFilterOpen && (
 							<div className="absolute top-14 left-40 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
 								<h4 className="font-semibold text-red-800 mb-3">
@@ -277,7 +263,7 @@ export default function ShipmentsList() {
 							</div>
 						)}
 
-						{/* 🧩 Sort Dropdown */}
+						{/* Sort Dropdown */}
 						{isSortOpen && (
 							<div className="absolute top-14 left-20 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
 								<h4 className="font-semibold text-red-800 mb-3">ترتيب حسب:</h4>
@@ -345,18 +331,18 @@ export default function ShipmentsList() {
 												</div>
 											</td>
 
-											{/* <td className="py-3 px-4 align-top">
-                        <div className="flex flex-col text-sm">
-                          <span className="text-gray-700 text-base font-semibold mb-1">
-                            رقم البوليصة
-                          </span>
-                        </div>
-                      </td> */}
-
 											<td className="py-3 px-4 align-top">
 												<div className="flex flex-col text-sm">
 													<span className="font-semibold text-gray-800">
 														{shipment.shipmentNo}
+													</span>
+												</div>
+											</td>
+
+											<td className="py-3 px-4 align-top">
+												<div className="flex flex-col text-sm">
+													<span className="text-gray-700 text-base">
+														{shipment.acid}
 													</span>
 												</div>
 											</td>
@@ -371,14 +357,14 @@ export default function ShipmentsList() {
 														alt="status icon"
 														className="w-4 h-4"
 													/>
-													{getStatusLabel(shipment.status)}
+													{shipment.status}
 												</span>
 											</td>
 
 											<td className="py-3 px-4 align-top">
-												<a href={`/shipmentstatus/${shipment.acid}`}>
+												<a href={`/employee-shipment/${shipment.id}`}>
 													<span className="text-blue-600 text-sm font-medium underline cursor-pointer">
-														عرض كل التفاصيل
+														إدارة الشحنة
 													</span>
 												</a>
 											</td>
