@@ -4,7 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" stylesheets="@charts.css" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.DashboardController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" stylesheets="@charts.css" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.DashboardController">
 
     <left>
         <fx:include fx:id="sidebar" source="Sidebar.fxml" />
@@ -88,7 +88,7 @@
                             <PieChart fx:id="chartClientsByVersion" prefHeight="220" prefWidth="220" stylesheets="charts.css" />
                         </VBox>
                     </HBox>
-                    <Button fx:id="downloadReportBtn" onAction="#downloadDashboardReport" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-padding: 14 40; -fx-background-radius: 12; -fx-cursor: hand;" text="تحميل تقرير الإحصائيات كـ PDF" />
+                    <Button fx:id="downloadReportBtn" onAction="#downloadDashboardReport" style="-fx-background-color: #1BA3B6; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-padding: 14 40; -fx-background-radius: 12; -fx-cursor: hand;" text="تحميل تقرير الإحصائيات كـ PDF" />
 
 <!--                    <Button text="تحميل تقرير شامل PDF" style="-fx-background-color: #1fb5b5; -fx-text-fill: white; -fx-font-size: 15; -fx-padding: 12 30; -fx-background-radius: 10; -fx-font-weight: bold;" />-->
                 </VBox>

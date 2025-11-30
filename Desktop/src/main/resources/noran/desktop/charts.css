@@ -22,8 +22,8 @@
 }
 
 /* Style the pie slices */
-.default-color0.chart-pie { -fx-pie-color: #28a745; } /* Green */
-.default-color1.chart-pie { -fx-pie-color: #ffc107; } /* Yellow */
+.default-color0.chart-pie { -fx-pie-color: #690000; } /* Green */
+.default-color1.chart-pie { -fx-pie-color: #1BA3B6; } /* Yellow */
 .default-color2.chart-pie { -fx-pie-color: #dc3545; } /* Red */
 .default-color3.chart-pie { -fx-pie-color: #0078d4; } /* Blue */
 

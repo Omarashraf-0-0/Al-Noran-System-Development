@@ -5,14 +5,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="71fa68e8-5159-49fe-9ebe-37f5d135855b" name="Changes" comment="Merged">
-      <change afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/chart.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/images/add_2.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/images/contract.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/images/delete_forever.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/images/ink_pen.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/images/paid.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/java/noran/desktop/Applications/LoginApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/java/noran/desktop/Applications/LoginApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AcceptedInvoicesView.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AcceptedInvoicesView.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/TopBar.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/TopBar.fxml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/add-client-popup.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/add-client-popup.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/add-employee-popup.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/add-employee-popup.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/chart.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/charts.css" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/charts.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data-invoice.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data-invoice.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data.fxml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/dashboard.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/dashboard.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/employee-management.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/employee-management.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/invoices-management.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/invoices-management.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-management.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-management.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-popup.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-popup.fxml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,6 +48,11 @@
     &quot;accountId&quot;: &quot;6a079c3b-78da-4884-bdc3-4b6aad69a185&quot;
   }
 }</component>
+  <component name="JavaAutoRunManager">
+    <enabled-run-configurations>
+      <run-configuration type="MavenRunConfiguration" name="Desktop Run" />
+    </enabled-run-configurations>
+  </component>
   <component name="KotlinScriptingSettings">
     <scriptDefinition className="org.jetbrains.kotlin.scripting.resolve.KotlinScriptDefinitionFromAnnotatedTemplate" definitionName="KotlinSettingsScript">
       <order>2147483647</order>
@@ -53,13 +67,17 @@
   &quot;associatedIndex&quot;: 1
 }</component>
   <component name="ProjectId" id="3458kvAtv1NsD5UfyvBUaqLoPEh" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "ASKED_ADD_EXTERNAL_FILES": "true",
+    "Application.Run Desktop.executor": "Run",
     "Maven.Desktop Run.executor": "Run",
     "Node.js.server.js.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
@@ -80,7 +98,7 @@
       <recent name="C:\Users\Yasmine Shehata\IdeaProjects\Client\Al-Noran-System-Development\Desktop\src\main\resources\noran\desktop\images" />
     </key>
   </component>
-  <component name="RunManager" selected="Maven.Desktop Run">
+  <component name="RunManager" selected="Node.js.server.js">
     <configuration name="Run Desktop" type="Application" factoryName="Application">
       <option name="MAIN_CLASS_NAME" value="noran.desktop.Applications.LoginApplication" />
       <method v="2">
@@ -166,7 +184,8 @@
       <workItem from="1764163878901" duration="4016000" />
       <workItem from="1764344684472" duration="4353000" />
       <workItem from="1764421548808" duration="1894000" />
-      <workItem from="1764494356897" duration="2250000" />
+      <workItem from="1764494356897" duration="5544000" />
+      <workItem from="1764499980066" duration="381000" />
     </task>
     <task id="LOCAL-00001" summary="Merged">
       <option name="closed" value="true" />
@@ -176,7 +195,15 @@
       <option name="project" value="LOCAL" />
       <updated>1764424539525</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Merged">
+      <option name="closed" value="true" />
+      <created>1764496715454</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1764496715454</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -191,6 +218,7 @@
     <option featureType="dependencySupport" implementationName="javascript:npm:postcss" />
   </component>
   <component name="VcsManagerConfiguration">
+    <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
     <MESSAGE value="GUI DESKTOP" />
     <MESSAGE value="Merged" />
     <option name="LAST_COMMIT_MESSAGE" value="Merged" />

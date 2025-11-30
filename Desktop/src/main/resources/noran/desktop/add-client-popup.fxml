@@ -15,15 +15,15 @@
 
     <Label style="-fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: #333;" text="إضافة عميل جديد" />
 
-    <TextField fx:id="fullnameField" alignment="CENTER_RIGHT" promptText="اسم العميل" style="-fx-pref-width: 300; -fx-font-size: 14;" />
+    <TextField fx:id="fullnameField" alignment="CENTER_RIGHT" promptText="اسم العميل" style="-fx-background-radius: 10;" />
 
-    <TextField fx:id="passwordField" alignment="CENTER_RIGHT" promptText="كلمة السر" style="-fx-pref-width: 300; -fx-font-size: 14;" />
+    <TextField fx:id="passwordField" alignment="CENTER_RIGHT" promptText="كلمة السر" style="-fx-background-radius: 10;" />
 
-    <TextField fx:id="phoneField" alignment="CENTER_RIGHT" promptText="رقم الهاتف" style="-fx-pref-width: 300; -fx-font-size: 14;" />
+    <TextField fx:id="phoneField" alignment="CENTER_RIGHT" promptText="رقم الهاتف" style="-fx-background-radius: 10;" />
 
-    <TextField fx:id="ssnField" alignment="CENTER_RIGHT" promptText="الرقم التعريفي / الرقم القومي" style="-fx-pref-width: 300; -fx-font-size: 14;" />
+    <TextField fx:id="ssnField" alignment="CENTER_RIGHT" promptText="الرقم التعريفي / الرقم القومي" style="-fx-background-radius: 10;" />
 
-    <ComboBox fx:id="clientTypeField" editable="false" nodeOrientation="RIGHT_TO_LEFT" promptText="نوع العميل" style="-fx-background-color:#ffffff; -fx-pref-width: 300; -fx-font-size: 14;">
+    <ComboBox fx:id="clientTypeField" editable="false" nodeOrientation="RIGHT_TO_LEFT" prefHeight="26.0" prefWidth="313.0" promptText="نوع العميل" style="-fx-background-radius: 10;">
         <items>
             <FXCollections fx:factory="observableArrayList">
                 <String fx:value="personal" />
@@ -32,7 +32,7 @@
         </items>
     </ComboBox>
 
-    <TextField fx:id="emailField" alignment="CENTER_RIGHT" promptText="البريد الإلكتروني" style="-fx-pref-width: 300; -fx-font-size: 14;" />
+    <TextField fx:id="emailField" alignment="CENTER_RIGHT" promptText="البريد الإلكتروني" style="-fx-background-radius: 10;" />
 
     <HBox alignment="CENTER" spacing="20">
         <Button onAction="#cancel" style="-fx-pref-width: 120; -fx-background-color: #aaa; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;" text="إلغاء" />
