@@ -706,7 +706,7 @@ const EmployeeShipmentManagement = () => {
 								)}
 
 							{/* Files Section */}
-							<div className="mt-16">
+							{/* <div className="mt-16">
 								<h2 className="text-2xl font-bold text-center text-red-900 mb-8">
 									📁 ملفات الشحنة
 								</h2>
@@ -743,7 +743,7 @@ const EmployeeShipmentManagement = () => {
 										))}
 									</div>
 								)}
-							</div>
+							</div> */}
 
 							{/* Action Buttons */}
 							<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-12">
