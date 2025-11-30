@@ -687,6 +687,41 @@ const getEmployeeShipmentStats = async (req, res) => {
 	}
 };
 
+// Get client shipment statistics
+const getClientShipmentStats = async (req, res) => {
+	try {
+		const { userId } = req.params;
+
+		if (!userId) {
+			return res.status(400).json({ message: "User ID is required" });
+		}
+
+		// Get all shipments for this client
+		const allShipments = await Shipment.find({ user_id: userId });
+
+		// Count completed shipments (both English and Arabic statuses)
+		const completedCount = allShipments.filter(
+			(shipment) =>
+				shipment.status === "Completed" || shipment.status === "تمت بنجاح"
+		).length;
+
+		// Count in-progress shipments (all except completed)
+		const inProgressCount = allShipments.length - completedCount;
+
+		res.json({
+			success: true,
+			stats: {
+				completed: completedCount,
+				inProgress: inProgressCount,
+				total: allShipments.length,
+			},
+		});
+	} catch (error) {
+		console.error("Error fetching client shipment stats:", error);
+		res.status(500).json({ message: error.message });
+	}
+};
+
 const mostActiveClients = async (req, res) => {
 	console.log("here");
 	try {
@@ -920,6 +955,7 @@ module.exports = {
 	getRequiredDocuments,
 	markDocumentAsUploaded,
 	getEmployeeShipmentStats,
+	getClientShipmentStats,
 	addShipments,
 	mostActiveClients,
 	getDashboardStats,

@@ -9,6 +9,7 @@ const {
 	getRequiredDocuments,
 	markDocumentAsUploaded,
 	getEmployeeShipmentStats,
+	getClientShipmentStats,
 	createShipment,
 	getAllShipments,
 	getShipmentByAcid,
@@ -39,6 +40,7 @@ router.get("/getAll", protect, getAllShipments);
 router.get("/employee/:employeeId", protect, getShipmentrelatedToEmployee);
 router.get("/employee/:employeeId/stats", protect, getEmployeeShipmentStats);
 router.get("/user/:userId", protect, getShipmentsByUserId);
+router.get("/user/:userId/stats", protect, getClientShipmentStats);
 router.get("/status/:acid", protect, getShipmentStatusByAcid);
 router.get("/status/number46/:number46", protect, getShipmentStatusByNumber46);
 
