@@ -1,321 +1,344 @@
-const User = require('../models/user');
-const Notification = require('../models/notifications');
-const asyncHandler = require('express-async-handler');
-const bcrypt = require('bcrypt');
-const notifications = require('../models/notifications');
+const User = require("../models/user");
+const Notification = require("../models/notifications");
+const asyncHandler = require("express-async-handler");
+const bcrypt = require("bcrypt");
+const notifications = require("../models/notifications");
 
 // @desc    Get all users
 // @route   GET /api/users
 // @access  Public (should be protected in production)
 const getAllUsers = asyncHandler(async (req, res) => {
-  const users = await User.find().select('-password').lean();
-  
-  if (!users?.length) {
-    return res.status(400).json({ message: 'No users found' });
-  }
-  
-  res.json(users);
+	const users = await User.find().select("-password").lean();
+
+	if (!users?.length) {
+		return res.status(400).json({ message: "No users found" });
+	}
+
+	res.json(users);
 });
 
 // @desc    Create new user
 // @route   POST /api/users
 // @access  Public (should be protected in production)
 const createUser = asyncHandler(async (req, res) => {
-  const {
-    fullname,
-    username,
-    phone,
-    email,
-    password,
-    type,
-    clientType,
-    ssn,
-    employeeType
-  } = req.body;
+	const {
+		fullname,
+		username,
+		phone,
+		email,
+		password,
+		type,
+		clientType,
+		ssn,
+		employeeType,
+	} = req.body;
 
-  // Confirm data
-  if (!fullname || !username || !phone || !email || !password || !type) {
-    return res.status(400).json({ message: 'All fields are required' });
-  }
+	// Confirm data
+	if (!fullname || !username || !phone || !email || !password || !type) {
+		return res.status(400).json({ message: "All fields are required" });
+	}
 
-  // Check for duplicate
-  const duplicate = await User.findOne({ $or: [{ email }, { username }, { phone }] })
-    .lean()
-    .exec();
-    
-  if (duplicate) {
-    return res.status(409).json({ message: 'User already exists with that email, username, or phone' });
-  }
+	// Check for duplicate
+	const duplicate = await User.findOne({
+		$or: [{ email }, { username }, { phone }],
+	})
+		.lean()
+		.exec();
 
-  // Create user data object
-  const userData = {
-    fullname,
-    username,
-    phone,
-    email,
-    password,
-    type,
-  };
+	if (duplicate) {
+		return res
+			.status(409)
+			.json({
+				message: "User already exists with that email, username, or phone",
+			});
+	}
 
-  if (type === 'client') {
-    userData.clientDetails = { clientType };
-    if (clientType === 'personal') {
-      userData.clientDetails.ssn = ssn;
-    }
-  } else if (type === 'employee') {
-    userData.employeeDetails = { employeeType };
-  }
+	// Create user data object
+	const userData = {
+		fullname,
+		username,
+		phone,
+		email,
+		password,
+		type,
+	};
 
-  // Create and store new user
-  const user = await User.create(userData);
+	if (type === "client") {
+		userData.clientDetails = { clientType };
+		if (clientType === "personal") {
+			userData.clientDetails.ssn = ssn;
+		}
+	} else if (type === "employee") {
+		userData.employeeDetails = { employeeType };
+	}
 
-  if (user) {
-    res.status(201).json({
-      message: `New user ${username} created`,
-      user: {
-        id: user._id,
-        fullname: user.fullname,
-        username: user.username,
-        email: user.email,
-        type: user.type
-      }
-    });
-    console.log(`New user registered: ${user})`);
-  } else {
-    res.status(400).json({ message: 'Invalid user data received' });
-  }
+	// Create and store new user
+	const user = await User.create(userData);
+
+	if (user) {
+		res.status(201).json({
+			message: `New user ${username} created`,
+			user: {
+				id: user._id,
+				fullname: user.fullname,
+				username: user.username,
+				email: user.email,
+				type: user.type,
+			},
+		});
+		console.log(`New user registered: ${user})`);
+	} else {
+		res.status(400).json({ message: "Invalid user data received" });
+	}
 });
 
 // @desc    Update a user
 // @route   PATCH /api/users/:id
 // @access  Public (should be protected in production)
 const updateUser = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { fullname, username, phone, email, password, active, type, clientType, ssn, employeeType } = req.body;
+	const { id } = req.params;
+	const {
+		fullname,
+		username,
+		phone,
+		email,
+		password,
+		active,
+		type,
+		clientType,
+		ssn,
+		employeeType,
+		taxNumber,
+		rank,
+	} = req.body;
 
-  // Confirm data
-  if (!id) {
-    return res.status(400).json({ message: 'User ID required' });
-  }
+	// Confirm data
+	if (!id) {
+		return res.status(400).json({ message: "User ID required" });
+	}
 
-  // Find user
-  const user = await User.findById(id).exec();
+	// Find user
+	const user = await User.findById(id).exec();
 
-  if (!user) {
-    return res.status(400).json({ message: 'User not found' });
-  }
+	if (!user) {
+		return res.status(400).json({ message: "User not found" });
+	}
 
-  // Check for duplicate
-  if (username || email || phone) {
-    const duplicate = await User.findOne({
-      _id: { $ne: id },
-      $or: [
-        ...(username ? [{ username }] : []),
-        ...(email ? [{ email }] : []),
-        ...(phone ? [{ phone }] : [])
-      ]
-    }).lean().exec();
+	// Check for duplicate
+	if (username || email || phone) {
+		const duplicate = await User.findOne({
+			_id: { $ne: id },
+			$or: [
+				...(username ? [{ username }] : []),
+				...(email ? [{ email }] : []),
+				...(phone ? [{ phone }] : []),
+			],
+		})
+			.lean()
+			.exec();
 
-    if (duplicate) {
-      return res.status(409).json({ message: 'Username, email, or phone already taken' });
-    }
-  }
+		if (duplicate) {
+			return res
+				.status(409)
+				.json({ message: "Username, email, or phone already taken" });
+		}
+	}
 
-  // Update fields
-  if (fullname) user.fullname = fullname;
-  if (username) user.username = username;
-  if (phone) user.phone = phone;
-  if (email) user.email = email;
-  if (password) user.password = password; // Will be hashed by the pre-save hook
-  if (typeof active !== 'undefined') user.active = active;
-  if (type) user.type = type;
+	// Update fields
+	if (fullname) user.fullname = fullname;
+	if (username) user.username = username;
+	if (phone) user.phone = phone;
+	if (email) user.email = email;
+	if (password) user.password = password; // Will be hashed by the pre-save hook
+	if (typeof active !== "undefined") user.active = active;
+	if (type) user.type = type;
+	if (taxNumber !== undefined) user.taxNumber = taxNumber;
+	if (rank !== undefined) user.rank = rank || null;
 
-  // Update type-specific details
-  if (type === 'client' && clientType) {
-    user.clientDetails = user.clientDetails || {};
-    user.clientDetails.clientType = clientType;
-    if (clientType === 'personal' && ssn) {
-      user.clientDetails.ssn = ssn;
-    }
-  }
+	// Update type-specific details
+	if (type === "client" && clientType) {
+		user.clientDetails = user.clientDetails || {};
+		user.clientDetails.clientType = clientType;
+		if (clientType === "personal" && ssn) {
+			user.clientDetails.ssn = ssn;
+		}
+	}
 
-  if (type === 'employee' && employeeType) {
-    user.employeeDetails = user.employeeDetails || {};
-    user.employeeDetails.employeeType = employeeType;
-  }
+	if (type === "employee" && employeeType) {
+		user.employeeDetails = user.employeeDetails || {};
+		user.employeeDetails.employeeType = employeeType;
+	}
 
-  const updatedUser = await user.save();
+	const updatedUser = await user.save();
 
-  res.json({
-    message: `User ${updatedUser.username} updated`,
-    user: {
-      id: updatedUser._id,
-      fullname: updatedUser.fullname,
-      username: updatedUser.username,
-      email: updatedUser.email,
-      type: updatedUser.type,
-      active: updatedUser.active
-    }
-  });
+	res.json({
+		message: `User ${updatedUser.username} updated`,
+		user: {
+			id: updatedUser._id,
+			fullname: updatedUser.fullname,
+			username: updatedUser.username,
+			email: updatedUser.email,
+			type: updatedUser.type,
+			active: updatedUser.active,
+		},
+	});
 });
 
 // @desc    Delete a user
 // @route   DELETE /api/users/:id
 // @access  Public (should be protected in production)
 const deleteUser = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+	const { id } = req.params;
 
-  if (!id) {
-    return res.status(400).json({ message: 'User ID Required' });
-  }
+	if (!id) {
+		return res.status(400).json({ message: "User ID Required" });
+	}
 
-  const user = await User.findById(id).exec();
+	const user = await User.findById(id).exec();
 
-  if (!user) {
-    return res.status(400).json({ message: 'User not found' });
-  }
+	if (!user) {
+		return res.status(400).json({ message: "User not found" });
+	}
 
-  const result = await user.deleteOne();
+	const result = await user.deleteOne();
 
-  const reply = `User ${result.fullname} with ID ${result._id} deleted`;
+	const reply = `User ${result.fullname} with ID ${result._id} deleted`;
 
-  res.json({ message: reply });
+	res.json({ message: reply });
 });
 
 // @desc    Change user password
 // @route   PUT /api/users/:id/change-password
 // @access  Private
 const changePassword = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { currentPassword, newPassword } = req.body;
+	const { id } = req.params;
+	const { currentPassword, newPassword } = req.body;
 
-  console.log('🔐 [changePassword] User ID:', id);
-  console.log('🔐 [changePassword] Request body:', { currentPassword: '***', newPassword: '***' });
+	console.log("🔐 [changePassword] User ID:", id);
+	console.log("🔐 [changePassword] Request body:", {
+		currentPassword: "***",
+		newPassword: "***",
+	});
 
-  // Validate input
-  if (!id || !currentPassword || !newPassword) {
-    return res.status(400).json({ 
-      success: false,
-      message: 'User ID, current password, and new password are required' 
-    });
-  }
+	// Validate input
+	if (!id || !currentPassword || !newPassword) {
+		return res.status(400).json({
+			success: false,
+			message: "User ID, current password, and new password are required",
+		});
+	}
 
-  // Find user with password
-  const user = await User.findById(id).select('+password').exec();
+	// Find user with password
+	const user = await User.findById(id).select("+password").exec();
 
-  if (!user) {
-    return res.status(404).json({ 
-      success: false,
-      message: 'User not found' 
-    });
-  }
+	if (!user) {
+		return res.status(404).json({
+			success: false,
+			message: "User not found",
+		});
+	}
 
-  // Verify current password
-  const isPasswordMatch = await user.matchPassword(currentPassword);
-  
-  if (!isPasswordMatch) {
-    return res.status(401).json({ 
-      success: false,
-      message: 'Current password is incorrect' 
-    });
-  }
+	// Verify current password
+	const isPasswordMatch = await user.matchPassword(currentPassword);
 
-  // Update password (will be hashed by pre-save hook)
-  user.password = newPassword;
-  await user.save();
+	if (!isPasswordMatch) {
+		return res.status(401).json({
+			success: false,
+			message: "Current password is incorrect",
+		});
+	}
 
-  console.log('✅ [changePassword] Password changed successfully');
+	// Update password (will be hashed by pre-save hook)
+	user.password = newPassword;
+	await user.save();
 
-  res.json({ 
-    success: true,
-    message: 'Password changed successfully' 
-  });
+	console.log("✅ [changePassword] Password changed successfully");
+
+	res.json({
+		success: true,
+		message: "Password changed successfully",
+	});
 });
 
 // @desc    Add multiple users
 // @route   POST /api/users/addUsers
 // @access  Private
 const addUsers = async (req, res) => {
-  const usersData = req.body;
-  if (!Array.isArray(usersData)) {
-    return res.status(400).json({ message: 'Expected an array of users' });
-  }
-  try {
-    const response = await User.insertMany(usersData, { ordered: false });
-    if (response) {
-      return res.status(200).json({
-        message: "Users saved successfully",
-        users: response
-      });
-    } else {
-      return res.status(400).json({ message: 'Invalid user data received' });
-    }
-  } catch (error) {
-    return res.status(500).json({ "error": error.message });
-  }
+	const usersData = req.body;
+	if (!Array.isArray(usersData)) {
+		return res.status(400).json({ message: "Expected an array of users" });
+	}
+	try {
+		const response = await User.insertMany(usersData, { ordered: false });
+		if (response) {
+			return res.status(200).json({
+				message: "Users saved successfully",
+				users: response,
+			});
+		} else {
+			return res.status(400).json({ message: "Invalid user data received" });
+		}
+	} catch (error) {
+		return res.status(500).json({ error: error.message });
+	}
 };
 
-
-const getNotifications = async (req,res) => {
-    const id = req.body.id ;// todo there is a better practices here like using JWT
-    try{
-      const userNotifications = await Notification.find({receiverId:id,isRead:false}).sort({ createdAt: -1 });;
-      return res.status(200).json({
-        notifications : userNotifications
-      });
-    }catch(err)
-    {
-      return res.status(500).json({error:err.message});
-    }
-}
-
+const getNotifications = async (req, res) => {
+	const id = req.body.id; // todo there is a better practices here like using JWT
+	try {
+		const userNotifications = await Notification.find({
+			receiverId: id,
+			isRead: false,
+		}).sort({ createdAt: -1 });
+		return res.status(200).json({
+			notifications: userNotifications,
+		});
+	} catch (err) {
+		return res.status(500).json({ error: err.message });
+	}
+};
 
 const sendNotification = async (req, res) => {
-  try {
-    const senderId = req.body.senderId;
-    const { receiverId, category, content } = req.body;
+	try {
+		const senderId = req.body.senderId;
+		const { receiverId, category, content } = req.body;
 
-    
-    if (!receiverId) return res.status(400).json({ message: "No receiver ID provided" });
-    if (!category) return res.status(400).json({ message: "No category provided" });
-    if (!content) return res.status(400).json({ message: "Notification content is empty" });
+		if (!receiverId)
+			return res.status(400).json({ message: "No receiver ID provided" });
+		if (!category)
+			return res.status(400).json({ message: "No category provided" });
+		if (!content)
+			return res.status(400).json({ message: "Notification content is empty" });
 
-    
-    const userReceiver = await User.findById(receiverId);
-    if (!userReceiver) return res.status(404).json({ message: "Receiver user not found" });
+		const userReceiver = await User.findById(receiverId);
+		if (!userReceiver)
+			return res.status(404).json({ message: "Receiver user not found" });
 
+		const notification = await Notification.create({
+			senderId,
+			receiverId,
+			category,
+			content,
+		});
 
-    const notification = await Notification.create({
-      senderId,
-      receiverId,
-      category,
-      content
-    });
+		// TODO: Add real-time notification via Socket.io here
 
-    // TODO: Add real-time notification via Socket.io here
-
-    return res.status(201).json({
-      message: "Notification sent successfully",
-      data: notification
-    });
-
-  } catch (err) {
-    return res.status(501).json({ message: err.message });
-  }
+		return res.status(201).json({
+			message: "Notification sent successfully",
+			data: notification,
+		});
+	} catch (err) {
+		return res.status(501).json({ message: err.message });
+	}
 };
 
-
-
-
-
-
 module.exports = {
-  getAllUsers,
-  createUser,
-  updateUser,
-  deleteUser,
-  changePassword,
-  addUsers,
-  getNotifications,
-  sendNotification
+	getAllUsers,
+	createUser,
+	updateUser,
+	deleteUser,
+	changePassword,
+	addUsers,
+	getNotifications,
+	sendNotification,
 };

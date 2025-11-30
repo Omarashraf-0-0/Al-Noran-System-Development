@@ -6,6 +6,7 @@ import Footer from "../components/Footer";
 import bannerPic from "../assets/images/Untitled design (8) 2.png";
 import searchIcon from "../assets/images/search.svg";
 import AddEmployeePopUp from "../pages/AddEmployeePopUp";
+import EmployeeDetailsModal from "../components/EmployeeDetailsModal";
 
 export default function EmployeeManagement() {
 	const [employees, setEmployees] = useState([]);
@@ -13,6 +14,7 @@ export default function EmployeeManagement() {
 	const [showPopup, setShowPopup] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [selectedEmployee, setSelectedEmployee] = useState(null);
+	const [showDetailsModal, setShowDetailsModal] = useState(false);
 
 	const user = JSON.parse(localStorage.getItem("user"));
 	const adminName = user?.fullname || user?.username || "المدير";
@@ -180,6 +182,7 @@ export default function EmployeeManagement() {
 					<table className="w-full text-center border-collapse bg-white rounded-lg shadow">
 						<thead>
 							<tr className="border-b bg-gradient-to-r from-red-800 to-red-900 text-white">
+								<th className="py-4 px-4">#</th>
 								<th className="py-4 px-4">اسم الموظف</th>
 								<th className="py-4 px-4">اسم المستخدم</th>
 								<th className="py-4 px-4">نوع الموظف</th>
@@ -193,16 +196,19 @@ export default function EmployeeManagement() {
 						<tbody>
 							{filteredEmployees.length === 0 ? (
 								<tr>
-									<td colSpan="7" className="py-8 text-gray-500">
+									<td colSpan="8" className="py-8 text-gray-500">
 										{search ? "لا يوجد موظفون مطابقون لبحثك" : "لا يوجد موظفون"}
 									</td>
 								</tr>
 							) : (
-								filteredEmployees.map((emp) => (
+								filteredEmployees.map((emp, index) => (
 									<tr
 										key={emp.id}
 										className="border-b text-gray-700 hover:bg-gray-50"
 									>
+										<td className="py-4 px-4 font-semibold text-gray-500">
+											{index + 1}
+										</td>
 										<td className="py-4 px-4 font-semibold">{emp.name}</td>
 										<td className="py-4 px-4">{emp.username}</td>
 										<td className="py-4 px-4">
@@ -224,7 +230,17 @@ export default function EmployeeManagement() {
 										<td className="py-4 px-4">{emp.email}</td>
 										<td className="py-4 px-4">{emp.phone}</td>
 										<td className="py-4 px-4">
-											<div className="flex gap-2 justify-center">
+											<div className="flex gap-2 justify-center flex-wrap">
+												<button
+													onClick={() => {
+														setSelectedEmployee(emp.id);
+														setShowDetailsModal(true);
+													}}
+													className="bg-[#1BA3B6] text-white px-3 py-1 rounded text-xs font-semibold hover:bg-[#158a9a]"
+													title="عرض التفاصيل"
+												>
+													👁️ عرض
+												</button>
 												<button
 													onClick={() => handleToggleStatus(emp.id, emp.status)}
 													className={`px-3 py-1 rounded text-xs font-semibold ${
@@ -266,6 +282,16 @@ export default function EmployeeManagement() {
 				<AddEmployeePopUp
 					onClose={() => setShowPopup(false)}
 					onEmployeeAdded={fetchEmployees}
+				/>
+			)}
+			{showDetailsModal && selectedEmployee && (
+				<EmployeeDetailsModal
+					employeeId={selectedEmployee}
+					onClose={() => {
+						setShowDetailsModal(false);
+						setSelectedEmployee(null);
+					}}
+					onUpdate={fetchEmployees}
 				/>
 			)}
 			<div className="mt-16">
