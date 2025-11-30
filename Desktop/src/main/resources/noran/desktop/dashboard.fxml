@@ -1,22 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.chart.PieChart?>
+<?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250"
-            style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;"
-            xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="noran.desktop.Controllers.DashboardController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" stylesheets="@charts.css" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.DashboardController">
 
     <left>
-        <fx:include source="Sidebar.fxml" fx:id="sidebar" />
+        <fx:include fx:id="sidebar" source="Sidebar.fxml" />
     </left>
 
     <top>
-        <fx:include source="TopBar.fxml" fx:id="topBar"/>
+        <fx:include fx:id="topBar" source="TopBar.fxml" />
     </top>
 
     <!-- CENTER CONTENT -->
@@ -64,6 +59,9 @@
                         <Label fx:id="ongoingShipmentsLabel" style="-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: #0078d4;" text="0" />
                     </VBox>
                 </StackPane>
+            <rowConstraints>
+               <RowConstraints />
+            </rowConstraints>
             </GridPane>
 
             <!-- CHARTS SECTION -->
@@ -75,24 +73,22 @@
                         <!-- Chart 1: نسبة المقبولة vs المعلقة -->
                         <VBox alignment="CENTER" spacing="12">
                             <Label style="-fx-font-weight: bold; -fx-font-size: 15;" text="نسبة الفواتير المقبولة والمعلقة" />
-                            <PieChart fx:id="chartAcceptedVsPending" prefHeight="220" prefWidth="220" />
+                            <PieChart fx:id="chartAcceptedVsPending" prefHeight="220" prefWidth="220" stylesheets="charts.css" />
                         </VBox>
 
                         <!-- Chart 2: نسبة الفواتير المعلقة فقط -->
                         <VBox alignment="CENTER" spacing="12">
                             <Label style="-fx-font-weight: bold; -fx-font-size: 15;" text="الفواتير المعلقة مقابل المعالجة" />
-                            <PieChart fx:id="chartPendingInvoicesRatio" prefHeight="220" prefWidth="220" />
+                            <PieChart fx:id="chartPendingInvoicesRatio" prefHeight="220" prefWidth="220" stylesheets="charts.css" />
                         </VBox>
 
                         <!-- Chart 3: توزيع العملاء حسب الإصدار -->
                         <VBox alignment="CENTER" spacing="12">
                             <Label style="-fx-font-weight: bold; -fx-font-size: 15;" text="توزيع العملاء حسب الإصدار" />
-                            <PieChart fx:id="chartClientsByVersion" prefHeight="220" prefWidth="220" />
+                            <PieChart fx:id="chartClientsByVersion" prefHeight="220" prefWidth="220" stylesheets="charts.css" />
                         </VBox>
                     </HBox>
-                    <Button fx:id="downloadReportBtn" onAction="#downloadDashboardReport"
-                            text="تحميل تقرير الإحصائيات كـ PDF"
-                            style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-padding: 14 40; -fx-background-radius: 12; -fx-cursor: hand;" />
+                    <Button fx:id="downloadReportBtn" onAction="#downloadDashboardReport" style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-font-size: 16; -fx-font-weight: bold; -fx-padding: 14 40; -fx-background-radius: 12; -fx-cursor: hand;" text="تحميل تقرير الإحصائيات كـ PDF" />
 
 <!--                    <Button text="تحميل تقرير شامل PDF" style="-fx-background-color: #1fb5b5; -fx-text-fill: white; -fx-font-size: 15; -fx-padding: 12 30; -fx-background-radius: 10; -fx-font-weight: bold;" />-->
                 </VBox>
