@@ -1,0 +1,18 @@
+.chart-pie > .chart-pie-color0 {
+    -fx-pie-color: #a40000;
+}
+
+.chart-pie > .chart-pie-color1 {
+    -fx-pie-color: #690000;
+}
+
+.chart-pie > .chart-pie-color2 {
+    -fx-pie-color: #1ba3b6;
+}
+
+/* Optional: labels styling */
+.chart-pie-label {
+    -fx-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}

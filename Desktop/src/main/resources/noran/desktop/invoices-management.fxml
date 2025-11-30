@@ -1,56 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
+<?import java.lang.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<?import java.lang.String?>
-<BorderPane nodeOrientation="RIGHT_TO_LEFT"
-            prefHeight="700" prefWidth="1250"
-            style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;"
-            xmlns="http://javafx.com/javafx/17.0.12"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="noran.desktop.HelloController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="700" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.HelloController">
 
     <stylesheets>
         <String fx:value="@invoices-table.css" />
     </stylesheets>
 
     <left>
-        <fx:include source="Sidebar.fxml" fx:id="sidebar" />
+        <fx:include fx:id="sidebar" source="Sidebar.fxml" />
     </left>
 
     <top>
-        <fx:include source="TopBar.fxml" fx:id="topBar"/>
+        <fx:include fx:id="topBar" source="TopBar.fxml" />
     </top>
 
     <!-- ======= Main Content ======= -->
     <center>
         <VBox spacing="18" style="-fx-padding: 18 24;">
             <!-- Client Info -->
-            <VBox spacing="8"
-                  style="-fx-background-color: white; -fx-padding: 18; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);">
+            <VBox spacing="8" style="-fx-background-color: white; -fx-padding: 18; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);">
                 <HBox spacing="25">
-                    <Label text="" style="-fx-font-weight: bold;" />
-                    <Label fx:id="clientNameLabel" text="—" style="-fx-font-weight: bold;"/>
-                    <Label text="-" style="-fx-font-weight: bold;" />
-                    <Label fx:id="taxNumberLabel" text="—" style="-fx-font-weight: bold;"/>
+                    <Label style="-fx-font-weight: bold;" text="" />
+                    <Label fx:id="clientNameLabel" style="-fx-font-weight: bold;" text="—" />
+                    <Label style="-fx-font-weight: bold;" text="-" />
+                    <Label fx:id="taxNumberLabel" style="-fx-font-weight: bold;" text="—" />
                 </HBox>
                 <HBox spacing="25">
-                    <Label text="" style="-fx-font-weight: bold;" />
-                    <Label fx:id="invoiceNumberLabel" text="—" style="-fx-font-weight: bold;"/>
-                    <Label text="" style="-fx-font-weight: bold;" />
-                    <Label fx:id="invoiceDateLabel" text="—" style="-fx-font-weight: bold;"/>
+                    <Label style="-fx-font-weight: bold;" text="" />
+                    <Label fx:id="invoiceNumberLabel" style="-fx-font-weight: bold;" text="—" />
+                    <Label style="-fx-font-weight: bold;" text="" />
+                    <Label fx:id="invoiceDateLabel" style="-fx-font-weight: bold;" text="—" />
                 </HBox>
             </VBox>
 
             <!-- Shipment Dropdown -->
-            <HBox spacing="12" alignment="CENTER_LEFT" style="-fx-padding: 4 0 12 0;">
-                <Label text="الشحنة:" style="-fx-font-weight: bold;" />
-                <ComboBox fx:id="clientShipmentComboBox" prefWidth="250"
-                          promptText="اختر الشحنة"
-                          style="-fx-background-radius: 8; -fx-background-color: #fff;" />
+            <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 4 0 12 0;">
+                <Label style="-fx-font-weight: bold;" text="الشحنة:" />
+                <ComboBox fx:id="clientShipmentComboBox" prefWidth="250" promptText="اختر الشحنة" style="-fx-background-radius: 8; -fx-background-color: #fff;" />
             </HBox>
 
             <!-- Invoices Table -->
@@ -61,14 +52,11 @@
                     </image>
                 </ImageView>
 
-                <TableView fx:id="invoicesTable"
-                           prefHeight="350"
-                           style="-fx-background-color: transparent;"
-                           stylesheets="@invoices-table.css">
+                <TableView fx:id="invoicesTable" prefHeight="350" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css">
                     <columns>
-                        <TableColumn fx:id="colDescription" text="الوصف" prefWidth="460" />
-                        <TableColumn fx:id="colPrice" text="السعر" prefWidth="200" />
-                        <TableColumn fx:id="colDate" text="الحالة" prefWidth="220" />
+                        <TableColumn fx:id="colDescription" prefWidth="460" text="الوصف" />
+                        <TableColumn fx:id="colPrice" prefWidth="200" text="السعر" />
+                        <TableColumn fx:id="colDate" prefWidth="220" text="الحالة" />
                     </columns>
                 </TableView>
             </StackPane>
@@ -77,20 +65,11 @@
             <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 12 0 0 0;">
                 <!-- Buttons -->
                 <HBox alignment="CENTER_RIGHT" spacing="12" style="-fx-padding: 12 0 0 0;">
-                    <Button fx:id="addRowBtn"
-                            onAction="#addNewInvoiceRow"
-                            style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;"
-                            text="إضافة عنصر جديد +" />
+                    <Button fx:id="addRowBtn" onAction="#addNewInvoiceRow" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="إضافة عنصر جديد +" />
 
-                    <Button fx:id="deleteRowBtn"
-                            onAction="#deleteSelectedRow"
-                            style="-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;"
-                            text="مسح العنصر" />
+                    <Button fx:id="deleteRowBtn" onAction="#deleteSelectedRow" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="مسح العنصر" />
 
-                    <Button fx:id="sendInvoiceBtn"
-                            onAction="#sendInvoiceToDatabase"
-                            style="-fx-background-color: #1e90ff; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;"
-                            text="إرسال الفاتورة" />
+                    <Button fx:id="sendInvoiceBtn" onAction="#sendInvoiceToDatabase" style="-fx-background-color: #a40000; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" text="إرسال الفاتورة" />
 
                     <Region HBox.hgrow="ALWAYS" />
 

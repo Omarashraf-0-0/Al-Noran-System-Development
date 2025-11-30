@@ -4,28 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="71fa68e8-5159-49fe-9ebe-37f5d135855b" name="Changes" comment="GUI DESKTOP">
-      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/Al-Noran-System-Development.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+    <list default="true" id="71fa68e8-5159-49fe-9ebe-37f5d135855b" name="Changes" comment="Merged">
+      <change afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/chart.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AcceptedInvoicesView.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AcceptedInvoicesView.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AdminInvoices.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AdminInvoices.fxml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/add-client-popup.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/add-client-popup.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/add-employee-popup.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/add-employee-popup.fxml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data-invoice.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data-invoice.fxml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/dashboard.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/dashboard.fxml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/employee-management.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/employee-management.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/hello-view.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/hello-view.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/images/avatar.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-management.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-management.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-popup.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-popup.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/invoices-management.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/invoices-management.fxml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,22 +58,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Maven.Desktop Run.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;desktop/test-merge&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/Yasmine Shehata/IdeaProjects/Client/Al-Noran-System-Development/Desktop/src/main/resources/noran/desktop/images&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Maven.Desktop Run.executor": "Run",
+    "Node.js.server.js.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "desktop/test-merge",
+    "junie.onboarding.icon.badge.shown": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/Yasmine Shehata/IdeaProjects/Client/Al-Noran-System-Development/Desktop/src/main/resources/noran/desktop/images",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\Yasmine Shehata\IdeaProjects\Client\Al-Noran-System-Development\Desktop\src\main\resources\noran\desktop\images" />
@@ -142,10 +130,19 @@
       </MavenSettings>
       <method v="2" />
     </configuration>
+    <configuration name="server.js" type="NodeJSConfigurationType" temporary="true" nameIsGenerated="true" path-to-js-file="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/otp-server/server.js" working-dir="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/otp-server">
+      <method v="2" />
+    </configuration>
     <list>
       <item itemvalue="Application.Run Desktop" />
       <item itemvalue="Maven.Desktop Run" />
+      <item itemvalue="Node.js.server.js" />
     </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Node.js.server.js" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -168,8 +165,18 @@
       <workItem from="1763455521780" duration="41000" />
       <workItem from="1764163878901" duration="4016000" />
       <workItem from="1764344684472" duration="4353000" />
-      <workItem from="1764421548808" duration="1649000" />
+      <workItem from="1764421548808" duration="1894000" />
+      <workItem from="1764494356897" duration="2250000" />
     </task>
+    <task id="LOCAL-00001" summary="Merged">
+      <option name="closed" value="true" />
+      <created>1764424539525</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1764424539525</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -184,8 +191,8 @@
     <option featureType="dependencySupport" implementationName="javascript:npm:postcss" />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Merged" />
     <MESSAGE value="GUI DESKTOP" />
-    <option name="LAST_COMMIT_MESSAGE" value="GUI DESKTOP" />
+    <MESSAGE value="Merged" />
+    <option name="LAST_COMMIT_MESSAGE" value="Merged" />
   </component>
 </project>

@@ -3,37 +3,27 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.geometry.Insets?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT"
-            prefHeight="780"
-            prefWidth="1250"
-            style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;"
-            xmlns="http://javafx.com/javafx/17.0.12"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="noran.desktop.Controllers.ClientDataInvoiceController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.ClientDataInvoiceController">
 
     <left>
-        <fx:include source="Sidebar.fxml" fx:id="sidebar" />
+        <fx:include fx:id="sidebar" source="Sidebar.fxml" />
     </left>
 
     <top>
-        <fx:include source="TopBar.fxml" fx:id="topBar"/>
+        <fx:include fx:id="topBar" source="TopBar.fxml" />
     </top>
     <!-- CENTER CONTENT -->
     <center>
-        <VBox spacing="24" alignment="TOP_CENTER" style="-fx-padding: 32 24;">
+        <VBox alignment="TOP_CENTER" spacing="24" style="-fx-padding: 32 24;">
 
             <!-- زر الانتقال إلى الفواتير المقبولة -->
             <HBox alignment="CENTER_LEFT" spacing="12">
-                <Button fx:id="btnViewAcceptedInvoices"
-                        text="عرض الفواتير المقبولة والمرسلة"
-                        onAction="#openAcceptedInvoices"
-                        style="-fx-background-color: #1e90ff; -fx-text-fill: white; -fx-padding: 14 32; -fx-font-size: 15; -fx-background-radius: 10; -fx-font-weight: bold; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);">
+                <Button fx:id="btnViewAcceptedInvoices" onAction="#openAcceptedInvoices" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 14 32; -fx-font-size: 15; -fx-background-radius: 10; -fx-font-weight: bold; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);" text="عرض الفواتير المقبولة والمرسلة">
                     <graphic>
                         <ImageView fitHeight="20" fitWidth="20">
                             <image>
-                                <Image url="@images/checklist.png" /> <!-- أيقونة اختيارية -->
+
                             </image>
                         </ImageView>
                     </graphic>
@@ -41,25 +31,18 @@
             </HBox>
 
             <!-- Illustration -->
-            <ImageView fitHeight="220" preserveRatio="true">
-                <image>
-                    <Image url="@images/invoice-illustration.png" />
-                </image>
+            <ImageView fitHeight="220" fitWidth="329.0" preserveRatio="true">
             </ImageView>
 
             <!-- Table container -->
             <StackPane style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 12;">
-                <TableView fx:id="invoicesTable"
-                           prefHeight="380"
-                           prefWidth="880"
-                           stylesheets="@invoices-table.css"
-                           style="-fx-background-color: transparent;">
+                <TableView fx:id="invoicesTable" prefHeight="380" prefWidth="880" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css">
 
                     <columns>
-                        <TableColumn fx:id="colClientName" text="اسم العميل" prefWidth="220"/>
-                        <TableColumn fx:id="colClientNumber" text="الرقم التعريفي" prefWidth="220"/>
-                        <TableColumn fx:id="colClientType" text="نوع العميل" prefWidth="220"/>
-                        <TableColumn fx:id="colClientRank" text="رتبة العميل" prefWidth="220"/>
+                        <TableColumn fx:id="colClientName" prefWidth="220" text="اسم العميل" />
+                        <TableColumn fx:id="colClientNumber" prefWidth="220" text="الرقم التعريفي" />
+                        <TableColumn fx:id="colClientType" prefWidth="220" text="نوع العميل" />
+                        <TableColumn fx:id="colClientRank" prefWidth="220" text="رتبة العميل" />
                     </columns>
                 </TableView>
             </StackPane>
