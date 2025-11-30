@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.AcceptedInvoicesController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.AcceptedInvoicesController">
 
     <top>
         <fx:include fx:id="topBar" source="TopBar.fxml" />
@@ -13,6 +22,17 @@
     <center>
         <VBox alignment="TOP_CENTER" spacing="30" style="-fx-padding: 30 40;">
             <Label style="-fx-font-size: 26; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;" text="الفواتير المقبولة والمرسلة" />
+         <AnchorPane prefHeight="200.0" prefWidth="200.0">
+            <children>
+               <Button fx:id="updateClientBtn1" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
+               <ImageView fitHeight="47.0" fitWidth="61.0" layoutX="22.0" pickOnBounds="true" preserveRatio="true">
+                  <image>
+                     <Image url="@images/cached.png" />
+                  </image>
+               </ImageView>
+               <Button fx:id="updateClientBtn1" layoutX="34.0" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
+            </children>
+         </AnchorPane>
 
             <!-- Back Button -->
             <HBox alignment="CENTER_LEFT">

@@ -1,10 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.*?>
-<?import javafx.scene.image.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.ClientDataController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.ClientDataController">
 
     <left>
         <fx:include fx:id="sidebar" source="Sidebar.fxml" />
@@ -17,6 +25,16 @@
     <!-- CENTER CONTENT -->
     <center>
         <VBox alignment="TOP_CENTER" spacing="24" style="-fx-padding: 32 24;">
+         <AnchorPane prefHeight="200.0" prefWidth="200.0">
+            <children>
+               <Button fx:id="updateClientBtn1" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
+               <ImageView fitHeight="47.0" fitWidth="61.0" pickOnBounds="true" preserveRatio="true">
+                  <image>
+                     <Image url="@images/cached.png" />
+                  </image>
+               </ImageView>
+            </children>
+         </AnchorPane>
 
 
             <ImageView fitHeight="220" preserveRatio="true">
@@ -48,6 +66,7 @@
 
                 <Region HBox.hgrow="ALWAYS" />
             </HBox>
+         <Button fx:id="updateClientBtn1" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
         </VBox>
     </center>
 </BorderPane>
