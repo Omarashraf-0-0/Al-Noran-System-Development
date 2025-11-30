@@ -235,34 +235,35 @@ const updateAcidStatusByEmployee = async (req, res) => {
 			});
 		}
 
-		const { id } = req.params;
-		const { status, acidCode } = req.body;
+	const { id } = req.params;
+	const { status, acidCode, reviewingBy } = req.body;
 
-		const request = await AcidRequest.findById(id);
+	const request = await AcidRequest.findById(id);
 
-		if (!request) {
-			return res.status(404).json({
-				success: false,
-				message: "Request not found",
-			});
-		}
+	if (!request) {
+		return res.status(404).json({
+			success: false,
+			message: "Request not found",
+		});
+	}
 
-		// Validate status
-		const validStatuses = ["Pending", "ACID Issued", "Rejected"];
-		if (status && !validStatuses.includes(status)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid status value",
-			});
-		}
+	// Validate status
+	const validStatuses = ["Pending", "ACID Issued", "Rejected"];
+	if (status && !validStatuses.includes(status)) {
+		return res.status(400).json({
+			success: false,
+			message: "Invalid status value",
+		});
+	}
 
-		// Update fields
-		if (status) request.status = status;
-		if (acidCode) request.acidCode = acidCode;
+	// Update fields
+	if (status) request.status = status;
+	if (acidCode) request.acidCode = acidCode;
+	if (reviewingBy !== undefined) {
+		request.reviewingBy = reviewingBy || null;
+	}
 
-		await request.save();
-
-		res.json({
+	await request.save();		res.json({
 			success: true,
 			message: "ACID request updated successfully",
 			request,

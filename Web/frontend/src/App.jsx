@@ -26,6 +26,7 @@ import AcidRequestDetailsPage from "./pages/AcidRequestDetailsPage";
 import EditAcidRequestPage from "./pages/EditAcidRequestPage";
 import EmployeeAcidRequestsPage from "./pages/EmployeeAcidRequestsPage";
 import EmployeeShipments from "./pages/EmployeeShipments";
+import ShipmentsManagement from "./pages/ShipmentsManagement";
 
 const App = () => {
 	return (
@@ -79,6 +80,7 @@ const App = () => {
 					path="/certificatesmanagement"
 					element={<CertificatesManagement />}
 				/>
+				<Route path="/shipmentsmanagement" element={<ShipmentsManagement />} />
 				<Route path="*" element={<NotFound404 />} />
 				<Route path="/chat" element={<Chat />} />
 				<Route

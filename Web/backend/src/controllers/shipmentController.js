@@ -142,7 +142,10 @@ const createShipment = async (req, res) => {
 // ✅ جلب كل الشحنات
 const getAllShipments = async (req, res) => {
 	try {
-		const shipments = await Shipment.find().sort({ createdAt: -1 });
+		const shipments = await Shipment.find()
+			.populate("user_id", "username fullname email")
+			.populate("employee_id", "username fullname email")
+			.sort({ createdAt: -1 });
 		res.json(shipments);
 	} catch (error) {
 		res.status(500).json({ message: error.message });
@@ -173,14 +176,18 @@ const getShipmentById = async (req, res) => {
 			console.log(
 				`Invalid ObjectId format: ${shipmentId}, trying to find by ACID code...`
 			);
-			const shipment = await Shipment.findOne({ acid: shipmentId });
+			const shipment = await Shipment.findOne({ acid: shipmentId })
+				.populate("user_id", "username fullname email")
+				.populate("employee_id", "username fullname email");
 			if (!shipment) {
 				return res.status(404).json({ message: "Shipment not found" });
 			}
 			return res.json(shipment);
 		}
 
-		const shipment = await Shipment.findById(shipmentId);
+		const shipment = await Shipment.findById(shipmentId)
+			.populate("user_id", "username fullname email")
+			.populate("employee_id", "username fullname email");
 		if (!shipment)
 			return res.status(404).json({ message: "Shipment not found" });
 		res.json(shipment);
