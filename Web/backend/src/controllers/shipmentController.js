@@ -780,6 +780,78 @@ const cleanFacet = (facetResult, field, key = "count") => {
 	return facetResult[field]?.[0]?.[key] || 0;
 };
 
+// Get revenue comparison by shipment type (air/sea) per month
+const getRevenueComparison = async (req, res) => {
+	try {
+		console.log("Fetching revenue comparison data...");
+		const result = await Shipment.aggregate([
+			{
+				$lookup: {
+					from: "invoices",
+					localField: "_id",
+					foreignField: "shipmentId",
+					as: "invoices",
+				},
+			},
+			{
+				$unwind: {
+					path: "$invoices",
+					preserveNullAndEmptyArrays: true,
+				},
+			},
+			{
+				$group: {
+					_id: {
+						month: { $month: "$createdAt" },
+						year: { $year: "$createdAt" },
+						type: "$shipmentType",
+					},
+					revenue: { $sum: { $toDouble: "$invoices.feePrice" } },
+				},
+			},
+			{
+				$sort: { "_id.year": 1, "_id.month": 1 },
+			},
+		]);
+
+		// Transform data for frontend
+		const monthNames = [
+			"Jan",
+			"Feb",
+			"Mar",
+			"Apr",
+			"May",
+			"Jun",
+			"Jul",
+			"Aug",
+			"Sep",
+			"Oct",
+			"Nov",
+			"Dec",
+		];
+
+		const dataMap = {};
+		result.forEach((item) => {
+			const monthLabel = monthNames[item._id.month - 1];
+			if (!dataMap[monthLabel]) {
+				dataMap[monthLabel] = { label: monthLabel, sea: 0, air: 0 };
+			}
+			if (item._id.type === "sea") {
+				dataMap[monthLabel].sea = item.revenue || 0;
+			} else if (item._id.type === "air") {
+				dataMap[monthLabel].air = item.revenue || 0;
+			}
+		});
+
+		const chartData = Object.values(dataMap);
+		console.log("Revenue comparison result:", chartData);
+		return res.status(200).json(chartData);
+	} catch (err) {
+		console.error("Error in getRevenueComparison:", err);
+		return res.status(500).json({ message: err.message });
+	}
+};
+
 const getDashboardStats = async (req, res) => {
 	try {
 		const invoiceStats = await Invoice.aggregate([
@@ -976,5 +1048,6 @@ module.exports = {
 	addShipments,
 	mostActiveClients,
 	getDashboardStats,
+	getRevenueComparison,
 	searchShipments,
 };
