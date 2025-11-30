@@ -11,6 +11,9 @@ const EmployeeAcidRequestsPage = () => {
 	const [showShipmentModal, setShowShipmentModal] = useState(false);
 	const [selectedRequest, setSelectedRequest] = useState(null);
 	const [statusFilter, setStatusFilter] = useState("All");
+	const [showConfirmModal, setShowConfirmModal] = useState(false);
+	const [confirmData, setConfirmData] = useState(null);
+	const [acidCodeInput, setAcidCodeInput] = useState("");
 
 	// Shipment form data
 	const [shipmentData, setShipmentData] = useState({
@@ -79,14 +82,109 @@ const EmployeeAcidRequestsPage = () => {
 		}
 	};
 
-	const handleIssueAcid = async (requestId) => {
-		const acidCode = prompt("Enter ACID Code:");
-		if (!acidCode) {
+	// Lock request for review
+	const handleLockRequest = async (requestId) => {
+		try {
+			const token = localStorage.getItem("token");
+			const response = await axios.post(
+				`http://localhost:3500/api/acid/employee/${requestId}/lock`,
+				{},
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				}
+			);
+
+			if (response.data.success) {
+				toast.success("Request locked for review");
+				fetchAllRequests();
+			}
+		} catch (error) {
+			console.error("Error locking request:", error);
+			if (error.response?.status === 423) {
+				toast.error(error.response.data.message);
+			} else {
+				toast.error(error.response?.data?.message || "Failed to lock request");
+			}
+		}
+	};
+
+	// Unlock request
+	const handleUnlockRequest = async (requestId) => {
+		try {
+			const token = localStorage.getItem("token");
+			const response = await axios.post(
+				`http://localhost:3500/api/acid/employee/${requestId}/unlock`,
+				{},
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				}
+			);
+
+			if (response.data.success) {
+				toast.success("Request unlocked");
+				fetchAllRequests();
+			}
+		} catch (error) {
+			console.error("Error unlocking request:", error);
+			toast.error(error.response?.data?.message || "Failed to unlock request");
+		}
+	};
+
+	// Step 1: Request confirmation with data preview
+	const requestIssueConfirmation = async (requestId) => {
+		try {
+			const token = localStorage.getItem("token");
+			const response = await axios.post(
+				`http://localhost:3500/api/acid/employee/${requestId}/issue`,
+				{ confirmed: false },
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				}
+			);
+
+			if (response.data.needsConfirmation) {
+				setConfirmData(response.data.request);
+				setShowConfirmModal(true);
+			}
+		} catch (error) {
+			console.error("Error requesting confirmation:", error);
+			toast.error(
+				error.response?.data?.message || "Failed to get request data"
+			);
+		}
+	};
+
+	// Step 2: Confirm and issue ACID
+	const handleIssueAcid = async () => {
+		if (!acidCodeInput || acidCodeInput.trim() === "") {
 			toast.error("ACID Code is required");
 			return;
 		}
 
-		await handleStatusChange(requestId, "ACID Issued", acidCode);
+		try {
+			const token = localStorage.getItem("token");
+			const response = await axios.post(
+				`http://localhost:3500/api/acid/employee/${confirmData.id}/issue`,
+				{
+					confirmed: true,
+					acidCode: acidCodeInput,
+				},
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				}
+			);
+
+			if (response.data.success) {
+				toast.success("ACID issued successfully!");
+				setShowConfirmModal(false);
+				setConfirmData(null);
+				setAcidCodeInput("");
+				fetchAllRequests();
+			}
+		} catch (error) {
+			console.error("Error issuing ACID:", error);
+			toast.error(error.response?.data?.message || "Failed to issue ACID");
+		}
 	};
 
 	const openShipmentModal = (request) => {
@@ -205,6 +303,8 @@ const EmployeeAcidRequestsPage = () => {
 		switch (status) {
 			case "Pending":
 				return "badge-pending";
+			case "Under Review":
+				return "badge-under-review";
 			case "ACID Issued":
 				return "badge-issued";
 			case "Rejected":
@@ -234,6 +334,7 @@ const EmployeeAcidRequestsPage = () => {
 					>
 						<option value="All">All</option>
 						<option value="Pending">Pending</option>
+						<option value="Under Review">Under Review</option>
 						<option value="ACID Issued">ACID Issued</option>
 						<option value="Rejected">Rejected</option>
 					</select>
@@ -310,24 +411,56 @@ const EmployeeAcidRequestsPage = () => {
 											</td>
 											<td>
 												<div className="action-buttons">
-													{request.status === "Pending" && (
-														<>
-															<button
-																className="btn-approve"
-																onClick={() => handleIssueAcid(request._id)}
-															>
-																Issue ACID
-															</button>
-															<button
-																className="btn-reject"
-																onClick={() =>
-																	handleStatusChange(request._id, "Rejected")
-																}
-															>
-																Reject
-															</button>
-														</>
-													)}
+													{request.status === "Pending" &&
+														!request.isLocked && (
+															<>
+																<button
+																	className="btn-lock"
+																	onClick={() => handleLockRequest(request._id)}
+																	title="Lock request to start review"
+																>
+																	🔒 Start Review
+																</button>
+																<button
+																	className="btn-reject"
+																	onClick={() =>
+																		handleStatusChange(request._id, "Rejected")
+																	}
+																>
+																	Reject
+																</button>
+															</>
+														)}
+													{request.status === "Under Review" &&
+														request.isLocked && (
+															<>
+																<button
+																	className="btn-approve"
+																	onClick={() =>
+																		requestIssueConfirmation(request._id)
+																	}
+																>
+																	Issue ACID
+																</button>
+																<button
+																	className="btn-unlock"
+																	onClick={() =>
+																		handleUnlockRequest(request._id)
+																	}
+																	title="Unlock request"
+																>
+																	🔓 Unlock
+																</button>
+																<button
+																	className="btn-reject"
+																	onClick={() =>
+																		handleStatusChange(request._id, "Rejected")
+																	}
+																>
+																	Reject
+																</button>
+															</>
+														)}
 													{request.status === "ACID Issued" && (
 														<button
 															className="btn-shipment"
@@ -338,6 +471,16 @@ const EmployeeAcidRequestsPage = () => {
 													)}
 													{request.status === "Rejected" && (
 														<span className="rejected-text">Rejected</span>
+													)}
+													{request.isLocked && (
+														<div
+															className="lock-indicator"
+															title={`Reviewing by ${
+																request.reviewingBy?.username || "Employee"
+															}`}
+														>
+															🔒 Locked
+														</div>
 													)}
 												</div>
 											</td>
@@ -508,6 +651,143 @@ const EmployeeAcidRequestsPage = () => {
 									</button>
 								</div>
 							</form>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Confirmation Modal for ACID Issuance */}
+			{showConfirmModal && confirmData && (
+				<div
+					className="modal-overlay"
+					onClick={() => setShowConfirmModal(false)}
+				>
+					<div
+						className="modal-content confirmation-modal"
+						onClick={(e) => e.stopPropagation()}
+					>
+						<div className="modal-header">
+							<h2>⚠️ Confirm ACID Issuance</h2>
+							<button
+								className="close-btn"
+								onClick={() => setShowConfirmModal(false)}
+							>
+								×
+							</button>
+						</div>
+
+						<div className="modal-body">
+							<div className="confirmation-message">
+								<p className="warning-text">
+									Please review the following data carefully before issuing the
+									ACID code. This action cannot be undone.
+								</p>
+							</div>
+
+							<div className="request-summary confirmation-details">
+								<h3>📋 Request Details</h3>
+
+								<div className="detail-section">
+									<h4>👤 Client Information</h4>
+									<p>
+										<strong>Username:</strong>{" "}
+										{confirmData.userId?.username || "N/A"}
+									</p>
+									<p>
+										<strong>Email:</strong> {confirmData.userId?.email || "N/A"}
+									</p>
+								</div>
+
+								<div className="detail-section">
+									<h4>🏭 Supplier Information</h4>
+									<p>
+										<strong>Name:</strong> {confirmData.supplier?.name || "N/A"}
+									</p>
+									<p>
+										<strong>Tax Number:</strong>{" "}
+										{confirmData.supplier?.taxNum || "N/A"}
+									</p>
+									<p>
+										<strong>Country:</strong>{" "}
+										{confirmData.supplier?.country || "N/A"}
+									</p>
+									<p>
+										<strong>Email:</strong>{" "}
+										{confirmData.supplier?.email || "N/A"}
+									</p>
+									<p>
+										<strong>Mobile:</strong>{" "}
+										{confirmData.supplier?.mobileNum || "N/A"}
+									</p>
+								</div>
+
+								<div className="detail-section">
+									<h4>📦 Goods Information</h4>
+									<p>
+										<strong>Description:</strong>{" "}
+										{confirmData.goods?.description || "N/A"}
+									</p>
+									<p>
+										<strong>Customs Item:</strong>{" "}
+										{confirmData.goods?.customsItem || "N/A"}
+									</p>
+									<p>
+										<strong>Weight:</strong>{" "}
+										{confirmData.goods?.weight
+											? `${confirmData.goods.weight} kg`
+											: "N/A"}
+									</p>
+								</div>
+
+								<div className="detail-section">
+									<h4>📅 Request Information</h4>
+									<p>
+										<strong>Request Date:</strong>{" "}
+										{new Date(confirmData.requestDate).toLocaleString()}
+									</p>
+									<p>
+										<strong>Uploads:</strong> {confirmData.uploads?.length || 0}{" "}
+										document(s)
+									</p>
+								</div>
+							</div>
+
+							<div className="acid-code-input">
+								<label htmlFor="acidCode">
+									<strong>Enter ACID Code:</strong>{" "}
+									<span className="required">*</span>
+								</label>
+								<input
+									id="acidCode"
+									type="text"
+									value={acidCodeInput}
+									onChange={(e) => setAcidCodeInput(e.target.value)}
+									placeholder="Enter the ACID code"
+									className="acid-input-field"
+									required
+								/>
+							</div>
+
+							<div className="modal-actions">
+								<button
+									type="button"
+									className="btn-cancel"
+									onClick={() => {
+										setShowConfirmModal(false);
+										setAcidCodeInput("");
+									}}
+								>
+									Cancel
+								</button>
+								<button
+									type="button"
+									className="btn-confirm"
+									onClick={handleIssueAcid}
+									disabled={!acidCodeInput.trim()}
+								>
+									✅ Confirm & Issue ACID
+								</button>
+							</div>
 						</div>
 					</div>
 				</div>

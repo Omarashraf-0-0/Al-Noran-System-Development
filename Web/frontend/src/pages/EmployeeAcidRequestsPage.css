@@ -501,3 +501,169 @@
 		width: 100%;
 	}
 }
+
+/* Lock/Unlock Buttons */
+.btn-lock {
+	background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+	color: white;
+	padding: 0.5rem 1rem;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+	transition: all 0.3s;
+	font-size: 0.85rem;
+}
+
+.btn-lock:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+}
+
+.btn-unlock {
+	background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+	color: white;
+	padding: 0.5rem 1rem;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+	transition: all 0.3s;
+	font-size: 0.85rem;
+}
+
+.btn-unlock:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.lock-indicator {
+	display: inline-block;
+	background: #f39c12;
+	color: white;
+	padding: 0.25rem 0.75rem;
+	border-radius: 12px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	margin-top: 0.5rem;
+}
+
+/* Under Review Badge */
+.badge-under-review {
+	background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+	color: white;
+}
+
+/* Confirmation Modal */
+.confirmation-modal {
+	max-width: 700px !important;
+	max-height: 90vh;
+	overflow-y: auto;
+}
+
+.confirmation-message {
+	background: #fff3cd;
+	border: 1px solid #ffc107;
+	border-radius: 8px;
+	padding: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.warning-text {
+	color: #856404;
+	font-weight: 600;
+	margin: 0;
+	font-size: 1rem;
+	text-align: center;
+}
+
+.confirmation-details {
+	background: #f8f9fa;
+	padding: 1.5rem;
+	border-radius: 8px;
+	margin-bottom: 1.5rem;
+}
+
+.detail-section {
+	margin-bottom: 1.5rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid #dee2e6;
+}
+
+.detail-section:last-child {
+	border-bottom: none;
+	margin-bottom: 0;
+	padding-bottom: 0;
+}
+
+.detail-section h4 {
+	color: #495057;
+	margin-bottom: 0.75rem;
+	font-size: 1rem;
+	font-weight: 700;
+}
+
+.detail-section p {
+	margin: 0.5rem 0;
+	color: #6c757d;
+	font-size: 0.95rem;
+}
+
+.detail-section strong {
+	color: #212529;
+	font-weight: 600;
+}
+
+.acid-code-input {
+	margin-bottom: 1.5rem;
+}
+
+.acid-code-input label {
+	display: block;
+	margin-bottom: 0.5rem;
+	color: #2c3e50;
+	font-size: 1rem;
+}
+
+.required {
+	color: #e74c3c;
+	font-weight: bold;
+}
+
+.acid-input-field {
+	width: 100%;
+	padding: 0.75rem;
+	border: 2px solid #ddd;
+	border-radius: 6px;
+	font-size: 1rem;
+	transition: all 0.3s;
+}
+
+.acid-input-field:focus {
+	outline: none;
+	border-color: #667eea;
+	box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-confirm {
+	background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+	color: white;
+	padding: 0.75rem 1.5rem;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 1rem;
+	transition: all 0.3s;
+}
+
+.btn-confirm:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+}
+
+.btn-confirm:disabled {
+	background: #95a5a6;
+	cursor: not-allowed;
+	opacity: 0.6;
+}

@@ -76,6 +76,15 @@ const EditAcidRequestPage = () => {
 
 				console.log("Fetched ACID request data:", response.data);
 
+				// Check if request is locked
+				if (response.data.isLocked) {
+					toast.error(
+						"الطلب قيد المعالجة من قبل أحد الموظفين ولا يمكن تعديله حالياً"
+					);
+					navigate(`/acidrequest/${requestId}`);
+					return;
+				}
+
 				// Check if request can be edited (only Pending status)
 				if (response.data.status !== "Pending") {
 					toast.error("لا يمكن تعديل طلب تم معالجته");

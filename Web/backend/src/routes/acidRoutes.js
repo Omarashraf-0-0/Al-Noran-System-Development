@@ -9,6 +9,9 @@ const {
 	getAllRequestsForEmployee,
 	updateAcidStatusByEmployee,
 	deleteAcidRequest,
+	lockAcidRequest,
+	unlockAcidRequest,
+	issueAcidWithConfirmation,
 } = require("../controllers/acidController");
 
 // @route   POST /api/acid
@@ -26,6 +29,18 @@ router.get("/employee/all", protect, getAllRequestsForEmployee);
 // @route   PATCH /api/acid/employee/:id/status
 // @desc    Update ACID request status by employee
 router.patch("/employee/:id/status", protect, updateAcidStatusByEmployee);
+
+// @route   POST /api/acid/employee/:id/lock
+// @desc    Lock ACID request for review
+router.post("/employee/:id/lock", protect, lockAcidRequest);
+
+// @route   POST /api/acid/employee/:id/unlock
+// @desc    Unlock ACID request
+router.post("/employee/:id/unlock", protect, unlockAcidRequest);
+
+// @route   POST /api/acid/employee/:id/issue
+// @desc    Issue ACID with confirmation
+router.post("/employee/:id/issue", protect, issueAcidWithConfirmation);
 
 // @route   DELETE /api/acid/:id
 // @desc    Delete ACID request
