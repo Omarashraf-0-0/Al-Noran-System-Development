@@ -28,6 +28,7 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import noran.desktop.AppSession;
@@ -79,6 +80,24 @@ public class DashboardController implements Initializable {
         topBarController.setSearchBarVisible(false);
 
     }
+    private void applyChartStyle(PieChart chart) {
+        // Make the chart look hollow (Donut Chart) or just cleaner
+        chart.setClockwise(true);
+        chart.setLabelsVisible(false); // Hide lines and text pointing to slices
+        chart.setLegendVisible(true);
+
+        // Add Tooltips (Shows value when you hover mouse)
+        for (PieChart.Data data : chart.getData()) {
+            Tooltip tooltip = new Tooltip(data.getName() + ": " + (int)data.getPieValue());
+            tooltip.setStyle("-fx-font-size: 14px; -fx-background-color: #333; -fx-text-fill: white;");
+            Tooltip.install(data.getNode(), tooltip);
+
+            // Add click listener (optional)
+            data.getNode().setOnMouseClicked(e -> {
+                System.out.println("Clicked on " + data.getName());
+            });
+        }
+    }
 
     private void loadDashboardData() {
         try (Connection conn = DatabaseConnection.connect()) {
@@ -123,7 +142,6 @@ public class DashboardController implements Initializable {
                         new PieChart.Data("مقبولة (" + a + ")", a),
                         new PieChart.Data("معلقة (" + p + ")", p)
                 ));
-                applyChartColors(chartAcceptedVsPending, "#28a745", "#ffc107");
             }
         }
 
@@ -136,7 +154,6 @@ public class DashboardController implements Initializable {
                         new PieChart.Data("معلقة (" + p + ")", p),
                         new PieChart.Data("تمت المعالجة (" + done + ")", done)
                 ));
-                applyChartColors(chartPendingInvoicesRatio, "#dc3545", "#6c757d");
             }
         }
 
@@ -152,7 +169,6 @@ public class DashboardController implements Initializable {
             }
             if (data.isEmpty()) data.add(new PieChart.Data("لا يوجد عملاء", 1));
             chartClientsByVersion.setData(data);
-            applyChartColors(chartClientsByVersion, "#1fb5b5", "#c91e2b", "#0078d4");
         }
 
         for (PieChart c : new PieChart[]{chartAcceptedVsPending, chartPendingInvoicesRatio, chartClientsByVersion}) {
@@ -160,12 +176,7 @@ public class DashboardController implements Initializable {
         }
     }
 
-    private void applyChartColors(PieChart chart, String... colors) {
-        int i = 0;
-        for (PieChart.Data d : chart.getData()) {
-            if (i < colors.length) d.getNode().setStyle("-fx-pie-color: " + colors[i++] + ";");
-        }
-    }
+
 
     // ============================== PDF EXPORT - عربي 100% بدون أي خطأ ==============================
     @FXML
