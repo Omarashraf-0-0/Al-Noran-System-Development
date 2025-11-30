@@ -236,7 +236,7 @@ const updateAcidStatusByEmployee = async (req, res) => {
 		}
 
 		const { id } = req.params;
-		const { status, acidCode } = req.body;
+		const { status, acidCode, reviewingBy } = req.body;
 
 		const request = await AcidRequest.findById(id);
 
@@ -259,6 +259,9 @@ const updateAcidStatusByEmployee = async (req, res) => {
 		// Update fields
 		if (status) request.status = status;
 		if (acidCode) request.acidCode = acidCode;
+		if (reviewingBy !== undefined) {
+			request.reviewingBy = reviewingBy || null;
+		}
 
 		await request.save();
 

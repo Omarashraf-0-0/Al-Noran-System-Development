@@ -102,6 +102,7 @@ const Header = () => {
 		{ label: "إدارة الموظفين", path: "/employeemanagement", icon: "👔" },
 		{ label: "إدارة العملاء", path: "/customermanagement", icon: "👥" },
 		{ label: "إدارة الشهادات", path: "/certificatesmanagement", icon: "📜" },
+		{ label: "إدارة الشحنات", path: "/shipmentsmanagement", icon: "🚢" },
 	];
 
 	const getUserDisplayName = () => {
