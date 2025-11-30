@@ -64,11 +64,11 @@ const ShipmentStatus = () => {
 					return;
 				}
 
-				console.log("Fetching shipment with acid:", shipmentId);
+				console.log("Fetching shipment with ID:", shipmentId);
 
-				// Fetch shipment details
+				// Fetch shipment details by ID
 				const shipmentResponse = await axios.get(
-					`${import.meta.env.VITE_API_URL}/api/shipments/${shipmentId}`,
+					`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
 					{
 						headers: {
 							Authorization: `Bearer ${token}`,

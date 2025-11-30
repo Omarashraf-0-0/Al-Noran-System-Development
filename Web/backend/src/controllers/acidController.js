@@ -115,7 +115,16 @@ const getRequestByAcid = async (req, res) => {
 const updateAcidStatus = async (req, res) => {
 	try {
 		const { id } = req.params;
-		const { status, acidCode, supplier, goods, uploads } = req.body;
+		const {
+			status,
+			acidCode,
+			supplier,
+			goods,
+			uploads,
+			hasShipment,
+			shipmentId,
+			shipmentCreatedAt,
+		} = req.body;
 
 		const request = await AcidRequest.findById(id);
 
@@ -123,35 +132,53 @@ const updateAcidStatus = async (req, res) => {
 			return res.status(404).json({ message: "Request not found" });
 		}
 
-		// Check if request is locked by an employee
-		if (request.isLocked) {
-			return res.status(423).json({
-				success: false,
-				message:
-					"This request is currently being reviewed by an employee and cannot be updated",
-				isLocked: true,
-			});
-		}
-
-		// Check if user owns this request
+		// Check user type
+		const userType = req.user.userType || req.user.type;
 		const userId = req.user ? req.user._id : null;
-		if (userId && request.userId.toString() !== userId.toString()) {
-			return res.status(403).json({
-				success: false,
-				message: "You don't have permission to update this request",
-			});
-		}
 
-		// Update fields
-		if (status) request.status = status;
-		if (acidCode) request.acidCode = acidCode;
-		if (supplier) request.supplier = supplier;
-		if (goods) request.goods = goods;
-		if (uploads) request.uploads = uploads;
+		// If updating shipment fields, only employees can do it
+		if (hasShipment !== undefined || shipmentId || shipmentCreatedAt) {
+			if (userType !== "employee") {
+				return res.status(403).json({
+					success: false,
+					message: "Only employees can update shipment information",
+				});
+			}
+			// Allow employee to update shipment fields
+			if (hasShipment !== undefined) request.hasShipment = hasShipment;
+			if (shipmentId) request.shipmentId = shipmentId;
+			if (shipmentCreatedAt) request.shipmentCreatedAt = shipmentCreatedAt;
+		} else {
+			// For non-shipment updates, check if request is locked
+			if (request.isLocked) {
+				return res.status(423).json({
+					success: false,
+					message:
+						"This request is currently being reviewed by an employee and cannot be updated",
+					isLocked: true,
+				});
+			}
+
+			// Check if user owns this request
+			if (userId && request.userId.toString() !== userId.toString()) {
+				return res.status(403).json({
+					success: false,
+					message: "You don't have permission to update this request",
+				});
+			}
+
+			// Update regular fields
+			if (status) request.status = status;
+			if (acidCode) request.acidCode = acidCode;
+			if (supplier) request.supplier = supplier;
+			if (goods) request.goods = goods;
+			if (uploads) request.uploads = uploads;
+		}
 
 		await request.save();
 
 		res.json({
+			success: true,
 			message: "ACID request updated successfully",
 			request,
 		});
@@ -179,6 +206,8 @@ const getAllRequestsForEmployee = async (req, res) => {
 		const requests = await AcidRequest.find()
 			.populate("userId", "username email")
 			.populate("uploads")
+			.populate("reviewingBy", "username email")
+			.populate("shipmentId")
 			.sort({ requestDate: -1 });
 
 		res.json({

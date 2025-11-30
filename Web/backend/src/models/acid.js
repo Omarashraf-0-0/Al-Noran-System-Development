@@ -49,6 +49,15 @@ const acidRequestSchema = new mongoose.Schema({
 	},
 	reviewStartedAt: { type: Date, default: null },
 	isLocked: { type: Boolean, default: false },
+
+	// ✅ Shipment tracking
+	hasShipment: { type: Boolean, default: false },
+	shipmentId: {
+		type: mongoose.Schema.Types.ObjectId,
+		ref: "Shipment",
+		default: null,
+	},
+	shipmentCreatedAt: { type: Date, default: null },
 });
 
 module.exports = mongoose.model("AcidRequest", acidRequestSchema);

@@ -255,17 +255,42 @@ const EmployeeAcidRequestsPage = () => {
 			);
 
 			if (response.data.success) {
-				// Delete the ACID request after shipment is created
-				await axios.delete(
-					`http://localhost:3500/api/acid/${selectedRequest._id}`,
-					{
-						headers: { Authorization: `Bearer ${token}` },
-					}
-				);
+				// Mark ACID request as having a shipment
+				try {
+					console.log("Shipment creation response:", response.data);
+					const shipmentId = response.data.data?._id || response.data.data?.id;
+					console.log("Extracted shipment ID:", shipmentId);
 
-				toast.success("Shipment created successfully");
-				closeShipmentModal();
-				fetchAllRequests();
+					if (!shipmentId) {
+						console.error("No shipment ID in response:", response.data);
+						throw new Error("Shipment created but ID not found in response");
+					}
+
+					const updatePayload = {
+						hasShipment: true,
+						shipmentId: shipmentId,
+						shipmentCreatedAt: new Date(),
+					};
+					console.log("Updating ACID request with payload:", updatePayload);
+
+					await axios.patch(
+						`http://localhost:3500/api/acid/${selectedRequest._id}`,
+						updatePayload,
+						{
+							headers: { Authorization: `Bearer ${token}` },
+						}
+					);
+
+					toast.success("Shipment created successfully");
+					closeShipmentModal();
+					// Refresh the requests list to show updated status
+					await fetchAllRequests();
+				} catch (updateError) {
+					console.error("Error updating ACID request:", updateError);
+					toast.error("Shipment created but failed to update ACID request");
+					closeShipmentModal();
+					await fetchAllRequests();
+				}
 			}
 		} catch (error) {
 			console.error("Error creating shipment:", error);
@@ -326,18 +351,81 @@ const EmployeeAcidRequestsPage = () => {
 				<p className="subtitle">Review and manage all client ACID requests</p>
 
 				{/* Filter Section */}
-				<div className="filter-section">
-					<label>Filter by Status:</label>
-					<select
-						value={statusFilter}
-						onChange={(e) => setStatusFilter(e.target.value)}
-					>
-						<option value="All">All</option>
-						<option value="Pending">Pending</option>
-						<option value="Under Review">Under Review</option>
-						<option value="ACID Issued">ACID Issued</option>
-						<option value="Rejected">Rejected</option>
-					</select>
+				<div className="filter-section-enhanced">
+					<div className="filter-header">
+						<h3 className="filter-title">📊 Filter Requests</h3>
+						<p className="filter-subtitle">Quick access by status</p>
+					</div>
+					<div className="filter-cards">
+						<button
+							className={`filter-card ${
+								statusFilter === "All" ? "active" : ""
+							}`}
+							onClick={() => setStatusFilter("All")}
+						>
+							<div className="filter-icon">📋</div>
+							<div className="filter-content">
+								<span className="filter-count">{requests.length}</span>
+								<span className="filter-label">All Requests</span>
+							</div>
+						</button>
+						<button
+							className={`filter-card ${
+								statusFilter === "Pending" ? "active" : ""
+							}`}
+							onClick={() => setStatusFilter("Pending")}
+						>
+							<div className="filter-icon">⏳</div>
+							<div className="filter-content">
+								<span className="filter-count">
+									{requests.filter((r) => r.status === "Pending").length}
+								</span>
+								<span className="filter-label">Pending</span>
+							</div>
+						</button>
+						<button
+							className={`filter-card ${
+								statusFilter === "Under Review" ? "active" : ""
+							}`}
+							onClick={() => setStatusFilter("Under Review")}
+						>
+							<div className="filter-icon">🔍</div>
+							<div className="filter-content">
+								<span className="filter-count">
+									{requests.filter((r) => r.status === "Under Review").length}
+								</span>
+								<span className="filter-label">Under Review</span>
+							</div>
+						</button>
+						<button
+							className={`filter-card ${
+								statusFilter === "ACID Issued" ? "active" : ""
+							}`}
+							onClick={() => setStatusFilter("ACID Issued")}
+						>
+							<div className="filter-icon">✅</div>
+							<div className="filter-content">
+								<span className="filter-count">
+									{requests.filter((r) => r.status === "ACID Issued").length}
+								</span>
+								<span className="filter-label">ACID Issued</span>
+							</div>
+						</button>
+						<button
+							className={`filter-card ${
+								statusFilter === "Rejected" ? "active" : ""
+							}`}
+							onClick={() => setStatusFilter("Rejected")}
+						>
+							<div className="filter-icon">❌</div>
+							<div className="filter-content">
+								<span className="filter-count">
+									{requests.filter((r) => r.status === "Rejected").length}
+								</span>
+								<span className="filter-label">Rejected</span>
+							</div>
+						</button>
+					</div>
 				</div>
 
 				{/* Requests Table */}
@@ -404,7 +492,16 @@ const EmployeeAcidRequestsPage = () => {
 											</td>
 											<td>
 												{request.acidCode ? (
-													<span className="acid-code">{request.acidCode}</span>
+													<div className="acid-code-container">
+														<span className="acid-code">
+															{request.acidCode}
+														</span>
+														{request.hasShipment && (
+															<span className="shipment-badge">
+																✅ Shipment Created
+															</span>
+														)}
+													</div>
 												) : (
 													<span className="no-acid">Not Issued</span>
 												)}
@@ -461,14 +558,28 @@ const EmployeeAcidRequestsPage = () => {
 																</button>
 															</>
 														)}
-													{request.status === "ACID Issued" && (
-														<button
-															className="btn-shipment"
-															onClick={() => openShipmentModal(request)}
-														>
-															Create Shipment
-														</button>
-													)}
+													{request.status === "ACID Issued" &&
+														!request.hasShipment && (
+															<button
+																className="btn-shipment"
+																onClick={() => openShipmentModal(request)}
+															>
+																Create Shipment
+															</button>
+														)}
+													{request.status === "ACID Issued" &&
+														request.hasShipment && (
+															<div className="shipment-created-info">
+																<span className="shipment-status">
+																	🚢 Shipment Created
+																</span>
+																<small className="shipment-date">
+																	{new Date(
+																		request.shipmentCreatedAt
+																	).toLocaleDateString()}
+																</small>
+															</div>
+														)}
 													{request.status === "Rejected" && (
 														<span className="rejected-text">Rejected</span>
 													)}
@@ -602,25 +713,6 @@ const EmployeeAcidRequestsPage = () => {
 											})
 										}
 									/>
-								</div>
-
-								<div className="form-group">
-									<label>Status</label>
-									<select
-										value={shipmentData.status}
-										onChange={(e) =>
-											setShipmentData({
-												...shipmentData,
-												status: e.target.value,
-											})
-										}
-									>
-										<option value="Pending">Pending</option>
-										<option value="In Transit">In Transit</option>
-										<option value="Arrived">Arrived</option>
-										<option value="Customs Clearance">Customs Clearance</option>
-										<option value="Completed">Completed</option>
-									</select>
 								</div>
 
 								<div className="form-group">

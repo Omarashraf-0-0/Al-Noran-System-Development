@@ -164,11 +164,28 @@ const getShipmentByAcid = async (req, res) => {
 // ✅ جلب شحنة بالـ ID
 const getShipmentById = async (req, res) => {
 	try {
-		const shipment = await Shipment.findById(req.params.shipmentId);
+		const { shipmentId } = req.params;
+
+		// Validate if it's a valid MongoDB ObjectId
+		const mongoose = require("mongoose");
+		if (!mongoose.Types.ObjectId.isValid(shipmentId)) {
+			// If not a valid ObjectId, try to find by ACID code
+			console.log(
+				`Invalid ObjectId format: ${shipmentId}, trying to find by ACID code...`
+			);
+			const shipment = await Shipment.findOne({ acid: shipmentId });
+			if (!shipment) {
+				return res.status(404).json({ message: "Shipment not found" });
+			}
+			return res.json(shipment);
+		}
+
+		const shipment = await Shipment.findById(shipmentId);
 		if (!shipment)
 			return res.status(404).json({ message: "Shipment not found" });
 		res.json(shipment);
 	} catch (error) {
+		console.error("Error in getShipmentById:", error);
 		res.status(500).json({ message: error.message });
 	}
 };
