@@ -17,9 +17,9 @@
                 style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
                 text="العمليات الحالية" textAlignment="RIGHT" />
 
-        <Button fx:id="lastOpsBtn" maxWidth="Infinity"
+        <Button fx:id="lastOpsBtn" maxWidth="Infinity" onAction="#navigateToTa5lees"
                 style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
-                text="آخر العمليات المنفذة" />
+                text="تخليص الفواتير " />
 
         <Button fx:id="clientsBtn" maxWidth="Infinity" onAction="#navigateToClients"
                 style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
@@ -36,6 +36,7 @@
         <Button fx:id="shipmentsBtn" maxWidth="Infinity" onAction="#shipments_management"
                 style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
                 text="إدارة الشحنات" />
+
 
         <Button fx:id="archiveBtn" maxWidth="Infinity"
                 style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"

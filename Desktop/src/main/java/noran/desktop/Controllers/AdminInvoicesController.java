@@ -4,6 +4,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -79,6 +80,23 @@ public class AdminInvoicesController {
         adminInvoicesTable.setItems(invoices);
     }
 //goBack
+
+    @FXML
+    public void navigateToDashboard(ActionEvent event) throws IOException {
+        loadPage(event, "/noran/desktop/dashboard.fxml");
+    }
+
+    private void loadPage(ActionEvent event, String fxmlPath) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(scene);
+        stage.show();
+    }
+
+
+
     @FXML
     private void refreshTable() {
         invoices.clear();

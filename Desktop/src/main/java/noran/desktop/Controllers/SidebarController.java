@@ -85,7 +85,10 @@ public class SidebarController {
     public void shipments_management(ActionEvent event) throws IOException {
         loadPage(event, "/noran/desktop/shipments-management.fxml");
     }
-
+    @FXML
+    public void navigateToTa5lees(ActionEvent event) throws IOException {
+        loadPage(event, "/noran/desktop/AdminInvoices.fxml");
+    }
     // Helper method to avoid repeating code
     private void loadPage(ActionEvent event, String fxmlPath) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));

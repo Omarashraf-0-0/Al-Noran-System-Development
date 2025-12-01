@@ -32,7 +32,8 @@
                      <Image url="@images/cached.png" />
                   </image>
                </ImageView>
-               <Button fx:id="updateClientBtn1" layoutX="2.0" onAction="#refresh" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
+               <Button fx:id="updateClientBtn1" layoutX="2.0" onAction="#refreshTable" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
+               <Button layoutX="1080.0" layoutY="8.0" onAction="#navigateToDashboard" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 8 20;" text="رجوع" />
             </children>
          </AnchorPane>
             <Label style="-fx-font-size: 26; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;" text="جميع الفواتير في النظام" />
