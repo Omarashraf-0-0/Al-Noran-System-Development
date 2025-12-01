@@ -7,6 +7,8 @@ const s3Client = new S3Client({
 		accessKeyId: process.env.AWS_ACCESS_KEY_ID,
 		secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
 	},
+	// Force path style for better compatibility
+	forcePathStyle: false,
 });
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || "noran-uploads";
@@ -17,6 +19,11 @@ console.log('   - Region:', process.env.AWS_REGION || "me-south-1");
 console.log('   - Bucket:', BUCKET_NAME);
 console.log('   - Access Key:', process.env.AWS_ACCESS_KEY_ID ? `${process.env.AWS_ACCESS_KEY_ID.substring(0, 8)}...` : 'NOT SET ❌');
 console.log('   - Secret Key:', process.env.AWS_SECRET_ACCESS_KEY ? 'SET ✅' : 'NOT SET ❌');
+
+if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+	console.error('❌ ERROR: AWS credentials not configured properly in .env file');
+	console.error('❌ Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY');
+}
 
 module.exports = {
 	s3Client,

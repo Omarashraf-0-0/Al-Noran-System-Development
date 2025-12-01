@@ -234,37 +234,71 @@ const DocumentUploadPage = () => {
 			console.log("Document response:", response.data);
 
 			// Check for AWS permission error
-			if (response.data.upload?.permissionError || response.data.warning) {
+			if (response.data.upload?.permissionError || response.data.warning || response.data.error) {
+				console.error("AWS Permission Error:", response.data.error);
+				
+				// Show detailed bilingual error message
 				toast.error(
-					"⚠️ لا يمكن عرض الملف حالياً بسبب قيود AWS.\nالملف محفوظ بأمان ويمكن الوصول إليه لاحقاً.",
-					{ duration: 5000 }
+					response.data.warning || 
+					"⚠️ لا يمكن عرض الملف حالياً بسبب قيود AWS\n" +
+					"File cannot be viewed due to AWS permission restrictions\n\n" +
+					"الملف محفوظ بأمان - يرجى الاتصال بالمسؤول\n" +
+					"File is safely stored - Please contact administrator",
+					{ 
+						duration: 7000,
+						style: {
+							minWidth: '400px',
+							fontSize: '14px',
+							whiteSpace: 'pre-line'
+						}
+					}
 				);
+				
+				// Log technical details for debugging
+				if (response.data.error) {
+					console.error("Technical Details:", {
+						code: response.data.error.code,
+						message: response.data.error.message,
+						action: response.data.error.action,
+						info: response.data.error.technicalInfo
+					});
+				}
 				return;
 			}
 
 			if (response.data.success && response.data.upload.url) {
 				// Open the fresh presigned URL
-				console.log("Opening URL:", response.data.upload.url);
+				console.log("✅ Opening document URL:", response.data.upload.url);
 				window.open(response.data.upload.url, "_blank");
 			} else {
 				console.error("Invalid response format:", response.data);
-				toast.error("فشل في الحصول على رابط الملف");
+				toast.error("فشل في الحصول على رابط الملف / Failed to get file URL");
 			}
 		} catch (error) {
-			console.error("Error fetching document URL:", error);
+			console.error("❌ Error fetching document URL:", error);
 			console.error("Error details:", error.response?.data);
 
 			// Show user-friendly error message
 			if (
 				error.response?.data?.message?.includes("AWS") ||
-				error.response?.data?.message?.includes("permission")
+				error.response?.data?.message?.includes("permission") ||
+				error.response?.data?.message?.includes("AccessDenied")
 			) {
 				toast.error(
-					"⚠️ مشكلة مؤقتة في عرض الملفات.\nالملفات محفوظة بأمان وسيتم حل المشكلة قريباً.",
-					{ duration: 5000 }
+					"⚠️ مشكلة مؤقتة في عرض الملفات - يرجى الاتصال بالمسؤول\n" +
+					"Temporary issue viewing files - Please contact administrator\n\n" +
+					"الملفات محفوظة بأمان\nFiles are safely stored",
+					{ 
+						duration: 7000,
+						style: {
+							minWidth: '400px',
+							fontSize: '14px',
+							whiteSpace: 'pre-line'
+						}
+					}
 				);
 			} else {
-				toast.error(error.response?.data?.message || "فشل في عرض الملف");
+				toast.error(error.response?.data?.message || "فشل في عرض الملف / Failed to view file");
 			}
 		}
 	};
