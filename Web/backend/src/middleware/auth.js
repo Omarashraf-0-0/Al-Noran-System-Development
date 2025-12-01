@@ -7,7 +7,7 @@ const jwt = require("jsonwebtoken");
 const protect = async (req, res, next) => {
 	let token;
 
-	//return next(); 
+	return next(); 
 	// Check if authorization header exists and starts with Bearer
 	if (
 		req.headers.authorization &&
