@@ -540,6 +540,43 @@ const ShipmentStatus = () => {
 			<UploadModal
 				isOpen={isUploadModalOpen}
 				onClose={() => setUploadModalOpen(false)}
+				shipmentId={shipment?._id}
+				onUploadSuccess={async () => {
+					// Refresh files list after successful upload
+					try {
+						const filesResponse = await axios.get(
+							`${
+								import.meta.env.VITE_API_URL
+							}/api/uploads?category=shipment&relatedId=${shipment._id}`,
+							{
+								headers: {
+									Authorization: `Bearer ${token}`,
+								},
+							}
+						);
+
+						const uploads =
+							filesResponse.data?.uploads || filesResponse.data || [];
+						const shipmentFiles = uploads.map((file) => ({
+							name: file.filename || file.originalname || "ملف",
+							date: new Date(
+								file.uploadedAt || file.createdAt
+							).toLocaleDateString("ar-EG", {
+								day: "numeric",
+								month: "long",
+								year: "numeric",
+							}),
+							url: file.presignedUrl || file.url,
+							id: file._id,
+							documentType: file.documentType,
+							description: file.description,
+						}));
+
+						setFileItems(shipmentFiles);
+					} catch (error) {
+						console.error("Error refreshing files:", error);
+					}
+				}}
 			/>
 
 			{/* Required Documents Upload Modal */}

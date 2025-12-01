@@ -61,7 +61,7 @@ const AcidRequestDetailsPage = () => {
 					try {
 						const uploadPromises = response.data.uploads.map((uploadId) =>
 							axios.get(
-								`${import.meta.env.VITE_API_URL}/api/upload/${uploadId}`,
+								`${import.meta.env.VITE_API_URL}/api/uploads/${uploadId}`,
 								{
 									headers: {
 										Authorization: `Bearer ${token}`,
@@ -71,18 +71,24 @@ const AcidRequestDetailsPage = () => {
 						);
 
 						const uploadResponses = await Promise.all(uploadPromises);
-						const formattedFiles = uploadResponses.map((res) => ({
-							name: res.data.originalname || "ملف",
-							date: new Date(res.data.createdAt).toLocaleDateString("ar-EG", {
-								weekday: "long",
-								day: "numeric",
-								month: "long",
-							}),
-							url: res.data.url,
-						}));
+						const formattedFiles = uploadResponses.map((res) => {
+							const upload = res.data.upload || res.data;
+							return {
+								name: upload.filename || upload.originalname || "ملف",
+								date: new Date(
+									upload.createdAt || upload.uploadedAt
+								).toLocaleDateString("ar-EG", {
+									weekday: "long",
+									day: "numeric",
+									month: "long",
+								}),
+								url: upload.presignedUrl || upload.s3Url || upload.url,
+							};
+						});
 						setFileItems(formattedFiles);
 					} catch (uploadError) {
 						console.log("Error fetching uploads:", uploadError);
+						console.error("Upload error details:", uploadError.response?.data);
 					}
 				}
 			} catch (error) {

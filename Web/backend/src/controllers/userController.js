@@ -162,11 +162,19 @@ const updateUser = asyncHandler(async (req, res) => {
 		if (clientType === "personal" && ssn) {
 			user.clientDetails.ssn = ssn;
 		}
+		// Clear employee details if switching to client
+		user.employeeDetails = undefined;
 	}
 
-	if (type === "employee" && employeeType) {
+	if (type === "employee") {
 		user.employeeDetails = user.employeeDetails || {};
-		user.employeeDetails.employeeType = employeeType;
+		if (employeeType) {
+			user.employeeDetails.employeeType = employeeType;
+		}
+		// Clear client details if switching to employee or if clientType is null
+		if (clientType === null || clientType === undefined) {
+			user.clientDetails = { clientType: null, ssn: "" };
+		}
 	}
 
 	const updatedUser = await user.save();
