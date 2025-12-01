@@ -27,6 +27,7 @@ import EditAcidRequestPage from "./pages/EditAcidRequestPage";
 import EmployeeAcidRequestsPage from "./pages/EmployeeAcidRequestsPage";
 import EmployeeShipments from "./pages/EmployeeShipments";
 import ShipmentsManagement from "./pages/ShipmentsManagement";
+import ShipmentHistory from "./pages/ShipmentHistory";
 
 const App = () => {
 	return (
@@ -88,6 +89,10 @@ const App = () => {
 					element={<EmployeeAcidRequestsPage />}
 				/>
 				<Route path="/employee-shipments" element={<EmployeeShipments />} />
+				<Route
+					path="/shipment-history/:shipmentId"
+					element={<ShipmentHistory />}
+				/>
 				{/* NEW */}
 				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
 			</Routes>
