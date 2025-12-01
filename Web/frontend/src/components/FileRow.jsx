@@ -61,14 +61,40 @@ const FileRow = ({
 					},
 				}
 			);
+			
+			// Check for AWS permission error
+			if (response.data.upload?.permissionError || response.data.warning || response.data.error) {
+				console.error("AWS Permission Error:", response.data.error);
+				toast.error(
+					response.data.warning || 
+					"⚠️ لا يمكن عرض الملف حالياً\nيرجى الاتصال بالمسؤول",
+					{ duration: 5000 }
+				);
+				return null;
+			}
+			
 			return (
 				response.data?.upload?.presignedUrl ||
+				response.data?.upload?.url ||
 				response.data?.presignedUrl ||
 				url
 			);
 		} catch (error) {
-			console.error("Error fetching fresh URL:", error);
-			toast.error("فشل تحميل رابط الملف");
+			console.error("❌ Error fetching fresh URL:", error);
+			
+			// Handle AWS permission errors
+			if (
+				error.response?.data?.message?.includes("AWS") ||
+				error.response?.data?.message?.includes("permission") ||
+				error.response?.data?.message?.includes("AccessDenied")
+			) {
+				toast.error(
+					"⚠️ مشكلة في عرض الملف\nيرجى الاتصال بالمسؤول",
+					{ duration: 5000 }
+				);
+			} else {
+				toast.error("فشل تحميل رابط الملف");
+			}
 			return null;
 		}
 	};

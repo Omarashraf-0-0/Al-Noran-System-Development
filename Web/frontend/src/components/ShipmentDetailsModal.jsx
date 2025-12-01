@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import close from "../assets/images/close(1).png";
@@ -414,63 +414,61 @@ export default function ShipmentDetailsModal({
 											: "bg-green-100 text-green-800"
 									}`}
 								>
-									{shipment.dragt ? "مسودة" : "نهائي"}
-								</span>
-							</div>
+							{shipment.dragt ? "مسودة" : "نهائي"}
+						</span>
+					</div>
+				</div>
+			</div>
+
+			{/* Documents Section */}
+			<div className="mb-6">
+				<h3 className="text-lg font-bold text-[#690000] mb-3">المستندات</h3>
+
+				{/* Upload New Document */}
+				<div className="bg-red-50 rounded-lg p-4 mb-4 border border-red-200">
+					<h4 className="text-sm font-semibold text-[#690000] mb-3">
+						رفع مستند جديد
+					</h4>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-1 text-right">
+								اسم المستند
+							</label>
+							<input
+								type="text"
+								value={documentName}
+								onChange={(e) => setDocumentName(e.target.value)}
+								placeholder="مثال: فاتورة، شهادة منشأ، بوليصة شحن"
+								className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
+							/>
+						</div>
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-1 text-right">
+								اختر الملف
+							</label>
+							<input
+								type="file"
+								onChange={handleFileSelect}
+								className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
+								accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+							/>
 						</div>
 					</div>
-
-					{/* Documents Section */}
-					<div className="mb-6">
-						<h3 className="text-lg font-bold text-[#690000] mb-3">المستندات</h3>
-
-						{/* Upload New Document */}
-						<div className="bg-red-50 rounded-lg p-4 mb-4 border border-red-200">
-							<h4 className="text-sm font-semibold text-[#690000] mb-3">
-								رفع مستند جديد
-							</h4>
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1 text-right">
-										اسم المستند
-									</label>
-									<input
-										type="text"
-										value={documentName}
-										onChange={(e) => setDocumentName(e.target.value)}
-										placeholder="مثال: فاتورة، شهادة منشأ، بوليصة شحن"
-										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1 text-right">
-										اختر الملف
-									</label>
-									<input
-										type="file"
-										onChange={handleFileSelect}
-										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
-										accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-									/>
-								</div>
-							</div>
-							{selectedFile && (
-								<div className="mt-3 flex items-center justify-between">
-									<button
-										onClick={handleUploadDocument}
-										disabled={uploadingDocument}
-										className="px-6 py-2 bg-[#690000] text-white rounded-lg hover:bg-[#991b1b] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-									>
-										{uploadingDocument ? "جاري الرفع..." : "رفع المستند"}
-									</button>
-									<p className="text-sm text-gray-600">
-										الملف المحدد: {selectedFile.name}
-									</p>
-								</div>
-							)}
+					{selectedFile && (
+						<div className="mt-3 flex items-center justify-between">
+							<button
+								onClick={handleUploadDocument}
+								disabled={uploadingDocument}
+								className="px-6 py-2 bg-[#690000] text-white rounded-lg hover:bg-[#991b1b] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+							>
+								{uploadingDocument ? "جاري الرفع..." : "رفع المستند"}
+							</button>
+							<p className="text-sm text-gray-600">
+								الملف المحدد: {selectedFile.name}
+							</p>
 						</div>
-
-						{/* Existing Documents List */}
+					)}
+				</div>						{/* Existing Documents List */}
 						{shipment.requiredDocuments &&
 						shipment.requiredDocuments.length > 0 ? (
 							<div className="bg-gray-50 rounded-lg p-4">
@@ -521,14 +519,14 @@ export default function ShipmentDetailsModal({
 								</div>
 							</div>
 						) : (
-							<div className="bg-gray-50 rounded-lg p-6 text-center">
-								<p className="text-gray-500">لا توجد مستندات مرفوعة بعد</p>
-							</div>
-						)}
-					</div>
+					<div className="bg-gray-50 rounded-lg p-6 text-center">
+							<p className="text-gray-500">لا توجد مستندات مرفوعة بعد</p>
+						</div>
+					)}
+				</div>
 
-					{/* Edit Form */}
-					{isEditing ? (
+				{/* Edit Form */}
+				{isEditing ? (
 						<div className="border-t pt-6">
 							<h3 className="text-lg font-bold text-[#690000] mb-4">
 								تعديل بيانات الشحنة
