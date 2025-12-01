@@ -331,4 +331,8 @@ public class ClientDataController {
         stage.setScene(scene);
         stage.show();
     }
+
+    public void refresh(ActionEvent event) {
+
+    }
 }

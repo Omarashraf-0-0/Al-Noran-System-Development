@@ -245,6 +245,10 @@ public class ClientDataInvoiceController implements Initializable {
         stage.show();
     }
 
+    public void refresh(ActionEvent event) {
+
+    }
+
     // --- Inner Class: UserRow ---
     public static class UserRow {
         private final SimpleStringProperty username;

@@ -632,4 +632,8 @@ public class HelloController implements Initializable {
         stage.setScene(scene);
         stage.show();
     }
+
+    public void refresh(ActionEvent event) {
+
+    }
 }

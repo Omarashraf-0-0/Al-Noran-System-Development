@@ -26,13 +26,13 @@
         <VBox spacing="30" style="-fx-padding: 30 40;">
          <AnchorPane prefHeight="200.0" prefWidth="200.0">
             <children>
-               <Button fx:id="updateClientBtn1" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
+               <Button fx:id="updateClientBtn2" onAction="#refresh" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
                <ImageView fitHeight="47.0" fitWidth="61.0" pickOnBounds="true" preserveRatio="true">
                   <image>
                      <Image url="@images/cached.png" />
                   </image>
                </ImageView>
-               <Button fx:id="updateClientBtn1" layoutX="2.0" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
+               <Button fx:id="updateClientBtn1" layoutX="2.0" onAction="#refresh" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
             </children>
          </AnchorPane>
             <Label style="-fx-font-size: 26; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;" text="جميع الفواتير في النظام" />

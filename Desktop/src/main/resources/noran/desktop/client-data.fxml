@@ -27,7 +27,7 @@
         <VBox alignment="TOP_CENTER" spacing="24" style="-fx-padding: 32 24;">
          <AnchorPane prefHeight="200.0" prefWidth="200.0">
             <children>
-               <Button fx:id="updateClientBtn1" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
+               <Button fx:id="refreshBtn" onAction="#refresh" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
                <ImageView fitHeight="47.0" fitWidth="61.0" pickOnBounds="true" preserveRatio="true">
                   <image>
                      <Image url="@images/cached.png" />
@@ -66,7 +66,7 @@
 
                 <Region HBox.hgrow="ALWAYS" />
             </HBox>
-         <Button fx:id="updateClientBtn1" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
+<!--         <Button fx:id="updateClientBtn1" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />-->
         </VBox>
     </center>
 </BorderPane>

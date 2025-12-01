@@ -355,4 +355,8 @@ public class EmployeeManagementController {
         stage.setScene(new Scene(root));
         stage.show();
     }
+
+    public void refresh(ActionEvent event) {
+
+    }
 }

@@ -2,6 +2,7 @@ package noran.desktop.Controllers;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
@@ -165,6 +166,10 @@ public class AdminInvoicesController {
         stage.setScene(new Scene(root));
         stage.setTitle("لوحة تحكم المدير");
         stage.centerOnScreen();
+    }
+
+    public void refresh(ActionEvent event) {
+
     }
 
     public static class InvoiceAdmin {
