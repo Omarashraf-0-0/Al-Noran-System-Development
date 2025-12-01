@@ -97,13 +97,16 @@ const uploadToS3 = async ({ fileBuffer, s3Key, mimetype }) => {
 			Key: s3Key,
 			Body: fileBuffer,
 			ContentType: mimetype,
-			ACL: "private", // Private files - use presigned URLs for access
+			// Remove ACL parameter - it may be causing permission issues
+			// S3 bucket policies will handle access control
 		});
 
 		await s3Client.send(command);
 
 		// Generate public URL (won't work for private ACL, use presigned URL instead)
-		const url = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || "me-south-1"}.amazonaws.com/${s3Key}`;
+		const url = `https://${BUCKET_NAME}.s3.${
+			process.env.AWS_REGION || "me-south-1"
+		}.amazonaws.com/${s3Key}`;
 
 		return {
 			success: true,
@@ -112,6 +115,10 @@ const uploadToS3 = async ({ fileBuffer, s3Key, mimetype }) => {
 		};
 	} catch (error) {
 		console.error("S3 Upload Error:", error);
+		if (error.name === 'AccessDenied') {
+			console.error('❌ AWS Permission Error: Missing s3:PutObject permission');
+			console.error('❌ Check IAM policy for user:', process.env.AWS_ACCESS_KEY_ID?.substring(0, 10));
+		}
 		throw new Error(`Failed to upload to S3: ${error.message}`);
 	}
 };
@@ -124,6 +131,8 @@ const uploadToS3 = async ({ fileBuffer, s3Key, mimetype }) => {
  */
 const getPresignedUrl = async (s3Key, expiresIn = 3600) => {
 	try {
+		console.log(`🔗 Generating presigned URL for: ${s3Key}`);
+		
 		const command = new GetObjectCommand({
 			Bucket: BUCKET_NAME,
 			Key: s3Key,
@@ -132,9 +141,31 @@ const getPresignedUrl = async (s3Key, expiresIn = 3600) => {
 		const presignedUrl = await getSignedUrl(s3Client, command, {
 			expiresIn,
 		});
+		
+		console.log(`✅ Presigned URL generated successfully`);
 		return presignedUrl;
 	} catch (error) {
-		console.error("Presigned URL Error:", error);
+		console.error("❌ Presigned URL Error:", error.message);
+		console.error("   S3 Key:", s3Key);
+		console.error("   Bucket:", BUCKET_NAME);
+		
+		// Check if it's a permission error
+		if (error.message && (error.message.includes("not authorized") || error.message.includes("AccessDenied"))) {
+			console.error(
+				"❌ AWS Permission Issue: IAM user lacks s3:GetObject permission"
+			);
+			console.error(
+				"❌ The IAM policy has an EXPLICIT DENY for s3:GetObject"
+			);
+			console.error(
+				"❌ Please update the IAM policy in AWS Console to allow s3:GetObject"
+			);
+			console.error(
+				"   IAM User:", process.env.AWS_ACCESS_KEY_ID?.substring(0, 10) + '...'
+			);
+			// Throw a specific error that we can catch
+			throw new Error("AWS_PERMISSION_ERROR");
+		}
 		throw new Error(`Failed to generate presigned URL: ${error.message}`);
 	}
 };

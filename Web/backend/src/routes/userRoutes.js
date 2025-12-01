@@ -6,7 +6,9 @@ const {
   updateUser,
   deleteUser,
   changePassword,
-  addUsers
+  addUsers,
+  getNotifications,
+  sendNotification
 } = require('../controllers/userController');
 
 // Base routes for user operations
@@ -27,5 +29,9 @@ router.route('/:id')
 // Password management
 router.route('/:id/change-password')
   .put(changePassword);
+
+router.route('/notifications/sendNotification').post(sendNotification)
+router.route('/notifications/getAllNotifications').get(getNotifications)
+
 
 module.exports = router;

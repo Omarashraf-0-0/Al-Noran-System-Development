@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Navbar from "../components/Navbar";
+import Header from "../components/Header";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import { toast } from "react-hot-toast";
@@ -24,22 +24,34 @@ const DocumentUploadPage = () => {
 			{ key: "certificate_vat", label: "شهادة القيمة المضافة", required: true },
 			{ key: "production_supplies", label: "مستلزمات الإنتاج", required: true },
 			{ key: "power_of_attorney", label: "التوكيل", required: true },
-			{ key: "personal_id_of_representative", label: "بطاقة ممثل", required: true },
+			{
+				key: "personal_id_of_representative",
+				label: "بطاقة ممثل",
+				required: true,
+			},
 		],
 		commercial: [
 			{ key: "commercial_register", label: "السجل التجاري", required: true },
 			{ key: "tax_card", label: "البطاقة الضريبية", required: true },
 			{ key: "contract", label: "العقد", required: true },
 			{ key: "certificate_vat", label: "شهادة القيمة المضافة", required: true },
-			{ key: "import_export_card", label: "بطاقة استيراد/تصدير", required: true },
+			{
+				key: "import_export_card",
+				label: "بطاقة استيراد/تصدير",
+				required: true,
+			},
 			{ key: "power_of_attorney", label: "التوكيل", required: true },
-			{ key: "personal_id_of_representative", label: "بطاقة ممثل", required: true },
+			{
+				key: "personal_id_of_representative",
+				label: "بطاقة ممثل",
+				required: true,
+			},
 			{ key: "trade_certificates", label: "شهادات تجارية", required: true },
 		],
 		personal: [
 			{ key: "power_of_attorney", label: "التوكيل", required: true },
 			{ key: "personal_id", label: "البطاقة الشخصية", required: true },
-			{ key: "sample_document", label: "مستند داعم", required: true },
+			// { key: "sample_document", label: "مستند داعم", required: true },
 		],
 	};
 
@@ -112,7 +124,12 @@ const DocumentUploadPage = () => {
 		if (!file) return;
 
 		// Validate file type
-		const allowedTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+		const allowedTypes = [
+			"application/pdf",
+			"image/jpeg",
+			"image/jpg",
+			"image/png",
+		];
 		if (!allowedTypes.includes(file.type)) {
 			toast.error("نوع الملف غير مدعوم. الرجاء رفع PDF أو صورة فقط");
 			return;
@@ -149,7 +166,10 @@ const DocumentUploadPage = () => {
 						const percentCompleted = Math.round(
 							(progressEvent.loaded * 100) / progressEvent.total
 						);
-						setProgress((prev) => ({ ...prev, [documentKey]: percentCompleted }));
+						setProgress((prev) => ({
+							...prev,
+							[documentKey]: percentCompleted,
+						}));
 					},
 				}
 			);
@@ -202,7 +222,7 @@ const DocumentUploadPage = () => {
 		try {
 			const token = localStorage.getItem("token");
 			console.log("Fetching document with ID:", uploadId);
-			
+
 			// Fetch fresh presigned URL from backend
 			const response = await axios.get(
 				`${import.meta.env.VITE_API_URL}/api/uploads/${uploadId}`,
@@ -213,18 +233,73 @@ const DocumentUploadPage = () => {
 
 			console.log("Document response:", response.data);
 
+			// Check for AWS permission error
+			if (response.data.upload?.permissionError || response.data.warning || response.data.error) {
+				console.error("AWS Permission Error:", response.data.error);
+				
+				// Show detailed bilingual error message
+				toast.error(
+					response.data.warning || 
+					"⚠️ لا يمكن عرض الملف حالياً بسبب قيود AWS\n" +
+					"File cannot be viewed due to AWS permission restrictions\n\n" +
+					"الملف محفوظ بأمان - يرجى الاتصال بالمسؤول\n" +
+					"File is safely stored - Please contact administrator",
+					{ 
+						duration: 7000,
+						style: {
+							minWidth: '400px',
+							fontSize: '14px',
+							whiteSpace: 'pre-line'
+						}
+					}
+				);
+				
+				// Log technical details for debugging
+				if (response.data.error) {
+					console.error("Technical Details:", {
+						code: response.data.error.code,
+						message: response.data.error.message,
+						action: response.data.error.action,
+						info: response.data.error.technicalInfo
+					});
+				}
+				return;
+			}
+
 			if (response.data.success && response.data.upload.url) {
 				// Open the fresh presigned URL
-				console.log("Opening URL:", response.data.upload.url);
+				console.log("✅ Opening document URL:", response.data.upload.url);
 				window.open(response.data.upload.url, "_blank");
 			} else {
 				console.error("Invalid response format:", response.data);
-				toast.error("فشل في الحصول على رابط الملف");
+				toast.error("فشل في الحصول على رابط الملف / Failed to get file URL");
 			}
 		} catch (error) {
-			console.error("Error fetching document URL:", error);
+			console.error("❌ Error fetching document URL:", error);
 			console.error("Error details:", error.response?.data);
-			toast.error(error.response?.data?.message || "فشل في عرض الملف");
+
+			// Show user-friendly error message
+			if (
+				error.response?.data?.message?.includes("AWS") ||
+				error.response?.data?.message?.includes("permission") ||
+				error.response?.data?.message?.includes("AccessDenied")
+			) {
+				toast.error(
+					"⚠️ مشكلة مؤقتة في عرض الملفات - يرجى الاتصال بالمسؤول\n" +
+					"Temporary issue viewing files - Please contact administrator\n\n" +
+					"الملفات محفوظة بأمان\nFiles are safely stored",
+					{ 
+						duration: 7000,
+						style: {
+							minWidth: '400px',
+							fontSize: '14px',
+							whiteSpace: 'pre-line'
+						}
+					}
+				);
+			} else {
+				toast.error(error.response?.data?.message || "فشل في عرض الملف / Failed to view file");
+			}
 		}
 	};
 
@@ -244,8 +319,8 @@ const DocumentUploadPage = () => {
 			});
 		}
 
-		// TODO: When dashboard is ready, change this to navigate("/dashboard")
-		navigate("/shipmentstatus");
+		// Redirect to home page
+		navigate("/home");
 	};
 
 	if (!clientType) {
@@ -266,7 +341,7 @@ const DocumentUploadPage = () => {
 
 	return (
 		<>
-			<Navbar />
+			<Header />
 			<BackgroundContainer>
 				<FormContainer>
 					<div className="w-full max-w-4xl mx-auto p-6" dir="rtl">
@@ -398,7 +473,10 @@ const DocumentUploadPage = () => {
 											<div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded">
 												<p>📄 {isUploaded.filename}</p>
 												<p className="text-gray-500">
-													تم الرفع: {new Date(isUploaded.uploadedAt).toLocaleDateString("ar-EG")}
+													تم الرفع:{" "}
+													{new Date(isUploaded.uploadedAt).toLocaleDateString(
+														"ar-EG"
+													)}
 												</p>
 											</div>
 										)}

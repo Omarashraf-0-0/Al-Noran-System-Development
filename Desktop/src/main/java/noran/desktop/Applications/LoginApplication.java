@@ -11,7 +11,8 @@ public class LoginApplication extends Application {
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/noran/desktop/login-view-ar.fxml"));
         Scene scene = new Scene(fxmlLoader.load());
-        stage.setTitle("Login");
+        stage.setTitle("Al Noran");
+        stage.getIcons().add(new javafx.scene.image.Image("/noran/desktop/images/logo.png"));
         stage.setScene(scene);
         stage.show();
     }

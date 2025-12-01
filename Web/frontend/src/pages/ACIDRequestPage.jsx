@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Navbar from "../components/Navbar";
+import Header from "../components/Header";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import ACIDRequestForm from "../components/ACIDRequestForm";
@@ -28,7 +28,12 @@ const ACIDRequestPage = () => {
 		if (!file) return;
 
 		// Validate file type
-		const allowedTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+		const allowedTypes = [
+			"application/pdf",
+			"image/jpeg",
+			"image/jpg",
+			"image/png",
+		];
 		if (!allowedTypes.includes(file.type)) {
 			toast.error("نوع الملف غير مدعوم. الرجاء رفع PDF أو صورة فقط");
 			return;
@@ -89,14 +94,38 @@ const ACIDRequestPage = () => {
 				}
 			);
 
+			// Check for AWS permission error
+			if (response.data.upload?.permissionError || response.data.warning || response.data.error) {
+				console.error("AWS Permission Error:", response.data.error);
+				toast.error(
+					response.data.warning || 
+					"⚠️ لا يمكن عرض الملف حالياً \nيرجى الاتصال بالمسؤول",
+					{ duration: 5000 }
+				);
+				return;
+			}
+
 			if (response.data.success && response.data.upload.url) {
 				window.open(response.data.upload.url, "_blank");
 			} else {
 				toast.error("فشل في الحصول على رابط الملف");
 			}
 		} catch (error) {
-			console.error("Error fetching document URL:", error);
-			toast.error(error.response?.data?.message || "فشل في عرض الملف");
+			console.error("❌ Error fetching document URL:", error);
+			
+			// Handle AWS permission errors
+			if (
+				error.response?.data?.message?.includes("AWS") ||
+				error.response?.data?.message?.includes("permission") ||
+				error.response?.data?.message?.includes("AccessDenied")
+			) {
+				toast.error(
+					"⚠️ مشكلة في عرض الملف\nيرجى الاتصال بالمسؤول",
+					{ duration: 5000 }
+				);
+			} else {
+				toast.error(error.response?.data?.message || "فشل في عرض الملف");
+			}
 		}
 	};
 
@@ -183,19 +212,19 @@ const ACIDRequestPage = () => {
 
 	return (
 		<>
-			<Navbar />
+			<Header />
 			<BackgroundContainer>
 				<FormContainer>
-				<ACIDRequestForm 
-					onSubmit={handleACIDRequest}
-					selectedFile={selectedFile}
-					uploadedInvoice={uploadedInvoice}
-					uploading={uploading}
-					progress={progress}
-					onFileSelect={handleFileSelect}
-					onDeleteUpload={handleDeleteUpload}
-					onViewDocument={handleViewDocument}
-				/>
+					<ACIDRequestForm
+						onSubmit={handleACIDRequest}
+						selectedFile={selectedFile}
+						uploadedInvoice={uploadedInvoice}
+						uploading={uploading}
+						progress={progress}
+						onFileSelect={handleFileSelect}
+						onDeleteUpload={handleDeleteUpload}
+						onViewDocument={handleViewDocument}
+					/>
 				</FormContainer>
 			</BackgroundContainer>
 		</>
