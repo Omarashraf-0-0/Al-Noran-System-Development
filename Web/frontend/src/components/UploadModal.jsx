@@ -117,7 +117,8 @@ const UploadModal = ({ isOpen, onClose, shipmentId, onUploadSuccess }) => {
 				if (uploadResponse.data.success) {
 					uploadedDocs.push({
 						name: fileObj.documentName,
-						fileId: uploadResponse.data.upload.id || uploadResponse.data.upload._id,
+						fileId:
+							uploadResponse.data.upload.id || uploadResponse.data.upload._id,
 						uploaded: true,
 						uploadedAt: new Date(),
 					});
@@ -142,7 +143,9 @@ const UploadModal = ({ isOpen, onClose, shipmentId, onUploadSuccess }) => {
 
 					// Update shipment with new documents
 					await axios.patch(
-						`${import.meta.env.VITE_API_URL}/api/shipments/${shipmentResponse.data.acid}`,
+						`${import.meta.env.VITE_API_URL}/api/shipments/${
+							shipmentResponse.data.acid
+						}`,
 						{
 							requiredDocuments: updatedDocs,
 						},
@@ -155,7 +158,10 @@ const UploadModal = ({ isOpen, onClose, shipmentId, onUploadSuccess }) => {
 
 					console.log("Shipment documents updated successfully");
 				} catch (shipmentUpdateError) {
-					console.error("Error updating shipment documents:", shipmentUpdateError);
+					console.error(
+						"Error updating shipment documents:",
+						shipmentUpdateError
+					);
 					// Don't fail the whole operation if this fails
 				}
 			}

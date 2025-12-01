@@ -46,11 +46,9 @@ const createUser = asyncHandler(async (req, res) => {
 		.exec();
 
 	if (duplicate) {
-		return res
-			.status(409)
-			.json({
-				message: "User already exists with that email, username, or phone",
-			});
+		return res.status(409).json({
+			message: "User already exists with that email, username, or phone",
+		});
 	}
 
 	// Create user data object
