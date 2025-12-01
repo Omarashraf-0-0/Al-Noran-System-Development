@@ -1,0 +1,7 @@
+.combo-box .text-field {
+    -fx-text-fill: white;
+}
+
+.combo-box .text-field:prompt {
+    -fx-fill: white;
+}
