@@ -6,13 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="71fa68e8-5159-49fe-9ebe-37f5d135855b" name="Changes" comment="some gui updates">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AcceptedInvoicesView.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AcceptedInvoicesView.fxml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AdminInvoices.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AdminInvoices.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data-invoice.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data-invoice.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/client-data.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/employee-management.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/employee-management.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/invoices-management.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/invoices-management.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-management.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/shipments-management.fxml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -89,7 +83,7 @@
       <recent name="C:\Users\Yasmine Shehata\IdeaProjects\Client\Al-Noran-System-Development\Desktop\src\main\resources\noran\desktop\images" />
     </key>
   </component>
-  <component name="RunManager" selected="Maven.Desktop Run">
+  <component name="RunManager" selected="Node.js.server.js">
     <configuration name="Run Desktop" type="Application" factoryName="Application">
       <option name="MAIN_CLASS_NAME" value="noran.desktop.Applications.LoginApplication" />
       <method v="2">
@@ -177,7 +171,8 @@
       <workItem from="1764421548808" duration="1894000" />
       <workItem from="1764494356897" duration="5544000" />
       <workItem from="1764499980066" duration="381000" />
-      <workItem from="1764540800556" duration="14000" />
+      <workItem from="1764540800556" duration="1187000" />
+      <workItem from="1764595732201" duration="471000" />
     </task>
     <task id="LOCAL-00001" summary="Merged">
       <option name="closed" value="true" />
@@ -195,7 +190,39 @@
       <option name="project" value="LOCAL" />
       <updated>1764496715454</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="some gui updates">
+      <option name="closed" value="true" />
+      <created>1764540826880</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1764540826880</updated>
+    </task>
+    <task id="LOCAL-00004" summary="some gui updates">
+      <option name="closed" value="true" />
+      <created>1764540907441</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1764540907441</updated>
+    </task>
+    <task id="LOCAL-00005" summary="some gui updates">
+      <option name="closed" value="true" />
+      <created>1764541362029</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1764541362029</updated>
+    </task>
+    <task id="LOCAL-00006" summary="some gui updates">
+      <option name="closed" value="true" />
+      <created>1764541371225</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1764541371225</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -213,6 +240,7 @@
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
     <MESSAGE value="GUI DESKTOP" />
     <MESSAGE value="Merged" />
-    <option name="LAST_COMMIT_MESSAGE" value="Merged" />
+    <MESSAGE value="some gui updates" />
+    <option name="LAST_COMMIT_MESSAGE" value="some gui updates" />
   </component>
 </project>
