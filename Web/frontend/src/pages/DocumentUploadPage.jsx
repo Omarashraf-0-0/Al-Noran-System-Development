@@ -51,7 +51,7 @@ const DocumentUploadPage = () => {
 		personal: [
 			{ key: "power_of_attorney", label: "التوكيل", required: true },
 			{ key: "personal_id", label: "البطاقة الشخصية", required: true },
-			{ key: "sample_document", label: "مستند داعم", required: true },
+			// { key: "sample_document", label: "مستند داعم", required: true },
 		],
 	};
 
@@ -233,6 +233,15 @@ const DocumentUploadPage = () => {
 
 			console.log("Document response:", response.data);
 
+			// Check for AWS permission error
+			if (response.data.upload?.permissionError || response.data.warning) {
+				toast.error(
+					"⚠️ لا يمكن عرض الملف حالياً بسبب قيود AWS.\nالملف محفوظ بأمان ويمكن الوصول إليه لاحقاً.",
+					{ duration: 5000 }
+				);
+				return;
+			}
+
 			if (response.data.success && response.data.upload.url) {
 				// Open the fresh presigned URL
 				console.log("Opening URL:", response.data.upload.url);
@@ -244,7 +253,19 @@ const DocumentUploadPage = () => {
 		} catch (error) {
 			console.error("Error fetching document URL:", error);
 			console.error("Error details:", error.response?.data);
-			toast.error(error.response?.data?.message || "فشل في عرض الملف");
+
+			// Show user-friendly error message
+			if (
+				error.response?.data?.message?.includes("AWS") ||
+				error.response?.data?.message?.includes("permission")
+			) {
+				toast.error(
+					"⚠️ مشكلة مؤقتة في عرض الملفات.\nالملفات محفوظة بأمان وسيتم حل المشكلة قريباً.",
+					{ duration: 5000 }
+				);
+			} else {
+				toast.error(error.response?.data?.message || "فشل في عرض الملف");
+			}
 		}
 	};
 

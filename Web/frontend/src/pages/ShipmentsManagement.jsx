@@ -3,29 +3,27 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import AdminHeader from "../components/AdminHeader";
 import Footer from "../components/Footer";
-import CertificateDetailsModal from "../components/CertificateDetailsModal";
+import ShipmentDetailsModal from "../components/ShipmentDetailsModal";
 import bannerPic from "../assets/images/Untitled design (8) 2.png";
 import searchIcon from "../assets/images/search.svg";
 
-export default function CertificatesManagement() {
-	const [certificates, setCertificates] = useState([]);
+export default function ShipmentsManagement() {
+	const [shipments, setShipments] = useState([]);
 	const [search, setSearch] = useState("");
 	const [loading, setLoading] = useState(true);
-	const [selectedCertificate, setSelectedCertificate] = useState(null);
+	const [selectedShipment, setSelectedShipment] = useState(null);
 	const [showDetailsModal, setShowDetailsModal] = useState(false);
 
 	const user = JSON.parse(localStorage.getItem("user"));
 	const adminName = user?.fullname || user?.username || "المدير";
 	const token = localStorage.getItem("token");
 
-	// --------------------------------------
-	// Fetch Certificates from backend
-	// --------------------------------------
-	const fetchCertificates = async () => {
+	// Fetch Shipments from backend
+	const fetchShipments = async () => {
 		try {
 			setLoading(true);
 			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/acid/employee/all`,
+				`${import.meta.env.VITE_API_URL}/api/shipments/getAll`,
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -33,89 +31,86 @@ export default function CertificatesManagement() {
 				}
 			);
 
-			// Transform backend data to match frontend structure
-			const certificatesData = response.data.requests.map((req) => ({
-				id: req._id,
-				certificateNumber: req.acidCode || req._id.slice(-8).toUpperCase(),
-				clientName: req.userId?.username || "غير متاح",
-				clientEmail: req.userId?.email || "",
-				employeeName: req.reviewingBy?.username || "لم يعين بعد",
-				stage: req.status,
-				isLocked: req.isLocked,
-				hasShipment: req.hasShipment,
-				requestDate: req.requestDate,
-				goods: req.goods,
-				supplier: req.supplier,
+			// Transform backend data
+			const shipmentsData = response.data.map((ship) => ({
+				id: ship._id,
+				acid: ship.acid,
+				clientName:
+					ship.user_id?.username || ship.user_id?.fullname || "غير متاح",
+				clientEmail: ship.user_id?.email || "",
+				employeeName:
+					ship.employee_id?.username ||
+					ship.employee_id?.fullname ||
+					"لم يعين بعد",
+				status: ship.status,
+				port: ship.port_name,
+				country: ship.country,
+				numContainers: ship.num_of_containers,
+				createdAt: ship.createdAt,
+				dragt: ship.dragt,
 			}));
 
-			setCertificates(certificatesData);
+			setShipments(shipmentsData);
 			setLoading(false);
 		} catch (error) {
-			console.error("Error fetching certificates:", error);
-			toast.error("فشل تحميل بيانات الشهادات");
+			console.error("Error fetching shipments:", error);
+			toast.error("فشل تحميل بيانات الشحنات");
 			setLoading(false);
 		}
 	};
 
 	useEffect(() => {
-		fetchCertificates();
+		fetchShipments();
 	}, []);
 
-	// --------------------------------------
-	// FILTER certificates
-	// --------------------------------------
-	const filteredCertificates = certificates.filter(
-		(cert) =>
-			cert.certificateNumber.toLowerCase().includes(search.toLowerCase()) ||
-			cert.clientName.toLowerCase().includes(search.toLowerCase()) ||
-			cert.employeeName.toLowerCase().includes(search.toLowerCase())
+	// Filter shipments
+	const filteredShipments = shipments.filter(
+		(ship) =>
+			ship.acid.toLowerCase().includes(search.toLowerCase()) ||
+			ship.clientName.toLowerCase().includes(search.toLowerCase()) ||
+			ship.employeeName.toLowerCase().includes(search.toLowerCase()) ||
+			ship.port.toLowerCase().includes(search.toLowerCase())
 	);
 
-	const handleDeleteCertificate = async (certId) => {
-		if (!window.confirm("هل أنت متأكد من حذف هذه الشهادة؟")) {
+	const handleDeleteShipment = async (shipmentAcid) => {
+		if (!window.confirm("هل أنت متأكد من حذف هذه الشحنة؟")) {
 			return;
 		}
 
 		try {
-			await axios.delete(`${import.meta.env.VITE_API_URL}/api/acid/${certId}`, {
-				headers: {
-					Authorization: `Bearer ${token}`,
-				},
-			});
+			await axios.delete(
+				`${import.meta.env.VITE_API_URL}/api/shipments/${shipmentAcid}`,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
 
-			toast.success("تم حذف الشهادة بنجاح");
-			fetchCertificates();
+			toast.success("تم حذف الشحنة بنجاح");
+			fetchShipments();
 		} catch (error) {
-			console.error("Error deleting certificate:", error);
-			toast.error("فشل حذف الشهادة");
-		}
-	};
-
-	const getStatusLabel = (status) => {
-		switch (status) {
-			case "ACID Issued":
-				return "صدرت الشهادة";
-			case "Under Review":
-				return "قيد المراجعة";
-			case "Pending":
-				return "قيد الانتظار";
-			case "Rejected":
-				return "مرفوض";
-			default:
-				return status;
+			console.error("Error deleting shipment:", error);
+			toast.error("فشل حذف الشحنة");
 		}
 	};
 
 	const getStatusColor = (status) => {
 		switch (status) {
-			case "ACID Issued":
+			case "Completed":
+			case "تمت بنجاح":
 				return "text-green-600";
-			case "Under Review":
+			case "In Transit":
+			case "في الطريق":
+				return "text-blue-600";
+			case "Arrived":
+			case "Customs Clearance":
+			case "جاري الكشف والتثمين":
+			case "في انتظار وصول الإذن":
 				return "text-yellow-600";
 			case "Pending":
-				return "text-blue-600";
-			case "Rejected":
-				return "text-red-600";
+			case "في انتظار الشحن":
+				return "text-gray-600";
 			default:
 				return "text-gray-600";
 		}
@@ -141,7 +136,7 @@ export default function CertificatesManagement() {
 
 			{/* Section Title */}
 			<h2 className="text-4xl font-bold text-[#690000] text-right my-8 px-16">
-				إدارة الشهادات (ACID Requests)
+				إدارة الشحنات
 			</h2>
 
 			{/* Search Bar */}
@@ -149,7 +144,7 @@ export default function CertificatesManagement() {
 				<div className="relative w-full max-w-xl">
 					<input
 						type="text"
-						placeholder="البحث بالكود / اسم العميل / اسم الموظف"
+						placeholder="البحث برقم ACID / اسم العميل / اسم الموظف / الميناء"
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						className="w-full bg-white text-gray-900 placeholder-gray-400 border border-gray-600 rounded-full py-2 pr-4 pl-10 text-right focus:outline-none focus:ring-2 focus:ring-[#6B0F1A]"
@@ -170,69 +165,63 @@ export default function CertificatesManagement() {
 				</div>
 			) : (
 				<>
-					{/* Certificates Table */}
+					{/* Shipments Table */}
 					<div className="overflow-x-auto px-4 mb-8">
 						<table className="w-full text-center border-collapse bg-white shadow-md rounded-lg">
 							<thead>
 								<tr className="text-white border-b border-red-900 bg-red-800">
 									<th className="py-4 px-4">#</th>
-									<th className="py-4 px-4">رقم الطلب</th>
+									<th className="py-4 px-4">رقم ACID</th>
 									<th className="py-4 px-4">اسم العميل</th>
 									<th className="py-4 px-4">الموظف المسؤول</th>
+									<th className="py-4 px-4">الميناء</th>
+									<th className="py-4 px-4">الدولة</th>
+									<th className="py-4 px-4">عدد الحاويات</th>
 									<th className="py-4 px-4">الحالة</th>
-									<th className="py-4 px-4">تاريخ الطلب</th>
-									<th className="py-4 px-4">حالة القفل</th>
+									<th className="py-4 px-4">تاريخ الإنشاء</th>
 									<th className="py-4 px-4">الإجراءات</th>
 								</tr>
 							</thead>
 
 							<tbody>
-								{filteredCertificates.length === 0 ? (
+								{filteredShipments.length === 0 ? (
 									<tr>
-										<td colSpan="8" className="py-6 text-gray-500">
-											لا يوجد شهادات مطابقة لبحثك
+										<td colSpan="10" className="py-6 text-gray-500">
+											لا يوجد شحنات مطابقة لبحثك
 										</td>
 									</tr>
 								) : (
-									filteredCertificates.map((cert, index) => (
+									filteredShipments.map((ship, index) => (
 										<tr
-											key={cert.id}
+											key={ship.id}
 											className="border-b border-red-100 text-gray-800 hover:bg-red-50"
 										>
 											<td className="py-4 px-4 font-semibold text-red-900">
 												{index + 1}
 											</td>
 											<td className="py-4 px-4 font-mono text-sm">
-												{cert.certificateNumber}
+												{ship.acid}
 											</td>
-											<td className="py-4 px-4">{cert.clientName}</td>
-											<td className="py-4 px-4">{cert.employeeName}</td>
+											<td className="py-4 px-4">{ship.clientName}</td>
+											<td className="py-4 px-4">{ship.employeeName}</td>
+											<td className="py-4 px-4">{ship.port}</td>
+											<td className="py-4 px-4">{ship.country}</td>
+											<td className="py-4 px-4">{ship.numContainers}</td>
 											<td
 												className={`py-4 px-4 font-semibold ${getStatusColor(
-													cert.stage
+													ship.status
 												)}`}
 											>
-												{getStatusLabel(cert.stage)}
+												{ship.status}
 											</td>
 											<td className="py-4 px-4">
-												{new Date(cert.requestDate).toLocaleDateString("ar-EG")}
-											</td>
-											<td className="py-4 px-4">
-												{cert.isLocked ? (
-													<span className="inline-block px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
-														مقفل
-													</span>
-												) : (
-													<span className="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-														مفتوح
-													</span>
-												)}
+												{new Date(ship.createdAt).toLocaleDateString("ar-EG")}
 											</td>
 											<td className="py-4 px-4">
 												<div className="flex gap-2 justify-center">
 													<button
 														onClick={() => {
-															setSelectedCertificate(cert.id);
+															setSelectedShipment(ship.id);
 															setShowDetailsModal(true);
 														}}
 														className="text-blue-600 hover:text-blue-800 underline text-sm"
@@ -240,7 +229,7 @@ export default function CertificatesManagement() {
 														عرض التفاصيل
 													</button>
 													<button
-														onClick={() => handleDeleteCertificate(cert.id)}
+														onClick={() => handleDeleteShipment(ship.acid)}
 														className="text-red-600 hover:text-red-800 underline text-sm"
 													>
 														حذف
@@ -259,28 +248,40 @@ export default function CertificatesManagement() {
 						<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 							<div className="bg-white rounded-lg shadow p-4 text-center">
 								<p className="text-2xl font-bold text-[#690000]">
-									{certificates.length}
+									{shipments.length}
 								</p>
-								<p className="text-sm text-gray-600">إجمالي الطلبات</p>
+								<p className="text-sm text-gray-600">إجمالي الشحنات</p>
 							</div>
 							<div className="bg-white rounded-lg shadow p-4 text-center">
 								<p className="text-2xl font-bold text-green-600">
-									{certificates.filter((c) => c.stage === "ACID Issued").length}
-								</p>
-								<p className="text-sm text-gray-600">صدرت الشهادة</p>
-							</div>
-							<div className="bg-white rounded-lg shadow p-4 text-center">
-								<p className="text-2xl font-bold text-yellow-600">
 									{
-										certificates.filter((c) => c.stage === "Under Review")
-											.length
+										shipments.filter(
+											(s) =>
+												s.status === "Completed" || s.status === "تمت بنجاح"
+										).length
 									}
 								</p>
-								<p className="text-sm text-gray-600">قيد المراجعة</p>
+								<p className="text-sm text-gray-600">مكتملة</p>
 							</div>
 							<div className="bg-white rounded-lg shadow p-4 text-center">
 								<p className="text-2xl font-bold text-blue-600">
-									{certificates.filter((c) => c.stage === "Pending").length}
+									{
+										shipments.filter(
+											(s) =>
+												s.status === "In Transit" || s.status === "في الطريق"
+										).length
+									}
+								</p>
+								<p className="text-sm text-gray-600">في الطريق</p>
+							</div>
+							<div className="bg-white rounded-lg shadow p-4 text-center">
+								<p className="text-2xl font-bold text-gray-600">
+									{
+										shipments.filter(
+											(s) =>
+												s.status === "Pending" || s.status === "في انتظار الشحن"
+										).length
+									}
 								</p>
 								<p className="text-sm text-gray-600">قيد الانتظار</p>
 							</div>
@@ -289,15 +290,15 @@ export default function CertificatesManagement() {
 				</>
 			)}
 
-			{/* Certificate Details Modal */}
-			{showDetailsModal && selectedCertificate && (
-				<CertificateDetailsModal
-					certificateId={selectedCertificate}
+			{/* Shipment Details Modal */}
+			{showDetailsModal && selectedShipment && (
+				<ShipmentDetailsModal
+					shipmentId={selectedShipment}
 					onClose={() => {
 						setShowDetailsModal(false);
-						setSelectedCertificate(null);
+						setSelectedShipment(null);
 					}}
-					onUpdate={fetchCertificates}
+					onUpdate={fetchShipments}
 				/>
 			)}
 

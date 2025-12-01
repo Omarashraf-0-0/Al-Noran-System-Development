@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router";
+import { Routes, Route } from "react-router-dom";
 import TrackingPage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -20,6 +20,14 @@ import CustomerManagement from "./pages/CustomerManagement";
 import EmployeeShipmentManagement from "./pages/EmployeeShipmentManagement";
 import CertificatesManagement from "./pages/CertificatesManagement";
 import AdminShipmentManagement from "./pages/AdminShipmentManagement";
+import Chat from "./pages/Chat";
+import AcidRequestsPage from "./pages/AcidRequestsPage";
+import AcidRequestDetailsPage from "./pages/AcidRequestDetailsPage";
+import EditAcidRequestPage from "./pages/EditAcidRequestPage";
+import EmployeeAcidRequestsPage from "./pages/EmployeeAcidRequestsPage";
+import EmployeeShipments from "./pages/EmployeeShipments";
+import ShipmentsManagement from "./pages/ShipmentsManagement";
+import ShipmentHistory from "./pages/ShipmentHistory";
 
 const App = () => {
 	return (
@@ -33,6 +41,20 @@ const App = () => {
 				<Route path="/resetpassword" element={<ResetPasswordPage />} />
 				<Route path="/home" element={<TrackingPage />} />
 				<Route path="/acidrequest" element={<ACIDRequestPage />} />
+				<Route path="/acidrequests" element={<AcidRequestsPage />} />
+				<Route
+					path="/acidrequest/:requestId"
+					element={<AcidRequestDetailsPage />}
+				/>
+				<Route
+					path="/acidrequest/:requestId/edit"
+					element={<EditAcidRequestPage />}
+				/>
+				<Route path="/acidrequests" element={<AcidRequestsPage />} />
+				<Route
+					path="/acidrequest/:requestId"
+					element={<AcidRequestDetailsPage />}
+				/>
 				<Route path="/upload-documents" element={<DocumentUploadPage />} />
 				<Route path="/employeedashboard" element={<EmployeeDashboard />} />
 				<Route
@@ -49,11 +71,30 @@ const App = () => {
 				/>
 				<Route path="/client-shipments" element={<ClientShipments />} />
 				<Route path="/admindashboard" element={<AdminDashboard />} />
-				<Route path="/EmployeeNotifications" element={<EmployeeNotifications />} />
+				<Route
+					path="/EmployeeNotifications"
+					element={<EmployeeNotifications />}
+				/>
 				<Route path="/employeemanagement" element={<EmployeeManagement />} />
 				<Route path="/customermanagement" element={<CustomerManagement />} />
-				<Route path="/certificatesmanagement" element={<CertificatesManagement />} />
+				<Route
+					path="/certificatesmanagement"
+					element={<CertificatesManagement />}
+				/>
+				<Route path="/shipmentsmanagement" element={<ShipmentsManagement />} />
 				<Route path="*" element={<NotFound404 />} />
+				<Route path="/chat" element={<Chat />} />
+				<Route
+					path="/employee/acid-requests"
+					element={<EmployeeAcidRequestsPage />}
+				/>
+				<Route path="/employee-shipments" element={<EmployeeShipments />} />
+				<Route
+					path="/shipment-history/:shipmentId"
+					element={<ShipmentHistory />}
+				/>
+				{/* NEW */}
+				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
 			</Routes>
 		</div>
 	);

@@ -33,6 +33,12 @@ const EmployeeShipmentManagement = () => {
 	const [newDocument, setNewDocument] = useState("");
 	const [uploadingDoc, setUploadingDoc] = useState(false);
 
+	// Document upload state
+	const [showUploadModal, setShowUploadModal] = useState(false);
+	const [selectedFile, setSelectedFile] = useState(null);
+	const [documentName, setDocumentName] = useState("");
+	const [uploadingFile, setUploadingFile] = useState(false);
+
 	const token = localStorage.getItem("token");
 
 	// Available statuses
@@ -302,6 +308,123 @@ const EmployeeShipmentManagement = () => {
 	const handleContactClient = () => {
 		// TODO: Implement contact client functionality
 		toast.info("سيتم إضافة نظام المراسلة قريباً");
+	};
+
+	const handleFileSelect = (e) => {
+		const file = e.target.files[0];
+		if (file) {
+			setSelectedFile(file);
+			setDocumentName(file.name);
+		}
+	};
+
+	const handleUploadDocument = async () => {
+		if (!selectedFile || !documentName) {
+			toast.error("الرجاء اختيار ملف وإدخال اسم المستند");
+			return;
+		}
+
+		try {
+			setUploadingFile(true);
+			toast.loading("جاري رفع المستند...");
+
+			// Step 1: Upload file to S3
+			const formData = new FormData();
+			formData.append("file", selectedFile);
+			formData.append("category", "shipment");
+			formData.append("relatedId", shipmentId);
+
+			const uploadResponse = await axios.post(
+				`${import.meta.env.VITE_API_URL}/api/uploads`,
+				formData,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "multipart/form-data",
+					},
+				}
+			);
+
+			const uploadedFileId =
+				uploadResponse.data.upload.id || uploadResponse.data.upload._id;
+			console.log("Uploaded file ID:", uploadedFileId);
+
+			// Step 2: Add document to shipment's requiredDocuments
+			const updatedDocuments = [
+				...(shipment.requiredDocuments || []),
+				{
+					name: documentName,
+					uploaded: true,
+					fileId: uploadedFileId,
+					uploadedAt: new Date(),
+				},
+			];
+
+			await axios.patch(
+				`${import.meta.env.VITE_API_URL}/api/shipments/${shipment.acid}`,
+				{
+					requiredDocuments: updatedDocuments,
+				},
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
+
+			toast.dismiss();
+			toast.success("تم رفع المستند بنجاح");
+
+			// Reset form
+			setSelectedFile(null);
+			setDocumentName("");
+			setShowUploadModal(false);
+
+			// Refresh shipment data
+			const shipmentResponse = await axios.get(
+				`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
+			setShipment(shipmentResponse.data);
+		} catch (error) {
+			console.error("Error uploading document:", error);
+			toast.dismiss();
+			toast.error(error.response?.data?.message || "فشل رفع المستند");
+		} finally {
+			setUploadingFile(false);
+		}
+	};
+
+	const handleDownloadDocument = async (fileId, fileName) => {
+		try {
+			toast.loading("جاري تحميل المستند...");
+			const response = await axios.get(
+				`${import.meta.env.VITE_API_URL}/api/uploads/${fileId}`,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
+
+			toast.dismiss();
+			// Open the S3 URL in a new tab
+			const fileUrl =
+				response.data?.upload?.presignedUrl || response.data?.presignedUrl;
+			if (fileUrl) {
+				window.open(fileUrl, "_blank");
+			} else {
+				toast.error("لم يتم العثور على رابط الملف");
+			}
+		} catch (error) {
+			console.error("Error downloading document:", error);
+			toast.dismiss();
+			toast.error("فشل تحميل المستند");
+		}
 	};
 
 	if (loading) {
@@ -705,8 +828,158 @@ const EmployeeShipmentManagement = () => {
 									</div>
 								)}
 
+							{/* Employee Document Upload Section */}
+							<div className="mt-12 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-6">
+								<div className="flex items-center justify-between mb-6">
+									<h2 className="text-2xl font-bold text-red-900 flex items-center gap-2">
+										<span>📤</span>
+										<span>رفع مستندات الموظف</span>
+									</h2>
+									<button
+										onClick={() => setShowUploadModal(!showUploadModal)}
+										className="bg-red-800 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-900 transition-all shadow-md flex items-center gap-2"
+									>
+										<svg
+											className="w-5 h-5"
+											fill="currentColor"
+											viewBox="0 0 20 20"
+										>
+											<path
+												fillRule="evenodd"
+												d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+												clipRule="evenodd"
+											/>
+										</svg>
+										<span>رفع مستند جديد</span>
+									</button>
+								</div>
+
+								{/* Upload Form */}
+								{showUploadModal && (
+									<div className="bg-white rounded-lg p-6 mb-6 border-2 border-red-300">
+										<h3 className="text-lg font-bold text-red-900 mb-4">
+											إضافة مستند جديد
+										</h3>
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div>
+												<label className="block text-sm font-medium text-gray-700 mb-2 text-right">
+													اسم المستند
+												</label>
+												<input
+													type="text"
+													value={documentName}
+													onChange={(e) => setDocumentName(e.target.value)}
+													placeholder="مثال: فاتورة، شهادة منشأ، بوليصة شحن"
+													className="w-full border border-gray-300 rounded-lg px-4 py-3 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
+												/>
+											</div>
+											<div>
+												<label className="block text-sm font-medium text-gray-700 mb-2 text-right">
+													اختر الملف
+												</label>
+												<input
+													type="file"
+													onChange={handleFileSelect}
+													className="w-full border border-gray-300 rounded-lg px-4 py-3 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
+													accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+												/>
+											</div>
+										</div>
+										{selectedFile && (
+											<div className="mt-4 flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+												<button
+													onClick={handleUploadDocument}
+													disabled={uploadingFile}
+													className="bg-red-800 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-900 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+												>
+													{uploadingFile ? "جاري الرفع..." : "رفع المستند"}
+												</button>
+												<div className="text-right">
+													<p className="text-sm font-medium text-gray-700">
+														الملف المحدد:
+													</p>
+													<p className="text-sm text-gray-600">
+														{selectedFile.name}
+													</p>
+												</div>
+											</div>
+										)}
+									</div>
+								)}
+
+								{/* Documents List */}
+								{shipment.requiredDocuments &&
+								shipment.requiredDocuments.length > 0 ? (
+									<div className="space-y-3">
+										<h3 className="text-lg font-semibold text-gray-800 mb-3">
+											المستندات المرفوعة ({shipment.requiredDocuments.length})
+										</h3>
+										{shipment.requiredDocuments.map((doc, index) => (
+											<div
+												key={index}
+												className="flex items-center justify-between bg-white p-4 rounded-lg border-2 border-gray-200 hover:border-red-300 transition-all"
+											>
+												<div className="flex items-center gap-3">
+													<span
+														className={`px-3 py-1 rounded-full text-sm font-semibold ${
+															doc.uploaded
+																? "bg-green-100 text-green-800"
+																: "bg-yellow-100 text-yellow-800"
+														}`}
+													>
+														{doc.uploaded ? "✓ مرفوع" : "⏳ مطلوب"}
+													</span>
+													{doc.uploaded && doc.fileId && (
+														<button
+															onClick={() =>
+																handleDownloadDocument(doc.fileId, doc.name)
+															}
+															className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
+														>
+															📥 تحميل
+														</button>
+													)}
+												</div>
+												<div className="text-right">
+													<p className="font-bold text-gray-900">{doc.name}</p>
+													{doc.uploadedAt && (
+														<p className="text-sm text-gray-500">
+															{new Date(doc.uploadedAt).toLocaleDateString(
+																"ar-EG"
+															)}
+														</p>
+													)}
+												</div>
+											</div>
+										))}
+									</div>
+								) : (
+									<div className="bg-white rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
+										<svg
+											className="w-16 h-16 mx-auto text-gray-400 mb-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+											/>
+										</svg>
+										<p className="text-gray-500 text-lg">
+											لا توجد مستندات مرفوعة بعد
+										</p>
+										<p className="text-gray-400 text-sm mt-2">
+											استخدم زر "رفع مستند جديد" لإضافة مستندات
+										</p>
+									</div>
+								)}
+							</div>
+
 							{/* Files Section */}
-							<div className="mt-16">
+							{/* <div className="mt-16">
 								<h2 className="text-2xl font-bold text-center text-red-900 mb-8">
 									📁 ملفات الشحنة
 								</h2>
@@ -743,7 +1016,7 @@ const EmployeeShipmentManagement = () => {
 										))}
 									</div>
 								)}
-							</div>
+							</div> */}
 
 							{/* Action Buttons */}
 							<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-12">

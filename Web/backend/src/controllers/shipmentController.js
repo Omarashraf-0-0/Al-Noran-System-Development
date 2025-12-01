@@ -12,11 +12,29 @@ const createShipment = async (req, res) => {
 		const decoded = jwt.verify(token, process.env.JWT_SECRET);
 		const shipmentData = req.body;
 
-		// Ensure invoice file exists
+		// Handle invoice file
 		if (req.file) {
+			// New file uploaded
 			shipmentData.invoiceUrl = `/uploads/shipments/${req.file.filename}`;
+		} else if (decoded.type === "employee" || decoded.userType === "employee") {
+			// Employee creating shipment - invoice comes from ACID request uploads
+			// Find invoice from uploads array if provided
+			if (shipmentData.uploads && Array.isArray(shipmentData.uploads)) {
+				const invoiceUpload = shipmentData.uploads.find(
+					(upload) =>
+						upload.category === "invoice" ||
+						upload.documentType === "proforma_invoice"
+				);
+				if (invoiceUpload && invoiceUpload.s3Url) {
+					shipmentData.invoiceUrl = invoiceUpload.s3Url;
+				}
+			}
+			// If no invoice found in uploads, it can be added later
+			if (!shipmentData.invoiceUrl) {
+				shipmentData.invoiceUrl = null;
+			}
 		} else {
-			// hash this when tetsing with no invoice file
+			// Client must provide invoice file
 			return res.status(400).json({ message: "Invoice file is required" });
 		}
 
@@ -124,7 +142,10 @@ const createShipment = async (req, res) => {
 // ✅ جلب كل الشحنات
 const getAllShipments = async (req, res) => {
 	try {
-		const shipments = await Shipment.find().sort({ createdAt: -1 });
+		const shipments = await Shipment.find()
+			.populate("user_id", "username fullname email")
+			.populate("employee_id", "username fullname email")
+			.sort({ createdAt: -1 });
 		res.json(shipments);
 	} catch (error) {
 		res.status(500).json({ message: error.message });
@@ -146,11 +167,32 @@ const getShipmentByAcid = async (req, res) => {
 // ✅ جلب شحنة بالـ ID
 const getShipmentById = async (req, res) => {
 	try {
-		const shipment = await Shipment.findById(req.params.shipmentId);
+		const { shipmentId } = req.params;
+
+		// Validate if it's a valid MongoDB ObjectId
+		const mongoose = require("mongoose");
+		if (!mongoose.Types.ObjectId.isValid(shipmentId)) {
+			// If not a valid ObjectId, try to find by ACID code
+			console.log(
+				`Invalid ObjectId format: ${shipmentId}, trying to find by ACID code...`
+			);
+			const shipment = await Shipment.findOne({ acid: shipmentId })
+				.populate("user_id", "username fullname email")
+				.populate("employee_id", "username fullname email");
+			if (!shipment) {
+				return res.status(404).json({ message: "Shipment not found" });
+			}
+			return res.json(shipment);
+		}
+
+		const shipment = await Shipment.findById(shipmentId)
+			.populate("user_id", "username fullname email")
+			.populate("employee_id", "username fullname email");
 		if (!shipment)
 			return res.status(404).json({ message: "Shipment not found" });
 		res.json(shipment);
 	} catch (error) {
+		console.error("Error in getShipmentById:", error);
 		res.status(500).json({ message: error.message });
 	}
 };
@@ -260,9 +302,24 @@ const getShipmentsByUserId = async (req, res) => {
 		const shipments = await Shipment.find({ user_id: userId }).sort({
 			createdAt: -1,
 		});
+		const User = require("../models/user");
+		var formattedShipments = [];
+		for (let shipment of shipments) {
+			const user = await User.findById(shipment.employee_id).select(
+				"fullname username email"
+			);
+			formattedShipments.push({
+				...shipment.toObject(),
+				employee_name: user
+					? user.fullname || user.username || user.email
+					: "N/A",
+			});
+		}
+		console.log(
+			`Found ${formattedShipments.length} shipments for user ${userId}`
+		);
 
-		console.log(`Found ${shipments.length} shipments for user ${userId}`);
-		res.json(shipments);
+		res.json(formattedShipments);
 	} catch (error) {
 		console.error("Error fetching user shipments:", error);
 		res.status(500).json({ message: error.message });
@@ -654,153 +711,329 @@ const getEmployeeShipmentStats = async (req, res) => {
 	}
 };
 
+// Get client shipment statistics
+const getClientShipmentStats = async (req, res) => {
+	try {
+		const { userId } = req.params;
 
+		if (!userId) {
+			return res.status(400).json({ message: "User ID is required" });
+		}
 
+		// Get all shipments for this client
+		const allShipments = await Shipment.find({ user_id: userId });
 
+		// Count completed shipments (both English and Arabic statuses)
+		const completedCount = allShipments.filter(
+			(shipment) =>
+				shipment.status === "Completed" || shipment.status === "تمت بنجاح"
+		).length;
+
+		// Count in-progress shipments (all except completed)
+		const inProgressCount = allShipments.length - completedCount;
+
+		res.json({
+			success: true,
+			stats: {
+				completed: completedCount,
+				inProgress: inProgressCount,
+				total: allShipments.length,
+			},
+		});
+	} catch (error) {
+		console.error("Error fetching client shipment stats:", error);
+		res.status(500).json({ message: error.message });
+	}
+};
 
 const mostActiveClients = async (req, res) => {
 	console.log("here");
-  try {
-    const result = await Shipment.aggregate([
-      {
-        $group: {
-          _id: "$user_id",
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "_id",
-          foreignField: "_id",
-          as: "user"
-        }
-      },
-      {
-        $unwind: "$user"
-      },
-      {
-        $project: {
-          _id: 1,
-          count: 1,
-          name: "$user.fullname" 
-        }
-      },
-      { $sort: { count: -1 } }
-    ]);
+	try {
+		const result = await Shipment.aggregate([
+			{
+				$group: {
+					_id: "$user_id",
+					count: { $sum: 1 },
+				},
+			},
+			{
+				$lookup: {
+					from: "users",
+					localField: "_id",
+					foreignField: "_id",
+					as: "user",
+				},
+			},
+			{
+				$unwind: "$user",
+			},
+			{
+				$project: {
+					_id: 1,
+					count: 1,
+					name: "$user.fullname",
+				},
+			},
+			{ $sort: { count: -1 } },
+		]);
 
-    return res.status(200).json({ result });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
+		return res.status(200).json({ result });
+	} catch (err) {
+		return res.status(500).json({ message: err.message });
+	}
 };
 
-
 const cleanFacet = (facetResult, field, key = "count") => {
-  return facetResult[field]?.[0]?.[key] || 0;
+	return facetResult[field]?.[0]?.[key] || 0;
+};
+
+// Get revenue comparison by shipment type (air/sea) per month
+const getRevenueComparison = async (req, res) => {
+	try {
+		console.log("Fetching revenue comparison data...");
+		const result = await Shipment.aggregate([
+			{
+				$lookup: {
+					from: "invoices",
+					localField: "_id",
+					foreignField: "shipmentId",
+					as: "invoices",
+				},
+			},
+			{
+				$unwind: {
+					path: "$invoices",
+					preserveNullAndEmptyArrays: true,
+				},
+			},
+			{
+				$group: {
+					_id: {
+						month: { $month: "$createdAt" },
+						year: { $year: "$createdAt" },
+						type: "$shipmentType",
+					},
+					revenue: { $sum: { $toDouble: "$invoices.feePrice" } },
+				},
+			},
+			{
+				$sort: { "_id.year": 1, "_id.month": 1 },
+			},
+		]);
+
+		// Transform data for frontend
+		const monthNames = [
+			"Jan",
+			"Feb",
+			"Mar",
+			"Apr",
+			"May",
+			"Jun",
+			"Jul",
+			"Aug",
+			"Sep",
+			"Oct",
+			"Nov",
+			"Dec",
+		];
+
+		const dataMap = {};
+		result.forEach((item) => {
+			const monthLabel = monthNames[item._id.month - 1];
+			if (!dataMap[monthLabel]) {
+				dataMap[monthLabel] = { label: monthLabel, sea: 0, air: 0 };
+			}
+			if (item._id.type === "sea") {
+				dataMap[monthLabel].sea = item.revenue || 0;
+			} else if (item._id.type === "air") {
+				dataMap[monthLabel].air = item.revenue || 0;
+			}
+		});
+
+		const chartData = Object.values(dataMap);
+		console.log("Revenue comparison result:", chartData);
+		return res.status(200).json(chartData);
+	} catch (err) {
+		console.error("Error in getRevenueComparison:", err);
+		return res.status(500).json({ message: err.message });
+	}
 };
 
 const getDashboardStats = async (req, res) => {
-  try {
-    const invoiceStats = await Invoice.aggregate([
-      {
-        $facet: {
-          ongoingInvoices: [
-            { $match: { status: "ongoing" } },
-            { $count: "count" }
-          ],
+	try {
+		const invoiceStats = await Invoice.aggregate([
+			{
+				$facet: {
+					ongoingInvoices: [
+						{ $match: { status: "ongoing" } },
+						{ $count: "count" },
+					],
 
-          completedInvoices: [
-            { $match: { status: "completed" } },
-            { $count: "count" }
-          ],
+					completedInvoices: [
+						{ $match: { status: "completed" } },
+						{ $count: "count" },
+					],
 
-          poundRevenue: [
-            { $match: { currency: "EGP" } },
-            {
-              $group: {
-                _id: null,
-                total: { $sum: { $toDouble: "$feePrice" } }
-              }
-            }
-          ],
+					poundRevenue: [
+						{ $match: { currencyType: "pound" } },
+						{
+							$group: {
+								_id: null,
+								total: { $sum: { $toDouble: "$feePrice" } },
+							},
+						},
+					],
 
-          dollarRevenue: [
-            { $match: { currency: "USD" } },
-            {
-              $group: {
-                _id: null,
-                total: { $sum: { $toDouble: "$feePrice" } }
-              }
-            }
-          ],
+					dollarRevenue: [
+						{ $match: { currencyType: "dollar" } },
+						{
+							$group: {
+								_id: null,
+								total: { $sum: { $toDouble: "$feePrice" } },
+							},
+						},
+					],
 
-          totalPayments: [
-            {
-              $group: {
-                _id: null,
-                totalPaid: {
-                  $sum: {
-                    $add: [
-                      { $toDouble: "$feePrice" },
-                      { $toDouble: "$Port_fee_price" },
-                      { $toDouble: "$Additional_Services_price" },
-                      { $toDouble: "$Clearance_Fees_price" },
-                      { $toDouble: "$Expense_Tips_price" },
-                      { $toDouble: "$Sundries_price" }
-                    ]
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    ]);
+					totalPayments: [
+						{
+							$group: {
+								_id: null,
+								totalPaid: {
+									$sum: {
+										$add: [
+											{ $toDouble: "$feePrice" },
+											{ $toDouble: "$Port_fee_price" },
+											{ $toDouble: "$Additional_Services_price" },
+											{ $toDouble: "$Clearance_Fees_price" },
+											{ $toDouble: "$Expense_Tips_price" },
+											{ $toDouble: "$Sundries_price" },
+										],
+									},
+								},
+							},
+						},
+					],
+				},
+			},
+		]);
 
-    const shipmentStats = await Shipment.aggregate([
-      {
-        $facet: {
-          ongoingSeaShipments: [
-            { $match: { status: "ongoing", shipmentType: "sea" } },
-            { $count: "count" }
-          ],
+		const shipmentStats = await Shipment.aggregate([
+			{
+				$facet: {
+					totalShipments: [{ $count: "count" }],
 
-          ongoingAirShipments: [
-            { $match: { status: "ongoing", shipmentType: "air" } },
-            { $count: "count" }
-          ],
+					ongoingAirShipments: [
+						{ $match: { status: "ongoing", shipmentType: "air" } },
+						{ $count: "count" },
+					],
 
-          completedShipments: [
-            { $match: { status: "completed" } },
-            { $count: "count" }
-          ]
-        }
-      }
-    ]);
+					completedShipments: [
+						{
+							$match: {
+								status: {
+									$in: ["completed", "Completed", "مكتملة", "تمت بنجاح"],
+								},
+							},
+						},
+						{ $count: "count" },
+					],
+				},
+			},
+		]);
 
-    return res.status(200).json({
-      ongoingInvoices: cleanFacet(invoiceStats[0], "ongoingInvoices"),
-      completedInvoices: cleanFacet(invoiceStats[0], "completedInvoices"),
+		// Calculate ongoing sea shipments = total - completed
+		const totalShipments = cleanFacet(shipmentStats[0], "totalShipments");
+		const completedShipments = cleanFacet(
+			shipmentStats[0],
+			"completedShipments"
+		);
+		const ongoingSeaShipments = totalShipments - completedShipments;
 
-      poundRevenue: cleanFacet(invoiceStats[0], "poundRevenue", "total"),
-      dollarRevenue: cleanFacet(invoiceStats[0], "dollarRevenue", "total"),
+		return res.status(200).json({
+			ongoingInvoices: cleanFacet(invoiceStats[0], "ongoingInvoices"),
+			completedInvoices: cleanFacet(invoiceStats[0], "completedInvoices"),
 
-      totalPayments: cleanFacet(invoiceStats[0], "totalPayments", "totalPaid"),
+			poundRevenue: cleanFacet(invoiceStats[0], "poundRevenue", "total"),
+			dollarRevenue: cleanFacet(invoiceStats[0], "dollarRevenue", "total"),
 
-      ongoingSeaShipments: cleanFacet(shipmentStats[0], "ongoingSeaShipments"),
-      ongoingAirShipments: cleanFacet(shipmentStats[0], "ongoingAirShipments"),
-      completedShipments: cleanFacet(shipmentStats[0], "completedShipments")
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+			totalPayments: cleanFacet(invoiceStats[0], "totalPayments", "totalPaid"),
+
+			ongoingSeaShipments: ongoingSeaShipments,
+			ongoingAirShipments: cleanFacet(shipmentStats[0], "ongoingAirShipments"),
+			completedShipments: completedShipments,
+		});
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
 };
 
+// ✅ Search shipments by any field (user's shipments only)
+const searchShipments = async (req, res) => {
+	try {
+		const { query } = req.query;
+		const userId = req.user?.id || req.user?._id;
 
+		if (!userId) {
+			return res.status(401).json({
+				success: false,
+				message: "User not authenticated",
+			});
+		}
 
+		// Base criteria - only user's shipments
+		const baseCriteria = { user_id: userId };
 
+		// If no query or very short, return recent shipments
+		if (!query || query.trim().length < 2) {
+			const recentShipments = await Shipment.find(baseCriteria)
+				.populate("user_id", "username email fullname")
+				.populate("employee_id", "username email fullname")
+				.sort({ createdAt: -1 })
+				.limit(10);
 
+			return res.json({
+				success: true,
+				count: recentShipments.length,
+				shipments: recentShipments,
+			});
+		}
+
+		// Build search criteria - search across multiple fields
+		const searchRegex = new RegExp(query, "i"); // case-insensitive
+
+		const searchCriteria = {
+			...baseCriteria,
+			$or: [
+				{ acid: searchRegex },
+				{ port_name: searchRegex },
+				{ country: searchRegex },
+				{ status: searchRegex },
+				{ policy: searchRegex },
+				{ third_gomroky: searchRegex },
+				{ number46: searchRegex },
+				{ bl_number: searchRegex },
+			],
+		};
+
+		const shipments = await Shipment.find(searchCriteria)
+			.populate("user_id", "username email fullname")
+			.populate("employee_id", "username email fullname")
+			.sort({ createdAt: -1 })
+			.limit(20); // Limit results for recommendations
+
+		res.json({
+			success: true,
+			count: shipments.length,
+			shipments,
+		});
+	} catch (error) {
+		console.error("Error searching shipments:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error while searching shipments",
+		});
+	}
+};
 
 module.exports = {
 	createShipment,
@@ -818,7 +1051,10 @@ module.exports = {
 	getRequiredDocuments,
 	markDocumentAsUploaded,
 	getEmployeeShipmentStats,
+	getClientShipmentStats,
 	addShipments,
 	mostActiveClients,
-	getDashboardStats
+	getDashboardStats,
+	getRevenueComparison,
+	searchShipments,
 };

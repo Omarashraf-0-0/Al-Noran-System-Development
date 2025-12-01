@@ -5,6 +5,9 @@ import account_circle from "../assets/images/account_circle.png";
 import notifications_unread from "../assets/images/notifications_unread.png";
 import coloredLogo from "../assets/images/coloredLogo.png";
 import dehaze from "../assets/images/dehaze.png";
+import cancelpreset from "../assets/images/cancel_presentation.png";
+import folderCheck from "../assets/images/folder_check.png";
+import pdfPic from "../assets/images/picture_as_pdf.png";
 
 const Header = () => {
 	const [user, setUser] = useState(null);
@@ -30,6 +33,49 @@ const Header = () => {
 				console.error("Error parsing user data:", error);
 			}
 		}
+	}, []);
+
+	// Load notifications
+	useEffect(() => {
+		const loadNotifications = async () => {
+			try {
+				// TODO: Replace with real API call
+				// const res = await fetch("/api/notifications");
+				// const data = await res.json();
+				// setNotifications(data);
+
+				setNotifications([
+					{
+						id: 1,
+						title: "تم رفع مستند من العميل : ياسمين",
+						category: "فاتورة مبدائية",
+						date: "تاريخ الجمعة 29 أكتوبر",
+						actions: true,
+						icon: pdfPic,
+					},
+					{
+						id: 2,
+						title: "الموظف : اسم أعتمد مستند لشحنة رقم : AIR-005",
+						category: "فاتورة مبدائية",
+						date: "تاريخ الجمعة 29 أكتوبر",
+						actions: false,
+						icon: pdfPic,
+					},
+					{
+						id: 3,
+						title: "تم تسجيل عميل جديد اسمه نوع العميل",
+						category: "",
+						date: "تاريخ الجمعة 29 أكتوبر",
+						actions: false,
+						icon: pdfPic,
+					},
+				]);
+			} catch (err) {
+				console.error("Error loading notifications:", err);
+			}
+		};
+
+		loadNotifications();
 	}, []);
 
 	// Close dropdowns when clicking outside
@@ -80,9 +126,10 @@ const Header = () => {
 			return [
 				{ label: "الرئيسية", path: "/home", icon: "🏠" },
 				{ label: "شحناتي", path: "/client-shipments", icon: "📦" },
+				{ label: "طلبات ACID", path: "/acidrequests", icon: "📋" },
 				{ label: "طلب رقم acid", path: "/acidrequest", icon: "🔢" },
 				{ label: "رفع المستندات", path: "/upload-documents", icon: "📄" },
-				{ label: "الدعم", path: "/support", icon: "🆘" },
+				{ label: "الدعم", path: "/chat", icon: "💬" },
 			];
 		}
 
@@ -92,7 +139,9 @@ const Header = () => {
 			const baseItems = [
 				{ label: "لوحة التحكم", path: "/employeedashboard", icon: "📊" },
 				{ label: "الشحنات", path: "/employee-shipments", icon: "📦" },
+				{ label: "طلبات ACID", path: "/employee/acid-requests", icon: "📋" },
 				{ label: "العملاء", path: "/clients", icon: "👥" },
+				{ label: "الدعم", path: "/chat", icon: "💬" },
 			];
 
 			// Add admin-specific items

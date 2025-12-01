@@ -64,11 +64,11 @@ const ShipmentStatus = () => {
 					return;
 				}
 
-				console.log("Fetching shipment with acid:", shipmentId);
+				console.log("Fetching shipment with ID:", shipmentId);
 
-				// Fetch shipment details
+				// Fetch shipment details by ID
 				const shipmentResponse = await axios.get(
-					`${import.meta.env.VITE_API_URL}/api/shipments/${shipmentId}`,
+					`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
 					{
 						headers: {
 							Authorization: `Bearer ${token}`,
@@ -481,7 +481,7 @@ const ShipmentStatus = () => {
 							)}
 
 							{/*  Shipment files section */}
-							<div className="mt-16">
+							{/* <div className="mt-16">
 								<h2 className="text-2xl font-bold text-center text-red-900 mb-8">
 									📁 ملفات الشحنة
 								</h2>
@@ -504,7 +504,7 @@ const ShipmentStatus = () => {
 										))}
 									</div>
 								)}
-							</div>
+							</div> */}
 
 							{/*  Action buttons */}
 							<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-12">

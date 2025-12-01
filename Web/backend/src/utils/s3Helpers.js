@@ -103,7 +103,9 @@ const uploadToS3 = async ({ fileBuffer, s3Key, mimetype }) => {
 		await s3Client.send(command);
 
 		// Generate public URL (won't work for private ACL, use presigned URL instead)
-		const url = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || "me-south-1"}.amazonaws.com/${s3Key}`;
+		const url = `https://${BUCKET_NAME}.s3.${
+			process.env.AWS_REGION || "me-south-1"
+		}.amazonaws.com/${s3Key}`;
 
 		return {
 			success: true,
@@ -135,6 +137,17 @@ const getPresignedUrl = async (s3Key, expiresIn = 3600) => {
 		return presignedUrl;
 	} catch (error) {
 		console.error("Presigned URL Error:", error);
+		// Check if it's a permission error
+		if (error.message && error.message.includes("not authorized")) {
+			console.warn(
+				"⚠️ AWS Permission Issue: IAM user lacks s3:GetObject permission"
+			);
+			console.warn(
+				"⚠️ File exists but cannot be accessed due to AWS policy restrictions"
+			);
+			// Return a placeholder or throw a more user-friendly error
+			throw new Error("AWS_PERMISSION_ERROR");
+		}
 		throw new Error(`Failed to generate presigned URL: ${error.message}`);
 	}
 };

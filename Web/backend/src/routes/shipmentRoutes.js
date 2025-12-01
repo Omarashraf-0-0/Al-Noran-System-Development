@@ -9,16 +9,19 @@ const {
 	getRequiredDocuments,
 	markDocumentAsUploaded,
 	getEmployeeShipmentStats,
-  createShipment,
-  getAllShipments,
-  getShipmentByAcid,
-  getShipmentStatusByAcid,
-  getShipmentStatusByNumber46,
-  deleteShipment,
-  getShipmentrelatedToEmployee,
-  addShipments,
-  mostActiveClients,
-  getDashboardStats,
+	getClientShipmentStats,
+	createShipment,
+	getAllShipments,
+	getShipmentByAcid,
+	getShipmentStatusByAcid,
+	getShipmentStatusByNumber46,
+	deleteShipment,
+	getShipmentrelatedToEmployee,
+	addShipments,
+	mostActiveClients,
+	getDashboardStats,
+	getRevenueComparison,
+	searchShipments,
 } = require("../controllers/shipmentController");
 
 const router = express.Router();
@@ -32,11 +35,14 @@ const router = express.Router();
 router.post("/", protect, createShipment);
 router.post("/addShipments", protect, addShipments);
 router.get("/get-dashboard-stats", protect, getDashboardStats);
-router.get("/most-active-clients", mostActiveClients);
+router.get("/revenue-comparison", protect, getRevenueComparison);
+router.get("/most-active-clients", protect, mostActiveClients);
+router.get("/search", protect, searchShipments);
 router.get("/getAll", protect, getAllShipments);
 router.get("/employee/:employeeId", protect, getShipmentrelatedToEmployee);
 router.get("/employee/:employeeId/stats", protect, getEmployeeShipmentStats);
 router.get("/user/:userId", protect, getShipmentsByUserId);
+router.get("/user/:userId/stats", protect, getClientShipmentStats);
 router.get("/status/:acid", protect, getShipmentStatusByAcid);
 router.get("/status/number46/:number46", protect, getShipmentStatusByNumber46);
 

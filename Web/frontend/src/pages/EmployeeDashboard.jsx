@@ -16,10 +16,26 @@ export default function ShipmentsList() {
 	const [shipments, setShipments] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	const [selectedStatus, setSelectedStatus] = useState("الكل");
+	const [sortOption, setSortOption] = useState("newest");
 
 	const user = JSON.parse(localStorage.getItem("user"));
 	const userID = user?.id;
 	const token = localStorage.getItem("token");
+
+	// Available shipment statuses
+	const shipmentStatuses = [
+		{ value: "الكل", label: "الكل" },
+		{ value: "Pending", label: "قيد الانتظار" },
+		{ value: "في انتظار الشحن", label: "في انتظار الشحن" },
+		{ value: "In Transit", label: "في الطريق" },
+		{ value: "Arrived", label: "تم وصول البضاعة" },
+		{ value: "في انتظار وصول الإذن", label: "في انتظار وصول الإذن" },
+		{ value: "Customs Clearance", label: "التخليص الجمركي" },
+		{ value: "جاري الكشف والتثمين", label: "جاري الكشف والتثمين" },
+		{ value: "Completed", label: "مكتملة" },
+		{ value: "تمت بنجاح", label: "تمت بنجاح" },
+	];
 
 	useEffect(() => {
 		const fetchShipments = async () => {
@@ -50,6 +66,7 @@ export default function ShipmentsList() {
 					shipmentNo: shipment.number46 || shipment.shipmentNumber || "N/A",
 					acid: shipment.acid || "N/A",
 					status: shipment.status || "pending",
+					createdAt: shipment.createdAt, // Keep raw date for sorting
 					date: new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
 						day: "numeric",
 						month: "long",
@@ -87,9 +104,72 @@ export default function ShipmentsList() {
 		setIsFilterOpen(false);
 	};
 
-	const filteredShipments = shipments.filter((shipment) =>
-		shipment.shipmentNo.toLowerCase().includes(searchTerm.toLowerCase())
-	);
+	const handleFilterApply = () => {
+		setIsFilterOpen(false);
+	};
+
+	const handleSortApply = () => {
+		setIsSortOpen(false);
+	};
+
+	// Normalize status for comparison (handles both English and Arabic)
+	const normalizeStatus = (status) => {
+		const statusNormalization = {
+			Pending: "Pending",
+			"قيد الانتظار": "Pending",
+			"في انتظار الشحن": "في انتظار الشحن",
+			"In Transit": "In Transit",
+			"في الطريق": "In Transit",
+			Arrived: "Arrived",
+			"تم وصول البضاعة": "Arrived",
+			"في انتظار وصول الإذن": "في انتظار وصول الإذن",
+			"Customs Clearance": "Customs Clearance",
+			"التخليص الجمركي": "Customs Clearance",
+			"جاري الكشف والتثمين": "جاري الكشف والتثمين",
+			Completed: "Completed",
+			مكتملة: "Completed",
+			"تمت بنجاح": "تمت بنجاح",
+		};
+		return statusNormalization[status] || status;
+	};
+
+	// Filter and sort shipments
+	let filteredShipments = shipments.filter((shipment) => {
+		// Filter by search term (shipment number, client name, ACID)
+		const matchesSearch =
+			shipment.shipmentNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			shipment.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			shipment.acid.toLowerCase().includes(searchTerm.toLowerCase());
+
+		// Filter by status - normalize both the filter and shipment status for comparison
+		const matchesStatus =
+			selectedStatus === "الكل" ||
+			normalizeStatus(shipment.status) === normalizeStatus(selectedStatus);
+
+		return matchesSearch && matchesStatus;
+	});
+
+	// Sort shipments
+	filteredShipments = [...filteredShipments].sort((a, b) => {
+		switch (sortOption) {
+			case "newest": {
+				const dateA = new Date(a.createdAt).getTime();
+				const dateB = new Date(b.createdAt).getTime();
+				return dateB - dateA;
+			}
+			case "oldest": {
+				const dateA = new Date(a.createdAt).getTime();
+				const dateB = new Date(b.createdAt).getTime();
+				return dateA - dateB;
+			}
+			case "clientAZ":
+				return a.clientName.localeCompare(b.clientName, "ar");
+			case "clientZA":
+				return b.clientName.localeCompare(a.clientName, "ar");
+			default:
+				return 0;
+		}
+	});
 
 	return (
 		<div className="flex flex-col min-h-screen bg-gray-50 font-sans relative">
@@ -145,7 +225,7 @@ export default function ShipmentsList() {
 						<div className="relative w-1/2">
 							<input
 								type="text"
-								placeholder="ابحث برقم الشحنة"
+								placeholder="ابحث برقم الشحنة، اسم العميل، أو ACID"
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
 								className="w-full bg-white shadow-md rounded-full py-2 px-4 pr-10 text-right focus:outline-none focus:ring-2 focus:ring-red-500 placeholder-gray-400 text-black"
@@ -157,31 +237,50 @@ export default function ShipmentsList() {
 							/>
 						</div>
 
-						{/* 🧩 Filter Dropdown */}
+						{/* Filter Dropdown */}
 						{isFilterOpen && (
 							<div className="absolute top-14 left-40 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">تصفية حسب:</h4>
-								<select className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700">
-									<option>الحالة</option>
-									<option>اسم العميل</option>
-									<option>نوع الشحنة</option>
+								<h4 className="font-semibold text-red-800 mb-3">
+									تصفية حسب الحالة:
+								</h4>
+								<select
+									value={selectedStatus}
+									onChange={(e) => setSelectedStatus(e.target.value)}
+									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
+								>
+									{shipmentStatuses.map((status) => (
+										<option key={status.value} value={status.value}>
+											{status.label}
+										</option>
+									))}
 								</select>
-								<button className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition">
+								<button
+									onClick={handleFilterApply}
+									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
+								>
 									تطبيق
 								</button>
 							</div>
 						)}
 
-						{/* 🧩 Sort Dropdown */}
+						{/* Sort Dropdown */}
 						{isSortOpen && (
 							<div className="absolute top-14 left-20 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
 								<h4 className="font-semibold text-red-800 mb-3">ترتيب حسب:</h4>
-								<select className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700">
-									<option>الأحدث أولاً</option>
-									<option>الأقدم أولاً</option>
-									<option>العميل (أ-ي)</option>
+								<select
+									value={sortOption}
+									onChange={(e) => setSortOption(e.target.value)}
+									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
+								>
+									<option value="newest">الأحدث أولاً</option>
+									<option value="oldest">الأقدم أولاً</option>
+									<option value="clientAZ">العميل (أ-ي)</option>
+									<option value="clientZA">العميل (ي-أ)</option>
 								</select>
-								<button className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition">
+								<button
+									onClick={handleSortApply}
+									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
+								>
 									تطبيق
 								</button>
 							</div>
@@ -213,26 +312,27 @@ export default function ShipmentsList() {
 							<p className="text-gray-500 text-lg">لا توجد شحنات</p>
 						</div>
 					) : (
-						<div className="overflow-x-auto">
-							<table className="w-full text-right border-separate border-spacing-y-3">
-								<tbody>
-									{filteredShipments.map((shipment) => (
-										<tr
-											key={shipment.id}
-											className="bg-gray-100 hover:bg-gray-200 rounded-xl transition text-right"
-										>
-											<td className="py-3 px-4 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="text-gray-700 text-base font-semibold">
-														{shipment.clientName}
-													</span>
-													<span className="text-gray-500 text-xs">
-														{shipment.date}
-													</span>
-												</div>
-											</td>
+						<>
+							<div className="overflow-x-auto">
+								<table className="w-full text-right border-separate border-spacing-y-3">
+									<tbody>
+										{filteredShipments.slice(0, 5).map((shipment) => (
+											<tr
+												key={shipment.id}
+												className="bg-gray-100 hover:bg-gray-200 rounded-xl transition text-right"
+											>
+												<td className="py-3 px-4 align-top">
+													<div className="flex flex-col text-sm">
+														<span className="text-gray-700 text-base font-semibold">
+															{shipment.clientName}
+														</span>
+														<span className="text-gray-500 text-xs">
+															{shipment.date}
+														</span>
+													</div>
+												</td>
 
-											{/* <td className="py-3 px-4 align-top">
+												{/* <td className="py-3 px-4 align-top">
                         <div className="flex flex-col text-sm">
                           <span className="text-gray-700 text-base font-semibold mb-1">
                             رقم البوليصة
@@ -240,40 +340,53 @@ export default function ShipmentsList() {
                         </div>
                       </td> */}
 
-											<td className="py-3 px-4 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="font-semibold text-gray-800">
-														{shipment.shipmentNo}
-													</span>
-												</div>
-											</td>
+												<td className="py-3 px-4 align-top">
+													<div className="flex flex-col text-sm">
+														<span className="font-semibold text-gray-800">
+															{shipment.shipmentNo}
+														</span>
+													</div>
+												</td>
 
-											<td className="py-3 px-4 align-top">
-												<span
-													className="bg-blue-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit"
-													style={{ color: "#690000" }}
-												>
-													<img
-														src={quickReorderIcon}
-														alt="status icon"
-														className="w-4 h-4"
-													/>
-													{shipment.status}
-												</span>
-											</td>
-
-											<td className="py-3 px-4 align-top">
-												<a href={`/employee-shipment/${shipment.id}`}>
-													<span className="text-blue-600 text-sm font-medium underline cursor-pointer">
-														إدارة الشحنة
+												<td className="py-3 px-4 align-top">
+													<span
+														className="bg-blue-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit"
+														style={{ color: "#690000" }}
+													>
+														<img
+															src={quickReorderIcon}
+															alt="status icon"
+															className="w-4 h-4"
+														/>
+														{shipment.status}
 													</span>
-												</a>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
+												</td>
+
+												<td className="py-3 px-4 align-top">
+													<a href={`/employee-shipment/${shipment.id}`}>
+														<span className="text-blue-600 text-sm font-medium underline cursor-pointer">
+															إدارة الشحنة
+														</span>
+													</a>
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+
+							{/* View All Button */}
+							{filteredShipments.length > 5 && (
+								<div className="flex justify-center mt-8">
+									<a
+										href="/employee-shipments"
+										className="bg-red-800 text-white px-8 py-3 rounded-lg hover:bg-red-700 transition font-semibold"
+									>
+										عرض جميع الشحنات ({filteredShipments.length})
+									</a>
+								</div>
+							)}
+						</>
 					)}
 				</div>
 			</section>
