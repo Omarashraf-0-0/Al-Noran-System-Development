@@ -263,7 +263,7 @@ const updateAcidStatusByEmployee = async (req, res) => {
 			request.reviewingBy = reviewingBy || null;
 		}
 
-		await request.save();
+		await request.save({ validateModifiedOnly: true });
 
 		res.json({
 			success: true,
