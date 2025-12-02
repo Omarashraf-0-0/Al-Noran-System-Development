@@ -38,7 +38,7 @@ const UserSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['client', 'employee'],
+    enum: ['client', 'employee', 'admin'],
   },
   active: {
     type: Boolean,
