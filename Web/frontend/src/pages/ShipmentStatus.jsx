@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Stepper from "../components/Stepper";
 import FileRow from "../components/FileRow";
@@ -41,6 +41,7 @@ const addNotification = (shipmentId, notification) => {
 
 const ShipmentStatus = () => {
 	const { shipmentId } = useParams();
+	const navigate = useNavigate();
 
 	const [isUploadModalOpen, setUploadModalOpen] = useState(false);
 	const [shipment, setShipment] = useState(null);
@@ -508,16 +509,6 @@ const ShipmentStatus = () => {
 
 							{/*  Action buttons */}
 							<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-12">
-								{/* Contact employee button */}
-								<button className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-red-900 text-white font-bold rounded-lg shadow-md hover:bg-red-800 transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700">
-									<img
-										src={supportAgent}
-										alt="Support Agent"
-										className="w-6 h-6"
-									/>
-									<span>تواصل مع الموظف</span>
-								</button>
-
 								{/* Upload documents button */}
 								<button
 									onClick={() => setUploadModalOpen(true)}
@@ -530,6 +521,27 @@ const ShipmentStatus = () => {
 									/>
 									<span>رفع مستندات أخرى</span>
 								</button>
+
+								{/* Contact Your Agent Button */}
+								{shipment?.employee_id && (
+									<button
+										onClick={() => navigate(`/shipment-chat/${shipment._id}`)}
+										className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-red-900 to-red-700 text-white font-bold rounded-lg shadow-md hover:from-red-800 hover:to-red-600 transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700"
+									>
+										<svg
+											className="w-6 h-6"
+											fill="currentColor"
+											viewBox="0 0 20 20"
+										>
+											<path
+												fillRule="evenodd"
+												d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
+												clipRule="evenodd"
+											/>
+										</svg>
+										<span>تواصل مع موظفك</span>
+									</button>
+								)}
 							</div>
 						</>
 					) : null}
