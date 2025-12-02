@@ -30,6 +30,7 @@ import ShipmentsManagement from "./pages/ShipmentsManagement";
 import ShipmentHistory from "./pages/ShipmentHistory";
 import ClientProfilePage from "./pages/ClientProfilePage";
 import EmployeeProfilePage from "./pages/EmployeeProfilePage";
+import AdminProfilePage from "./pages/AdminProfilePage";
 
 // Smart Profile Route Component
 const ProfileRoute = () => {
@@ -40,6 +41,8 @@ const ProfileRoute = () => {
 		return <ClientProfilePage />;
 	} else if (userType === "employee") {
 		return <EmployeeProfilePage />;
+	} else if (userType === "admin") {
+		return <AdminProfilePage />;
 	}
 	// Default to employee profile if type not found
 	return <EmployeeProfilePage />;
