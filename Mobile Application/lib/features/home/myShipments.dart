@@ -27,14 +27,21 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
   List<Map<String, dynamic>> _allCompletedShipments = [];
   List<Map<String, dynamic>> _currentShipments = [];
   List<Map<String, dynamic>> _completedShipments = [];
+
+  // ACID Requests
+  List<Map<String, dynamic>> _allCurrentAcidRequests = [];
+  List<Map<String, dynamic>> _allCompletedAcidRequests = [];
+  List<Map<String, dynamic>> _currentAcidRequests = [];
+  List<Map<String, dynamic>> _completedAcidRequests = [];
+
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _searchController.addListener(_onSearchChanged);
-    _loadShipments();
+    _loadShipmentsAndRequests();
   }
 
   @override
@@ -66,6 +73,8 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
 
             final matchesFilter =
                 _selectedFilter == 'الكل' ||
+                _selectedFilter == 'طلبات ACID' &&
+                    false || // Hide shipments when ACID filter is selected
                 _getShipmentTypeFilter(shipment) == _selectedFilter;
 
             return matchesSearch && matchesFilter;
@@ -83,7 +92,45 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
 
             final matchesFilter =
                 _selectedFilter == 'الكل' ||
+                _selectedFilter == 'طلبات ACID' &&
+                    false || // Hide shipments when ACID filter is selected
                 _getShipmentTypeFilter(shipment) == _selectedFilter;
+
+            return matchesSearch && matchesFilter;
+          }).toList();
+
+      // Filter current ACID requests
+      _currentAcidRequests =
+          _allCurrentAcidRequests.where((request) {
+            final matchesSearch =
+                searchQuery.isEmpty ||
+                (request['acidCode']?.toString() ?? '').toLowerCase().contains(
+                  searchQuery,
+                ) ||
+                (request['supplier']?['name']?.toString() ?? '')
+                    .toLowerCase()
+                    .contains(searchQuery);
+
+            final matchesFilter =
+                _selectedFilter == 'الكل' || _selectedFilter == 'طلبات ACID';
+
+            return matchesSearch && matchesFilter;
+          }).toList();
+
+      // Filter completed ACID requests
+      _completedAcidRequests =
+          _allCompletedAcidRequests.where((request) {
+            final matchesSearch =
+                searchQuery.isEmpty ||
+                (request['acidCode']?.toString() ?? '').toLowerCase().contains(
+                  searchQuery,
+                ) ||
+                (request['supplier']?['name']?.toString() ?? '')
+                    .toLowerCase()
+                    .contains(searchQuery);
+
+            final matchesFilter =
+                _selectedFilter == 'الكل' || _selectedFilter == 'طلبات ACID';
 
             return matchesSearch && matchesFilter;
           }).toList();
@@ -111,6 +158,16 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
             (a['rawData']?['createdAt'] ?? '').toString(),
           ),
         );
+        _currentAcidRequests.sort(
+          (a, b) => (b['requestDate'] ?? '').toString().compareTo(
+            (a['requestDate'] ?? '').toString(),
+          ),
+        );
+        _completedAcidRequests.sort(
+          (a, b) => (b['requestDate'] ?? '').toString().compareTo(
+            (a['requestDate'] ?? '').toString(),
+          ),
+        );
         break;
       case 'الأقدم':
         _currentShipments.sort(
@@ -123,6 +180,16 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
             (b['rawData']?['createdAt'] ?? '').toString(),
           ),
         );
+        _currentAcidRequests.sort(
+          (a, b) => (a['requestDate'] ?? '').toString().compareTo(
+            (b['requestDate'] ?? '').toString(),
+          ),
+        );
+        _completedAcidRequests.sort(
+          (a, b) => (a['requestDate'] ?? '').toString().compareTo(
+            (b['requestDate'] ?? '').toString(),
+          ),
+        );
         break;
       case 'ACID':
         _currentShipments.sort(
@@ -131,34 +198,51 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
         _completedShipments.sort(
           (a, b) => a['id'].toString().compareTo(b['id'].toString()),
         );
+        _currentAcidRequests.sort(
+          (a, b) => (a['acidCode'] ?? '').toString().compareTo(
+            (b['acidCode'] ?? '').toString(),
+          ),
+        );
+        _completedAcidRequests.sort(
+          (a, b) => (a['acidCode'] ?? '').toString().compareTo(
+            (b['acidCode'] ?? '').toString(),
+          ),
+        );
         break;
     }
   }
 
-  Future<void> _loadShipments() async {
+  Future<void> _loadShipmentsAndRequests() async {
     try {
       if (!mounted) return;
       setState(() => _isLoading = true);
 
-      print('🚢 [MyShipments] Loading shipments...');
+      print('🚢 [MyShipments] Loading shipments and ACID requests...');
 
-      final response = await ApiService.getAllShipments();
+      // Load shipments and ACID requests in parallel
+      final results = await Future.wait([
+        ApiService.getAllShipments(),
+        ApiService.getAllAcidRequests(),
+      ]);
 
-      print('🚢 [MyShipments] Response: $response');
+      final shipmentsResponse = results[0];
+      final acidRequestsResponse = results[1];
 
-      if (response['success'] == true) {
+      print('🚢 [MyShipments] Shipments Response: $shipmentsResponse');
+      print('📦 [MyShipments] ACID Requests Response: $acidRequestsResponse');
+
+      // Process Shipments
+      final current = <Map<String, dynamic>>[];
+      final completed = <Map<String, dynamic>>[];
+
+      if (shipmentsResponse['success'] == true) {
         final shipments = List<Map<String, dynamic>>.from(
-          response['shipments'] ?? [],
+          shipmentsResponse['shipments'] ?? [],
         );
 
         print('🚢 [MyShipments] Found ${shipments.length} shipments');
 
-        // تقسيم الشحنات حسب الحالة
-        final current = <Map<String, dynamic>>[];
-        final completed = <Map<String, dynamic>>[];
-
         for (var shipment in shipments) {
-          // تحويل البيانات من Backend إلى الشكل المطلوب في UI
           final mappedShipment = {
             'id': shipment['acid'] ?? 'N/A',
             'type': _getShipmentType(shipment['acid']),
@@ -172,7 +256,8 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
             'importerName': shipment['importerName'],
             'employerName': shipment['employerName'],
             'description': shipment['shipmentDescription'],
-            'rawData': shipment, // للاحتفاظ بالبيانات الأصلية
+            'rawData': shipment,
+            'itemType': 'shipment',
           };
 
           if (shipment['status'] == 'تمت بنجاح') {
@@ -181,31 +266,65 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
             current.add(mappedShipment);
           }
         }
+      }
 
-        if (!mounted) return;
-        setState(() {
-          _allCurrentShipments = current;
-          _allCompletedShipments = completed;
-          _currentShipments = current;
-          _completedShipments = completed;
-          _isLoading = false;
-        });
+      // Process ACID Requests
+      final currentAcid = <Map<String, dynamic>>[];
+      final completedAcid = <Map<String, dynamic>>[];
 
-        print(
-          '🚢 [MyShipments] Current: ${current.length}, Completed: ${completed.length}',
+      if (acidRequestsResponse['success'] == true) {
+        final requests = List<Map<String, dynamic>>.from(
+          acidRequestsResponse['requests'] ?? [],
         );
-      } else {
-        if (!mounted) return;
-        setState(() => _isLoading = false);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response['message'] ?? 'فشل تحميل الشحنات'),
-              backgroundColor: Colors.red,
-            ),
-          );
+
+        print('📦 [MyShipments] Found ${requests.length} ACID requests');
+
+        for (var request in requests) {
+          final mappedRequest = {
+            'id': request['acidCode'] ?? 'قيد المراجعة',
+            'type': 'طلب ACID',
+            'supplier': request['supplier']?['name'] ?? 'غير محدد',
+            'date': _formatDate(request['requestDate']),
+            'status': _translateAcidStatus(request['status'] ?? 'Pending'),
+            'isUrgent': request['status'] == 'Pending',
+            'hasDocuments': (request['uploads'] as List?)?.isNotEmpty ?? false,
+            'goods': request['goods']?['description'] ?? 'غير محدد',
+            'weight': request['goods']?['weight']?.toString() ?? '0',
+            'requestDate': request['requestDate'],
+            'acidCode': request['acidCode'],
+            'rawData': request,
+            'itemType': 'acidRequest',
+          };
+
+          if (request['status'] == 'ACID Issued') {
+            completedAcid.add(mappedRequest);
+          } else {
+            currentAcid.add(mappedRequest);
+          }
         }
       }
+
+      if (!mounted) return;
+      setState(() {
+        _allCurrentShipments = current;
+        _allCompletedShipments = completed;
+        _currentShipments = current;
+        _completedShipments = completed;
+
+        _allCurrentAcidRequests = currentAcid;
+        _allCompletedAcidRequests = completedAcid;
+        _currentAcidRequests = currentAcid;
+        _completedAcidRequests = completedAcid;
+
+        _isLoading = false;
+      });
+
+      print(
+        '🚢 [MyShipments] Shipments - Current: ${current.length}, Completed: ${completed.length}',
+      );
+      print(
+        '📦 [MyShipments] ACID Requests - Current: ${currentAcid.length}, Completed: ${completedAcid.length}',
+      );
     } catch (e) {
       print('❌ [MyShipments] Error: $e');
       if (!mounted) return;
@@ -213,11 +332,24 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('حدث خطأ في تحميل الشحنات'),
+            content: Text('حدث خطأ في تحميل البيانات'),
             backgroundColor: Colors.red,
           ),
         );
       }
+    }
+  }
+
+  String _translateAcidStatus(String status) {
+    switch (status) {
+      case 'Pending':
+        return 'قيد المراجعة';
+      case 'ACID Issued':
+        return 'تم إصدار ACID';
+      case 'Rejected':
+        return 'مرفوض';
+      default:
+        return status;
     }
   }
 
@@ -284,6 +416,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                           children: [
                             _buildShipmentsList(_currentShipments, true),
                             _buildShipmentsList(_completedShipments, false),
+                            _buildAcidRequestsList(),
                           ],
                         ),
               ),
@@ -541,7 +674,11 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
           fontSize: 15,
           fontWeight: FontWeight.w600,
         ),
-        tabs: const [Tab(text: 'الجارية'), Tab(text: 'المكتملة')],
+        tabs: const [
+          Tab(text: 'الجارية'),
+          Tab(text: 'المكتملة'),
+          Tab(text: 'طلبات ACID'),
+        ],
       ),
     );
   }
@@ -550,9 +687,66 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     List<Map<String, dynamic>> shipments,
     bool isCurrent,
   ) {
-    if (shipments.isEmpty) {
+    // Combine shipments and ACID requests
+    final combinedList = <Map<String, dynamic>>[];
+
+    if (isCurrent) {
+      combinedList.addAll(_currentShipments);
+      combinedList.addAll(_currentAcidRequests);
+      print(
+        '🔍 [MyShipments] Current - Shipments: ${_currentShipments.length}, ACID Requests: ${_currentAcidRequests.length}',
+      );
+    } else {
+      combinedList.addAll(_completedShipments);
+      combinedList.addAll(_completedAcidRequests);
+      print(
+        '🔍 [MyShipments] Completed - Shipments: ${_completedShipments.length}, ACID Requests: ${_completedAcidRequests.length}',
+      );
+    }
+
+    print(
+      '🔍 [MyShipments] Combined list total: ${combinedList.length}, Filter: $_selectedFilter',
+    );
+
+    if (combinedList.isEmpty) {
+      // Determine the empty message based on filter
+      String emptyMessage;
+      IconData emptyIcon;
+
+      if (_selectedFilter == 'طلبات ACID') {
+        emptyIcon = Icons.receipt_long_outlined;
+        emptyMessage =
+            isCurrent
+                ? 'لا توجد طلبات ACID جارية'
+                : 'لا توجد طلبات ACID مكتملة';
+      } else if (_selectedFilter == 'بحري') {
+        emptyIcon = Icons.directions_boat_outlined;
+        emptyMessage =
+            isCurrent
+                ? 'لا توجد شحنات بحرية جارية'
+                : 'لا توجد شحنات بحرية مكتملة';
+      } else if (_selectedFilter == 'جوي') {
+        emptyIcon = Icons.flight_takeoff_outlined;
+        emptyMessage =
+            isCurrent
+                ? 'لا توجد شحنات جوية جارية'
+                : 'لا توجد شحنات جوية مكتملة';
+      } else if (_selectedFilter == 'بري') {
+        emptyIcon = Icons.local_shipping_outlined;
+        emptyMessage =
+            isCurrent
+                ? 'لا توجد شحنات برية جارية'
+                : 'لا توجد شحنات برية مكتملة';
+      } else {
+        emptyIcon = Icons.inventory_2_outlined;
+        emptyMessage =
+            isCurrent
+                ? 'لا توجد شحنات أو طلبات جارية'
+                : 'لا توجد شحنات أو طلبات مكتملة';
+      }
+
       return RefreshIndicator(
-        onRefresh: _loadShipments,
+        onRefresh: _loadShipmentsAndRequests,
         color: const Color(0xFF690000),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -562,19 +756,16 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.inventory_2_outlined,
-                    size: 80,
-                    color: Colors.grey[300],
-                  ),
+                  Icon(emptyIcon, size: 80, color: Colors.grey[300]),
                   const SizedBox(height: 16),
                   Text(
-                    isCurrent ? 'لا توجد شحنات جارية' : 'لا توجد شحنات مكتملة',
+                    emptyMessage,
                     style: TextStyle(
                       fontSize: 18,
                       fontFamily: 'Cairo',
                       color: Colors.grey[500],
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -592,13 +783,84 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
         ),
       );
     }
+
     return RefreshIndicator(
-      onRefresh: _loadShipments,
+      onRefresh: _loadShipmentsAndRequests,
       color: const Color(0xFF690000),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: shipments.length,
-        itemBuilder: (context, index) => _buildShipmentCard(shipments[index]),
+        itemCount: combinedList.length,
+        itemBuilder: (context, index) {
+          final item = combinedList[index];
+          if (item['itemType'] == 'acidRequest') {
+            return _buildAcidRequestCard(item);
+          } else {
+            return _buildShipmentCard(item);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildAcidRequestsList() {
+    // Combine current and completed ACID requests
+    final allAcidRequests = <Map<String, dynamic>>[];
+    allAcidRequests.addAll(_currentAcidRequests);
+    allAcidRequests.addAll(_completedAcidRequests);
+
+    if (allAcidRequests.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _loadShipmentsAndRequests,
+        color: const Color(0xFF690000),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.receipt_long_outlined,
+                    size: 80,
+                    color: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'لا توجد طلبات ACID',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontFamily: 'Cairo',
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'اسحب لأسفل للتحديث',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'Cairo',
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadShipmentsAndRequests,
+      color: const Color(0xFF690000),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: allAcidRequests.length,
+        itemBuilder: (context, index) {
+          return _buildAcidRequestCard(allAcidRequests[index]);
+        },
       ),
     );
   }
@@ -875,6 +1137,241 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     );
   }
 
+  Widget _buildAcidRequestCard(Map<String, dynamic> request) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            const Color(0xFF1ba3b6).withOpacity(0.05),
+            const Color(0xFF1ba3b6).withOpacity(0.02),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF1ba3b6).withOpacity(0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1ba3b6).withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1ba3b6),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.receipt_long,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'طلب ACID',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1ba3b6),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        request['id'],
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF424242),
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(request['status']).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  request['status'],
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: _getStatusColor(request['status']),
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(height: 1, thickness: 1),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(
+                Icons.business_outlined,
+                size: 18,
+                color: Color(0xFF1ba3b6),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'المورد',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF9E9E9E),
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      request['supplier'],
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF424242),
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(
+                Icons.inventory_2_outlined,
+                size: 18,
+                color: Color(0xFF1ba3b6),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'وصف البضاعة',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF9E9E9E),
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      request['goods'],
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF424242),
+                        fontFamily: 'Cairo',
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.scale_outlined,
+                      size: 18,
+                      color: Color(0xFF1ba3b6),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${request['weight']} كجم',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF616161),
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: Color(0xFF9E9E9E),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    request['date'],
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF9E9E9E),
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'قيد المراجعة':
+      case 'Pending':
+        return Colors.orange;
+      case 'تم إصدار ACID':
+      case 'ACID Issued':
+        return Colors.green;
+      case 'مرفوض':
+      case 'Rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
   Widget _buildFloatingActionButton() {
     return FloatingActionButton.extended(
       onPressed: _showAddShipmentBottomSheet,
@@ -1063,6 +1560,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                   _buildFilterOption('بحري', Icons.directions_boat_rounded),
                   _buildFilterOption('جوي', Icons.flight_takeoff_rounded),
                   _buildFilterOption('بري', Icons.local_shipping_rounded),
+                  _buildFilterOption('طلبات ACID', Icons.receipt_long_rounded),
                   const SizedBox(height: 20),
                 ],
               ),

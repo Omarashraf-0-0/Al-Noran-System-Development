@@ -18,7 +18,7 @@ class ApiService {
     if (Platform.isAndroid) {
       // للموبايل الحقيقي - استخدم IP اللابتوب على نفس الشبكة
       // تأكد إن اللابتوب والموبايل على نفس WiFi
-      return 'http://192.168.1.14:3500';
+      return 'http://192.168.1.12:3500';
 
       // لو Emulator فقط، استخدم:
       // return 'http://10.0.2.2:3500';
@@ -1423,6 +1423,100 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في إرسال الطلب',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get All ACID Requests for current user
+  static Future<Map<String, dynamic>> getAllAcidRequests() async {
+    try {
+      final token = await SecureStorage.getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'لم يتم تسجيل الدخول'};
+      }
+
+      print('📦 [getAllAcidRequests] Fetching ACID requests...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/acid'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
+
+      print('📦 [getAllAcidRequests] Response status: ${response.statusCode}');
+      print('📦 [getAllAcidRequests] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        // Handle both array response and object with requests array
+        List<dynamic> requests = [];
+        if (data is List) {
+          requests = data;
+        } else if (data is Map && data.containsKey('requests')) {
+          requests = data['requests'];
+        }
+
+        return {'success': true, 'requests': requests};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب طلبات ACID',
+        };
+      }
+    } catch (e) {
+      print('❌ [getAllAcidRequests] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب طلبات ACID',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get ACID Request by ACID code
+  static Future<Map<String, dynamic>> getAcidRequestByCode(
+    String acidCode,
+  ) async {
+    try {
+      final token = await SecureStorage.getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'لم يتم تسجيل الدخول'};
+      }
+
+      print('📦 [getAcidRequestByCode] Fetching ACID: $acidCode');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/acid/$acidCode'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
+
+      print(
+        '📦 [getAcidRequestByCode] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'request': data};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب طلب ACID',
+        };
+      }
+    } catch (e) {
+      print('❌ [getAcidRequestByCode] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب طلب ACID',
         'error': e.toString(),
       };
     }
