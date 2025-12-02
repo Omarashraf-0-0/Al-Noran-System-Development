@@ -411,8 +411,7 @@ const contactUs = async (req,res) => {
 
 
 		await send_mail(
-			//process.env.EMAIL_USER,
-			"salahgamal20016@gmail.com",
+			process.env.EMAIL_USER,
 			"Contact Us Form",
 			mailMessage,
 			mailMessageHTML
