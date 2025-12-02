@@ -22,7 +22,7 @@ public class MongoToSQLiteSync {
         try (Connection sqliteConn = DatabaseConnection.connect()) {
 
             String insertSQL = "INSERT OR REPLACE INTO users (" +
-                    "id, fullname, username, phone, email, password, type, active, " +
+                    "_id, fullname, username, phone, email, password, type, active, " +
                     "clientType, ssn, employeeType, verified, createdAt, updatedAt, version" +
                     ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.collections.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox alignment="CENTER" prefHeight="455.0" prefWidth="397.0" spacing="12" style="-fx-padding: 18; -fx-background-color: #f7f7f7; -fx-background-radius: 20; -fx-border-radius: 20;" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.ShipmentPopupController">
+   <ImageView fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true">
+      <image>
+         <Image url="@images/Untitled%20design%20(10).png" />
+      </image>
+   </ImageView>
+
+    <Label style="-fx-font-size: 18; -fx-font-weight: bold;" text="إضافة / تعديل شحنة" />
+
+    <TextField fx:id="acidField" promptText="ACID" style="-fx-pref-width: 360; -fx-background-radius: 15;" />
+    <TextField fx:id="portField" alignment="CENTER_RIGHT" promptText="اسم الميناء" style="-fx-pref-width: 360; -fx-background-radius: 15;" />
+    <TextField fx:id="countryField" alignment="CENTER_RIGHT" promptText="الدولة" style="-fx-pref-width: 360; -fx-background-radius: 15;" />
+    <TextField fx:id="containersField" alignment="BOTTOM_RIGHT" promptText="عدد الحاويات" style="-fx-pref-width: 360; -fx-background-radius: 15;" />
+    <ComboBox fx:id="statusCombo" nodeOrientation="RIGHT_TO_LEFT" promptText="الحالة" style="-fx-pref-width: 360; -fx-background-radius: 15;">
+        <items>
+            <FXCollections fx:factory="observableArrayList">
+                <String fx:value="Pending" />
+                <String fx:value="In Transit" />
+                <String fx:value="Arrived" />
+                <String fx:value="Customs Clearance" />
+                <String fx:value="Completed" />
+                <String fx:value="في انتظار الشحن" />
+                <String fx:value="تمت بنجاح" />
+            </FXCollections>
+        </items>
+    </ComboBox>
+    <TextField fx:id="policyField" alignment="CENTER_RIGHT" promptText="رقم البوليصة / ملاحظات" style="-fx-pref-width: 360; -fx-background-radius: 15;" />
+
+    <HBox alignment="CENTER" spacing="12">
+        <Button onAction="#cancel" style="-fx-pref-width: 120; -fx-background-color: #aaa; -fx-text-fill: white; -fx-background-radius: 20; -fx-border-radius: 20;" text="إلغاء" />
+        <Button onAction="#save" style="-fx-pref-width: 120; -fx-background-color: #690000; -fx-text-fill: white; -fx-border-radius: 20; -fx-background-radius: 20;" text="حفظ" />
+    </HBox>
+</VBox>

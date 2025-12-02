@@ -25,9 +25,9 @@ const LoginPage = () => {
 				localStorage.setItem("token", response.data.token);
 				localStorage.setItem("tokenExpiry", Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days expiry
 				// console.log(localStorage.getItem("token"));
-				// we need to wait to abit before redirecting
+				// we need to wait a bit before redirecting
 				setTimeout(() => {
-					// TODO: Change to /dashboard when dashboard is ready
+					// Route based on user type
 					switch (user.type) {
 						case "client":
 							window.location.href = "/home";
@@ -39,8 +39,8 @@ const LoginPage = () => {
 							window.location.href = "/admindashboard";
 							break;
 						default:
-							}
-					// window.location.href = "/";
+							window.location.href = "/home";
+					}
 				}, 2000);
 			})
 			.catch((error) => {

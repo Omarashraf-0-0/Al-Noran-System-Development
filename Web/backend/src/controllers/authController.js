@@ -93,13 +93,6 @@ const signup = asyncHandler(async (req, res) => {
 		.lean()
 		.exec();
 	if (userExists) {
-		// <<<<<<< HEAD
-		//      res.status(409).json({
-		//       success: false,
-		//       error: 'A user with that email, username, or phone number already exists.'
-		//     });
-		//     throw new Error('A user with that email, username, or phone number already exists.');
-		// =======
 		res.status(409);
 		throw new Error(
 			"البريد الإلكتروني أو اسم المستخدم أو رقم الهاتف مستخدم بالفعل"
@@ -211,24 +204,22 @@ const checkAvailability = asyncHandler(async (req, res) => {
 
 		console.log("❌ Data NOT available - Field:", field);
 
-		return res.status(200).json({
-			success: true,
-			available: false,
-			field,
-			message:
-				field === "username" ? "Username already taken" : "Email already taken",
-		});
-	}
+    return res.status(200).json({
+      success: true,
+      available: false,
+      field,
+      message: field === 'username' ? 'Username already taken' : 'Email already taken'
+    });
+  }
+  
+  console.log('✅ Data IS available - user can proceed');
 
-	console.log("✅ Data IS available - user can proceed");
-
-	res.status(200).json({
-		success: true,
-		available: true,
-		message: "Data is available",
-	});
+  res.status(200).json({
+    success: true,
+    available: true,
+    message: 'Data is available'
+  });
 });
-
 // @desc    Get current user info
 // @route   GET /api/auth/me
 // @access  Private

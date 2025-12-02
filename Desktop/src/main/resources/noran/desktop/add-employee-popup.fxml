@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.collections.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox alignment="CENTER" prefHeight="494.0" spacing="15" style="-fx-padding: 25; -fx-background-color: #f5f5f5; -fx-pref-width: 400;" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.EmployeePopupController">
+   <ImageView fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true">
+<image><Image url="@images/AVATAR 1.png" /></image>   </ImageView>
+
+    <Label style="-fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: #333;" text="بيانات الموظف" />
+
+    <TextField fx:id="fullnameField" promptText="اسم الموظف" style="-fx-font-size: 14; -fx-background-radius: 15; -fx-padding: 8;" />
+
+    <TextField fx:id="emailField" promptText="البريد الإلكتروني" style="-fx-font-size: 14; -fx-background-radius: 15; -fx-padding: 8;" />
+
+    <TextField fx:id="phoneField" promptText="رقم الهاتف" style="-fx-font-size: 14; -fx-background-radius: 15; -fx-padding: 8;" />
+
+    <TextField fx:id="passwordField" promptText="كلمة المرور" style="-fx-font-size: 14; -fx-background-radius: 15; -fx-padding: 8;" />
+
+    <ComboBox fx:id="jobTypeField" promptText="المسمى الوظيفي" style="-fx-background-color: white; -fx-background-radius: 15; -fx-border-radius: 15; -fx-border-color: #ccc; -fx-font-size: 14; -fx-pref-width: 350;">
+        <items>
+            <FXCollections fx:factory="observableArrayList">
+                <String fx:value="Regular Employee" />
+                <String fx:value="Certified Employee" />
+                <String fx:value="Department Manager" />
+                <String fx:value="System Admin" />
+            </FXCollections>
+        </items>
+    </ComboBox>
+
+    <HBox alignment="CENTER" prefHeight="57.0" prefWidth="350.0" spacing="20" style="-fx-padding: 15 0 0 0;">
+        <Button onAction="#cancel" style="-fx-pref-width: 120; -fx-background-color: #aaa; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-border-radius: 10; -fx-background-radius: 10;" text="إلغاء" />
+        <Button onAction="#save" style="-fx-pref-width: 120; -fx-background-color: #690000; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 15;" text="حفظ البيانات" />
+    </HBox>
+   <AnchorPane prefHeight="200.0" prefWidth="200.0" />
+
+</VBox>

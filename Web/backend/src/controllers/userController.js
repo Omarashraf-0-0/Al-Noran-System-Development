@@ -3,6 +3,12 @@ const Notification = require("../models/notifications");
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcrypt");
 const notifications = require("../models/notifications");
+const phoneNumberValidation = require('../middleware/validation');
+const {send_mail} = require('../services/mailer');
+const ContactUs = require('../models/contactus');
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
+
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -332,6 +338,95 @@ const sendNotification = async (req, res) => {
 	}
 };
 
+
+const contactUs = async (req,res) => {
+	try{
+		const data = req.body;
+		const firstName = data.firstName;
+		const secondName = data.secondName;
+		const phone = data.phone;
+		const email = data.email;
+		const message = data.message;
+
+		if(!firstName || !secondName)
+		{
+			return res.status(400).json({message:!firstName?"First name is not provided":"Second name is not provided"});
+		}
+
+		const dbResponse = await ContactUs.insertOne({
+			firstName,
+			secondName,
+			phone,
+			email,
+			message,
+			createdAt: new Date(),
+		});
+
+
+		const mailMessage = `Hello,
+
+		You received a new message from the Contact Us form.
+
+		Name: ${firstName} ${secondName}
+		Email: ${email}
+		Phone Number: ${phone}
+
+		Message:
+		${message}
+
+		Best regards,
+		Your Website Team
+		`;
+
+
+		const mailMessageHTML = `
+		<!DOCTYPE html>
+		<html>
+		<head>
+		<meta charset="UTF-8">
+		<title>Contact Us Message</title>
+		<style>
+			body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+			.container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+			h2 { color: #2c3e50; }
+			p { margin: 5px 0; }
+			.footer { margin-top: 20px; font-size: 0.9em; color: #777; }
+		</style>
+		</head>
+		<body>
+		<div class="container">
+			<h2>New Contact Us Message</h2>
+			<p><strong>Name:</strong> ${firstName} ${secondName}</p>
+			<p><strong>Email:</strong> ${email}</p>
+			<p><strong>Phone:</strong> ${phone}</p>
+			<p><strong>Message:</strong></p>
+			<p>${message}</p>
+			<div class="footer">
+			<p>Best regards,<br>Your Website Team</p>
+			</div>
+		</div>
+		</body>
+		</html>
+		`;
+
+
+		await send_mail(
+			process.env.EMAIL_USER,
+			"Contact Us Form",
+			mailMessage,
+			mailMessageHTML
+		);
+
+
+		return res.status(200).json({message:"Mail sent successfully"});
+
+	}catch(err)
+	{
+		return res.status(500).json({message:err.message});
+	}
+};
+
+
 module.exports = {
 	getAllUsers,
 	createUser,
@@ -341,4 +436,5 @@ module.exports = {
 	addUsers,
 	getNotifications,
 	sendNotification,
+	contactUs,
 };
