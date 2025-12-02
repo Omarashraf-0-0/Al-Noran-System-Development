@@ -12,6 +12,7 @@ const {
 	updateUpload,
 	deleteUpload,
 	checkRequiredDocuments,
+	getPresignedUrlForKey,
 } = require("../controllers/uploadS3Controller");
 
 /**
@@ -52,6 +53,13 @@ router.get("/user/:userId", protect, getUploads);
  * @access  Private
  */
 router.get("/check-required/:userId", protect, checkRequiredDocuments);
+
+/**
+ * @route   GET /api/uploads/presigned-url/:s3Key
+ * @desc    Get presigned URL for an S3 key
+ * @access  Private
+ */
+router.get("/presigned-url/:s3Key", protect, getPresignedUrlForKey);
 
 /**
  * @route   GET /api/uploads/:id
