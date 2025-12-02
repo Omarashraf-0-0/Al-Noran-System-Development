@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
+import LoadingSpinner from "../components/LoadingSpinner";
+import UploadProgress from "../components/UploadProgress";
+import DocumentUploadCard from "../components/DocumentUploadCard";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +16,12 @@ const DocumentUploadPage = () => {
 	const [uploads, setUploads] = useState({});
 	const [uploading, setUploading] = useState({});
 	const [progress, setProgress] = useState({});
+
+	// TODO: RBAC - Get user permissions from context/store
+	// Example: const { user, hasPermission } = useAuth();
+	// const canUploadDocuments = hasPermission('document:upload');
+	// const canDeleteDocuments = hasPermission('document:delete');
+	// const canViewDocuments = hasPermission('document:view');
 
 	// Document requirements based on client type
 	const documentRequirements = {
@@ -121,6 +130,8 @@ const DocumentUploadPage = () => {
 	};
 
 	const handleFileSelect = async (documentKey, documentType, file) => {
+		// TODO: RBAC - Check if user has permission to upload documents
+		// if (!canUploadDocuments) { toast.error('ليس لديك صلاحية لرفع المستندات'); return; }
 		if (!file) return;
 
 		// Validate file type
@@ -197,6 +208,8 @@ const DocumentUploadPage = () => {
 	};
 
 	const handleDeleteUpload = async (documentKey, uploadId) => {
+		// TODO: RBAC - Check if user has permission to delete documents
+		// if (!canDeleteDocuments) { toast.error('ليس لديك صلاحية لحذف المستندات'); return; }
 		try {
 			const token = localStorage.getItem("token");
 			await axios.delete(
@@ -219,6 +232,8 @@ const DocumentUploadPage = () => {
 	};
 
 	const handleViewDocument = async (uploadId) => {
+		// TODO: RBAC - Check if user has permission to view documents
+		// if (!canViewDocuments) { toast.error('ليس لديك صلاحية لعرض المستندات'); return; }
 		try {
 			const token = localStorage.getItem("token");
 			console.log("Fetching document with ID:", uploadId);
@@ -290,20 +305,12 @@ const DocumentUploadPage = () => {
 	};
 
 	if (!clientType) {
-		return (
-			<div className="min-h-screen flex items-center justify-center">
-				<div className="text-center">
-					<div className="loading loading-spinner loading-lg text-primary"></div>
-					<p className="mt-4 text-gray-600">جاري التحميل...</p>
-				</div>
-			</div>
-		);
+		return <LoadingSpinner />;
 	}
 
 	const requirements = documentRequirements[clientType] || [];
 	const completedCount = Object.keys(uploads).length;
 	const totalCount = requirements.length;
-	const completionPercentage = Math.round((completedCount / totalCount) * 100);
 
 	return (
 		<>
@@ -329,126 +336,26 @@ const DocumentUploadPage = () => {
 						</div>
 
 						{/* Overall Progress */}
-						<div className="mb-8 p-4 bg-blue-50 rounded-lg">
-							<div className="flex justify-between items-center mb-2">
-								<span className="text-sm font-medium text-gray-700">
-									التقدم الإجمالي
-								</span>
-								<span className="text-sm font-medium text-blue-600">
-									{completedCount} / {totalCount}
-								</span>
-							</div>
-							<div className="w-full bg-gray-200 rounded-full h-3">
-								<div
-									className="bg-blue-600 h-3 rounded-full transition-all duration-300"
-									style={{ width: `${completionPercentage}%` }}
-								></div>
-							</div>
-							<p className="text-xs text-gray-600 mt-1">
-								{completionPercentage}% مكتمل
-							</p>
-						</div>
+						<UploadProgress
+							completedCount={completedCount}
+							totalCount={totalCount}
+						/>
 
-						{/* Document Upload Cards */}
+						{/* Document Upload Cards - TODO: RBAC - Only show upload cards if user has permission */}
 						<div className="space-y-4 mb-6">
-							{requirements.map((doc, index) => {
-								const isUploaded = uploads[doc.key];
-								const isUploading = uploading[doc.key];
-								const uploadProgress = progress[doc.key] || 0;
-
-								return (
-									<div
-										key={doc.key}
-										className={`border-2 rounded-lg p-4 transition-all ${
-											isUploaded
-												? "border-green-500 bg-green-50"
-												: "border-gray-300 bg-white hover:border-blue-400"
-										}`}
-									>
-										<div className="flex items-center justify-between mb-2">
-											<div className="flex items-center gap-3">
-												<span className="text-2xl">
-													{isUploaded ? "✅" : "📎"}
-												</span>
-												<div>
-													<h3 className="font-semibold text-gray-800">
-														{index + 1}. {doc.label}
-													</h3>
-													{doc.required && (
-														<span className="text-xs text-red-500">
-															* مطلوب
-														</span>
-													)}
-												</div>
-											</div>
-
-											{isUploaded ? (
-												<div className="flex gap-2">
-													<button
-														onClick={() => handleViewDocument(isUploaded.id)}
-														className="btn btn-sm btn-info text-white"
-													>
-														👁️ عرض
-													</button>
-													<button
-														onClick={() =>
-															handleDeleteUpload(doc.key, isUploaded.id)
-														}
-														className="btn btn-sm btn-error text-white"
-													>
-														🗑️ حذف
-													</button>
-												</div>
-											) : (
-												<label className="btn btn-sm btn-primary text-white">
-													{isUploading ? "جاري الرفع..." : "📤 رفع"}
-													<input
-														type="file"
-														className="hidden"
-														accept=".pdf,.jpg,.jpeg,.png"
-														onChange={(e) =>
-															handleFileSelect(
-																doc.key,
-																doc.key,
-																e.target.files[0]
-															)
-														}
-														disabled={isUploading}
-													/>
-												</label>
-											)}
-										</div>
-
-										{/* Upload Progress Bar */}
-										{isUploading && (
-											<div className="mt-3">
-												<div className="w-full bg-gray-200 rounded-full h-2">
-													<div
-														className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-														style={{ width: `${uploadProgress}%` }}
-													></div>
-												</div>
-												<p className="text-xs text-gray-600 mt-1 text-center">
-													{uploadProgress}%
-												</p>
-											</div>
-										)}
-
-										{/* File Info */}
-										{isUploaded && (
-											<div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded">
-												<p>📄 {isUploaded.filename}</p>
-												<p className="text-gray-500">
-													تم الرفع:{" "}
-													{new Date(isUploaded.uploadedAt).toLocaleDateString(
-														"ar-EG"
-													)}
-												</p>
-											</div>
-										)}
-									</div>
-								);
-							})}
+							{requirements.map((doc, index) => (
+								<DocumentUploadCard
+									key={doc.key}
+									doc={doc}
+									index={index}
+									isUploaded={uploads[doc.key]}
+									isUploading={uploading[doc.key]}
+									uploadProgress={progress[doc.key] || 0}
+									onFileSelect={handleFileSelect}
+									onView={handleViewDocument}
+									onDelete={handleDeleteUpload}
+								/>
+							))}
 						</div>
 
 						{/* Action Buttons */}
