@@ -28,6 +28,22 @@ import EmployeeAcidRequestsPage from "./pages/EmployeeAcidRequestsPage";
 import EmployeeShipments from "./pages/EmployeeShipments";
 import ShipmentsManagement from "./pages/ShipmentsManagement";
 import ShipmentHistory from "./pages/ShipmentHistory";
+import ClientProfilePage from "./pages/ClientProfilePage";
+import EmployeeProfilePage from "./pages/EmployeeProfilePage";
+
+// Smart Profile Route Component
+const ProfileRoute = () => {
+	const user = JSON.parse(localStorage.getItem("user") || "{}");
+	const userType = user?.type;
+
+	if (userType === "client") {
+		return <ClientProfilePage />;
+	} else if (userType === "employee") {
+		return <EmployeeProfilePage />;
+	}
+	// Default to employee profile if type not found
+	return <EmployeeProfilePage />;
+};
 
 const App = () => {
 	return (
@@ -40,6 +56,7 @@ const App = () => {
 				<Route path="/verify-otp" element={<OTPPage />} />
 				<Route path="/resetpassword" element={<ResetPasswordPage />} />
 				<Route path="/home" element={<TrackingPage />} />
+				<Route path="/profile" element={<ProfileRoute />} />
 				<Route path="/acidrequest" element={<ACIDRequestPage />} />
 				<Route path="/acidrequests" element={<AcidRequestsPage />} />
 				<Route

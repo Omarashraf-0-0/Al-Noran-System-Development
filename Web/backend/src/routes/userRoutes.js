@@ -8,9 +8,22 @@ const {
   changePassword,
   addUsers,
   getNotifications,
-  sendNotification
+  sendNotification,
+  getUserProfile,
+  updateUserProfile,
+  changePasswordProfile,
 } = require('../controllers/userController');
+const { protect } = require('../middleware/auth');
 
+// Profile routes (protected)
+router.route('/profile')
+  .get(protect, getUserProfile)
+  .put(protect, updateUserProfile);
+
+router.route('/change-password')
+  .put(protect, changePasswordProfile);
+
+// User management routes
 router.route('/getAll')
   .get(getAllUsers)
   .post(createUser);

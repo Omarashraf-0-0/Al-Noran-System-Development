@@ -44,6 +44,11 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  profilePhoto: {
+    type: String,
+    required: false,
+    default: null,
+  },
   taxNumber: {
     type: String,
     required: false,
