@@ -40,21 +40,33 @@ const chatSchema = new mongoose.Schema({
 	employeeId: {
 		type: mongoose.Schema.Types.ObjectId,
 		ref: "User",
-		default: null, // Null until assigned to an employee
+		required: true, // Now required - employee assigned from shipment
 	},
 	shipmentId: {
 		type: mongoose.Schema.Types.ObjectId,
 		ref: "Shipment",
-		default: null, // Optional: link to specific shipment
+		required: true, // Now required - chat is always linked to a shipment
 	},
 	status: {
 		type: String,
 		enum: ["active", "resolved", "pending"],
-		default: "pending",
+		default: "active", // Active by default since employee is assigned
 	},
 	lastMessageAt: {
 		type: Date,
 		default: Date.now,
+	},
+	unreadCount: {
+		type: Number,
+		default: 0,
+	},
+	clientTyping: {
+		type: Boolean,
+		default: false,
+	},
+	employeeTyping: {
+		type: Boolean,
+		default: false,
 	},
 	createdAt: {
 		type: Date,

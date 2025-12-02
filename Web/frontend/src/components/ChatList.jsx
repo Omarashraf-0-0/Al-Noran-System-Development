@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 const ChatListItem = ({ user, isSelected, onSelect }) => {
 	const itemClasses = `
@@ -30,6 +30,13 @@ const ChatListItem = ({ user, isSelected, onSelect }) => {
 };
 
 const ChatList = ({ users, selectedUser, onSelectUser }) => {
+	// Separate assigned and unassigned chats
+	const assignedChats = users.filter(user => user.employeeId);
+	const unassignedChats = users.filter(user => !user.employeeId);
+	
+	// State for dropdown toggle
+	const [isUnassignedOpen, setIsUnassignedOpen] = useState(false);
+
 	return (
 		<div className="h-full flex flex-col">
 			<div className="p-4 bg-white border-b border-gray-200">
@@ -41,14 +48,56 @@ const ChatList = ({ users, selectedUser, onSelectUser }) => {
 				{users.length === 0 ? (
 					<div className="p-4 text-center text-gray-500">لا توجد محادثات</div>
 				) : (
-					users.map((user) => (
-						<ChatListItem
-							key={user.id}
-							user={user}
-							isSelected={selectedUser?.id === user.id}
-							onSelect={() => onSelectUser(user)}
-						/>
-					))
+					<>
+						{/* Assigned Chats Section - Always Visible */}
+						{assignedChats.length > 0 && (
+							<div>
+								<div className="px-4 py-2 bg-gray-100 border-b border-gray-300">
+									<h3 className="text-sm font-semibold text-gray-700">
+										محادثاتي ({assignedChats.length})
+									</h3>
+								</div>
+								{assignedChats.map((user) => (
+									<ChatListItem
+										key={user.id}
+										user={user}
+										isSelected={selectedUser?.id === user.id}
+										onSelect={() => onSelectUser(user)}
+									/>
+								))}
+							</div>
+						)}
+
+						{/* Unassigned Chats Section - Dropdown */}
+						{unassignedChats.length > 0 && (
+							<div>
+								<div 
+									className="px-4 py-3 bg-yellow-50 border-b border-yellow-200 cursor-pointer hover:bg-yellow-100 transition-colors flex items-center justify-between"
+									onClick={() => setIsUnassignedOpen(!isUnassignedOpen)}
+								>
+									<h3 className="text-sm font-semibold text-yellow-800">
+										في الانتظار ({unassignedChats.length})
+									</h3>
+									<svg 
+										className={`w-5 h-5 text-yellow-800 transition-transform ${isUnassignedOpen ? 'rotate-180' : ''}`}
+										fill="none" 
+										stroke="currentColor" 
+										viewBox="0 0 24 24"
+									>
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+									</svg>
+								</div>
+								{isUnassignedOpen && unassignedChats.map((user) => (
+									<ChatListItem
+										key={user.id}
+										user={user}
+										isSelected={selectedUser?.id === user.id}
+										onSelect={() => onSelectUser(user)}
+									/>
+								))}
+							</div>
+						)}
+					</>
 				)}
 			</div>
 		</div>

@@ -45,21 +45,54 @@ const ChatWindow = ({
 	onSendMessage,
 	sending,
 	currentUserId,
+	onTyping,
+	isOtherUserTyping,
 }) => {
 	const [newMessage, setNewMessage] = useState("");
 	const messagesEndRef = useRef(null);
+	const messagesContainerRef = useRef(null);
+	const typingTimeoutRef = useRef(null);
 
 	const scrollToBottom = () => {
-		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+		if (messagesContainerRef.current) {
+			messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+		}
 	};
 
 	useEffect(scrollToBottom, [messages]);
+
+	const handleInputChange = (e) => {
+		setNewMessage(e.target.value);
+
+		// Emit typing indicator
+		if (onTyping) {
+			onTyping(true);
+
+			// Clear previous timeout
+			if (typingTimeoutRef.current) {
+				clearTimeout(typingTimeoutRef.current);
+			}
+
+			// Stop typing after 3 seconds of inactivity
+			typingTimeoutRef.current = setTimeout(() => {
+				onTyping(false);
+			}, 3000);
+		}
+	};
 
 	const handleSubmit = (e) => {
 		e.preventDefault();
 		if (newMessage.trim() && !sending) {
 			onSendMessage(newMessage);
 			setNewMessage("");
+
+			// Stop typing indicator
+			if (onTyping) {
+				onTyping(false);
+			}
+			if (typingTimeoutRef.current) {
+				clearTimeout(typingTimeoutRef.current);
+			}
 		}
 	};
 
@@ -107,6 +140,22 @@ const ChatWindow = ({
 								avatarUrl={user.avatarUrl}
 							/>
 						))}
+						{isOtherUserTyping && (
+							<div className="flex items-center gap-2 text-gray-500 text-sm">
+								<div className="flex gap-1">
+									<span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+									<span
+										className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+										style={{ animationDelay: "0.2s" }}
+									></span>
+									<span
+										className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+										style={{ animationDelay: "0.4s" }}
+									></span>
+								</div>
+								<span>يكتب...</span>
+							</div>
+						)}
 					</div>
 				)}
 				<div ref={messagesEndRef} />
@@ -118,7 +167,7 @@ const ChatWindow = ({
 					<input
 						type="text"
 						value={newMessage}
-						onChange={(e) => setNewMessage(e.target.value)}
+						onChange={handleInputChange}
 						placeholder="اكتب رسالة..."
 						className="flex-1 bg-white text-gray-900 px-4 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 transition"
 						disabled={sending}

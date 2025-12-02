@@ -21,6 +21,7 @@ import EmployeeShipmentManagement from "./pages/EmployeeShipmentManagement";
 import CertificatesManagement from "./pages/CertificatesManagement";
 import AdminShipmentManagement from "./pages/AdminShipmentManagement";
 import Chat from "./pages/Chat";
+import SupportDashboard from "./pages/SupportDashboard";
 import AcidRequestsPage from "./pages/AcidRequestsPage";
 import AcidRequestDetailsPage from "./pages/AcidRequestDetailsPage";
 import EditAcidRequestPage from "./pages/EditAcidRequestPage";
@@ -28,6 +29,8 @@ import EmployeeAcidRequestsPage from "./pages/EmployeeAcidRequestsPage";
 import EmployeeShipments from "./pages/EmployeeShipments";
 import ShipmentsManagement from "./pages/ShipmentsManagement";
 import ShipmentHistory from "./pages/ShipmentHistory";
+import MyCustomers from "./pages/MyCustomers";
+import ShipmentChatPage from "./pages/ShipmentChatPage";
 
 const App = () => {
 	return (
@@ -82,8 +85,10 @@ const App = () => {
 					element={<CertificatesManagement />}
 				/>
 				<Route path="/shipmentsmanagement" element={<ShipmentsManagement />} />
-				<Route path="*" element={<NotFound404 />} />
 				<Route path="/chat" element={<Chat />} />
+				<Route path="/support-dashboard" element={<SupportDashboard />} />
+				<Route path="/my-customers" element={<MyCustomers />} />
+				<Route path="/shipment-chat/:shipmentId" element={<ShipmentChatPage />} />
 				<Route
 					path="/employee/acid-requests"
 					element={<EmployeeAcidRequestsPage />}
@@ -95,6 +100,7 @@ const App = () => {
 				/>
 				{/* NEW */}
 				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
+				<Route path="*" element={<NotFound404 />} />
 			</Routes>
 		</div>
 	);
