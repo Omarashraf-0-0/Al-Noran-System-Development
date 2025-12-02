@@ -249,33 +249,37 @@ const DocumentUploadPage = () => {
 			console.log("Document response:", response.data);
 
 			// Check for AWS permission error
-			if (response.data.upload?.permissionError || response.data.warning || response.data.error) {
+			if (
+				response.data.upload?.permissionError ||
+				response.data.warning ||
+				response.data.error
+			) {
 				console.error("AWS Permission Error:", response.data.error);
-				
+
 				// Show detailed bilingual error message
 				toast.error(
-					response.data.warning || 
-					"⚠️ لا يمكن عرض الملف حالياً بسبب قيود AWS\n" +
-					"File cannot be viewed due to AWS permission restrictions\n\n" +
-					"الملف محفوظ بأمان - يرجى الاتصال بالمسؤول\n" +
-					"File is safely stored - Please contact administrator",
-					{ 
+					response.data.warning ||
+						"⚠️ لا يمكن عرض الملف حالياً بسبب قيود AWS\n" +
+							"File cannot be viewed due to AWS permission restrictions\n\n" +
+							"الملف محفوظ بأمان - يرجى الاتصال بالمسؤول\n" +
+							"File is safely stored - Please contact administrator",
+					{
 						duration: 7000,
 						style: {
-							minWidth: '400px',
-							fontSize: '14px',
-							whiteSpace: 'pre-line'
-						}
+							minWidth: "400px",
+							fontSize: "14px",
+							whiteSpace: "pre-line",
+						},
 					}
 				);
-				
+
 				// Log technical details for debugging
 				if (response.data.error) {
 					console.error("Technical Details:", {
 						code: response.data.error.code,
 						message: response.data.error.message,
 						action: response.data.error.action,
-						info: response.data.error.technicalInfo
+						info: response.data.error.technicalInfo,
 					});
 				}
 				return;
@@ -301,26 +305,33 @@ const DocumentUploadPage = () => {
 			) {
 				toast.error(
 					"⚠️ مشكلة مؤقتة في عرض الملفات - يرجى الاتصال بالمسؤول\n" +
-					"Temporary issue viewing files - Please contact administrator\n\n" +
-					"الملفات محفوظة بأمان\nFiles are safely stored",
-					{ 
+						"Temporary issue viewing files - Please contact administrator\n\n" +
+						"الملفات محفوظة بأمان\nFiles are safely stored",
+					{
 						duration: 7000,
 						style: {
-							minWidth: '400px',
-							fontSize: '14px',
-							whiteSpace: 'pre-line'
-						}
+							minWidth: "400px",
+							fontSize: "14px",
+							whiteSpace: "pre-line",
+						},
 					}
 				);
 			} else {
-				toast.error(error.response?.data?.message || "فشل في عرض الملف / Failed to view file");
+				toast.error(
+					error.response?.data?.message ||
+						"فشل في عرض الملف / Failed to view file"
+				);
 			}
 		}
 	};
 
 	const handleFinish = () => {
 		const requirements = documentRequirements[clientType] || [];
-		const uploadedCount = Object.keys(uploads).length;
+		// Only count uploads that match the current requirements (exclude profilePhoto and other non-required docs)
+		const requiredKeys = requirements.map((doc) => doc.key);
+		const uploadedCount = Object.keys(uploads).filter((key) =>
+			requiredKeys.includes(key)
+		).length;
 		const totalRequired = requirements.length;
 
 		if (uploadedCount < totalRequired) {
@@ -343,7 +354,11 @@ const DocumentUploadPage = () => {
 	}
 
 	const requirements = documentRequirements[clientType] || [];
-	const completedCount = Object.keys(uploads).length;
+	// Only count uploads that match the current requirements (exclude profilePhoto and other non-required docs)
+	const requiredKeys = requirements.map((doc) => doc.key);
+	const completedCount = Object.keys(uploads).filter((key) =>
+		requiredKeys.includes(key)
+	).length;
 	const totalCount = requirements.length;
 
 	return (

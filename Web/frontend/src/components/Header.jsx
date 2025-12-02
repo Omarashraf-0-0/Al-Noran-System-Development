@@ -337,13 +337,30 @@ const Header = () => {
 												>
 													👤 الملف الشخصي
 												</Link>
-												<Link
-													to="/settings"
-													className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-													onClick={() => setIsProfileMenuOpen(false)}
-												>
-													⚙️ الإعدادات
-												</Link>
+												{/* Only show admin dashboard link for System Admin */}
+												{user?.type === "employee" &&
+													user?.employeeDetails?.employeeType ===
+														"System Admin" && (
+														<Link
+															to="/admindashboard"
+															className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+															onClick={() => setIsProfileMenuOpen(false)}
+														>
+															📊 لوحة التحكم
+														</Link>
+													)}
+												{/* Only show settings for System Admin */}
+												{user?.type === "employee" &&
+													user?.employeeDetails?.employeeType ===
+														"System Admin" && (
+														<Link
+															to="/settings"
+															className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+															onClick={() => setIsProfileMenuOpen(false)}
+														>
+															⚙️ الإعدادات
+														</Link>
+													)}
 												<button
 													onClick={handleLogout}
 													className="w-full text-right px-4 py-2 text-sm text-red-600 hover:bg-red-50"

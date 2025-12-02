@@ -74,17 +74,17 @@ const getAllRequests = async (req, res) => {
 		// Filter requests by userId to show only current user's requests
 		const requests = await AcidRequest.find({ userId })
 			.sort({ requestDate: -1 })
-			.populate('uploads');
-		
+			.populate("uploads");
+
 		res.json({
 			success: true,
 			requests: requests,
 		});
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ 
+		res.status(500).json({
 			success: false,
-			message: "Server error while fetching requests" 
+			message: "Server error while fetching requests",
 		});
 	}
 };
@@ -255,7 +255,12 @@ const updateAcidStatusByEmployee = async (req, res) => {
 		}
 
 		// Validate status
-		const validStatuses = ["Pending", "Under Review", "ACID Issued", "Rejected"];
+		const validStatuses = [
+			"Pending",
+			"Under Review",
+			"ACID Issued",
+			"Rejected",
+		];
 		if (status && !validStatuses.includes(status)) {
 			return res.status(400).json({
 				success: false,

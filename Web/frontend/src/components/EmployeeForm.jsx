@@ -95,10 +95,10 @@ const EmployeeForm = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {isEditing ? (
                 <>
-                  <input type="text" name="name" value={employeeData.name} onChange={handleInputChange} className="w-full bg-gray-100 p-3 rounded-lg" />
-                  <input type="text" name="code" value={employeeData.code} onChange={handleInputChange} className="w-full bg-gray-100 p-3 rounded-lg" />
-                  <input type="email" name="email" value={employeeData.email} onChange={handleInputChange} className="w-full bg-gray-100 p-3 rounded-lg" />
-                  <select name="status" value={employeeData.status} onChange={handleInputChange} className="w-full bg-gray-100 p-3 rounded-lg">
+                  <input type="text" name="name" value={employeeData.name} onChange={handleInputChange} className="w-full bg-white text-gray-800 p-3 rounded-lg border border-gray-300" />
+                  <input type="text" name="code" value={employeeData.code} onChange={handleInputChange} className="w-full bg-white text-gray-800 p-3 rounded-lg border border-gray-300" />
+                  <input type="email" name="email" value={employeeData.email} onChange={handleInputChange} className="w-full bg-white text-gray-800 p-3 rounded-lg border border-gray-300" />
+                  <select name="status" value={employeeData.status} onChange={handleInputChange} className="w-full bg-white text-gray-800 p-3 rounded-lg border border-gray-300">
                     {statuses.map(status => (
                       <option key={status} value={status}>{status}</option>
                     ))}

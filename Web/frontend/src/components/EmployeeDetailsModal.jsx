@@ -269,7 +269,7 @@ export default function EmployeeDetailsModal({
 										name="fullname"
 										value={formData.fullname}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -289,7 +289,7 @@ export default function EmployeeDetailsModal({
 										name="username"
 										value={formData.username}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -309,7 +309,7 @@ export default function EmployeeDetailsModal({
 										name="email"
 										value={formData.email}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -329,7 +329,7 @@ export default function EmployeeDetailsModal({
 										name="phone"
 										value={formData.phone}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -348,7 +348,7 @@ export default function EmployeeDetailsModal({
 										name="employeeType"
 										value={formData.employeeType}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									>
 										{employeeTypes.map((type) => (
 											<option key={type.value} value={type.value}>
@@ -380,7 +380,7 @@ export default function EmployeeDetailsModal({
 												active: e.target.value === "true",
 											})
 										}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									>
 										<option value="true">نشط</option>
 										<option value="false">غير نشط</option>

@@ -16,14 +16,18 @@ const LoginPage = () => {
 			password: formData.password,
 		};
 
-		axios.post(`${import.meta.env.VITE_API_URL}/api/users/login`, loginData)
+		axios
+			.post(`${import.meta.env.VITE_API_URL}/api/users/login`, loginData)
 			.then((response) => {
 				console.log("Login successful:", response.data);
 				toast.success("تم تسجيل الدخول بنجاح");
 				const user = response.data.user;
 				localStorage.setItem("user", JSON.stringify(response.data.user));
 				localStorage.setItem("token", response.data.token);
-				localStorage.setItem("tokenExpiry", Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days expiry
+				localStorage.setItem(
+					"tokenExpiry",
+					Date.now() + 30 * 24 * 60 * 60 * 1000
+				); // 30 days expiry
 				// console.log(localStorage.getItem("token"));
 				// we need to wait a bit before redirecting
 				setTimeout(() => {
@@ -33,7 +37,12 @@ const LoginPage = () => {
 							window.location.href = "/home";
 							break;
 						case "employee":
-							window.location.href = "/employeedashboard";
+							// Check if employee is System Admin
+							if (user.employeeDetails?.employeeType === "System Admin") {
+								window.location.href = "/admindashboard";
+							} else {
+								window.location.href = "/employeedashboard";
+							}
 							break;
 						case "admin":
 							window.location.href = "/admindashboard";

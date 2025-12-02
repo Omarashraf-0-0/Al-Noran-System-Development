@@ -278,6 +278,18 @@ const Header = () => {
 										>
 											📊 لوحة التحكم
 										</a>
+										<a
+											href="/employeedashboard"
+											className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right"
+										>
+											💼 لوحة الموظف
+										</a>
+										<a
+											href="/profile"
+											className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right"
+										>
+											👤 الملف الشخصي
+										</a>
 										<button
 											onClick={handleLogout}
 											className="w-full text-right block px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
