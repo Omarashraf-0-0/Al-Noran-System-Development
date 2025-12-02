@@ -144,7 +144,7 @@ const getAllShipments = async (req, res) => {
 	try {
 		// Get userId from authenticated user (from protect middleware)
 		const userId = req.user ? req.user._id : null;
-		const userType = req.user ? req.user.type : null;
+		let userType = req.user ? (req.user.type || req.user.userType) : null;
 
 		if (!userId) {
 			return res.status(401).json({
@@ -153,11 +153,22 @@ const getAllShipments = async (req, res) => {
 			});
 		}
 
+		// If userType is not in token, fetch from database
+		if (!userType) {
+			const User = require("../models/user");
+			const user = await User.findById(userId);
+			if (user) {
+				userType = user.type;
+				console.log(`✅ Fetched userType from database: ${userType}`);
+			}
+		}
+
 		let query = {};
 
 		// If user is a client, show only their shipments
 		if (userType === "client") {
 			query.user_id = userId;
+			console.log(`🔒 Client filter applied for user: ${userId}`);
 		}
 		// If user is employee or admin, show all shipments (or filter by employee_id if needed)
 		// For now, employees and admins see all shipments

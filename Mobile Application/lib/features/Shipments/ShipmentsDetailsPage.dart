@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/network/api_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/file_picker_helper.dart';
+import '../chat/screens/chat_screen.dart';
 
 class ShipmentDetailsPage extends StatefulWidget {
   final String shipmentId; // ACID number
@@ -347,21 +348,30 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.pushNamed(
-              context,
-              '/chat',
-              arguments: {
-                'shipmentId': widget.shipmentId,
-                'employeeName': 'فريق الدعم',
-              },
-            );
-          },
-          backgroundColor: primaryDark,
-          child: const Icon(Icons.chat_bubble, color: Colors.white),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+        floatingActionButton:
+            _shipmentData != null
+                ? FloatingActionButton.extended(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => ChatScreen(
+                              shipmentId: _shipmentData!['_id'] ?? '',
+                              shipmentAcid: widget.shipmentId,
+                            ),
+                      ),
+                    );
+                  },
+                  backgroundColor: primaryDark,
+                  icon: const Icon(Icons.chat_bubble, color: Colors.white),
+                  label: const Text(
+                    'تواصل مع الدعم',
+                    style: TextStyle(fontFamily: 'Cairo', color: Colors.white),
+                  ),
+                )
+                : null,
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }

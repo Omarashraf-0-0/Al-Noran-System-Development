@@ -1582,4 +1582,171 @@ class ApiService {
       };
     }
   }
+
+  // ============= CHAT API =============
+
+  /// Get all chats for current user
+  static Future<Map<String, dynamic>> getChats() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💬 [getChats] Fetching chats...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/chat'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💬 [getChats] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'chats': data['chats'] ?? []};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحميل المحادثات',
+        };
+      }
+    } catch (e) {
+      print('❌ [getChats] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل المحادثات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get or create a chat for a specific shipment
+  static Future<Map<String, dynamic>> getOrCreateChat(String shipmentId) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💬 [getOrCreateChat] Creating chat for shipment: $shipmentId');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/chat'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'shipmentId': shipmentId}),
+      );
+
+      print('💬 [getOrCreateChat] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'chat': data['chat']};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل إنشاء المحادثة',
+        };
+      }
+    } catch (e) {
+      print('❌ [getOrCreateChat] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في إنشاء المحادثة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get messages for a specific chat
+  static Future<Map<String, dynamic>> getMessages(String chatId) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💬 [getMessages] Fetching messages for chat: $chatId');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/chat/$chatId/messages'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💬 [getMessages] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'messages': data['messages'] ?? []};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحميل الرسائل',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMessages] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل الرسائل',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Send a message in a chat
+  static Future<Map<String, dynamic>> sendMessage(
+    String chatId,
+    String text,
+  ) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💬 [sendMessage] Sending message to chat: $chatId');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/chat/$chatId/messages'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'text': text}),
+      );
+
+      print('💬 [sendMessage] Status: ${response.statusCode}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'message': data['message']};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل إرسال الرسالة',
+        };
+      }
+    } catch (e) {
+      print('❌ [sendMessage] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في إرسال الرسالة',
+        'error': e.toString(),
+      };
+    }
+  }
 }

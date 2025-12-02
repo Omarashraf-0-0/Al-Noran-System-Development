@@ -49,7 +49,7 @@ const getChats = async (req, res) => {
 const getOrCreateChat = async (req, res) => {
 	try {
 		const userId = req.user._id;
-		const userType = req.user.type;
+		let userType = req.user.type || req.user.userType;
 		const { shipmentId } = req.body;
 
 		console.log("getOrCreateChat called:", {
@@ -81,6 +81,24 @@ const getOrCreateChat = async (req, res) => {
 				success: false,
 				message: "No employee assigned to this shipment yet. Please wait for assignment.",
 			});
+		}
+
+		// If userType is not in token, determine from shipment ownership
+		if (!userType) {
+			console.log("⚠️ No userType in token, determining from shipment...");
+			if (shipment.user_id.toString() === userId.toString()) {
+				userType = "client";
+				console.log("✅ Determined userType as 'client' from shipment ownership");
+			} else if (shipment.employee_id.toString() === userId.toString()) {
+				userType = "employee";
+				console.log("✅ Determined userType as 'employee' from shipment assignment");
+			} else {
+				console.log("❌ User has no relation to this shipment");
+				return res.status(403).json({
+					success: false,
+					message: "You don't have access to this shipment",
+				});
+			}
 		}
 
 		// Verify user has access to this shipment
@@ -174,7 +192,7 @@ const getMessages = async (req, res) => {
 	try {
 		const { chatId } = req.params;
 		const userId = req.user._id;
-		const userType = req.user.type;
+		let userType = req.user.type || req.user.userType;
 
 		// Verify user has access to this chat
 		const chat = await Chat.findById(chatId);
@@ -192,6 +210,24 @@ const getMessages = async (req, res) => {
 			employeeId: chat.employeeId?.toString(),
 			shipmentId: chat.shipmentId?.toString()
 		});
+
+		// If userType is not in token, determine from chat
+		if (!userType) {
+			console.log("⚠️ No userType in token for getMessages, determining from chat...");
+			if (chat.clientId.toString() === userId.toString()) {
+				userType = "client";
+				console.log("✅ Determined userType as 'client'");
+			} else if (chat.employeeId && chat.employeeId.toString() === userId.toString()) {
+				userType = "employee";
+				console.log("✅ Determined userType as 'employee'");
+			} else {
+				console.log("❌ User has no access to this chat");
+				return res.status(403).json({
+					success: false,
+					message: "Access denied to this chat",
+				});
+			}
+		}
 
 		// Check authorization
 		if (userType === "client") {
@@ -249,7 +285,7 @@ const sendMessage = async (req, res) => {
 		const { chatId } = req.params;
 		const { text } = req.body;
 		const userId = req.user._id;
-		const userType = req.user.type;
+		let userType = req.user.type || req.user.userType;
 
 		if (!text || text.trim() === "") {
 			return res.status(400).json({
@@ -266,6 +302,31 @@ const sendMessage = async (req, res) => {
 				success: false,
 				message: "Chat not found",
 			});
+		}
+
+		// Determine sender type from chat if not in token (fallback for old tokens)
+		if (!userType) {
+			console.log("⚠️ No userType in token, checking chat ownership...");
+			console.log("Chat clientId:", chat.clientId.toString());
+			console.log("Chat employeeId:", chat.employeeId ? chat.employeeId.toString() : "null");
+			console.log("Current userId:", userId.toString());
+			
+			if (chat.clientId.toString() === userId.toString()) {
+				userType = "client";
+				console.log("✅ Determined user type as 'client' from chat");
+			} else if (
+				chat.employeeId &&
+				chat.employeeId.toString() === userId.toString()
+			) {
+				userType = "employee";
+				console.log("✅ Determined user type as 'employee' from chat");
+			} else {
+				console.log("❌ User not in chat - unauthorized");
+				return res.status(403).json({
+					success: false,
+					message: "User not authorized for this chat",
+				});
+			}
 		}
 
 		// Check authorization
@@ -296,7 +357,14 @@ const sendMessage = async (req, res) => {
 			chat.status = "active";
 		}
 
-		// Create message
+		// Create the message
+		console.log("Creating message with data:", {
+			chatId,
+			senderId: userId.toString(),
+			senderType: userType,
+			textLength: text.trim().length,
+		});
+
 		const message = new Message({
 			chatId,
 			senderId: userId,
@@ -304,31 +372,45 @@ const sendMessage = async (req, res) => {
 			text: text.trim(),
 		});
 
+		console.log("Message object created, attempting to save...");
 		await message.save();
+		console.log("Message saved successfully with ID:", message._id);
 
 		// Update chat lastMessageAt
+		console.log("Updating chat lastMessageAt...");
 		chat.lastMessageAt = Date.now();
 		if (chat.status === "pending") {
 			chat.status = "active";
 		}
 		await chat.save();
+		console.log("Chat updated successfully");
 
 		// Populate sender info
+		console.log("Populating sender information...");
 		const populatedMessage = await Message.findById(message._id).populate(
 			"senderId",
 			"fullname username type"
 		);
+		console.log("Sender populated successfully:", populatedMessage.senderId?.fullname);
 
 		res.status(201).json({
 			success: true,
 			message: populatedMessage,
 		});
 	} catch (error) {
-		console.error("Error sending message:", error);
+		console.error("❌ Error sending message:");
+		console.error("Error name:", error.name);
+		console.error("Error message:", error.message);
+		console.error("Error stack:", error.stack);
+		console.error("Chat ID:", req.params.chatId);
+		console.error("User ID:", req.user?._id);
+		console.error("User Type:", req.user?.type);
+
 		res.status(500).json({
 			success: false,
 			message: "Server error while sending message",
 			error: error.message,
+			errorType: error.name,
 		});
 	}
 };
