@@ -10,7 +10,7 @@ const connectDB = async () => {
             tlsAllowInvalidHostnames: false,
             serverSelectionTimeoutMS: 10000,
         });
-        console.log(`MongoDB Connected: ${conn.connection.host}`);
+        // Removed duplicate console.log - will print once in server.js
     } catch (error) {
         console.error(`MongoDB Connection Error: ${error.message}`);
         console.error('Please check:');
