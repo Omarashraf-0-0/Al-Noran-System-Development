@@ -142,7 +142,27 @@ const createShipment = async (req, res) => {
 // ✅ جلب كل الشحنات
 const getAllShipments = async (req, res) => {
 	try {
-		const shipments = await Shipment.find()
+		// Get userId from authenticated user (from protect middleware)
+		const userId = req.user ? req.user._id : null;
+		const userType = req.user ? req.user.type : null;
+
+		if (!userId) {
+			return res.status(401).json({
+				success: false,
+				message: "User not authenticated",
+			});
+		}
+
+		let query = {};
+
+		// If user is a client, show only their shipments
+		if (userType === "client") {
+			query.user_id = userId;
+		}
+		// If user is employee or admin, show all shipments (or filter by employee_id if needed)
+		// For now, employees and admins see all shipments
+
+		const shipments = await Shipment.find(query)
 			.populate("user_id", "username fullname email")
 			.populate("employee_id", "username fullname email")
 			.sort({ createdAt: -1 });

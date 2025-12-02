@@ -72,13 +72,20 @@ const getAllRequests = async (req, res) => {
 		}
 
 		// Filter requests by userId to show only current user's requests
-		const requests = await AcidRequest.find({ userId }).sort({
-			requestDate: -1,
+		const requests = await AcidRequest.find({ userId })
+			.sort({ requestDate: -1 })
+			.populate('uploads');
+		
+		res.json({
+			success: true,
+			requests: requests,
 		});
-		res.json(requests);
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ message: "Server error while fetching requests" });
+		res.status(500).json({ 
+			success: false,
+			message: "Server error while fetching requests" 
+		});
 	}
 };
 
