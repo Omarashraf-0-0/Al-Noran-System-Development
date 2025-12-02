@@ -62,20 +62,24 @@ const ChatInterface = ({ preselectedChatId }) => {
 		}
 
 		// Listen for new messages
-		chatService.onNewMessage((message) => {
+		chatService.onNewMessage((data) => {
+			// Socket sends { chatId, message } structure
+			const chatId = data.chatId;
+			const message = data.message || data; // Support both formats
+			
 			console.log("New message received:", {
 				messageId: message._id,
-				messageChatId: message.chatId,
+				messageChatId: chatId,
 				selectedChatId: selectedChatRef.current?._id,
-				willAdd: selectedChatRef.current && message.chatId === selectedChatRef.current._id
+				willAdd: selectedChatRef.current && chatId === selectedChatRef.current._id
 			});
 
 			// Only add message to messages array if it belongs to currently selected chat
 			setMessages((prev) => {
 				// Check if message belongs to the selected chat
-				if (selectedChatRef.current && message.chatId === selectedChatRef.current._id) {
-					// Avoid duplicates
-					if (prev.find((m) => m._id === message._id)) {
+				if (selectedChatRef.current && chatId === selectedChatRef.current._id) {
+					// Avoid duplicates - check by _id if exists
+					if (message._id && prev.find((m) => m._id === message._id)) {
 						return prev;
 					}
 					console.log("Adding message to display");
@@ -89,7 +93,7 @@ const ChatInterface = ({ preselectedChatId }) => {
 			// Update last message in chat list (for all chats)
 			setChats((prev) =>
 				prev.map((chat) =>
-					chat._id === message.chatId
+					chat._id === chatId
 						? { ...chat, lastMessageAt: message.createdAt }
 						: chat
 				)
@@ -313,17 +317,25 @@ const ChatInterface = ({ preselectedChatId }) => {
 	});
 
 	// Format messages for ChatWindow component
-	const formattedMessages = messages.map((msg) => {
-		const isOwn = msg.senderId._id === userId || msg.senderId.id === userId;
+	const formattedMessages = messages.map((msg, index) => {
+		// Handle both populated senderId object and plain string ID
+		const senderId = typeof msg.senderId === 'object' 
+			? (msg.senderId?._id || msg.senderId?.id) 
+			: msg.senderId;
+		const senderName = typeof msg.senderId === 'object'
+			? (msg.senderId?.fullname || msg.senderId?.username || 'مستخدم')
+			: 'مستخدم';
+		
+		const isOwn = senderId ? String(senderId) === String(userId) : false;
 		console.log("Message ownership check:", {
-			messageSenderId: msg.senderId._id,
+			messageSenderId: senderId,
 			currentUserId: userId,
 			isOwn: isOwn,
 		});
 		return {
-			id: msg._id,
-			senderId: msg.senderId._id,
-			senderName: msg.senderId.fullname || msg.senderId.username,
+			id: msg._id || `temp-${index}-${Date.now()}`, // Fallback key for messages without _id
+			senderId: senderId,
+			senderName: senderName,
 			text: msg.text,
 			timestamp: new Date(msg.createdAt).toLocaleTimeString("ar-EG", {
 				hour: "2-digit",
