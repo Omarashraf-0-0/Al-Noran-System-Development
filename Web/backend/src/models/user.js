@@ -76,6 +76,14 @@ const UserSchema = new mongoose.Schema({
       type: Boolean,
       default: false,
     },
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+    socketId: {
+      type: String,
+      default: null,
+    },
   },
 }, {
   timestamps: true 

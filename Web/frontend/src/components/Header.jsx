@@ -140,8 +140,8 @@ const Header = () => {
 				{ label: "لوحة التحكم", path: "/employeedashboard", icon: "📊" },
 				{ label: "الشحنات", path: "/employee-shipments", icon: "📦" },
 				{ label: "طلبات ACID", path: "/employee/acid-requests", icon: "📋" },
-				{ label: "العملاء", path: "/clients", icon: "👥" },
-				{ label: "الدعم", path: "/chat", icon: "💬" },
+				{ label: "عملائي", path: "/my-customers", icon: "👥" },
+				{ label: "الدعم", path: "/support-dashboard", icon: "💬" },
 			];
 
 			// Add admin-specific items

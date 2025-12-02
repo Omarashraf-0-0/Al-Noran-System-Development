@@ -614,7 +614,7 @@ const updateUpload = async (req, res) => {
 			success: false,
 			message: "Server error updating upload",
 		});
-	}
+}
 };
 
 /**

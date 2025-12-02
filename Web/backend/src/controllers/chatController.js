@@ -2,7 +2,7 @@ const { Chat, Message } = require("../models/chat");
 const User = require("../models/user");
 const Shipment = require("../models/shipment");
 
-// Get all chats for a user (client sees their chats, employee sees all active chats)
+// Get all chats for a user (client sees their chats, employee sees chats for their assigned shipments)
 const getChats = async (req, res) => {
 	try {
 		const userId = req.user._id;
@@ -11,24 +11,18 @@ const getChats = async (req, res) => {
 		let chats;
 
 		if (userType === "client") {
-			// Client can only see their own chats
+			// Client can only see their own chats (based on shipments they own)
 			chats = await Chat.find({ clientId: userId })
-				.populate("clientId", "fullname username")
-				.populate("employeeId", "fullname username")
-				.populate("shipmentId", "acid")
+				.populate("clientId", "fullname username email")
+				.populate("employeeId", "fullname username email")
+				.populate("shipmentId", "acid status country")
 				.sort({ lastMessageAt: -1 });
 		} else if (userType === "employee") {
-			// Employee can see all chats or chats assigned to them
-			chats = await Chat.find({
-				$or: [
-					{ employeeId: userId },
-					{ employeeId: null }, // Unassigned chats
-					{ status: "active" },
-				],
-			})
-				.populate("clientId", "fullname username")
-				.populate("employeeId", "fullname username")
-				.populate("shipmentId", "acid")
+			// Employee sees chats for shipments assigned to them
+			chats = await Chat.find({ employeeId: userId })
+				.populate("clientId", "fullname username email")
+				.populate("employeeId", "fullname username email")
+				.populate("shipmentId", "acid status country")
 				.sort({ lastMessageAt: -1 });
 		} else {
 			return res.status(403).json({
@@ -51,43 +45,114 @@ const getChats = async (req, res) => {
 	}
 };
 
-// Get or create a chat for a client
+// Get or create a chat for a specific shipment
 const getOrCreateChat = async (req, res) => {
 	try {
 		const userId = req.user._id;
 		const userType = req.user.type;
 		const { shipmentId } = req.body;
 
-		if (userType !== "client") {
-			return res.status(403).json({
+		console.log("getOrCreateChat called:", {
+			userId: userId.toString(),
+			userType,
+			username: req.user.username,
+			shipmentId,
+		});
+
+		if (!shipmentId) {
+			return res.status(400).json({
 				success: false,
-				message: "Only clients can create support chats",
+				message: "Shipment ID is required",
 			});
 		}
 
-		// Check if chat already exists for this client
-		let chat = await Chat.findOne({
-			clientId: userId,
-			status: { $ne: "resolved" }, // Not resolved
-		})
-			.populate("clientId", "fullname username")
-			.populate("employeeId", "fullname username")
-			.populate("shipmentId", "acid");
+		// Verify shipment exists
+		const shipment = await Shipment.findById(shipmentId);
+		if (!shipment) {
+			return res.status(404).json({
+				success: false,
+				message: "Shipment not found",
+			});
+		}
+
+		// Check if shipment has an assigned employee
+		if (!shipment.employee_id) {
+			return res.status(400).json({
+				success: false,
+				message: "No employee assigned to this shipment yet. Please wait for assignment.",
+			});
+		}
+
+		// Verify user has access to this shipment
+		if (userType === "client") {
+			if (shipment.user_id.toString() !== userId.toString()) {
+				return res.status(403).json({
+					success: false,
+					message: "You don't have access to this shipment",
+				});
+			}
+		} else if (userType === "employee") {
+			if (shipment.employee_id.toString() !== userId.toString()) {
+				return res.status(403).json({
+					success: false,
+					message: "This shipment is not assigned to you",
+				});
+			}
+		}
+
+		// Determine the client and employee IDs
+		const clientId = userType === "client" ? userId : shipment.user_id;
+		const employeeId = shipment.employee_id;
+
+		// Check if chat already exists for this shipment
+		let chat = await Chat.findOne({ shipmentId })
+			.populate("clientId", "fullname username email")
+			.populate("employeeId", "fullname username email")
+			.populate("shipmentId", "acid status country");
+
+		console.log("Existing chat found:", chat ? {
+			chatId: chat._id.toString(),
+			shipmentId: chat.shipmentId._id.toString(),
+			chatClientId: chat.clientId._id.toString(),
+			currentClientId: clientId.toString(),
+		} : "No existing chat");
 
 		if (!chat) {
-			// Create new chat
+			// Create new chat linking client and employee through shipment
 			chat = new Chat({
-				clientId: userId,
-				shipmentId: shipmentId || null,
-				status: "pending",
+				clientId: clientId,
+				employeeId: employeeId,
+				shipmentId: shipmentId,
+				status: "active",
 			});
 			await chat.save();
 
 			// Populate after save
 			chat = await Chat.findById(chat._id)
-				.populate("clientId", "fullname username")
-				.populate("employeeId", "fullname username")
-				.populate("shipmentId", "acid");
+				.populate("clientId", "fullname username email")
+				.populate("employeeId", "fullname username email")
+				.populate("shipmentId", "acid status country");
+		} else {
+			// If chat exists but has wrong clientId or employeeId, update it
+			let needsUpdate = false;
+			if (chat.clientId._id.toString() !== clientId.toString()) {
+				console.log("Updating chat clientId from", chat.clientId._id.toString(), "to", clientId.toString());
+				chat.clientId = clientId;
+				needsUpdate = true;
+			}
+			if (chat.employeeId._id.toString() !== employeeId.toString()) {
+				console.log("Updating chat employeeId from", chat.employeeId._id.toString(), "to", employeeId.toString());
+				chat.employeeId = employeeId;
+				needsUpdate = true;
+			}
+			if (needsUpdate) {
+				await chat.save();
+				// Re-populate after update
+				chat = await Chat.findById(chat._id)
+					.populate("clientId", "fullname username email")
+					.populate("employeeId", "fullname username email")
+					.populate("shipmentId", "acid status country");
+			}
 		}
 
 		res.json({
@@ -121,15 +186,30 @@ const getMessages = async (req, res) => {
 			});
 		}
 
+		console.log("getMessages - User:", { userId: userId.toString(), userType });
+		console.log("getMessages - Chat:", { 
+			clientId: chat.clientId?.toString(), 
+			employeeId: chat.employeeId?.toString(),
+			shipmentId: chat.shipmentId?.toString()
+		});
+
 		// Check authorization
-		if (
-			userType === "client" &&
-			chat.clientId.toString() !== userId.toString()
-		) {
-			return res.status(403).json({
-				success: false,
-				message: "Access denied to this chat",
-			});
+		if (userType === "client") {
+			if (chat.clientId.toString() !== userId.toString()) {
+				console.log("Client access denied - IDs don't match");
+				return res.status(403).json({
+					success: false,
+					message: "Access denied to this chat",
+				});
+			}
+		} else if (userType === "employee") {
+			if (chat.employeeId.toString() !== userId.toString()) {
+				console.log("Employee access denied - IDs don't match");
+				return res.status(403).json({
+					success: false,
+					message: "Access denied to this chat",
+				});
+			}
 		}
 
 		const messages = await Message.find({ chatId })
@@ -324,6 +404,11 @@ const resolveChat = async (req, res) => {
 		chat.status = "resolved";
 		await chat.save();
 
+		// Emit event via Socket.IO
+		if (req.io) {
+			req.io.to(`chat_${chatId}`).emit("chat_resolved", { chatId });
+		}
+
 		res.json({
 			success: true,
 			message: "Chat resolved successfully",
@@ -338,6 +423,129 @@ const resolveChat = async (req, res) => {
 	}
 };
 
+// Get online employees
+const getOnlineEmployees = async (req, res) => {
+	try {
+		const employees = await User.find({
+			type: "employee",
+			"employeeDetails.isOnline": true,
+		}).select("fullname username employeeDetails");
+
+		res.json({
+			success: true,
+			employees,
+			count: employees.length,
+		});
+	} catch (error) {
+		console.error("Error fetching online employees:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error while fetching online employees",
+			error: error.message,
+		});
+	}
+};
+
+// Get customers for an employee (based on assigned shipments)
+const getMyCustomers = async (req, res) => {
+	try {
+		const userId = req.user._id;
+		const userType = req.user.type;
+
+		if (userType !== "employee") {
+			return res.status(403).json({
+				success: false,
+				message: "Only employees can access this endpoint",
+			});
+		}
+
+		// Find all shipments assigned to this employee
+		const shipments = await Shipment.find({ employee_id: userId })
+			.populate("user_id", "fullname username email")
+			.select("acid status country user_id");
+
+		// Extract unique customers
+		const customersMap = new Map();
+		shipments.forEach((shipment) => {
+			if (shipment.user_id) {
+				const clientId = shipment.user_id._id.toString();
+				if (!customersMap.has(clientId)) {
+					customersMap.set(clientId, {
+						_id: shipment.user_id._id,
+						fullname: shipment.user_id.fullname,
+						username: shipment.user_id.username,
+						email: shipment.user_id.email,
+						shipments: [],
+					});
+				}
+				customersMap.get(clientId).shipments.push({
+					_id: shipment._id,
+					acid: shipment.acid,
+					status: shipment.status,
+					country: shipment.country,
+				});
+			}
+		});
+
+		const customers = Array.from(customersMap.values());
+
+		res.json({
+			success: true,
+			customers,
+			count: customers.length,
+		});
+	} catch (error) {
+		console.error("Error fetching customers:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error while fetching customers",
+			error: error.message,
+		});
+	}
+};
+
+// Mark messages as delivered
+const markAsDelivered = async (req, res) => {
+	try {
+		const { chatId } = req.params;
+		const userId = req.user._id;
+
+		const chat = await Chat.findById(chatId);
+		if (!chat) {
+			return res.status(404).json({
+				success: false,
+				message: "Chat not found",
+			});
+		}
+
+		// Update undelivered messages
+		await Message.updateMany(
+			{
+				chatId,
+				senderId: { $ne: userId },
+				isRead: false,
+			},
+			{ isRead: true }
+		);
+
+		// Reset unread count
+		chat.unreadCount = 0;
+		await chat.save();
+
+		res.json({
+			success: true,
+			message: "Messages marked as delivered",
+		});
+	} catch (error) {
+		console.error("Error marking messages:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error",
+			error: error.message,
+		});
+	}
+};
+
 module.exports = {
 	getChats,
 	getOrCreateChat,
@@ -345,4 +553,7 @@ module.exports = {
 	sendMessage,
 	assignChat,
 	resolveChat,
+	getOnlineEmployees,
+	getMyCustomers,
+	markAsDelivered,
 };

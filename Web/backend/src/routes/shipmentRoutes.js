@@ -65,5 +65,4 @@ router.get("/id/:shipmentId", protect, getShipmentById);
 router.get("/:acid", protect, getShipmentByAcid);
 router.patch("/:acid", protect, updateShipmentStatus);
 router.delete("/:acid", protect, deleteShipment);
-
 module.exports = router;
