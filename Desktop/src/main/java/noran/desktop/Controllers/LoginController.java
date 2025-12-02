@@ -36,9 +36,8 @@ public class LoginController {
             return;
         }
 
-        // ✅ Match backend keys exactly: identifier and password
+        // Match backend keys exactly
         String jsonBody = String.format("{\"identifier\":\"%s\",\"password\":\"%s\"}", identifier, password);
-
         String response = APIService.post(LOGIN_URL, jsonBody);
 
         if (response == null || response.isBlank()) {
@@ -53,35 +52,49 @@ public class LoginController {
                 showAlert(Alert.AlertType.ERROR, "فشل تسجيل الدخول", json.getString("error"));
             } else if (json.has("token")) {
 
-                // extract user info when available and store in AppSession so it's accessible app-wide
-                try {
-                    String extractedId = "";
-                    String extractedName = "";
+                String extractedId = "";
+                String extractedName = "";
+                String extractedRole = "";
 
+                try {
                     if (json.has("user") && json.get("user") instanceof JSONObject) {
                         JSONObject u = json.getJSONObject("user");
                         extractedId = u.optString("id", u.optString("_id", u.optString("userId", "")));
                         extractedName = u.optString("name", u.optString("username", u.optString("fullname", "")));
+                        extractedRole = u.optString("type", u.optString("role", ""));
                     } else {
-                        // try top-level fields as fallback
                         extractedId = json.optString("id", json.optString("_id", ""));
-                        extractedName = json.optString("name", json.optString("username", json.optString("username", "")));
+                        extractedName = json.optString("name", json.optString("username", ""));
+                        extractedRole = json.optString("type", json.optString("role", ""));
                     }
 
-                    // create and store User in session
-                    noran.desktop.Controllers.User loggedInUser = new noran.desktop.Controllers.User(extractedId, extractedName);
+                    // 🛑 ACCESS CONTROL CHECK 🛑
+                    // Check if role is strictly "employee" (ignoring case)
+                    if (!extractedRole.equalsIgnoreCase("employee")) {
+                        showAlert(Alert.AlertType.ERROR, "تم رفض الوصول", "هذا التطبيق مخصص للموظفين فقط.\n(الدور الحالي: " + extractedRole + ")");
+                        return; // Stop here, do not load dashboard
+                    }
+
+                    // Create user and save to session
+                    noran.desktop.Controllers.User loggedInUser = new noran.desktop.Controllers.User(extractedId, extractedName, extractedRole);
                     noran.desktop.AppSession.getInstance().setCurrentUser(loggedInUser);
+
                 } catch (Exception ex) {
-                    // don't fail login if parsing user info fails — keep going
                     ex.printStackTrace();
+                    showAlert(Alert.AlertType.ERROR, "خطأ", "حدث خطأ أثناء معالجة بيانات المستخدم.");
+                    return;
                 }
-                showAlert(Alert.AlertType.INFORMATION, "تم تسجيل الدخول", "تم تسجيل الدخول بنجاح!");
+
+                showAlert(Alert.AlertType.INFORMATION, "تم تسجيل الدخول", "أهلاً بك يا " + extractedName);
+
+                // Navigate to Dashboard
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/dashboard.fxml"));
                 Parent root = loader.load();
                 Scene scene = new Scene(root);
                 Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
                 stage.setScene(scene);
                 stage.show();
+
             } else {
                 showAlert(Alert.AlertType.INFORMATION, "استجابة الخادم", response);
             }

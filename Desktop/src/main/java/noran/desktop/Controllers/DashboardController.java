@@ -69,7 +69,7 @@ public class DashboardController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         User currentUser = AppSession.getInstance().getCurrentUser();
-
+        System.out.println(currentUser.toString());
         loadDashboardData();
         sidebarController.setActivePage("dashboard");
         if (topBarController != null && currentUser != null) {
