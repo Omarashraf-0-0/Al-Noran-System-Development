@@ -23,7 +23,9 @@ const ShipmentChatPage = () => {
 	const typingTimeoutRef = useRef(null);
 	const mountedRef = useRef(false);
 
-	const user = useRef(JSON.parse(localStorage.getItem("user") || "null")).current;
+	const user = useRef(
+		JSON.parse(localStorage.getItem("user") || "null")
+	).current;
 	const token = useRef(localStorage.getItem("token")).current;
 
 	const scrollToBottom = () => {
@@ -73,7 +75,9 @@ const ShipmentChatPage = () => {
 
 				// Fetch messages
 				const messagesResponse = await axios.get(
-					`${import.meta.env.VITE_API_URL}/api/chat/${response.data.chat._id}/messages`,
+					`${import.meta.env.VITE_API_URL}/api/chat/${
+						response.data.chat._id
+					}/messages`,
 					{
 						headers: {
 							Authorization: `Bearer ${token}`,
@@ -90,15 +94,19 @@ const ShipmentChatPage = () => {
 				chatService.joinChat(response.data.chat._id, userId);
 
 				// Listen for new messages
-				chatService.onNewMessage((message) => {
-					if (message.chatId === response.data.chat._id) {
-						setMessages((prev) => [...prev, message]);
+				chatService.onNewMessage((data) => {
+					// data is { chatId, message }
+					if (data.chatId === response.data.chat._id && data.message) {
+						setMessages((prev) => [...prev, data.message]);
 					}
 				});
 
 				// Listen for typing
 				chatService.onTyping((data) => {
-					if (data.chatId === response.data.chat._id && data.userId !== user._id) {
+					if (
+						data.chatId === response.data.chat._id &&
+						data.userId !== user._id
+					) {
 						setIsTyping(data.isTyping);
 					}
 				});
@@ -190,7 +198,8 @@ const ShipmentChatPage = () => {
 					</button>
 					<div className="bg-yellow-50 border border-yellow-300 rounded-xl p-8 text-center">
 						<p className="text-yellow-800 text-lg">
-							⏳ لم يتم تعيين موظف لهذه الشحنة بعد. سيتم تفعيل المحادثة بمجرد التعيين.
+							⏳ لم يتم تعيين موظف لهذه الشحنة بعد. سيتم تفعيل المحادثة بمجرد
+							التعيين.
 						</p>
 					</div>
 				</div>
@@ -229,10 +238,16 @@ const ShipmentChatPage = () => {
 					{/* Chat Header */}
 					<div className="bg-gradient-to-r from-red-900 to-red-700 p-4">
 						<div className="flex items-center gap-3">
-							<img src={AVATAR} alt="Agent" className="w-12 h-12 rounded-full" />
+							<img
+								src={AVATAR}
+								alt="Agent"
+								className="w-12 h-12 rounded-full"
+							/>
 							<div className="text-white">
 								<h3 className="font-bold text-lg">
-									{chat?.employeeId?.fullname || chat?.employeeId?.username || "موظفك"}
+									{chat?.employeeId?.fullname ||
+										chat?.employeeId?.username ||
+										"موظفك"}
 								</h3>
 								<p className="text-sm text-red-100">
 									{isTyping ? "يكتب..." : "متاح للمساعدة"}
@@ -254,13 +269,17 @@ const ShipmentChatPage = () => {
 							<div className="flex flex-col gap-4">
 								{messages.map((msg) => {
 									const currentUserId = user._id || user.id;
-									const messageSenderId = msg.senderId?._id || msg.senderId?.id || msg.senderId;
-									const isOwnMessage = String(messageSenderId) === String(currentUserId);
+									const messageSenderId =
+										msg.senderId?._id || msg.senderId?.id || msg.senderId;
+									const isOwnMessage =
+										String(messageSenderId) === String(currentUserId);
 
 									return (
 										<div
 											key={msg._id}
-											className={`flex ${isOwnMessage ? "justify-end" : "justify-start"} w-full`}
+											className={`flex ${
+												isOwnMessage ? "justify-end" : "justify-start"
+											} w-full`}
 										>
 											<div
 												className={`flex items-end gap-2 max-w-[70%] ${
@@ -285,10 +304,13 @@ const ShipmentChatPage = () => {
 															isOwnMessage ? "text-red-100" : "text-gray-500"
 														}`}
 													>
-														{new Date(msg.createdAt).toLocaleTimeString("ar-EG", {
-															hour: "2-digit",
-															minute: "2-digit",
-														})}
+														{new Date(msg.createdAt).toLocaleTimeString(
+															"ar-EG",
+															{
+																hour: "2-digit",
+																minute: "2-digit",
+															}
+														)}
 													</span>
 												</div>
 											</div>
@@ -318,7 +340,10 @@ const ShipmentChatPage = () => {
 
 					{/* Message Input */}
 					<div className="p-4 bg-white border-t border-gray-200">
-						<form onSubmit={handleSendMessage} className="flex items-center gap-3">
+						<form
+							onSubmit={handleSendMessage}
+							className="flex items-center gap-3"
+						>
 							<input
 								type="text"
 								value={newMessage}

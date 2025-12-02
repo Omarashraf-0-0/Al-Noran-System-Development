@@ -50,7 +50,9 @@ const AcidRequestsPage = () => {
 
 				console.log("Fetched ACID requests:", response.data);
 
-				const formattedRequests = (response.data || []).map((request) => ({
+				// Handle both response formats: { requests: [...] } or direct array
+				const requestsArray = response.data?.requests || response.data || [];
+				const formattedRequests = requestsArray.map((request) => ({
 					id: request._id,
 					acidCode: request.acidCode || "قيد المعالجة",
 					supplierName: request.supplier?.name || "غير محدد",

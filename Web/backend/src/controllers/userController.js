@@ -3,12 +3,11 @@ const Notification = require("../models/notifications");
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcrypt");
 const notifications = require("../models/notifications");
-const phoneNumberValidation = require('../middleware/validation');
-const {send_mail} = require('../services/mailer');
-const ContactUs = require('../models/contactus');
+const phoneNumberValidation = require("../middleware/validation");
+const { send_mail } = require("../services/mailer");
+const ContactUs = require("../models/contactus");
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
-
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -358,7 +357,9 @@ const contactUs = async (req, res) => {
 
 		if (!firstName || !secondName) {
 			return res.status(400).json({
-				message: !firstName ? "First name is not provided" : "Second name is not provided",
+				message: !firstName
+					? "First name is not provided"
+					: "Second name is not provided",
 			});
 		}
 
@@ -517,7 +518,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 			let field = "Username";
 			if (duplicate.email === email) field = "Email";
 			else if (duplicate.phone === phone) field = "Phone number";
-			
+
 			return res.status(409).json({
 				success: false,
 				message: `${field} is already taken by another user`,
@@ -538,7 +539,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 		user.username = username;
 		user.phone = phone;
 		user.email = email;
-		
+
 		// Update profile photo if provided
 		if (profilePhoto !== undefined) {
 			console.log("📸 Updating profile photo to:", profilePhoto);
@@ -546,8 +547,11 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 		}
 
 		const updatedUser = await user.save();
-		
-		console.log("✅ User updated successfully. Profile photo:", updatedUser.profilePhoto);
+
+		console.log(
+			"✅ User updated successfully. Profile photo:",
+			updatedUser.profilePhoto
+		);
 
 		res.status(200).json({
 			success: true,

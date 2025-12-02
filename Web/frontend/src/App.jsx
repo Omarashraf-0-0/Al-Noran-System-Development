@@ -108,7 +108,10 @@ const App = () => {
 				<Route path="/chat" element={<Chat />} />
 				<Route path="/support-dashboard" element={<SupportDashboard />} />
 				<Route path="/my-customers" element={<MyCustomers />} />
-				<Route path="/shipment-chat/:shipmentId" element={<ShipmentChatPage />} />
+				<Route
+					path="/shipment-chat/:shipmentId"
+					element={<ShipmentChatPage />}
+				/>
 				<Route
 					path="/employee/acid-requests"
 					element={<EmployeeAcidRequestsPage />}
