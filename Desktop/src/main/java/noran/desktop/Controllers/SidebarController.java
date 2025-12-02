@@ -18,6 +18,8 @@ public class SidebarController {
     @FXML private Button invoicesBtn;
     @FXML private Button employeesBtn;
     @FXML private Button shipmentsBtn;
+    @FXML private Button addInvoicesBtn;
+    @FXML private Button invoiceCompletionBtn;
 
     // Constant Styles
     private final String ACTIVE_STYLE = "-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12; -fx-background-radius: 8;";
@@ -48,6 +50,12 @@ public class SidebarController {
             case "shipments":
                 shipmentsBtn.setStyle(ACTIVE_STYLE);
                 break;
+            case "new invoice":
+                addInvoicesBtn.setStyle(ACTIVE_STYLE);
+                break;
+            case "invoice completion":
+                invoiceCompletionBtn.setStyle(ACTIVE_STYLE);
+                break;
         }
     }
 
@@ -57,6 +65,8 @@ public class SidebarController {
         if(invoicesBtn != null) invoicesBtn.setStyle(INACTIVE_STYLE);
         if(employeesBtn != null) employeesBtn.setStyle(INACTIVE_STYLE);
         if(shipmentsBtn != null) shipmentsBtn.setStyle(INACTIVE_STYLE);
+        if(addInvoicesBtn != null) addInvoicesBtn.setStyle(INACTIVE_STYLE);
+        if(invoiceCompletionBtn != null) invoiceCompletionBtn.setStyle(INACTIVE_STYLE);
     }
 
     // --- Navigation Methods ---

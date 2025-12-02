@@ -9,7 +9,7 @@ public class User implements Serializable {
 
     private String id;
     private String name;
-    private String rank;
+    private String role;
 
     public User() {}
 
@@ -18,10 +18,10 @@ public class User implements Serializable {
         this.name = name;
     }
 
-    public User(String id, String name, String rank) {
+    public User(String id, String name, String role) {
         this.id = id;
         this.name = name;
-        this.rank = rank;
+        this.role = role;
     }
 
     public String getId() { return id; }
@@ -30,15 +30,16 @@ public class User implements Serializable {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public String getRank() { return rank; }
-    public void setRank(String rank) { this.rank = rank; }
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
 
     @Override
     public String toString() {
         return "User{" +
                 "id='" + id + '\'' +
                 ", name='" + name + '\'' +
-                ", rank='" + rank + '\'' +
+                ", role='" + role + '\'' +
                 '}';
     }
 
@@ -48,11 +49,11 @@ public class User implements Serializable {
         if (!(o instanceof User user)) return false;
         return Objects.equals(id, user.id) &&
                 Objects.equals(name, user.name) &&
-                Objects.equals(rank, user.rank);
+                Objects.equals(role, user.role);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, rank);
+        return Objects.hash(id, name, role);
     }
 }

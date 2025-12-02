@@ -17,6 +17,9 @@
 
 <BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.AdminInvoicesController">
 
+    <left>
+        <fx:include fx:id="sidebar" source="Sidebar.fxml" />
+    </left>
     <top>
         <fx:include fx:id="topBar" source="TopBar.fxml" />
     </top>
@@ -33,7 +36,6 @@
                   </image>
                </ImageView>
                <Button fx:id="updateClientBtn1" layoutX="2.0" onAction="#refreshTable" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
-               <Button layoutX="1080.0" layoutY="8.0" onAction="#navigateToDashboard" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 8 20;" text="رجوع" />
             </children>
          </AnchorPane>
             <Label style="-fx-font-size: 26; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;" text="جميع الفواتير في النظام" />
@@ -41,7 +43,7 @@
             <!-- فلتر الحالة -->
             <HBox alignment="CENTER_LEFT" spacing="15">
                 <Label style="-fx-font-size: 16;" text="فلتر الحالة:" />
-                <ComboBox fx:id="statusFilter" prefWidth="200" promptText="جميع الحالات">
+                <ComboBox fx:id="statusFilter" prefWidth="200" promptText="جميع الحالات" style="-fx-background-radius: 10;">
                     <items>
                         <FXCollections fx:factory="observableArrayList">
                             <String fx:value="الكل" />
@@ -51,7 +53,6 @@
                         </FXCollections>
                     </items>
                 </ComboBox>
-                <Button onAction="#refreshTable" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 8 20;" text="تحديث" />
             </HBox>
 
             <!-- الجدول -->

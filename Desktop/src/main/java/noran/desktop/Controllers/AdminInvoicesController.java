@@ -17,6 +17,7 @@ import javafx.geometry.Insets;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import noran.desktop.AppSession;
 import noran.desktop.Database.DatabaseConnection;
 
 import java.io.IOException;
@@ -37,6 +38,9 @@ public class AdminInvoicesController {
     @FXML private TableColumn<InvoiceAdmin, Void> colActions;
     @FXML private ComboBox<String> statusFilter;
 
+    @FXML private SidebarController sidebarController;
+    @FXML private TopBarController topBarController;
+
     private final ObservableList<InvoiceAdmin> invoices = FXCollections.observableArrayList();
     private static final DateTimeFormatter AR_DATE = DateTimeFormatter
             .ofPattern("dd MMMM yyyy - hh:mm a", new Locale("ar"))
@@ -50,6 +54,24 @@ public class AdminInvoicesController {
         statusFilter.setItems(FXCollections.observableArrayList("الكل", "pending", "accepted", "rejected"));
         statusFilter.valueProperty().addListener((obs, old, newVal) -> refreshTable());
         refreshTable();
+
+        if (sidebarController != null) {
+            sidebarController.setActivePage("invoice completion");
+        }
+
+        // 8. Configure TopBar (Title + User Info + Search Logic)
+        User currentUser = AppSession.getInstance().getCurrentUser();
+        if (topBarController != null) {
+
+            // Set Page Title
+            topBarController.setPageTitle("تخليص الفواتير");
+            // Set User Info
+            if (currentUser != null) {
+                String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
+                String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
+                topBarController.setUserData(name, id);
+            }
+        }
     }
 
     private void setupColumns() {

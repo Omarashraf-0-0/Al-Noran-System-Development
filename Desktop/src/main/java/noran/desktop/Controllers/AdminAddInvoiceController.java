@@ -24,6 +24,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.stage.FileChooser;
+import noran.desktop.AppSession;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -38,6 +39,9 @@ public class AdminAddInvoiceController {
     @FXML private TableColumn<InvoiceRow, String> colDesc;
     @FXML private TableColumn<InvoiceRow, Double> colPrice;
     @FXML private Label totalLabel;
+
+    @FXML private SidebarController sidebarController;
+    @FXML private TopBarController topBarController;
 
     private final ObservableList<InvoiceRow> items = FXCollections.observableArrayList();
 
@@ -56,6 +60,21 @@ public class AdminAddInvoiceController {
 
         // Add a default empty row so user can start typing immediately
         addEmptyRow();
+
+        if (sidebarController != null) {
+            sidebarController.setActivePage("new invoice");
+        }
+
+        // 8. Configure TopBar (Title + User Info + Search Logic)
+        User currentUser = AppSession.getInstance().getCurrentUser();
+        topBarController.setPageTitle("إضافة فاتورة جديدة");
+
+        // Set User Info
+        if (currentUser != null) {
+            String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
+            String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
+            topBarController.setUserData(name, id);
+        }
     }
 
     private InvoiceRow showAddItemDialog() {

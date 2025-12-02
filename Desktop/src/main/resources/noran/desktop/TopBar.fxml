@@ -17,7 +17,7 @@
 
     <HBox fx:id="searchContainer" alignment="CENTER_RIGHT" maxHeight="40" spacing="8" style="-fx-background-color: #f3f4f6; -fx-padding: 6 10; -fx-background-radius: 20;">
 
-        <TextField fx:id="searchField" prefWidth="380" promptText="ابحث برقم الشحنة أو اسم العميل" style="-fx-background-color: transparent;" />
+        <TextField fx:id="searchField" prefWidth="380" promptText="ابحث ....." style="-fx-background-color: transparent;" />
         <ImageView fitHeight="18" fitWidth="18"><image><Image url="@images/search.png" /></image></ImageView>
 
     </HBox>
