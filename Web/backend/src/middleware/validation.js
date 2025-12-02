@@ -1,4 +1,4 @@
-const { body } = require('express-validator');
+const { body , check } = require('express-validator');
 
 const signupValidationRules = [
   body('fullname', 'الاسم الكامل مطلوب').not().isEmpty().trim().escape(),
@@ -40,7 +40,27 @@ const signupValidationRules = [
   }),
 ];
 
+
+
+const isPhoneNumberValid = (value) => {
+  const phoneNumber = parsePhoneNumberFromString(value, 'EG');
+
+  if (!phoneNumber || !phoneNumber.isValid()) {
+    throw new Error('Please enter a valid phone number');
+  }
+
+  return true;
+};
+
+const phoneNumberValidation = [
+  check('phoneNumber').custom(isPhoneNumberValid)
+];
+
+
+
+
 module.exports = {
-  signupValidationRules
+  signupValidationRules,
+  phoneNumberValidation
 };
 
