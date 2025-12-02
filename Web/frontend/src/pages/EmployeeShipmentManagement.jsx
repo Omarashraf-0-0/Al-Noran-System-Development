@@ -335,7 +335,11 @@ const EmployeeShipmentManagement = () => {
 	};
 
 	const handleContactClient = () => {
-		toast.info("سيتم إضافة نظام المراسلة قريباً");
+		if (shipment?._id) {
+			navigate(`/shipment-chat/${shipment._id}`);
+		} else {
+			toast.error("لا يمكن فتح المحادثة، الرجاء المحاولة مرة أخرى");
+		}
 	};
 
 	// Loading state
