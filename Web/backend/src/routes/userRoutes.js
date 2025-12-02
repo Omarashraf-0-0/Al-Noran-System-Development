@@ -8,8 +8,12 @@ const {
   changePassword,
   addUsers,
   getNotifications,
-  sendNotification
+  sendNotification,
+  contactUs
 } = require('../controllers/userController');
+
+const { phoneNumberValidation } = require('../middleware/validation');
+
 
 // Base routes for user operations
 router.route('/')
@@ -32,6 +36,6 @@ router.route('/:id/change-password')
 
 router.route('/notifications/sendNotification').post(sendNotification)
 router.route('/notifications/getAllNotifications').get(getNotifications)
-
+router.route('/contactUs/sendMail').post(phoneNumberValidation,contactUs);
 
 module.exports = router;
