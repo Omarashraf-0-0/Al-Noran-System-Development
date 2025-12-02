@@ -9,13 +9,23 @@ const {
   addUsers,
   getNotifications,
   sendNotification,
-  contactUs
+  contactUs,
+  getUserProfile,
+  updateUserProfile,
+  changePasswordProfile,
 } = require('../controllers/userController');
-
+const { protect } = require('../middleware/auth');
 const { phoneNumberValidation } = require('../middleware/validation');
 
+// Profile routes (protected)
+router.route('/profile')
+  .get(protect, getUserProfile)
+  .put(protect, updateUserProfile);
 
-// Base routes for user operations
+router.route('/change-password')
+  .put(protect, changePasswordProfile);
+
+// User management routes
 router.route('/')
   .get(getAllUsers)
   .post(createUser);

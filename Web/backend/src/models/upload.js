@@ -28,6 +28,9 @@ const uploadSchema = new mongoose.Schema(
 		documentType: {
 			type: String,
 			enum: [
+				// Profile photo
+				"profilePhoto",               // صورة الملف الشخصي
+				
 				// Factory documents (مصنع)
 				"commercial_register",        // السجل التجاري
 				"tax_card",                   // البطاقة الضريبية

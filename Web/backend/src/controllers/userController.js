@@ -344,9 +344,11 @@ const sendNotification = async (req, res) => {
 	}
 };
 
-
-const contactUs = async (req,res) => {
-	try{
+// @desc    Contact Us form handler
+// @route   POST /api/users/contact
+// @access  Public
+const contactUs = async (req, res) => {
+	try {
 		const data = req.body;
 		const firstName = data.firstName;
 		const secondName = data.secondName;
@@ -354,9 +356,10 @@ const contactUs = async (req,res) => {
 		const email = data.email;
 		const message = data.message;
 
-		if(!firstName || !secondName)
-		{
-			return res.status(400).json({message:!firstName?"First name is not provided":"Second name is not provided"});
+		if (!firstName || !secondName) {
+			return res.status(400).json({
+				message: !firstName ? "First name is not provided" : "Second name is not provided",
+			});
 		}
 
 		const dbResponse = await ContactUs.insertOne({
@@ -367,7 +370,6 @@ const contactUs = async (req,res) => {
 			message,
 			createdAt: new Date(),
 		});
-
 
 		const mailMessage = `Hello,
 
@@ -383,7 +385,6 @@ const contactUs = async (req,res) => {
 		Best regards,
 		Your Website Team
 		`;
-
 
 		const mailMessageHTML = `
 		<!DOCTYPE html>
@@ -415,7 +416,6 @@ const contactUs = async (req,res) => {
 		</html>
 		`;
 
-
 		await send_mail(
 			process.env.EMAIL_USER,
 			"Contact Us Form",
@@ -423,15 +423,225 @@ const contactUs = async (req,res) => {
 			mailMessageHTML
 		);
 
-
-		return res.status(200).json({message:"Mail sent successfully"});
-
-	}catch(err)
-	{
-		return res.status(500).json({message:err.message});
+		return res.status(200).json({ message: "Mail sent successfully" });
+	} catch (err) {
+		return res.status(500).json({ message: err.message });
 	}
 };
 
+// @desc    Get user profile
+// @route   GET /api/users/profile
+// @access  Private
+const getUserProfile = asyncHandler(async (req, res) => {
+	try {
+		const userId = req.user?.id || req.user?._id;
+
+		if (!userId) {
+			return res.status(401).json({
+				success: false,
+				message: "Unauthorized - User ID not found",
+			});
+		}
+
+		const user = await User.findById(userId).select("-password").lean();
+
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				message: "User not found",
+			});
+		}
+
+		res.status(200).json({
+			success: true,
+			user: user,
+		});
+	} catch (error) {
+		console.error("Get Profile Error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error",
+			error: error.message,
+		});
+	}
+});
+
+// @desc    Update user profile
+// @route   PUT /api/users/profile
+// @access  Private
+const updateUserProfile = asyncHandler(async (req, res) => {
+	try {
+		const userId = req.user?.id || req.user?._id;
+		const { fullname, username, phone, email, profilePhoto } = req.body;
+
+		if (!userId) {
+			return res.status(401).json({
+				success: false,
+				message: "Unauthorized - User ID not found",
+			});
+		}
+
+		// Validate required fields
+		if (!fullname || !username || !phone || !email) {
+			return res.status(400).json({
+				success: false,
+				message: "All fields are required",
+			});
+		}
+
+		// Validate email format
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(email)) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid email format",
+			});
+		}
+
+		// Validate phone format (10-15 digits)
+		const phoneRegex = /^[0-9]{10,15}$/;
+		if (!phoneRegex.test(phone.replace(/[\s-]/g, ""))) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid phone number format",
+			});
+		}
+
+		// Check for duplicate username, email, or phone (excluding current user)
+		const duplicate = await User.findOne({
+			_id: { $ne: userId },
+			$or: [{ username }, { email }, { phone }],
+		}).lean();
+
+		if (duplicate) {
+			let field = "Username";
+			if (duplicate.email === email) field = "Email";
+			else if (duplicate.phone === phone) field = "Phone number";
+			
+			return res.status(409).json({
+				success: false,
+				message: `${field} is already taken by another user`,
+			});
+		}
+
+		// Find and update user
+		const user = await User.findById(userId);
+
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				message: "User not found",
+			});
+		}
+
+		user.fullname = fullname;
+		user.username = username;
+		user.phone = phone;
+		user.email = email;
+		
+		// Update profile photo if provided
+		if (profilePhoto !== undefined) {
+			console.log("📸 Updating profile photo to:", profilePhoto);
+			user.profilePhoto = profilePhoto;
+		}
+
+		const updatedUser = await user.save();
+		
+		console.log("✅ User updated successfully. Profile photo:", updatedUser.profilePhoto);
+
+		res.status(200).json({
+			success: true,
+			message: "Profile updated successfully",
+			user: {
+				id: updatedUser._id,
+				fullname: updatedUser.fullname,
+				username: updatedUser.username,
+				phone: updatedUser.phone,
+				email: updatedUser.email,
+				type: updatedUser.type,
+				profilePhoto: updatedUser.profilePhoto,
+			},
+		});
+	} catch (error) {
+		console.error("Update Profile Error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error",
+			error: error.message,
+		});
+	}
+});
+
+// @desc    Change password from profile
+// @route   PUT /api/users/change-password
+// @access  Private
+const changePasswordProfile = asyncHandler(async (req, res) => {
+	try {
+		const userId = req.user?.id || req.user?._id;
+		const { currentPassword, newPassword } = req.body;
+
+		if (!userId) {
+			return res.status(401).json({
+				success: false,
+				message: "Unauthorized - User ID not found",
+			});
+		}
+
+		// Validate input
+		if (!currentPassword || !newPassword) {
+			return res.status(400).json({
+				success: false,
+				message: "Current password and new password are required",
+			});
+		}
+
+		// Validate new password length
+		if (newPassword.length < 6) {
+			return res.status(400).json({
+				success: false,
+				message: "New password must be at least 6 characters long",
+			});
+		}
+
+		// Find user with password
+		const user = await User.findById(userId).select("+password");
+
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				message: "User not found",
+			});
+		}
+
+		// Verify current password
+		const isPasswordMatch = await user.matchPassword(currentPassword);
+
+		if (!isPasswordMatch) {
+			return res.status(401).json({
+				success: false,
+				message: "Current password is incorrect",
+			});
+		}
+
+		// Update password (will be hashed by pre-save hook)
+		user.password = newPassword;
+		await user.save();
+
+		console.log("✅ Password changed successfully for user:", user.username);
+
+		res.status(200).json({
+			success: true,
+			message: "Password changed successfully",
+		});
+	} catch (error) {
+		console.error("Change Password Error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error",
+			error: error.message,
+		});
+	}
+});
 
 module.exports = {
 	getAllUsers,
@@ -443,4 +653,7 @@ module.exports = {
 	getNotifications,
 	sendNotification,
 	contactUs,
+	getUserProfile,
+	updateUserProfile,
+	changePasswordProfile,
 };

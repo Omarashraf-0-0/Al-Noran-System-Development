@@ -709,6 +709,28 @@ const checkRequiredDocuments = async (req, res) => {
 	}
 };
 
+/**
+ * Get presigned URL for an S3 key
+ */
+const getPresignedUrlForKey = async (req, res) => {
+	try {
+		const s3Key = decodeURIComponent(req.params.s3Key);
+		
+		console.log("🔗 Generating presigned URL for key:", s3Key);
+		
+		const presignedUrl = await getPresignedUrl(s3Key, 3600); // 1 hour
+		
+		res.status(200).json({
+			success: true,
+			url: presignedUrl,
+			expiresIn: 3600
+		});
+	} catch (error) {
+		console.error("Get Presigned URL Error:", error);
+		res.status(500).json({ message: error.message || "Failed to generate presigned URL" });
+	}
+};
+
 module.exports = {
 	uploadFile,
 	uploadMultipleFiles,
@@ -717,4 +739,5 @@ module.exports = {
 	updateUpload,
 	deleteUpload,
 	checkRequiredDocuments,
+	getPresignedUrlForKey,
 };
