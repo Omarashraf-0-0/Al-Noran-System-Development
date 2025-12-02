@@ -18,7 +18,7 @@ class ApiService {
     if (Platform.isAndroid) {
       // للموبايل الحقيقي - استخدم IP اللابتوب على نفس الشبكة
       // تأكد إن اللابتوب والموبايل على نفس WiFi
-      return 'http://192.168.1.12:3500';
+      return 'http://192.168.1.17:3500';
 
       // لو Emulator فقط، استخدم:
       // return 'http://10.0.2.2:3500';
