@@ -13,9 +13,9 @@
                 style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12; -fx-background-radius: 8;"
                 text="لوحة التحكم" textAlignment="RIGHT" />
 
-        <Button fx:id="currentOpsBtn" maxWidth="Infinity"
-                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
-                text="العمليات الحالية" textAlignment="RIGHT" />
+<!--        <Button fx:id="currentOpsBtn" maxWidth="Infinity"-->
+<!--                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"-->
+<!--                text="العمليات الحالية" textAlignment="RIGHT" />-->
 
         <Button fx:id="lastOpsBtn" maxWidth="Infinity" onAction="#navigateToTa5lees"
                 style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
@@ -29,6 +29,10 @@
                 style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
                 text="إدارة الفواتير" />
 
+        <Button fx:id="addinvoicesBtn" maxWidth="Infinity" onAction="#navigateToAddInvoices"
+                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
+                text="اضافه فاتورة يدوبا" />
+
         <Button fx:id="employeesBtn" maxWidth="Infinity" onAction="#navigateToEmployees"
                 style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
                 text="إدارة الصلاحيات" />
@@ -38,8 +42,8 @@
                 text="إدارة الشحنات" />
 
 
-        <Button fx:id="archiveBtn" maxWidth="Infinity"
-                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
-                text="أرشيف الملفات" />
+<!--        <Button fx:id="archiveBtn" maxWidth="Infinity"-->
+<!--                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"-->
+<!--                text="أرشيف الملفات" />-->
     </VBox>
 </VBox>

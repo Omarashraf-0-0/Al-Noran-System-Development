@@ -72,6 +72,11 @@ public class SidebarController {
     }
 
     @FXML
+    private void navigateToAddInvoices(ActionEvent event) throws IOException {
+        loadPage(event, "/noran/desktop/admin-add-invoice.fxml");
+    }
+
+    @FXML
     public void navigateToDashboard(ActionEvent event) throws IOException {
         loadPage(event, "/noran/desktop/dashboard.fxml");
     }

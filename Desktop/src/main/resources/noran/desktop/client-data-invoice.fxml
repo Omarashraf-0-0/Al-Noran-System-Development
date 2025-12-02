@@ -34,13 +34,13 @@
             </children>
          </AnchorPane>
 
-            <!-- زر الانتقال إلى الفواتير المقبولة -->
+            <!-- زر الانتقال إلى الفواتير المقبولة edit-->
             <HBox alignment="CENTER_LEFT" prefHeight="49.0" prefWidth="326.0" spacing="12">
                 <Button fx:id="btnViewAcceptedInvoices" onAction="#openAcceptedInvoices" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 14 32; -fx-font-size: 15; -fx-background-radius: 10; -fx-font-weight: bold; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);" text="عرض الفواتير المقبولة والمرسلة">
                     <graphic>
                         <ImageView fitHeight="20" fitWidth="20">
                             <image>
-                                <Image url="@images/checklist.png" /> <!-- أيقونة اختيارية -->
+<!--                                <Image url="@images/checklist.png" /> &lt;!&ndash; أيقونة اختيارية &ndash;&gt;-->
                             </image>
                         </ImageView>
                     </graphic>
@@ -50,7 +50,7 @@
             <!-- Illustration -->
             <ImageView fitHeight="188.0" fitWidth="311.0" preserveRatio="true">
                 <image>
-                    <Image url="@images/Untitled%20design%20(8).png" />
+<!--                    <Image url="@images/Untitled%20design%20(8).png" />-->
                 </image>
             </ImageView>
 
