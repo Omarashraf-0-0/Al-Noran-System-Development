@@ -5,20 +5,24 @@ import { toast } from "react-hot-toast";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import WelcomeBanner from "./WelcomeBanner";
-import searchIcon from "../assets/images/Search.svg";
-import filterListIcon from "../assets/images/filter_list.png";
-import filterAltIcon from "../assets/images/filter_alt.png";
-import { FileText, Clock, CheckCircle, XCircle } from "lucide-react";
+import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorMessage from "../components/ErrorMessage";
+import SearchAndFilters from "../components/SearchAndFilters";
+import RequestsTable from "../components/RequestsTable";
+import RequestsEmptyState from "../components/RequestsEmptyState";
+import { Clock, CheckCircle, XCircle } from "lucide-react";
 
 const AcidRequestsPage = () => {
 	const [searchTerm, setSearchTerm] = useState("");
-	const [isFilterOpen, setIsFilterOpen] = useState(false);
-	const [isSortOpen, setIsSortOpen] = useState(false);
 	const [acidRequests, setAcidRequests] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const navigate = useNavigate();
 
+	// TODO: RBAC - Get user role and permissions from context/store
+	// Example: const { user, hasPermission } = useAuth();
+	// const canCreateRequest = hasPermission('acid:create');
+	// const canViewAllRequests = hasPermission('acid:viewAll');
 	const user = JSON.parse(localStorage.getItem("user"));
 	const token = localStorage.getItem("token");
 
@@ -87,16 +91,6 @@ const AcidRequestsPage = () => {
 		fetchAcidRequests();
 	}, [token, navigate]);
 
-	const toggleFilter = () => {
-		setIsFilterOpen(!isFilterOpen);
-		setIsSortOpen(false);
-	};
-
-	const toggleSort = () => {
-		setIsSortOpen(!isSortOpen);
-		setIsFilterOpen(false);
-	};
-
 	const getStatusIcon = (status) => {
 		switch (status) {
 			case "approved":
@@ -107,10 +101,9 @@ const AcidRequestsPage = () => {
 			case "pending":
 				return <Clock className="w-4 h-4 text-yellow-600" />;
 			default:
-				return <FileText className="w-4 h-4 text-gray-600" />;
+				return <Clock className="w-4 h-4 text-gray-600" />;
 		}
 	};
-
 	const getStatusText = (status) => {
 		switch (status) {
 			case "ACID Issued":
@@ -159,227 +152,39 @@ const AcidRequestsPage = () => {
 					</h1>
 
 					{/* Search + Filter + Sort */}
-					<div className="flex items-center justify-center mb-8 gap-4 relative">
-						{/* Left side — Filter + Sort */}
-						<div className="flex items-center gap-3">
-							{/* Filter Button */}
-							<button
-								onClick={toggleFilter}
-								className={`flex items-center gap-2 font-medium transition-colors ${
-									isFilterOpen
-										? "bg-red-800 text-white px-3 py-1 rounded-md"
-										: "text-red-800"
-								}`}
-							>
-								<img
-									src={filterAltIcon}
-									alt="Filter"
-									className="w-5 h-5 object-contain"
-								/>
-								تصفية
-							</button>
+					<SearchAndFilters
+						searchTerm={searchTerm}
+						onSearchChange={(e) => setSearchTerm(e.target.value)}
+						placeholder="ابحث برقم ACID أو اسم المورد"
+					/>
 
-							{/* Sort Button */}
-							<button
-								onClick={toggleSort}
-								className={`flex items-center gap-2 font-medium transition-colors ${
-									isSortOpen
-										? "bg-red-800 text-white px-3 py-1 rounded-md"
-										: "text-red-800"
-								}`}
-							>
-								<img
-									src={filterListIcon}
-									alt="Sort"
-									className="w-5 h-5 object-contain"
-								/>
-								ترتيب
-							</button>
-						</div>
-
-						{/* Search Bar */}
-						<div className="relative w-1/2">
-							<input
-								type="text"
-								placeholder="ابحث برقم ACID أو اسم المورد"
-								value={searchTerm}
-								onChange={(e) => setSearchTerm(e.target.value)}
-								className="w-full bg-white shadow-md rounded-full py-2 px-4 pr-10 text-right focus:outline-none focus:ring-2 focus:ring-red-500 placeholder-gray-400 text-black"
-							/>
-							<img
-								src={searchIcon}
-								alt="Search"
-								className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-							/>
-						</div>
-
-						{/* Filter Dropdown */}
-						{isFilterOpen && (
-							<div className="absolute top-14 left-40 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">تصفية حسب:</h4>
-								<select className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700">
-									<option>الحالة</option>
-									<option>تمت الموافقة</option>
-									<option>قيد المراجعة</option>
-									<option>مرفوض</option>
-								</select>
-								<button className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition">
-									تطبيق
-								</button>
-							</div>
-						)}
-
-						{/* Sort Dropdown */}
-						{isSortOpen && (
-							<div className="absolute top-14 left-20 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">ترتيب حسب:</h4>
-								<select className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700">
-									<option>الأحدث أولاً</option>
-									<option>الأقدم أولاً</option>
-									<option>المورد (أ-ي)</option>
-								</select>
-								<button className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition">
-									تطبيق
-								</button>
-							</div>
-						)}
-					</div>
-
-					{/* ACID Requests Table */}
+					{/* ACID Requests Table - TODO: RBAC filter based on user permissions */}
 					{loading ? (
-						<div className="flex justify-center items-center py-12 gap-4">
-							<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
-							<span className="text-gray-600 text-lg">
-								جاري تحميل الطلبات...
-							</span>
-						</div>
+						<LoadingSpinner message="جاري تحميل الطلبات..." />
 					) : error ? (
-						<div className="bg-red-50 border border-red-300 rounded-lg p-4 text-right">
-							<p className="text-red-800 font-medium mb-3">
-								❌ حدث خطأ: {error}
-							</p>
-							<button
-								onClick={() => window.location.reload()}
-								className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-							>
-								إعادة محاولة
-							</button>
-						</div>
+						<ErrorMessage
+							error={error}
+							onRetry={() => window.location.reload()}
+							retryButtonText="إعادة محاولة"
+						/>
 					) : filteredRequests.length === 0 ? (
-						<div className="text-center py-12 bg-gray-50 rounded-lg">
-							<FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-							<p className="text-gray-500 text-lg mb-4">لا توجد طلبات ACID</p>
-							<button
-								onClick={() => navigate("/acidrequest")}
-								className="bg-red-800 text-white px-6 py-2 rounded hover:bg-red-700 transition"
-							>
-								إضافة طلب جديد
-							</button>
-						</div>
+						<RequestsEmptyState
+							onAddNew={() => navigate("/acidrequest")}
+							message="لا توجد طلبات ACID"
+							buttonText="إضافة طلب جديد"
+						/>
 					) : (
-						<div className="overflow-x-auto">
-							<table className="w-full text-right border-separate border-spacing-y-3">
-								<tbody>
-									{filteredRequests.map((request) => (
-										<tr
-											key={request.id}
-											className="bg-gray-100 hover:bg-gray-200 rounded-xl transition text-right"
-										>
-											<td className="py-4 px-6 align-top rounded-r-xl">
-												<div className="flex flex-col text-sm">
-													<span className="text-gray-700 text-base font-semibold">
-														{request.supplierName}
-													</span>
-													<span className="text-gray-500 text-xs">
-														{request.requestDate}
-													</span>
-												</div>
-											</td>
-
-											<td className="py-4 px-6 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="text-gray-500 text-xs mb-1">
-														رقم ACID
-													</span>
-													<span className="font-semibold text-gray-800">
-														{request.acidCode}
-													</span>
-												</div>
-											</td>
-
-											<td className="py-4 px-6 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="text-gray-500 text-xs mb-1">
-														البند الجمركي
-													</span>
-													<span className="text-gray-700">
-														{request.customsItem}
-													</span>
-												</div>
-											</td>
-
-											<td className="py-4 px-6 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="text-gray-500 text-xs mb-1">
-														الوزن
-													</span>
-													<span className="text-gray-700">
-														{request.weight} كجم
-													</span>
-												</div>
-											</td>
-
-											<td className="py-4 px-6 align-top">
-												<span
-													className={`${getStatusColor(
-														request.status
-													)} text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit`}
-													style={{ color: "#690000" }}
-												>
-													{getStatusIcon(request.status)}
-													{getStatusText(request.status)}
-												</span>
-											</td>
-
-											<td className="py-4 px-6 align-top rounded-l-xl">
-												<div className="flex flex-col gap-2">
-													{request.hasShipment ? (
-														<>
-															<div className="flex items-center gap-2 text-green-600 text-sm font-semibold mb-1">
-																<CheckCircle className="w-4 h-4" />
-																تم إنشاء الشحنة
-															</div>
-															<button
-																onClick={() =>
-																	navigate(
-																		`/shipmentstatus/${request.acidCode}`
-																	)
-																}
-																className="bg-green-600 text-white text-sm px-4 py-2 rounded-md hover:bg-green-700 transition font-medium"
-															>
-																عرض الشحنة
-															</button>
-														</>
-													) : (
-														<button
-															onClick={() =>
-																navigate(`/acidrequest/${request.id}`)
-															}
-															className="text-blue-600 text-sm font-medium underline cursor-pointer hover:text-blue-700"
-														>
-															عرض التفاصيل
-														</button>
-													)}
-												</div>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
+						<RequestsTable
+							requests={filteredRequests}
+							getStatusIcon={getStatusIcon}
+							getStatusText={getStatusText}
+							getStatusColor={getStatusColor}
+						/>
 					)}
 
 					{/* Add New Request Button */}
+					{/* TODO: RBAC - Only show if user has permission to create ACID requests */}
+					{/* Example: {canCreateRequest && !loading && !error && filteredRequests.length > 0 && ( */}
 					{!loading && !error && filteredRequests.length > 0 && (
 						<div className="flex justify-center mt-8">
 							<button

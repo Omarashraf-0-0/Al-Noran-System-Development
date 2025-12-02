@@ -83,17 +83,23 @@ export default function EmployeeDetailsModal({
 
 	const handleSave = async () => {
 		try {
-			await axios.patch(
+			const updateData = {
+				fullname: formData.fullname,
+				username: formData.username,
+				email: formData.email,
+				phone: formData.phone,
+				type: "employee",
+				employeeType: formData.employeeType,
+				active: formData.active,
+				// Explicitly clear clientDetails for employees
+				clientType: null,
+			};
+
+			console.log("Updating employee with data:", updateData);
+
+			const response = await axios.patch(
 				`${import.meta.env.VITE_API_URL}/api/users/${employeeId}`,
-				{
-					fullname: formData.fullname,
-					username: formData.username,
-					email: formData.email,
-					phone: formData.phone,
-					type: "employee",
-					employeeType: formData.employeeType,
-					active: formData.active,
-				},
+				updateData,
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -101,6 +107,7 @@ export default function EmployeeDetailsModal({
 				}
 			);
 
+			console.log("Update response:", response.data);
 			toast.success("تم تحديث بيانات الموظف بنجاح");
 			setIsEditing(false);
 			if (onUpdate) {
@@ -109,7 +116,8 @@ export default function EmployeeDetailsModal({
 			fetchEmployeeDetails();
 		} catch (error) {
 			console.error("Error updating employee:", error);
-			toast.error("فشل تحديث بيانات الموظف");
+			console.error("Error response:", error.response?.data);
+			toast.error(error.response?.data?.message || "فشل تحديث بيانات الموظف");
 		}
 	};
 

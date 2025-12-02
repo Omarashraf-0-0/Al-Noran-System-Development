@@ -46,11 +46,9 @@ const createUser = asyncHandler(async (req, res) => {
 		.exec();
 
 	if (duplicate) {
-		return res
-			.status(409)
-			.json({
-				message: "User already exists with that email, username, or phone",
-			});
+		return res.status(409).json({
+			message: "User already exists with that email, username, or phone",
+		});
 	}
 
 	// Create user data object
@@ -162,11 +160,19 @@ const updateUser = asyncHandler(async (req, res) => {
 		if (clientType === "personal" && ssn) {
 			user.clientDetails.ssn = ssn;
 		}
+		// Clear employee details if switching to client
+		user.employeeDetails = undefined;
 	}
 
-	if (type === "employee" && employeeType) {
+	if (type === "employee") {
 		user.employeeDetails = user.employeeDetails || {};
-		user.employeeDetails.employeeType = employeeType;
+		if (employeeType) {
+			user.employeeDetails.employeeType = employeeType;
+		}
+		// Clear client details if switching to employee or if clientType is null
+		if (clientType === null || clientType === undefined) {
+			user.clientDetails = { clientType: null, ssn: "" };
+		}
 	}
 
 	const updatedUser = await user.save();
