@@ -1,5 +1,5 @@
 import React from "react";
-import Navbar from "../components/Navbar";
+import AuthNavbar from "../components/AuthNavbar";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import LoginForm from "../components/LoginForm";
@@ -68,7 +68,7 @@ const LoginPage = () => {
 
 	return (
 		<>
-			<Navbar />
+			<AuthNavbar />
 			<BackgroundContainer>
 				<FormContainer>
 					<LoginForm

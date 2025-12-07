@@ -1,5 +1,5 @@
 import React from "react";
-import Navbar from "../components/Navbar";
+import AuthNavbar from "../components/AuthNavbar";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import RegisterForm from "../components/RegisterForm";
@@ -51,7 +51,7 @@ const RegisterPage = () => {
 
 	return (
 		<>
-			<Navbar />
+			<AuthNavbar />
 			<BackgroundContainer>
 				<FormContainer>
 					<RegisterForm onSubmit={handleRegister} />

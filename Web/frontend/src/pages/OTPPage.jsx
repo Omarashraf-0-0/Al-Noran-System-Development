@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
+import AuthNavbar from "../components/AuthNavbar";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import OTPForm from "../components/OTPForm";
@@ -47,7 +47,7 @@ const OTPPage = () => {
 
 	return (
 		<>
-			<Navbar />
+			<AuthNavbar />
 			<BackgroundContainer>
 				<FormContainer>
 					<OTPForm onSubmit={handleVerifyOTP} email={email} />

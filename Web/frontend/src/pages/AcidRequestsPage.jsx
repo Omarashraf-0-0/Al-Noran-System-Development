@@ -14,6 +14,8 @@ import { Clock, CheckCircle, XCircle } from "lucide-react";
 
 const AcidRequestsPage = () => {
 	const [searchTerm, setSearchTerm] = useState("");
+	const [statusFilter, setStatusFilter] = useState("all");
+	const [sortBy, setSortBy] = useState("newest");
 	const [acidRequests, setAcidRequests] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
@@ -58,7 +60,9 @@ const AcidRequestsPage = () => {
 					supplierName: request.supplier?.name || "غير محدد",
 					customsItem: request.goods?.customsItem || "غير محدد",
 					weight: request.goods?.weight || 0,
-					status: request.status || "pending",
+					status: request.status || "Pending",
+					// Keep raw date for sorting
+					rawDate: request.requestDate || request.createdAt,
 					requestDate: new Date(
 						request.requestDate || request.createdAt
 					).toLocaleDateString("ar-EG", {
@@ -136,11 +140,53 @@ const AcidRequestsPage = () => {
 		}
 	};
 
-	const filteredRequests = acidRequests.filter(
-		(request) =>
-			request.acidCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			request.supplierName.toLowerCase().includes(searchTerm.toLowerCase())
-	);
+	// Filter options for status dropdown
+	const filterOptions = [
+		{ value: "all", label: "الكل" },
+		{ value: "ACID Issued", label: "تم إصدار ACID" },
+		{ value: "Under Review", label: "قيد المراجعة" },
+		{ value: "Rejected", label: "مرفوض" },
+		{ value: "Pending", label: "قيد الانتظار" },
+	];
+
+	// Sort options
+	const sortOptions = [
+		{ value: "newest", label: "الأحدث أولاً" },
+		{ value: "oldest", label: "الأقدم أولاً" },
+		{ value: "supplierAZ", label: "المورد (أ-ي)" },
+		{ value: "supplierZA", label: "المورد (ي-أ)" },
+		{ value: "acidCode", label: "رقم ACID" },
+	];
+
+	// Filter by search term and status
+	const filteredRequests = acidRequests
+		.filter((request) => {
+			// Search filter
+			const matchesSearch =
+				request.acidCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+				request.supplierName.toLowerCase().includes(searchTerm.toLowerCase());
+			
+			// Status filter
+			const matchesStatus = statusFilter === "all" || request.status === statusFilter;
+			
+			return matchesSearch && matchesStatus;
+		})
+		.sort((a, b) => {
+			switch (sortBy) {
+				case "newest":
+					return new Date(b.rawDate) - new Date(a.rawDate);
+				case "oldest":
+					return new Date(a.rawDate) - new Date(b.rawDate);
+				case "supplierAZ":
+					return a.supplierName.localeCompare(b.supplierName, "ar");
+				case "supplierZA":
+					return b.supplierName.localeCompare(a.supplierName, "ar");
+				case "acidCode":
+					return a.acidCode.localeCompare(b.acidCode);
+				default:
+					return 0;
+			}
+		});
 
 	return (
 		<div className="flex flex-col min-h-screen bg-gray-50 font-sans relative">
@@ -158,6 +204,12 @@ const AcidRequestsPage = () => {
 						searchTerm={searchTerm}
 						onSearchChange={(e) => setSearchTerm(e.target.value)}
 						placeholder="ابحث برقم ACID أو اسم المورد"
+						statusOptions={filterOptions}
+						statusFilter={statusFilter}
+						onStatusFilterChange={setStatusFilter}
+						sortOptions={sortOptions}
+						sortBy={sortBy}
+						onSortChange={setSortBy}
 					/>
 
 					{/* ACID Requests Table - TODO: RBAC filter based on user permissions */}

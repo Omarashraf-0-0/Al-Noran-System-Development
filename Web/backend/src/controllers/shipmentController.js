@@ -382,36 +382,48 @@ const addShipments = async (req, res) => {
 const updateShipmentStatusById = async (req, res) => {
 	try {
 		const { shipmentId } = req.params;
-		const { status } = req.body;
+		const { status, number46 } = req.body;
 
-		// Validate status
-		const validStatuses = [
-			"In Transit",
-			"في انتظار الشحن",
-			"في انتظار وصول الإذن",
-			"جاري الكشف والتثمين",
-			"تمت بنجاح",
-			"Pending",
-			"Arrived",
-			"Customs Clearance",
-			"Completed",
-		];
+		// Build update object
+		const updateData = {};
 
-		if (!status) {
-			return res.status(400).json({ message: "Status is required" });
+		// Validate and add status if provided
+		if (status) {
+			const validStatuses = [
+				"In Transit",
+				"في انتظار الشحن",
+				"في انتظار وصول الإذن",
+				"جاري الكشف والتثمين",
+				"تمت بنجاح",
+				"Pending",
+				"Arrived",
+				"Customs Clearance",
+				"Completed",
+			];
+
+			if (!validStatuses.includes(status)) {
+				return res.status(400).json({
+					message: "Invalid status value",
+					validStatuses,
+				});
+			}
+			updateData.status = status;
 		}
 
-		if (!validStatuses.includes(status)) {
-			return res.status(400).json({
-				message: "Invalid status value",
-				validStatuses,
-			});
+		// Add number46 if provided
+		if (number46 !== undefined) {
+			updateData.number46 = number46;
+		}
+
+		// Check if there's anything to update
+		if (Object.keys(updateData).length === 0) {
+			return res.status(400).json({ message: "No valid fields to update" });
 		}
 
 		// Find and update shipment
 		const shipment = await Shipment.findByIdAndUpdate(
 			shipmentId,
-			{ status },
+			updateData,
 			{ new: true, runValidators: true }
 		);
 

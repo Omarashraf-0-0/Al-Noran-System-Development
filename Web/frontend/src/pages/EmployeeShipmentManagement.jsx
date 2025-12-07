@@ -184,6 +184,30 @@ const EmployeeShipmentManagement = () => {
 		}
 	};
 
+	// Number46 update handler
+	const handleNumber46Update = async (newNumber46) => {
+		try {
+			toast.loading("جاري تحديث رقم البوليصة...");
+			await axios.put(
+				`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
+				{ number46: newNumber46 },
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
+				}
+			);
+			setShipment((prev) => ({ ...prev, number46: newNumber46 }));
+			toast.dismiss();
+			toast.success("تم تحديث رقم البوليصة بنجاح");
+		} catch (error) {
+			console.error("Error updating number46:", error);
+			toast.dismiss();
+			toast.error(error.response?.data?.message || "فشل تحديث رقم البوليصة");
+		}
+	};
+
 	// Document request handlers
 	const handleAddRequiredDocument = () => {
 		if (newDocument.trim()) {
@@ -425,6 +449,8 @@ const EmployeeShipmentManagement = () => {
 							<ShipmentDetailsGrid
 								shipment={shipment}
 								availableStatuses={AVAILABLE_STATUSES}
+								isEmployee={true}
+								onNumber46Update={handleNumber46Update}
 							/>
 
 							{/* Required Documents Status Section */}
