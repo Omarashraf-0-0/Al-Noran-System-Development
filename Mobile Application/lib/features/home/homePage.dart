@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
 import '../../core/storage/secure_storage.dart';
-import '../profile/profile_page.dart';
-import '../profile/profile_settings_page.dart';
 
 class HomePage extends StatefulWidget {
   final String userName;
@@ -216,7 +215,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               InkWell(
                 onTap: () {
-                  Navigator.pushNamed(context, '/profile');
+                  context.push('/profile');
                 },
                 borderRadius: BorderRadius.circular(50),
                 child: Container(
@@ -399,7 +398,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _handleTrackShipment() {
+  void _handleTrackShipment() async {
     final trackingNumber = _trackingController.text.trim();
     if (trackingNumber.isEmpty) {
       AlNoranPopups.showError(
@@ -409,11 +408,332 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    // TODO: تنفيذ البحث عن الشحنة
-    AlNoranPopups.showInfo(
+    // Show loading
+    showDialog(
       context: context,
-      title: 'البحث عن الشحنة',
-      message: 'جاري البحث عن الشحنة رقم: $trackingNumber',
+      barrierDismissible: false,
+      builder:
+          (context) => const Center(
+            child: CircularProgressIndicator(color: Color(0xFF690000)),
+          ),
+    );
+
+    try {
+      // Get all shipments from API
+      final response = await ApiService.getAllShipments();
+
+      if (!mounted) return;
+      context.pop(); // Close loading
+
+      if (response['success'] == true) {
+        final allShipments = List<Map<String, dynamic>>.from(
+          response['shipments'] ?? [],
+        );
+
+        // Filter shipments that match the search query
+        final searchLower = trackingNumber.toLowerCase();
+        final matchingShipments =
+            allShipments.where((shipment) {
+              final acid = (shipment['acid'] ?? '').toString().toLowerCase();
+              final number46 =
+                  (shipment['number46'] ?? '').toString().toLowerCase();
+              final description =
+                  (shipment['shipmentDescription'] ?? '')
+                      .toString()
+                      .toLowerCase();
+
+              return acid.contains(searchLower) ||
+                  number46.contains(searchLower) ||
+                  description.contains(searchLower);
+            }).toList();
+
+        if (matchingShipments.isEmpty) {
+          AlNoranPopups.showError(
+            context: context,
+            message: 'لم يتم العثور على شحنات تطابق: $trackingNumber',
+          );
+          return;
+        }
+
+        // Show results in popup
+        _showSearchResultsPopup(matchingShipments, trackingNumber);
+      } else {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ أثناء البحث',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      context.pop(); // Close loading if still open
+      AlNoranPopups.showError(
+        context: context,
+        message: 'حدث خطأ أثناء البحث: ${e.toString()}',
+      );
+    }
+  }
+
+  void _showSearchResultsPopup(
+    List<Map<String, dynamic>> results,
+    String query,
+  ) {
+    final homeContext = context; // Save home page context
+
+    showDialog(
+      context: context,
+      builder:
+          (dialogContext) => Directionality(
+            textDirection: TextDirection.rtl,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(dialogContext).size.height * 0.7,
+                  maxWidth: MediaQuery.of(dialogContext).size.width * 0.9,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF690000),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(25),
+                          topRight: Radius.circular(25),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.search_rounded,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'نتائج البحث',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'تم العثور على ${results.length} شحنة',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            icon: const Icon(Icons.close, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Results List
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: results.length,
+                        itemBuilder: (context, index) {
+                          final shipment = results[index];
+                          return _buildSearchResultCard(shipment, homeContext);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+    );
+  }
+
+  Widget _buildSearchResultCard(
+    Map<String, dynamic> shipment,
+    BuildContext homeContext,
+  ) {
+    final acid = shipment['acid'] ?? 'N/A';
+    final polNumber = shipment['number46'] ?? 'غير محدد';
+    final status = shipment['status'] ?? 'غير محدد';
+    final description = shipment['shipmentDescription'] ?? 'شحنة';
+    final isUrgent = _isUrgent(status);
+
+    return InkWell(
+      onTap: () {
+        Navigator.pop(context); // Close dialog using dialog context
+        homeContext.push(
+          '/shipment-details/$acid',
+        ); // Navigate using home context
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF690000),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        acid,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cairo',
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    if (isUrgent) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'عاجل',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                Icon(Icons.arrow_back_ios, size: 16, color: Colors.grey[400]),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            // Description
+            Text(
+              description,
+              style: const TextStyle(
+                fontSize: 13,
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF424242),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            const SizedBox(height: 8),
+
+            // POL Number
+            Row(
+              children: [
+                Icon(
+                  Icons.description_outlined,
+                  size: 14,
+                  color: Colors.grey[600],
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'رقم البوليصة: ',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'Cairo',
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  polNumber,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF424242),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 6),
+
+            // Status
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Icon(
+                    Icons.access_time,
+                    size: 12,
+                    color: Colors.orange[700],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange[700],
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -484,13 +804,8 @@ class _HomePageState extends State<HomePage> {
                       'الملف الشخصي',
                       const Color(0xFF690000),
                       () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfilePage(),
-                          ),
-                        );
+                        context.pop();
+                        context.push('/profile');
                       },
                     ),
                     _buildMenuItem(
@@ -498,8 +813,8 @@ class _HomePageState extends State<HomePage> {
                       'الإعدادات',
                       const Color(0xFF690000),
                       () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/settings');
+                        context.pop();
+                        context.push('/settings');
                       },
                     ),
                     _buildMenuItem(
@@ -507,7 +822,7 @@ class _HomePageState extends State<HomePage> {
                       'المساعدة',
                       const Color(0xFF1ba3b6),
                       () {
-                        Navigator.pop(context);
+                        context.pop();
                         // TODO: Navigate to help
                       },
                     ),
@@ -521,7 +836,7 @@ class _HomePageState extends State<HomePage> {
                       'تسجيل الخروج',
                       Colors.red,
                       () {
-                        Navigator.pop(context);
+                        context.pop();
                         _handleLogout();
                       },
                     ),
@@ -651,7 +966,7 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           Expanded(
                             child: TextButton(
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () => context.pop(),
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 14,
@@ -685,11 +1000,8 @@ class _HomePageState extends State<HomePage> {
 
                                 // إغلاق الـ dialog ثم الانتقال لصفحة تسجيل الدخول
                                 if (mounted) {
-                                  Navigator.pop(context); // Close dialog
-                                  Navigator.of(context).pushNamedAndRemoveUntil(
-                                    '/login',
-                                    (route) => false,
-                                  );
+                                  context.pop(); // Close dialog
+                                  context.go('/login');
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -833,6 +1145,7 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
+              // Row 1: الملف الشخصي - إعدادات الحساب
               Row(
                 children: [
                   Expanded(
@@ -840,12 +1153,7 @@ class _HomePageState extends State<HomePage> {
                       'الملف الشخصي',
                       Icons.person_outline,
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfilePage(),
-                          ),
-                        );
+                        context.push('/profile');
                       },
                     ),
                   ),
@@ -855,36 +1163,24 @@ class _HomePageState extends State<HomePage> {
                       'إعدادات الحساب',
                       Icons.settings_outlined,
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfileSettingsPage(),
-                          ),
-                        );
+                        context.push('/profile-settings');
                       },
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
+              // Row 2: طلب رقم ACID (الوارد) - طلب رقم UCR (الصادر)
               Row(
                 children: [
                   Expanded(
                     child: _buildServiceCard(
-                      'تواصل معنا',
-                      Icons.headset_mic_outlined,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildServiceCard(
-                      'طلب رقم ACID',
-                      Icons.description_outlined,
+                      'طلب رقم ACID\n(الوارد)',
+                      Icons.flight_land_rounded,
                       onTap: () {
-                        Navigator.pushNamed(
-                          context,
+                        context.push(
                           '/acid-request',
-                          arguments: {
+                          extra: {
                             'userName': widget.userName,
                             'userEmail': widget.userEmail,
                           },
@@ -892,23 +1188,37 @@ class _HomePageState extends State<HomePage> {
                       },
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildServiceCard(
+                      'طلب رقم UCR\n(الصادر)',
+                      Icons.flight_takeoff_rounded,
+                      onTap: () {
+                        AlNoranPopups.showInfo(
+                          context: context,
+                          title: 'طلب رقم UCR',
+                          message: 'قسم الشحنات الصادرة قيد التطوير',
+                        );
+                      },
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
+              // Row 3: تواصل معنا
               Row(
                 children: [
                   Expanded(
+                    flex: 1,
                     child: _buildServiceCard(
-                      'طلب إدراج شهادة بحرية',
-                      Icons.directions_boat_outlined,
+                      'تواصل معنا',
+                      Icons.headset_mic_outlined,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _buildServiceCard(
-                      'طلب إدراج شهادة جوية',
-                      Icons.flight_outlined,
-                    ),
+                    flex: 1,
+                    child: Container(), // Empty space
                   ),
                 ],
               ),
@@ -1076,11 +1386,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _handleViewAllShipments() {
-    // الانتقال لصفحة جميع الشحنات (الصفحة الجديدة التي أنشأناها)
-    Navigator.pushNamed(
-      context,
+    // الانتقال لصفحة جميع الشحنات
+    context.go(
       '/shipments',
-      arguments: {'userName': widget.userName, 'userEmail': widget.userEmail},
+      extra: {
+        'userName': widget.userName,
+        'userEmail': widget.userEmail,
+        'type': 'incoming',
+      },
     );
   }
 
@@ -1285,11 +1598,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _handleShipmentTap(Map<String, dynamic> shipment) {
-    Navigator.pushNamed(
-      context,
-      '/shipment-details',
-      arguments: {'shipmentId': shipment['id']},
-    );
+    context.push('/shipment-details/${shipment['id']}');
   }
 
   Widget _buildBottomNavigationBar() {
@@ -1320,14 +1629,9 @@ class _HomePageState extends State<HomePage> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(0, Icons.home_rounded, 'الرئيسية'),
-                _buildNavItem(1, Icons.receipt_long_rounded, 'الفواتير'),
-                _buildNavItem(2, Icons.flight_takeoff_rounded, 'الشحنات'),
-                _buildNavItem(
-                  3,
-                  Icons.account_balance_wallet_rounded,
-                  'المدفوعات',
-                ),
-                _buildNavItem(4, Icons.person_rounded, 'حسابي'),
+                _buildNavItem(1, Icons.flight_land_rounded, 'الوارد'),
+                _buildNavItem(2, Icons.flight_takeoff_rounded, 'الصادر'),
+                _buildNavItem(3, Icons.receipt_long_rounded, 'الفواتير'),
               ],
             ),
           ),
@@ -1342,9 +1646,6 @@ class _HomePageState extends State<HomePage> {
       child: InkWell(
         onTap: () {
           if (!mounted) return;
-          setState(() {
-            _selectedIndex = index;
-          });
           _handleNavigationTap(index);
         },
         borderRadius: BorderRadius.circular(15),
@@ -1403,50 +1704,38 @@ class _HomePageState extends State<HomePage> {
   void _handleNavigationTap(int index) {
     switch (index) {
       case 0:
-        // الرئيسية - already here
+        // الرئيسية - already here, just update state if needed
+        if (_selectedIndex != 0) {
+          setState(() => _selectedIndex = 0);
+        }
         break;
       case 1:
-        // الفواتير
+        // الوارد - Navigate to incoming shipments (الشحنات الحالية)
+        setState(() => _selectedIndex = index);
+        context.go(
+          '/shipments',
+          extra: {
+            'userName': widget.userName,
+            'userEmail': widget.userEmail,
+            'type': 'incoming',
+          },
+        );
+        break;
+      case 2:
+        // الصادر - قيد التطوير (don't change selected index)
+        AlNoranPopups.showInfo(
+          context: context,
+          title: 'الصادر',
+          message: 'قسم الشحنات الصادرة قيد التطوير',
+        );
+        break;
+      case 3:
+        // الفواتير (don't change selected index)
         AlNoranPopups.showInfo(
           context: context,
           title: 'الفواتير',
           message: 'قسم الفواتير قيد التطوير',
         );
-        break;
-      case 2:
-        // الشحنات - Navigate to shipments screen
-        Navigator.pushNamed(
-          context,
-          '/shipments',
-          arguments: {
-            'userName': widget.userName,
-            'userEmail': widget.userEmail,
-          },
-        ).then((_) {
-          // إعادة تعيين الـ selected index عند الرجوع
-          if (!mounted) return;
-          setState(() {
-            _selectedIndex = 0;
-          });
-        });
-        break;
-      case 3:
-        // إدارة المدفوعات
-        AlNoranPopups.showInfo(
-          context: context,
-          title: 'إدارة المدفوعات',
-          message: 'قسم المدفوعات قيد التطوير',
-        );
-        break;
-      case 4:
-        // حسابي - Navigate to Profile Page
-        Navigator.pushNamed(context, '/profile').then((_) {
-          // إعادة تعيين الـ selected index عند الرجوع
-          if (!mounted) return;
-          setState(() {
-            _selectedIndex = 0;
-          });
-        });
         break;
     }
   }

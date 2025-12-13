@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'register_page.dart';
-import 'ForgotPasswordPage.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/widgets/al_noran_loading.dart';
 import '../../util/validators.dart';
-import '../home/homePage.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -256,12 +254,7 @@ class _LoginPageState extends State<LoginPage> {
                       alignment: Alignment.centerRight,
                       child: TextButton.icon(
                         onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ForgotPasswordPage(),
-                            ),
-                          );
+                          context.push('/register');
                         },
                         icon: const Icon(
                           Icons.lock_outline,
@@ -326,12 +319,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         TextButton(
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const RegisterPage(),
-                              ),
-                            );
+                            context.push('/forgot-password');
                           },
                           child: const Text(
                             'إنشاء حساب',
@@ -415,25 +403,22 @@ class _LoginPageState extends State<LoginPage> {
             print('✅ [Login] Token and user data saved to storage');
           }
 
-          // الحصول على اسم المستخدم من البيانات
+          // الحصول على اسم المستخدم والبريد الإلكتروني من البيانات
           String userName = 'مستخدم';
+          String userEmail = _emailController.text.trim();
+
           if (result['data'] != null && result['data']['user'] != null) {
             userName =
                 result['data']['user']['fullname'] ??
                 result['data']['user']['username'] ??
                 'مستخدم';
+            userEmail = result['data']['user']['email'] ?? userEmail;
           }
 
           // الانتقال للصفحة الرئيسية
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => HomePage(
-                    userName: userName,
-                    userEmail: _emailController.text,
-                  ),
-            ),
+          context.go(
+            '/home',
+            extra: {'userName': userName, 'userEmail': userEmail},
           );
         }
       } else {

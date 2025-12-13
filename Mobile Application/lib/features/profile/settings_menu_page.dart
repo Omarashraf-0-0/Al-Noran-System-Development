@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'user_settings_page.dart';
 import 'documents_settings_page.dart';
 import 'change_password_page.dart';
@@ -99,7 +100,7 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => context.pop(),
                   child: Text(
                     'إلغاء',
                     style: TextStyle(
@@ -111,14 +112,10 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    Navigator.pop(context);
+                    context.pop();
                     await SecureStorage.clearAll();
                     if (mounted) {
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        '/login',
-                        (route) => false,
-                      );
+                      context.go('/login');
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -168,7 +165,7 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.arrow_forward, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => context.pop(),
                   ),
                 ),
               ],
@@ -345,6 +342,7 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
                             colors: [Color(0xFF690000), Color(0xFF8B0000)],
                           ),
                           onTap: () {
+                            // Navigate using Navigator since page not in router
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -366,6 +364,7 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
                             colors: [Color(0xFF1ba3b6), Color(0xFF16879a)],
                           ),
                           onTap: () {
+                            // Navigate using Navigator since page not in router
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -388,6 +387,7 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
                             colors: [Color(0xFFFF8C00), Color(0xFFFF7700)],
                           ),
                           onTap: () {
+                            // Navigate using Navigator since page not in router
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -602,7 +602,7 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => context.pop(),
                   child: const Text(
                     'حسناً',
                     style: TextStyle(

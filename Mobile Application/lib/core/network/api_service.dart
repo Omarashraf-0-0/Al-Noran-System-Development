@@ -16,12 +16,11 @@ class ApiService {
 
     // لو Android (Emulator أو Physical Device)
     if (Platform.isAndroid) {
-      // للموبايل الحقيقي - استخدم IP اللابتوب على نفس الشبكة
-      // تأكد إن اللابتوب والموبايل على نفس WiFi
-      return 'http://192.168.1.17:3500';
+      // للـ Emulator - استخدم IP الخاص
+      return 'http://10.0.2.2:3500';
 
-      // لو Emulator فقط، استخدم:
-      // return 'http://10.0.2.2:3500';
+      // لو موبايل حقيقي، استخدم IP اللابتوب:
+      // return 'http://10.250.15.105:3500';
     }
 
     // لو iOS Simulator أو جهاز حقيقي

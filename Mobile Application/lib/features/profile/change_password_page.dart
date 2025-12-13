@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
 import '../../core/storage/secure_storage.dart';
@@ -127,7 +128,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         AlNoranPopups.showSuccess(
           context: context,
           message: 'تم تغيير كلمة المرور بنجاح',
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         );
       } else {
         throw Exception(response['message'] ?? 'فشل تغيير كلمة المرور');
@@ -167,7 +168,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.arrow_forward, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => context.pop(),
                   ),
                 ),
               ],

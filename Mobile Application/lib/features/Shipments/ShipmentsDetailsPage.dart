@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/file_picker_helper.dart';
-import '../chat/screens/chat_screen.dart';
 
 class ShipmentDetailsPage extends StatefulWidget {
   final String shipmentId; // ACID number
@@ -180,7 +180,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
       final userData = await ApiService.getUserData();
       final userId = userData['id'];
       if (userId == null) {
-        Navigator.pop(context);
+        context.pop();
         if (mounted) {
           AlNoranPopups.showError(
             context: context,
@@ -199,7 +199,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
         userType: 'client',
       );
 
-      Navigator.pop(context); // Close loading
+      context.pop(); // Close loading
 
       if (uploadResult['success'] == true) {
         if (mounted) {
@@ -220,7 +220,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Close loading if open
+        context.pop(); // Close loading if open
       }
       print('❌ [ShipmentDetails] Upload error: $e');
       if (mounted) {
@@ -352,15 +352,9 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
             _shipmentData != null
                 ? FloatingActionButton.extended(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (context) => ChatScreen(
-                              shipmentId: _shipmentData!['_id'] ?? '',
-                              shipmentAcid: widget.shipmentId,
-                            ),
-                      ),
+                    context.push(
+                      '/chat/${widget.shipmentId}',
+                      extra: {'employeeName': _userData?['name'] ?? 'مستخدم'},
                     );
                   },
                   backgroundColor: primaryDark,
@@ -405,7 +399,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
             children: [
               InkWell(
                 onTap: () {
-                  Navigator.pushNamed(context, '/profile');
+                  context.push('/profile');
                 },
                 borderRadius: BorderRadius.circular(50),
                 child: Container(
@@ -494,7 +488,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
                 size: 24,
               ),
               onPressed: () {
-                Navigator.pop(context);
+                context.pop();
               },
             ),
           ),
@@ -538,7 +532,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => context.pop(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryDark,
                 foregroundColor: Colors.white,

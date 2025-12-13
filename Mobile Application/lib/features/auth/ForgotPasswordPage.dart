@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import 'OtpVerificationPage.dart';
@@ -199,7 +200,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
                   // Back to Login
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => context.pop(),
                     child: const Text(
                       'العودة لتسجيل الدخول',
                       style: TextStyle(

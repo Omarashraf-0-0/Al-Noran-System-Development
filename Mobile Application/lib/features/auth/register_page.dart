@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/validators.dart';
 import '../../core/network/api_service.dart';
@@ -49,7 +50,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         color: Color(0xFF690000),
                         size: 28,
                       ),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => context.pop(),
                     ),
                     const Spacer(),
                   ],
@@ -209,7 +210,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.pop(context);
+                        context.pop();
                       },
                       child: const Text(
                         'تسجيل الدخول',
@@ -346,7 +347,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
       // Dismiss loading
       if (mounted) {
-        Navigator.pop(context);
+        context.pop();
       }
 
       print('📨 Response: $checkResult');
@@ -383,7 +384,7 @@ class _RegisterPageState extends State<RegisterPage> {
     } catch (e) {
       // Dismiss loading if still showing
       if (mounted && Navigator.canPop(context)) {
-        Navigator.pop(context);
+        context.pop();
       }
 
       print('❌ Exception during validation: $e');

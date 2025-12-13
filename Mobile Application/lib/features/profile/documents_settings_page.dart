@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
@@ -194,7 +195,7 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.arrow_forward, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => context.pop(),
                   ),
                 ),
               ],
@@ -968,14 +969,14 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: () => context.pop(false),
                   child: const Text(
                     'إلغاء',
                     style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () => context.pop(true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF690000),
                     shape: RoundedRectangleBorder(
@@ -1060,14 +1061,14 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: () => context.pop(false),
                   child: const Text(
                     'إلغاء',
                     style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () => context.pop(true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     shape: RoundedRectangleBorder(

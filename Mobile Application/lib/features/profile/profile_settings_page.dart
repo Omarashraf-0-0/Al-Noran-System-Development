@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
 import '../../core/storage/secure_storage.dart';
@@ -283,7 +284,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_forward_ios, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
           ),
         ),
         body:

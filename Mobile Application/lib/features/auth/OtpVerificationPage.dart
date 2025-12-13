@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import '../../core/network/api_service.dart';
@@ -213,7 +214,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () => context.pop(),
                     child: Directionality(
                       textDirection: TextDirection.ltr,
                       child: const Row(

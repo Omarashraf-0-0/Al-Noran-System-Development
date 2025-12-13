@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/file_picker_helper.dart';
@@ -102,7 +103,7 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
       );
 
       if (mounted) {
-        Navigator.pop(context); // Close loading
+        context.pop(); // Close loading
 
         if (uploadResult['success'] == true) {
           setState(() {
@@ -123,7 +124,7 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Close loading
+        context.pop(); // Close loading
         AlNoranPopups.showError(
           context: context,
           message: 'حدث خطأ أثناء رفع الفاتورة',
@@ -305,7 +306,7 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
             children: [
               InkWell(
                 onTap: () {
-                  Navigator.pushNamed(context, '/profile');
+                  context.push('/profile');
                 },
                 borderRadius: BorderRadius.circular(50),
                 child: Container(
@@ -399,11 +400,7 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
                 size: 24,
               ),
               onPressed: () {
-                Navigator.pushReplacementNamed(
-                  context,
-                  '/home',
-                  arguments: {'userName': _userName, 'userEmail': _userEmail},
-                );
+                context.go('/home');
               },
             ),
           ),
@@ -945,3 +942,4 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
     );
   }
 }
+

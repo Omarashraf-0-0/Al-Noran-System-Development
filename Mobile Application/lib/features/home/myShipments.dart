@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 
 class MyShipmentsPage extends StatefulWidget {
@@ -19,7 +20,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
-  int _selectedIndex = 2;
+  int _selectedIndex = 1; // الوارد (index 1)
   String _selectedFilter = 'الكل';
   String _selectedSort = 'الأحدث';
 
@@ -542,7 +543,15 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                 color: Colors.white,
                 size: 24,
               ),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                context.go(
+                  '/home',
+                  extra: {
+                    'userName': widget.userName,
+                    'userEmail': widget.userEmail,
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -612,24 +621,6 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
               ),
               child: const Icon(
                 Icons.sort_rounded,
-                color: Color(0xFF690000),
-                size: 22,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          InkWell(
-            onTap: _showFilterBottomSheet,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              margin: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF690000).withOpacity(0.08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.filter_list_rounded,
                 color: Color(0xFF690000),
                 size: 22,
               ),
@@ -869,11 +860,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     return InkWell(
       onTap: () {
         // Navigate to shipment details page
-        Navigator.pushNamed(
-          context,
-          '/shipment-details',
-          arguments: {'shipmentId': shipment['id'].toString()},
-        );
+        context.push('/shipment-details/${shipment['id']}');
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -1098,11 +1085,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/shipment-details',
-                      arguments: {'shipmentId': shipment['id'].toString()},
-                    );
+                    context.push('/shipment-details/${shipment['id']}');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF690000),
@@ -1418,14 +1401,9 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(0, Icons.home_rounded, 'الرئيسية'),
-                _buildNavItem(1, Icons.receipt_long_rounded, 'الفواتير'),
-                _buildNavItem(2, Icons.flight_takeoff_rounded, 'الشحنات'),
-                _buildNavItem(
-                  3,
-                  Icons.account_balance_wallet_rounded,
-                  'المدفوعات',
-                ),
-                _buildNavItem(4, Icons.person_rounded, 'حسابي'),
+                _buildNavItem(1, Icons.flight_land_rounded, 'الوارد'),
+                _buildNavItem(2, Icons.flight_takeoff_rounded, 'الصادر'),
+                _buildNavItem(3, Icons.receipt_long_rounded, 'الفواتير'),
               ],
             ),
           ),
@@ -1440,17 +1418,37 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
       child: InkWell(
         onTap: () {
           if (index == 0) {
-            Navigator.pushReplacementNamed(
-              context,
+            // الرئيسية - navigate back
+            context.go(
               '/home',
-              arguments: {
+              extra: {
                 'userName': widget.userName,
                 'userEmail': widget.userEmail,
               },
             );
-          } else {
-            if (!mounted) return;
-            setState(() => _selectedIndex = index);
+          } else if (index == 1) {
+            // الوارد - already here, ensure state is correct
+            if (_selectedIndex != 1) {
+              setState(() => _selectedIndex = 1);
+            }
+          } else if (index == 2) {
+            // الصادر - قيد التطوير (don't change state)
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('قسم الشحنات الصادرة قيد التطوير'),
+                backgroundColor: Color(0xFF1ba3b6),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          } else if (index == 3) {
+            // الفواتير (don't change state)
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('قسم الفواتير قيد التطوير'),
+                backgroundColor: Color(0xFF1ba3b6),
+                duration: Duration(seconds: 2),
+              ),
+            );
           }
         },
         borderRadius: BorderRadius.circular(15),
@@ -1677,12 +1675,9 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                   const SizedBox(height: 16),
                   const Divider(height: 1),
                   const SizedBox(height: 8),
-                  _buildSortOption(
-                    'الأحدث أولاً',
-                    Icons.arrow_downward_rounded,
-                  ),
-                  _buildSortOption('الأقدم أولاً', Icons.arrow_upward_rounded),
-                  _buildSortOption('رقم الشحنة', Icons.tag_rounded),
+                  _buildSortOption('الأحدث', Icons.arrow_downward_rounded),
+                  _buildSortOption('الأقدم', Icons.arrow_upward_rounded),
+                  _buildSortOption('ACID', Icons.tag_rounded),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -1692,8 +1687,16 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
   }
 
   Widget _buildSortOption(String title, IconData icon) {
+    final isSelected = _selectedSort == title;
     return InkWell(
-      onTap: () => Navigator.pop(context),
+      onTap: () {
+        if (!mounted) return;
+        setState(() {
+          _selectedSort = title;
+        });
+        Navigator.pop(context);
+        _applyFiltersAndSearch();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(
@@ -1701,24 +1704,43 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF1ba3b6).withOpacity(0.1),
+                color:
+                    isSelected
+                        ? const Color(0xFF690000).withOpacity(0.1)
+                        : const Color(0xFF1ba3b6).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: const Color(0xFF1ba3b6), size: 22),
+              child: Icon(
+                icon,
+                color:
+                    isSelected
+                        ? const Color(0xFF690000)
+                        : const Color(0xFF1ba3b6),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontFamily: 'Cairo',
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF424242),
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color:
+                      isSelected
+                          ? const Color(0xFF690000)
+                          : const Color(0xFF424242),
                 ),
               ),
             ),
-            Icon(Icons.arrow_back_ios, size: 16, color: Colors.grey[400]),
+            Icon(
+              isSelected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: isSelected ? const Color(0xFF690000) : Colors.grey[400],
+              size: 24,
+            ),
           ],
         ),
       ),
@@ -1798,10 +1820,9 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                       const Color(0xFF690000),
                       () {
                         Navigator.pop(context);
-                        Navigator.pushNamed(
-                          context,
+                        context.push(
                           '/acid-request',
-                          arguments: {
+                          extra: {
                             'userName': widget.userName,
                             'userEmail': widget.userEmail,
                           },

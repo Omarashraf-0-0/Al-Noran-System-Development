@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
-import 'login_page.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;
@@ -309,11 +309,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             buttonText: 'تسجيل الدخول',
             onPressed: () {
               // العودة لصفحة Login
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginPage()),
-                (route) => false,
-              );
+              context.go('/login');
             },
           );
         }
