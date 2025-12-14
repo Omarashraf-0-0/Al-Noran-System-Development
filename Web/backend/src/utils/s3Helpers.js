@@ -58,6 +58,10 @@ const generateS3Key = ({
 			// ACID requests don't need relatedId initially (created during request)
 			fullPath = `${basePath}/acidrequest/${uniqueFilename}`;
 			break;
+		case "ucr_request":
+			// UCR export requests don't need relatedId initially (created during request)
+			fullPath = `${basePath}/ucr_request/${uniqueFilename}`;
+			break;
 		case "acid":
 			if (!relatedId) throw new Error("relatedId required for acid category");
 			fullPath = `${basePath}/acid/${relatedId}/${uniqueFilename}`;

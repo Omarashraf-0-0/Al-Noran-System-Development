@@ -35,6 +35,15 @@ import ClientProfilePage from "./pages/ClientProfilePage";
 import EmployeeProfilePage from "./pages/EmployeeProfilePage";
 import AdminProfilePage from "./pages/AdminProfilePage";
 
+// Export System Pages
+import UCRRequestPage from "./pages/UCRRequestPage";
+import UCRRequestsPage from "./pages/UCRRequestsPage";
+import UCRRequestDetailsPage from "./pages/UCRRequestDetailsPage";
+import ExportShipmentsPage from "./pages/ExportShipmentsPage";
+import ExportShipmentDetailsPage from "./pages/ExportShipmentDetailsPage";
+import EmployeeUCRRequestsPage from "./pages/EmployeeUCRRequestsPage";
+import EmployeeExportShipmentsPage from "./pages/EmployeeExportShipmentsPage";
+
 // Admin Route Protection Component
 const AdminRoute = ({ children }) => {
 	const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -349,6 +358,83 @@ const App = () => {
 						</AdminRoute>
 					}
 				/>
+
+				{/* ===== Export System Routes (UCR) ===== */}
+				{/* Client Export Routes */}
+				<Route
+					path="/ucr-request"
+					element={
+						<ClientRoute>
+							<UCRRequestPage />
+						</ClientRoute>
+					}
+				/>
+				<Route
+					path="/ucr-requests"
+					element={
+						<ClientRoute>
+							<UCRRequestsPage />
+						</ClientRoute>
+					}
+				/>
+				<Route
+					path="/ucr-request/:requestId"
+					element={
+						<ClientRoute>
+							<UCRRequestDetailsPage />
+						</ClientRoute>
+					}
+				/>
+				<Route
+					path="/ucr-request/:requestId/edit"
+					element={
+						<ClientRoute>
+							<UCRRequestPage />
+						</ClientRoute>
+					}
+				/>
+				<Route
+					path="/export-shipments"
+					element={
+						<ClientRoute>
+							<ExportShipmentsPage />
+						</ClientRoute>
+					}
+				/>
+				<Route
+					path="/export-shipment/:shipmentId"
+					element={
+						<ClientRoute>
+							<ExportShipmentDetailsPage />
+						</ClientRoute>
+					}
+				/>
+				{/* Employee Export Routes */}
+				<Route
+					path="/employee/ucr-requests"
+					element={
+						<EmployeeRoute>
+							<EmployeeUCRRequestsPage />
+						</EmployeeRoute>
+					}
+				/>
+				<Route
+					path="/employee/ucr-request/:requestId"
+					element={
+						<EmployeeRoute>
+							<UCRRequestDetailsPage />
+						</EmployeeRoute>
+					}
+				/>
+				<Route
+					path="/employee/export-shipments"
+					element={
+						<EmployeeRoute>
+							<EmployeeExportShipmentsPage />
+						</EmployeeRoute>
+					}
+				/>
+
 				{/* NEW */}
 				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
 				<Route path="*" element={<NotFound404 />} />
