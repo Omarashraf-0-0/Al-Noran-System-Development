@@ -22,7 +22,19 @@ const uploadSchema = new mongoose.Schema(
 		// File categorization
 		category: {
 			type: String,
-			enum: ["registration", "acidrequest", "acid", "shipment", "invoice", "archive"],
+			enum: [
+				"registration", 
+				"acidrequest", 
+				"acid", 
+				"shipment", 
+				"invoice", 
+				"archive",
+				// Export categories
+				"ucr_request",        // طلب UCR
+				"export_shipment",    // شحنة تصدير
+				"certificate_origin", // شهادة المنشأ
+				"form_46",            // نموذج 46
+			],
 			required: true,
 		},
 		documentType: {
@@ -49,11 +61,38 @@ const uploadSchema = new mongoose.Schema(
 				"personal_id",                // البطاقة الشخصية
 				"sample_document",            // مستند داعم
 				
-				// Shipment documents
+				// Shipment documents (Import)
 				"bill_of_lading",
 				"delivery_permit",
 				"discharge_docs",
 				"proforma_invoice",
+				
+				// =====================
+				// Export Documents (NEW)
+				// =====================
+				// UCR Request Documents
+				"bank_waiver",                // التنازل البنكي (Noran Certified only)
+				"export_invoice",             // فاتورة التصدير
+				"export_packing_list",        // كشف عبوة التصدير
+				"shipping_permit",            // إذن الشحن
+				"awb",                        // Air Waybill (بوليصة الشحن الجوي)
+				"bl",                         // Bill of Lading (بوليصة الشحن البحري)
+				
+				// Noran Created Documents
+				"noran_invoice",              // فاتورة النوران
+				"noran_packing_list",         // كشف عبوة النوران
+				
+				// Regulatory Documents
+				"regulatory_approval",        // موافقة الجهات الرقابية
+				"phytosanitary_cert",         // شهادة صحة نباتية
+				"veterinary_cert",            // شهادة صحة حيوانية
+				"health_cert",                // شهادة صحية
+				
+				// Certificate of Origin
+				"certificate_of_origin",      // شهادة المنشأ
+				
+				// Form 46
+				"form_46",                    // نموذج 46
 				
 				// Other
 				"invoice",

@@ -87,6 +87,13 @@ app.use("/api/upload/users", require("./routes/uploadRoutes"));
 app.use("/api/upload/shipments", require("./routes/uploadRoutes"));
 app.use("/api/uploads", require("./routes/uploadS3Routes")); // S3 Upload Routes
 app.use("/api/chat", require("./routes/chatRoutes")); // Chat Routes
+
+// =====================================================
+// EXPORT SYSTEM ROUTES (NEW)
+// =====================================================
+app.use("/api/ucr", require("./routes/ucrRoutes")); // UCR (Export License) Routes
+app.use("/api/export-shipments", require("./routes/exportShipmentRoutes")); // Export Shipment Routes
+
 app.use((req, res) => {
 	res.status(404);
 	if (req.accepts("html")) {

@@ -92,6 +92,7 @@ const uploadFile = async (req, res) => {
 			"shipment",
 			"invoice",
 			"archive",
+			"ucr_request",
 		];
 		if (!validCategories.includes(category)) {
 			console.log("❌ Invalid category:", category);

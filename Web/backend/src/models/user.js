@@ -70,6 +70,14 @@ const UserSchema = new mongoose.Schema({
       type: String, 
       default: "",
     },
+    // Export Certification Type (for export services)
+    // 'noran' = على بطاقة الشركة (Green circle) - Noran handles docs, 10% fee
+    // 'client' = على بطاقة العميل (Yellow circle) - Client provides docs, no auto fee
+    exportCertificationType: {
+      type: String,
+      enum: ['noran', 'client'],
+      default: 'noran',
+    },
   },
   employeeDetails: {
     employeeType: {

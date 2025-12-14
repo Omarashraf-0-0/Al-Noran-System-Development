@@ -15,11 +15,13 @@ const Header = () => {
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [notifications, setNotifications] = useState([]);
 	const [showNotifications, setShowNotifications] = useState(false);
+	const [openDropdown, setOpenDropdown] = useState(null); // For navigation dropdowns
 
 	const navigate = useNavigate();
 	const location = useLocation();
 	const profileMenuRef = useRef(null);
 	const notificationRef = useRef(null);
+	const dropdownRef = useRef(null);
 
 	const primaryColor = "#690000";
 
@@ -93,6 +95,12 @@ const Header = () => {
 			) {
 				setShowNotifications(false);
 			}
+			if (
+				dropdownRef.current &&
+				!dropdownRef.current.contains(event.target)
+			) {
+				setOpenDropdown(null);
+			}
 		};
 
 		document.addEventListener("mousedown", handleClickOutside);
@@ -128,6 +136,18 @@ const Header = () => {
 				{ label: "شحناتي", path: "/client-shipments", icon: "📦" },
 				{ label: "طلبات ACID", path: "/acidrequests", icon: "📋" },
 				{ label: "طلب رقم acid", path: "/acidrequest", icon: "🔢" },
+				// Export Section
+				{ 
+					label: "التصدير", 
+					path: "/export", 
+					icon: "📤",
+					isDropdown: true,
+					dropdownItems: [
+						{ label: "طلب رقم UCR", path: "/ucr-request", icon: "🔢" },
+						{ label: "طلباتي UCR", path: "/ucr-requests", icon: "📋" },
+						{ label: "شحنات التصدير", path: "/export-shipments", icon: "🚢" },
+					]
+				},
 				{ label: "رفع المستندات", path: "/upload-documents", icon: "📄" },
 				{ label: "الدعم", path: "/chat", icon: "💬" },
 			];
@@ -140,6 +160,17 @@ const Header = () => {
 				{ label: "لوحة التحكم", path: "/employeedashboard", icon: "📊" },
 				{ label: "الشحنات", path: "/employee-shipments", icon: "📦" },
 				{ label: "طلبات ACID", path: "/employee/acid-requests", icon: "📋" },
+				// Export Section for Employees
+				{ 
+					label: "التصدير", 
+					path: "/export", 
+					icon: "📤",
+					isDropdown: true,
+					dropdownItems: [
+						{ label: "طلبات UCR", path: "/employee/ucr-requests", icon: "📋" },
+						{ label: "شحنات التصدير", path: "/employee/export-shipments", icon: "🚢" },
+					]
+				},
 				{ label: "عملائي", path: "/my-customers", icon: "👥" },
 				{ label: "الدعم", path: "/support-dashboard", icon: "💬" },
 			];
@@ -224,21 +255,68 @@ const Header = () => {
 						</Link>
 
 						{/* Desktop Navigation Links */}
-						<nav className="hidden md:flex items-center">
+						<nav className="hidden md:flex items-center" ref={dropdownRef}>
 							<div className="flex items-baseline space-x-4 space-x-reverse">
 								{navigationItems.map((item, index) => (
-									<Link
-										key={index}
-										to={item.path}
-										className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-											isActivePath(item.path)
-												? "text-red-800 font-bold bg-red-50"
-												: "text-gray-700 hover:text-red-800 hover:bg-gray-50"
-										}`}
-									>
-										<span className="inline-block ml-1">{item.icon}</span>
-										{item.label}
-									</Link>
+									item.isDropdown ? (
+										// Dropdown Navigation Item
+										<div key={index} className="relative">
+											<button
+												onClick={() => setOpenDropdown(openDropdown === item.label ? null : item.label)}
+												className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1 ${
+													item.dropdownItems?.some(sub => isActivePath(sub.path))
+														? "text-red-800 font-bold bg-red-50"
+														: "text-gray-700 hover:text-red-800 hover:bg-gray-50"
+												}`}
+											>
+												<span className="inline-block ml-1">{item.icon}</span>
+												{item.label}
+												<svg 
+													className={`w-4 h-4 transition-transform ${openDropdown === item.label ? 'rotate-180' : ''}`} 
+													fill="none" 
+													stroke="currentColor" 
+													viewBox="0 0 24 24"
+												>
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+												</svg>
+											</button>
+											
+											{/* Dropdown Menu */}
+											{openDropdown === item.label && (
+												<div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50 py-2">
+													{item.dropdownItems?.map((subItem, subIndex) => (
+														<Link
+															key={subIndex}
+															to={subItem.path}
+															onClick={() => setOpenDropdown(null)}
+															className={`block px-4 py-2 text-sm transition-colors ${
+																isActivePath(subItem.path)
+																	? "text-red-800 font-bold bg-red-50"
+																	: "text-gray-700 hover:text-red-800 hover:bg-gray-50"
+															}`}
+														>
+															<span className="inline-block ml-2">{subItem.icon}</span>
+															{subItem.label}
+														</Link>
+													))}
+												</div>
+											)}
+										</div>
+									) : (
+										// Regular Navigation Item
+										<Link
+											key={index}
+											to={item.path}
+											className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+												isActivePath(item.path)
+													? "text-red-800 font-bold bg-red-50"
+													: "text-gray-700 hover:text-red-800 hover:bg-gray-50"
+											}`}
+										>
+											<span className="inline-block ml-1">{item.icon}</span>
+											{item.label}
+										</Link>
+									)
 								))}
 							</div>
 						</nav>
@@ -388,19 +466,68 @@ const Header = () => {
 					<div className="md:hidden border-t border-gray-200 py-4">
 						<nav className="flex flex-col space-y-2">
 							{navigationItems.map((item, index) => (
-								<Link
-									key={index}
-									to={item.path}
-									onClick={() => setIsMobileMenuOpen(false)}
-									className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-										isActivePath(item.path)
-											? "text-red-800 font-bold bg-red-50"
-											: "text-gray-700 hover:text-red-800 hover:bg-gray-50"
-									}`}
-								>
-									<span className="inline-block ml-2">{item.icon}</span>
-									{item.label}
-								</Link>
+								item.isDropdown ? (
+									// Dropdown in mobile
+									<div key={index} className="flex flex-col">
+										<button
+											onClick={() => setOpenDropdown(openDropdown === item.label ? null : item.label)}
+											className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-between ${
+												item.dropdownItems?.some(sub => isActivePath(sub.path))
+													? "text-red-800 font-bold bg-red-50"
+													: "text-gray-700 hover:text-red-800 hover:bg-gray-50"
+											}`}
+										>
+											<span>
+												<span className="inline-block ml-2">{item.icon}</span>
+												{item.label}
+											</span>
+											<svg 
+												className={`w-4 h-4 transition-transform ${openDropdown === item.label ? 'rotate-180' : ''}`} 
+												fill="none" 
+												stroke="currentColor" 
+												viewBox="0 0 24 24"
+											>
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+											</svg>
+										</button>
+										{openDropdown === item.label && (
+											<div className="mr-6 border-r-2 border-red-200">
+												{item.dropdownItems?.map((subItem, subIndex) => (
+													<Link
+														key={subIndex}
+														to={subItem.path}
+														onClick={() => {
+															setIsMobileMenuOpen(false);
+															setOpenDropdown(null);
+														}}
+														className={`block px-4 py-2 text-sm transition-colors ${
+															isActivePath(subItem.path)
+																? "text-red-800 font-bold bg-red-50"
+																: "text-gray-600 hover:text-red-800 hover:bg-gray-50"
+														}`}
+													>
+														<span className="inline-block ml-2">{subItem.icon}</span>
+														{subItem.label}
+													</Link>
+												))}
+											</div>
+										)}
+									</div>
+								) : (
+									<Link
+										key={index}
+										to={item.path}
+										onClick={() => setIsMobileMenuOpen(false)}
+										className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+											isActivePath(item.path)
+												? "text-red-800 font-bold bg-red-50"
+												: "text-gray-700 hover:text-red-800 hover:bg-gray-50"
+										}`}
+									>
+										<span className="inline-block ml-2">{item.icon}</span>
+										{item.label}
+									</Link>
+								)
 							))}
 						</nav>
 					</div>
