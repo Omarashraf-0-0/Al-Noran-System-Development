@@ -17,11 +17,15 @@ import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.mongodb.client.MongoCollection;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
 import javafx.stage.FileChooser;
 import noran.desktop.AppSession;
@@ -56,15 +60,57 @@ public class AdminAddInvoiceController {
         invoiceDateLabel.setText(new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
 
         items.addListener((javafx.collections.ListChangeListener<InvoiceRow>) c -> updateTotal());
+
+        Platform.runLater(this::registerShortcuts);
+
+        invoiceTable.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.DELETE) {
+                deleteSelectedRow();
+            }
+        });
     }
 
-    // ================= CURRENCY CONVERSION =================
+    // ================= SHORTCUTS =================
+
+    private void registerShortcuts() {
+        Scene scene = invoiceTable.getScene();
+        if (scene == null) return;
+
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+
+            if (e.isControlDown() && e.getCode() == KeyCode.A) {
+                addNewRow();
+                e.consume();
+            }
+
+            if (e.isControlDown() && e.getCode() == KeyCode.S) {
+                generatePdf();
+                e.consume();
+            }
+
+            if (e.isControlDown() && e.getCode() == KeyCode.D) {
+                invoiceTable.requestFocus();
+                if (!invoiceTable.getItems().isEmpty()) {
+                    invoiceTable.getSelectionModel().selectFirst();
+                }
+                e.consume();
+            }
+
+            if (e.isControlDown() && e.getCode() == KeyCode.X) {
+                clientNameField.requestFocus();
+                clientNameField.selectAll();
+                e.consume();
+            }
+        });
+    }
+
+    // ================= CURRENCY =================
 
     private double convertToEGP(double price, String currency) {
         if ("USD".equalsIgnoreCase(currency)) {
             return price * 50;
         }
-        return price; // EGP
+        return price;
     }
 
     // ================= ADD ITEM =================
@@ -85,6 +131,9 @@ public class AdminAddInvoiceController {
         currencyBox.getItems().addAll("EGP", "USD");
         currencyBox.setValue("EGP");
 
+        descField.setOnAction(e -> priceField.requestFocus());
+        priceField.setOnAction(e -> currencyBox.requestFocus());
+
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
@@ -99,6 +148,8 @@ public class AdminAddInvoiceController {
         grid.add(currencyBox, 1, 2);
 
         dialog.getDialogPane().setContent(grid);
+
+        Platform.runLater(descField::requestFocus);
 
         dialog.setResultConverter(btn -> {
             if (btn == addBtn) {
@@ -136,7 +187,7 @@ public class AdminAddInvoiceController {
         totalLabel.setText(String.format("المجموع الكلي: %,.2f جنيه مصري", total));
     }
 
-    // ================= GENERATE PDF (UNCHANGED FORM) =================
+    // ================= GENERATE PDF =================
 
     @FXML
     private void generatePdf() {
