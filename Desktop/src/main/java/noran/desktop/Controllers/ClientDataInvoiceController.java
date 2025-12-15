@@ -1,5 +1,8 @@
 package noran.desktop.Controllers;
 
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
@@ -16,18 +19,19 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
 import noran.desktop.AppSession;
-import noran.desktop.Database.DatabaseConnection;
+import noran.desktop.Database.MongoConnection;
 import noran.desktop.HelloController;
+import org.bson.Document;
+import org.bson.types.ObjectId;
 
 import java.io.IOException;
 import java.net.URL;
-import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
 
 public class ClientDataInvoiceController implements Initializable {
 
-    @FXML private Label userNameLabel;
-    @FXML private Label userIdLabel;
     @FXML private Button btnViewAcceptedInvoices;
 
     // Table Setup
@@ -53,61 +57,20 @@ public class ClientDataInvoiceController implements Initializable {
         colClientType.setCellValueFactory(data -> data.getValue().clientTypeProperty());
         colClientRank.setCellValueFactory(data -> data.getValue().rankProperty());
 
-        // 2. Wrap the ObservableList in a FilteredList (initially display all data)
+        // 2. Setup Search/Filter
         filteredData = new FilteredList<>(userList, p -> true);
-
-        // 3. Wrap the FilteredList in a SortedList (to allow sorting by clicking headers)
         SortedList<UserRow> sortedData = new SortedList<>(filteredData);
         sortedData.comparatorProperty().bind(invoicesTable.comparatorProperty());
-
-        // 4. Bind the table to the SortedList
         invoicesTable.setItems(sortedData);
 
-        // 5. Load Data
-        loadUsersFromDatabase();
+        // 3. Load Data from MongoDB
+        loadUsersWithShipments();
 
-        // 6. Setup Sidebar
-        if (sidebarController != null) {
-            sidebarController.setActivePage("invoices");
-        }
+        // 4. Setup UI Components
+        if (sidebarController != null) sidebarController.setActivePage("invoices");
+        setupTopBar();
 
-        // 7. Setup TopBar (User Info + Search Logic)
-        User currentUser = AppSession.getInstance().getCurrentUser();
-        if (topBarController != null) {
-
-            // Set Page Title
-            topBarController.setPageTitle("إدارة الفواتير");
-
-            // Set User Info
-            if (currentUser != null) {
-                String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
-                String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
-                topBarController.setUserData(name, id);
-            }
-
-            // --- DYNAMIC SEARCH LOGIC ---
-            topBarController.setOnSearchAction(searchText -> {
-                filteredData.setPredicate(user -> {
-                    // If filter text is empty, display all users.
-                    if (searchText == null || searchText.isEmpty()) {
-                        return true;
-                    }
-
-                    String lowerCaseFilter = searchText.toLowerCase();
-
-                    // Search by Name or Tax Number
-                    if (user.getUsername() != null && user.getUsername().toLowerCase().contains(lowerCaseFilter)) {
-                        return true; // Match Name
-                    } else if (user.getTaxNumber() != null && user.getTaxNumber().contains(lowerCaseFilter)) {
-                        return true; // Match Tax Number
-                    }
-
-                    return false; // No Match
-                });
-            });
-        }
-
-        // Double-click to open invoice screen
+        // 5. Double-click Action
         invoicesTable.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
                 UserRow selected = invoicesTable.getSelectionModel().getSelectedItem();
@@ -118,62 +81,91 @@ public class ClientDataInvoiceController implements Initializable {
         });
     }
 
-    private void loadUsersFromDatabase() {
-        userList.clear(); // Automatically updates the table because of binding
+    private void setupTopBar() {
+        User currentUser = AppSession.getInstance().getCurrentUser();
+        if (topBarController != null) {
+            topBarController.setPageTitle("إدارة الفواتير");
+            if (currentUser != null) {
+                topBarController.setUserData(currentUser.getName(), "ID: " + currentUser.getId());
+            }
 
-        String sql = """
-            SELECT _id, fullname, taxNumber, clientType, rank 
-            FROM users 
-            WHERE type = 'client' AND active = 1
-            ORDER BY fullname
-            """;
+            // Dynamic Search
+            topBarController.setOnSearchAction(searchText -> {
+                filteredData.setPredicate(user -> {
+                    if (searchText == null || searchText.isEmpty()) return true;
+                    String lower = searchText.toLowerCase();
+                    return (user.getUsername() != null && user.getUsername().toLowerCase().contains(lower)) ||
+                            (user.getTaxNumber() != null && user.getTaxNumber().contains(lower));
+                });
+            });
+        }
+    }
 
-        try (Connection conn = DatabaseConnection.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+    // ✅ LOAD LOGIC: Only get users who actually have shipments
+    private void loadUsersWithShipments() {
+        userList.clear();
 
-            while (rs.next()) {
-                String id = rs.getString("_id");
-                String fullname = rs.getString("fullname");
-                String taxNumber = rs.getString("taxNumber");
-                String clientType = rs.getString("clientType");
-                String rank = rs.getString("rank");
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            MongoCollection<Document> shipmentsCol = db.getCollection("shipments");
+            MongoCollection<Document> usersCol = db.getCollection("users");
 
-                // Normalize rank
+            // 1. Find all distinct User IDs that exist in the 'shipments' collection
+            List<ObjectId> distinctUserIds = shipmentsCol.distinct("user_id", ObjectId.class)
+                    .into(new ArrayList<>());
+
+            if (distinctUserIds.isEmpty()) {
+                System.out.println("No shipments found, list will be empty.");
+                return;
+            }
+
+            // 2. Find User details ONLY for those IDs
+            // Query: WHERE _id IN (id1, id2, id3...) AND active = true
+            List<Document> usersFound = usersCol.find(
+                    Filters.and(
+                            Filters.in("_id", distinctUserIds),
+                            Filters.eq("active", true) // Optional: Ensure user is active
+                    )
+            ).into(new ArrayList<>());
+
+            for (Document doc : usersFound) {
+                String id = doc.getObjectId("_id").toString();
+                String fullname = doc.getString("fullname");
+                String taxNumber = doc.getString("taxNumber");
+                String clientType = doc.getString("clientType");
+                String rank = doc.getString("rank");
+
+                // Normalize Data
+                if (fullname == null) fullname = doc.getString("username"); // Fallback
+                if (taxNumber == null) taxNumber = "-";
+                if (clientType == null) clientType = "عادي";
+
+                // Rank Logic
                 if (rank == null || rank.trim().isEmpty()) {
                     rank = "low";
                 } else {
                     rank = rank.toLowerCase();
                     if (rank.equals("rank1")) rank = "low";
-                    if (rank.equals("rank2")) rank = "med";
-                    if (rank.equals("rank3")) rank = "high";
+                    else if (rank.equals("rank2")) rank = "med";
+                    else if (rank.equals("rank3")) rank = "high";
                 }
 
-                userList.add(new UserRow(fullname, clientType, taxNumber != null ? taxNumber : "-", rank, id));
+                userList.add(new UserRow(fullname, clientType, taxNumber, rank, id));
             }
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             showAlert("خطأ", "فشل تحميل بيانات العملاء: " + e.getMessage());
         }
     }
 
-    // --- Navigation & Other Actions ---
-
-    @FXML
-    public void onDashboardClick(ActionEvent event) throws IOException {
-        navigate(event, "/noran/desktop/dashboard.fxml");
-    }
-
-    @FXML
-    public void onTa5les(ActionEvent event) throws IOException {
-        navigate(event, "/noran/desktop/AdminInvoices.fxml");
-    }
+    // --- Navigation ---
 
     @FXML
     private void openAcceptedInvoices() {
         try {
             Stage currentStage = (Stage) btnViewAcceptedInvoices.getScene().getWindow();
+            // Ensure this points to your new MongoDB-based AcceptedInvoicesController
             Parent root = FXMLLoader.load(getClass().getResource("/noran/desktop/AcceptedInvoicesView.fxml"));
             Scene scene = new Scene(root);
             currentStage.setScene(scene);
@@ -181,7 +173,7 @@ public class ClientDataInvoiceController implements Initializable {
             currentStage.centerOnScreen();
         } catch (IOException e) {
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "فشل في فتح صفحة الفواتير المقبولة:\n" + e.getMessage()).show();
+            showAlert("خطأ", "فشل في فتح الصفحة: " + e.getMessage());
         }
     }
 
@@ -191,7 +183,7 @@ public class ClientDataInvoiceController implements Initializable {
             Parent root = loader.load();
             HelloController controller = loader.getController();
 
-            // Pass ALL required data including rank
+            // Pass Data to HelloController
             controller.setSelectedClient(
                     user.getUsername(),
                     user.getTaxNumber(),
@@ -219,23 +211,10 @@ public class ClientDataInvoiceController implements Initializable {
         alert.showAndWait();
     }
 
-    public void onClientManagementClick(ActionEvent event) throws IOException {
-        navigate(event, "/noran/desktop/client-data.fxml");
-    }
+    @FXML public void onDashboardClick(ActionEvent e) throws IOException { navigate(e, "/noran/desktop/dashboard.fxml"); }
+    @FXML public void onTa5les(ActionEvent e) throws IOException { navigate(e, "/noran/desktop/AdminInvoices.fxml"); }
+    @FXML public void refresh(ActionEvent e) { loadUsersWithShipments(); }
 
-    public void invoice_management(ActionEvent event) throws IOException {
-        navigate(event, "/noran/desktop/client-data-invoice.fxml");
-    }
-
-    public void shipment_management(ActionEvent event) throws IOException {
-        navigate(event, "/noran/desktop/shipments-management.fxml");
-    }
-
-    public void employee_management(ActionEvent event) throws IOException {
-        navigate(event, "/noran/desktop/employee-management.fxml");
-    }
-
-    // Helper for navigation
     private void navigate(ActionEvent event, String fxmlPath) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
         Parent root = loader.load();
@@ -243,10 +222,6 @@ public class ClientDataInvoiceController implements Initializable {
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.setScene(scene);
         stage.show();
-    }
-
-    public void refresh(ActionEvent event) {
-
     }
 
     // --- Inner Class: UserRow ---
@@ -258,10 +233,10 @@ public class ClientDataInvoiceController implements Initializable {
         private final SimpleStringProperty id;
 
         public UserRow(String username, String clientType, String taxNumber, String rank, String id) {
-            this.username = new SimpleStringProperty(username != null ? username : "غير محدد");
-            this.clientType = new SimpleStringProperty(clientType != null ? clientType : "عادي");
-            this.taxNumber = new SimpleStringProperty(taxNumber != null ? taxNumber : "-");
-            this.rank = new SimpleStringProperty(rank != null ? rank : "low");
+            this.username = new SimpleStringProperty(username);
+            this.clientType = new SimpleStringProperty(clientType);
+            this.taxNumber = new SimpleStringProperty(taxNumber);
+            this.rank = new SimpleStringProperty(rank);
             this.id = new SimpleStringProperty(id);
         }
 
@@ -275,6 +250,5 @@ public class ClientDataInvoiceController implements Initializable {
         public StringProperty clientTypeProperty() { return clientType; }
         public StringProperty taxNumberProperty() { return taxNumber; }
         public StringProperty rankProperty() { return rank; }
-        public StringProperty idProperty() { return id; }
     }
 }

@@ -1,9 +1,15 @@
 package noran.desktop.Controllers;
 
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -16,13 +22,16 @@ import javafx.scene.control.TableView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import noran.desktop.AppSession;
-import noran.desktop.Database.DatabaseConnection;
-import noran.desktop.Database.RestMongoSyncClient;
+import noran.desktop.Database.MongoConnection;
 import noran.desktop.models.Employee;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+import org.mindrot.jbcrypt.BCrypt;
+
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 public class EmployeeManagementController {
 
@@ -33,11 +42,9 @@ public class EmployeeManagementController {
     @FXML private TableColumn<Employee, String> colType;
     @FXML private TableColumn<Employee, String> colRank;
 
-    // --- Data Lists ---
     private final ObservableList<Employee> employees = FXCollections.observableArrayList();
     private FilteredList<Employee> filteredData;
 
-    // --- Injected Controllers ---
     @FXML private SidebarController sidebarController;
     @FXML private TopBarController topBarController;
 
@@ -48,63 +55,71 @@ public class EmployeeManagementController {
         colEmail.setCellValueFactory(data -> data.getValue().emailProperty());
         colPhone.setCellValueFactory(data -> data.getValue().phoneProperty());
         colType.setCellValueFactory(data -> data.getValue().jobTypeProperty());
-        colRank.setCellValueFactory(data -> data.getValue().rankProperty());
 
-        // 2. Wrap the ObservableList
+        // Display "Active" or "Frozen" based on boolean
+        colRank.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(data.getValue().isActive() ? "نشط" : "مجمد")
+        );
+
+        // 2. Wrap List
         filteredData = new FilteredList<>(employees, p -> true);
         SortedList<Employee> sortedData = new SortedList<>(filteredData);
         sortedData.comparatorProperty().bind(clientTable.comparatorProperty());
         clientTable.setItems(sortedData);
 
-        // 3. Load Data (Syncs automatically)
-        loadEmployees();
+        // 3. Load Data
+        loadEmployeesFromMongo();
 
-        // 4. Setup Sidebar
-        if (sidebarController != null) {
-            sidebarController.setActivePage("employees");
-        }
-
-        // 5. Setup TopBar
+        if (sidebarController != null) sidebarController.setActivePage("employees");
         setupTopBar();
     }
 
-    public void loadEmployees() {
-        // ✅ STEP 1: Sync Local DB with Remote Server First
-        try {
-            System.out.println("🔄 Syncing local database with remote server...");
-            RestMongoSyncClient.syncUsersWithRemote();
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.err.println("⚠ Sync failed. Loading existing local data only.");
-        }
+    // ✅ 1. LOAD FROM MONGODB (Matching JSON Structure)
+    public void loadEmployeesFromMongo() {
+        Task<List<Employee>> task = new Task<>() {
+            @Override
+            protected List<Employee> call() {
+                List<Employee> list = new ArrayList<>();
+                try {
+                    MongoDatabase db = MongoConnection.getDatabase();
+                    MongoCollection<Document> users = db.getCollection("users");
 
-        // ✅ STEP 2: Clear old UI data
-        employees.clear();
+                    // Filter only 'employee' type
+                    for (Document doc : users.find(new Document("type", "employee"))) {
+                        String id = doc.getObjectId("_id").toString();
+                        String fullname = doc.getString("fullname");
+                        String email = doc.getString("email");
+                        String phone = doc.getString("phone");
+                        boolean active = doc.getBoolean("active", true);
+                        String password = doc.getString("password");
 
-        // ✅ STEP 3: Load fresh data from SQLite
-        try (Connection conn = DatabaseConnection.connect()) {
-            String sql = "SELECT _id, fullname, email, phone, clientType, employeeType, active, password FROM users WHERE type='employee'";
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            ResultSet rs = stmt.executeQuery();
+                        // 🛑 EXTRACT NESTED employeeDetails
+                        String jobTitle = "موظف"; // Default
+                        Document empDetails = (Document) doc.get("employeeDetails");
 
-            while (rs.next()) {
-                String jobTitle = rs.getString("employeeType");
-                if (jobTitle == null || jobTitle.isBlank()) jobTitle = rs.getString("clientType");
+                        if (empDetails != null && empDetails.getString("employeeType") != null) {
+                            jobTitle = empDetails.getString("employeeType");
+                        } else if (doc.getString("clientType") != null) {
+                            // Fallback for old data format
+                            jobTitle = doc.getString("clientType");
+                        }
 
-                employees.add(new Employee(
-                        rs.getString("_id"),
-                        rs.getString("fullname"),
-                        rs.getString("email"),
-                        rs.getString("phone"),
-                        jobTitle,
-                        rs.getBoolean("active"),
-                        rs.getString("password")
-                ));
+                        list.add(new Employee(id, fullname, email, phone, jobTitle, active, password));
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Platform.runLater(() -> showAlert("Connection Error: " + e.getMessage()));
+                }
+                return list;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("Error loading employees: " + e.getMessage());
-        }
+        };
+
+        task.setOnSucceeded(e -> {
+            employees.setAll(task.getValue());
+            clientTable.refresh();
+        });
+
+        new Thread(task).start();
     }
 
     // --- CRUD OPERATIONS ---
@@ -122,21 +137,12 @@ public class EmployeeManagementController {
             showAlert("Select an employee to edit.");
             return;
         }
-
-        // 🛑 Create a COPY of the employee so we don't modify the table directly
-        Employee tempEmployee = new Employee(
-                selected.getId(),
-                selected.getFullname(),
-                selected.getEmail(),
-                selected.getPhone(),
-                selected.getJobType(),
-                selected.isActive(),
-                selected.getPassword()
-        );
-
-        openEmployeePopup(tempEmployee);
+        openEmployeePopup(selected);
     }
 
+    // -------------------------------------------------------------
+    // REPLACE openEmployeePopup WITH THIS
+    // -------------------------------------------------------------
     private void openEmployeePopup(Employee employee) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/add-employee-popup.fxml"));
@@ -145,15 +151,17 @@ public class EmployeeManagementController {
             EmployeePopupController popupController = loader.getController();
             popupController.loadEmployee(employee);
 
+            // ✅ PASS THE SAVE FUNCTION TO THE POPUP
+            popupController.setSaveHandler(this::saveEmployeeToMongo);
+
             Stage stage = new Stage();
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setScene(new Scene(root));
             stage.setTitle(employee.getId().isBlank() ? "Add Employee" : "Edit Employee");
             stage.showAndWait();
 
-            if (popupController.isSaved()) {
-                handleRemoteSave(employee);
-            }
+            // We don't need to check isSaved() here anymore because the saving
+            // happens inside the popup flow now.
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -161,34 +169,88 @@ public class EmployeeManagementController {
         }
     }
 
-    /**
-     * ✅ REMOTE FIRST SAVE LOGIC
-     */
-    private void handleRemoteSave(Employee employee) {
-        boolean success = false;
-        String operation = "";
+    // -------------------------------------------------------------
+    // REPLACE saveEmployeeToMongo WITH THIS (Returns Boolean)
+    // -------------------------------------------------------------
+    // ✅ 2. SAVE TO MONGODB (With Password Hashing)
+    private boolean saveEmployeeToMongo(Employee emp) {
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            MongoCollection<Document> users = db.getCollection("users");
 
-        if (employee.getId() == null || employee.getId().isBlank()) {
-            operation = "add";
-            // Uses addEmployeeRemotely which returns the new ID
-            String remoteId = RestMongoSyncClient.addEmployeeRemotely(employee);
-            success = (remoteId != null && !remoteId.isBlank());
-        } else {
-            operation = "update";
-            // Uses updateEmployeeRemotely (Self-Healing version)
-            success = RestMongoSyncClient.updateEmployeeRemotely(employee);
-        }
+            // --- PASSWORD HASHING LOGIC ---
+            String finalPassword = emp.getPassword();
 
-        if (success) {
-            System.out.println("✔ Remote " + operation + " successful.");
-            // loadEmployees() handles the sync and refresh
-            loadEmployees();
-            clientTable.refresh();
-        } else {
-            showAlert("فشل الاتصال بالخادم. لم يتم حفظ البيانات.");
+            // Only hash if it exists AND it doesn't look like a Bcrypt hash already
+            // (Prevents double-hashing when editing an employee without changing password)
+            if (finalPassword != null && !finalPassword.isEmpty()) {
+                if (!finalPassword.startsWith("$2b$") && !finalPassword.startsWith("$2a$")) {
+                    finalPassword = BCrypt.hashpw(finalPassword, BCrypt.gensalt());
+                    System.out.println("🔒 Password hashed successfully.");
+                }
+            }
+            // -----------------------------
+
+            Document employeeDetails = new Document()
+                    .append("employeeType", emp.getJobType())
+                    .append("verified", false)
+                    .append("isOnline", false);
+
+            Document doc = new Document()
+                    .append("fullname", emp.getFullname())
+                    .append("username", emp.getFullname().replaceAll("\\s+", "").toLowerCase())
+                    .append("email", emp.getEmail())
+                    .append("phone", emp.getPhone())
+                    .append("password", finalPassword) // ✅ Save HASHED password
+                    .append("type", "employee")
+                    .append("active", emp.isActive())
+                    .append("employeeDetails", employeeDetails)
+                    .append("clientDetails", new Document("clientType", null).append("ssn", ""));
+
+            if (emp.getId() == null || emp.getId().isBlank()) {
+                // INSERT
+                doc.append("createdAt", new Date());
+                doc.append("updatedAt", new Date());
+                doc.append("__v", 0);
+                users.insertOne(doc);
+                System.out.println("✔ Inserted new employee");
+            } else {
+                // UPDATE
+                doc.append("updatedAt", new Date());
+                users.updateOne(
+                        Filters.eq("_id", new ObjectId(emp.getId())),
+                        new Document("$set", doc)
+                );
+                System.out.println("✔ Updated employee: " + emp.getId());
+            }
+
+            loadEmployeesFromMongo();
+            return true; // ✅ Success
+
+        } catch (com.mongodb.MongoWriteException e) {
+            // 🛑 HANDLE DUPLICATE (Pop-up stays open)
+            if (e.getError().getCode() == 11000) {
+                String msg = e.getMessage();
+                if (msg.contains("phone")) {
+                    showAlert("تنبيه: رقم الهاتف (" + emp.getPhone() + ") مسجل بالفعل لموظف آخر.");
+                } else if (msg.contains("email")) {
+                    showAlert("تنبيه: البريد الإلكتروني (" + emp.getEmail() + ") مسجل بالفعل.");
+                } else {
+                    showAlert("تنبيه: توجد بيانات مكررة (هاتف أو إيميل).");
+                }
+            } else {
+                e.printStackTrace();
+                showAlert("خطأ قاعدة بيانات: " + e.getMessage());
+            }
+            return false; // ❌ Fail
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("فشل الحفظ: " + e.getMessage());
+            return false; // ❌ Fail
         }
     }
-
+    // ✅ 3. DELETE
     @FXML
     public void deleteEmployee(ActionEvent event) {
         Employee selected = clientTable.getSelectionModel().getSelectedItem();
@@ -197,18 +259,20 @@ public class EmployeeManagementController {
             return;
         }
 
-        // 1. DELETE FROM REMOTE DATABASE FIRST
-        boolean remoteDeleted = RestMongoSyncClient.deleteUserRemotely(selected.getId());
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            db.getCollection("users").deleteOne(Filters.eq("_id", new ObjectId(selected.getId())));
 
-        if (remoteDeleted) {
-            System.out.println("✔ Remote delete successful.");
-            // Sync & Reload handles local deletion
-            loadEmployees();
-        } else {
-            showAlert("Failed to delete employee from server.");
+            employees.remove(selected);
+            System.out.println("✔ Deleted employee: " + selected.getId());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Failed to delete: " + e.getMessage());
         }
     }
 
+    // ✅ 4. FREEZE
     @FXML
     public void freezeEmployee(ActionEvent event) {
         Employee selected = clientTable.getSelectionModel().getSelectedItem();
@@ -217,29 +281,22 @@ public class EmployeeManagementController {
             return;
         }
 
-        boolean originalStatus = selected.isActive();
-        boolean newStatus = !originalStatus;
+        boolean newStatus = !selected.isActive();
 
-        // Create temp copy for update
-        Employee tempEmp = new Employee(
-                selected.getId(),
-                selected.getFullname(),
-                selected.getEmail(),
-                selected.getPhone(),
-                selected.getJobType(),
-                newStatus, // Apply new status
-                selected.getPassword()
-        );
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            db.getCollection("users").updateOne(
+                    Filters.eq("_id", new ObjectId(selected.getId())),
+                    Updates.set("active", newStatus)
+            );
 
-        // Send update to server
-        boolean success = RestMongoSyncClient.updateEmployeeRemotely(tempEmp);
+            selected.setActive(newStatus);
+            clientTable.refresh();
+            System.out.println("✔ Employee status updated to: " + newStatus);
 
-        if (success) {
-            // Sync and reload to get the official change
-            loadEmployees();
-            System.out.println("✔ Freeze/Unfreeze synced successfully.");
-        } else {
-            showAlert("Failed to sync status with server.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Failed to update status: " + e.getMessage());
         }
     }
 
@@ -251,7 +308,7 @@ public class EmployeeManagementController {
     }
 
     public void refresh(ActionEvent event) {
-        loadEmployees();
+        loadEmployeesFromMongo();
     }
 
     // --- NAVIGATION ---
@@ -268,13 +325,13 @@ public class EmployeeManagementController {
             topBarController.setOnSearchAction(searchText -> {
                 filteredData.setPredicate(employee -> {
                     if (searchText == null || searchText.isEmpty()) return true;
-                    String lowerCaseFilter = searchText.toLowerCase();
-                    if (employee.getFullname() != null && employee.getFullname().toLowerCase().contains(lowerCaseFilter)) return true;
-                    if (employee.getPhone() != null && employee.getPhone().contains(lowerCaseFilter)) return true;
-                    return false;
+                    String lower = searchText.toLowerCase();
+                    return (employee.getFullname() != null && employee.getFullname().toLowerCase().contains(lower)) ||
+                            (employee.getPhone() != null && employee.getPhone().contains(lower));
                 });
             });
         }
     }
+
 
 }
