@@ -194,11 +194,7 @@ export default function EmployeeDetailsModal({
 								{getEmployeeTypeLabel(employee.employeeDetails?.employeeType)}
 							</div>
 
-							{employee.employeeDetails?.verified && (
-								<div className="bg-purple-100 text-purple-800 px-4 py-2 rounded-lg text-sm font-semibold">
-									✓ موظف معتمد
-								</div>
-							)}
+
 						</div>
 
 						<div className="mt-6 text-right w-full space-y-1 text-sm text-gray-600">
@@ -392,15 +388,7 @@ export default function EmployeeDetailsModal({
 								)}
 							</div>
 
-							{/* Verified Status */}
-							<div className="flex items-center gap-4">
-								<label className="w-1/3 text-right font-semibold text-gray-700">
-									التحقق:
-								</label>
-								<p className="flex-1 text-right text-gray-600">
-									{employee.employeeDetails?.verified ? "معتمد ✓" : "غير معتمد"}
-								</p>
-							</div>
+
 
 							{/* User ID */}
 							<div className="flex items-center gap-4">

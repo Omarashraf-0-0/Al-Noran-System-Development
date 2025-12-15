@@ -18,7 +18,7 @@ const AcidConfirmationModal = ({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="modal-header">
-					<h2>⚠️ Confirm ACID Issuance</h2>
+					<h2>⚠️ تأكيد إصدار رقم ACID</h2>
 					<button className="close-btn" onClick={onClose}>
 						×
 					</button>
@@ -27,80 +27,102 @@ const AcidConfirmationModal = ({
 				<div className="modal-body">
 					<div className="confirmation-message">
 						<p className="warning-text">
-							Please review the following data carefully before issuing the ACID
-							code. This action cannot be undone.
+							يرجى مراجعة البيانات التالية بعناية قبل إصدار رقم ACID. لا
+							يمكن التراجع عن هذا الإجراء.
+						</p>
+					</div>
+
+					<div className="request-summary confirmation-summary">
+						<h4>ملخص الطلب</h4>
+						<p>
+							<strong>العميل:</strong>{" "}
+							{confirmData.userId?.username || "غير متوفر"}
+						</p>
+						<p>
+							<strong>المورد:</strong>{" "}
+							{confirmData.supplier?.name || "غير متوفر"}
+						</p>
+						<p>
+							<strong>وصف البضاعة:</strong>{" "}
+							{confirmData.goods?.description || "غير متوفر"}
 						</p>
 					</div>
 
 					<div className="request-summary confirmation-details">
-						<h3>📋 Request Details</h3>
+						<h3>📋 تفاصيل الطلب</h3>
 
 						<div className="detail-section">
-							<h4>👤 Client Information</h4>
+							<h4>👤 بيانات العميل</h4>
 							<p>
-								<strong>Username:</strong>{" "}
-								{confirmData.userId?.username || "N/A"}
+								<strong>اسم المستخدم:</strong>{" "}
+								{confirmData.userId?.username || "غير متوفر"}
 							</p>
 							<p>
-								<strong>Email:</strong> {confirmData.userId?.email || "N/A"}
+								<strong>البريد الإلكتروني:</strong>{" "}
+								{confirmData.userId?.email || "غير متوفر"}
+							</p>
+							<p>
+								<strong>رقم الهاتف:</strong>{" "}
+								{confirmData.userId?.phone || "غير متوفر"}
 							</p>
 						</div>
 
 						<div className="detail-section">
-							<h4>🏭 Supplier Information</h4>
+							<h4>🏭 بيانات المورد</h4>
 							<p>
-								<strong>Name:</strong> {confirmData.supplier?.name || "N/A"}
+								<strong>الاسم:</strong> {confirmData.supplier?.name || "غير متوفر"}
 							</p>
 							<p>
-								<strong>Tax Number:</strong>{" "}
-								{confirmData.supplier?.taxNum || "N/A"}
+								<strong>الرقم الضريبي:</strong>{" "}
+								{confirmData.supplier?.taxNum || "غير متوفر"}
 							</p>
 							<p>
-								<strong>Country:</strong>{" "}
-								{confirmData.supplier?.country || "N/A"}
+								<strong>الدولة:</strong>{" "}
+								{confirmData.supplier?.country || "غير متوفر"}
 							</p>
 							<p>
-								<strong>Email:</strong> {confirmData.supplier?.email || "N/A"}
+								<strong>البريد الإلكتروني:</strong>{" "}
+								{confirmData.supplier?.email || "غير متوفر"}
 							</p>
 							<p>
-								<strong>Mobile:</strong>{" "}
-								{confirmData.supplier?.mobileNum || "N/A"}
+								<strong>رقم الجوال:</strong>{" "}
+								{confirmData.supplier?.mobileNum || "غير متوفر"}
 							</p>
 						</div>
 
 						<div className="detail-section">
-							<h4>📦 Goods Information</h4>
+							<h4>📦 بيانات البضاعة</h4>
 							<p>
-								<strong>Description:</strong>{" "}
-								{confirmData.goods?.description || "N/A"}
+								<strong>الوصف:</strong>{" "}
+								{confirmData.goods?.description || "غير متوفر"}
 							</p>
 							<p>
-								<strong>Customs Item:</strong>{" "}
-								{confirmData.goods?.customsItem || "N/A"}
+								<strong>بند جمركي:</strong>{" "}
+								{confirmData.goods?.customsItem || "غير متوفر"}
 							</p>
 							<p>
-								<strong>Weight:</strong>{" "}
+								<strong>الوزن:</strong>{" "}
 								{confirmData.goods?.weight
-									? `${confirmData.goods.weight} kg`
-									: "N/A"}
+									? `${confirmData.goods.weight} كجم`
+									: "غير متوفر"}
 							</p>
 						</div>
 
 						<div className="detail-section">
-							<h4>📅 Request Information</h4>
+							<h4>📅 بيانات الطلب</h4>
 							<p>
-								<strong>Request Date:</strong>{" "}
-								{new Date(confirmData.requestDate).toLocaleString()}
+								<strong>تاريخ الطلب:</strong>{" "}
+								{new Date(confirmData.requestDate).toLocaleString("ar-EG")}
 							</p>
 							<p>
-								<strong>Uploads:</strong> {confirmData.uploads?.length || 0}{" "}
-								document(s)
+								<strong>المرفقات:</strong> {confirmData.uploads?.length || 0}{" "}
+								مستند(ات)
 							</p>
 						</div>
 
 						{confirmData.uploads && confirmData.uploads.length > 0 && (
 							<div className="detail-section">
-								<h4>📄 Uploaded Documents</h4>
+								<h4>📄 المستندات المرفقة</h4>
 								<div className="documents-list">
 									{confirmData.uploads.map((upload, index) => {
 										const documentUrl =
@@ -108,7 +130,7 @@ const AcidConfirmationModal = ({
 										return (
 											<div key={upload._id || index} className="document-item">
 												<span className="document-name">
-													{upload.documentType || "Document"} -{" "}
+													{upload.documentType || "مستند"} -{" "}
 													{upload.originalname || upload.filename}
 												</span>
 												<button
@@ -120,12 +142,12 @@ const AcidConfirmationModal = ({
 														if (documentUrl) {
 															window.open(documentUrl, "_blank");
 														} else {
-															toast.error("Document URL not available");
+															toast.error("رابط المستند غير متوفر");
 														}
 													}}
 													disabled={!documentUrl}
 												>
-													👁️ View
+													👁️ عرض
 												</button>
 											</div>
 										);
@@ -137,7 +159,7 @@ const AcidConfirmationModal = ({
 
 					<div className="acid-code-input">
 						<label htmlFor="acidCode">
-							<strong>Enter ACID Code:</strong>{" "}
+							<strong>أدخل رقم ACID:</strong>{" "}
 							<span className="required">*</span>
 						</label>
 						<input
@@ -145,7 +167,7 @@ const AcidConfirmationModal = ({
 							type="text"
 							value={acidCodeInput}
 							onChange={(e) => onAcidCodeChange(e.target.value)}
-							placeholder="Enter the ACID code"
+							placeholder="أدخل رقم ACID"
 							className="acid-input-field"
 							required
 						/>
@@ -153,7 +175,7 @@ const AcidConfirmationModal = ({
 
 					<div className="modal-actions">
 						<button type="button" className="btn-cancel" onClick={onClose}>
-							Cancel
+							إلغاء
 						</button>
 						<button
 							type="button"
@@ -161,7 +183,7 @@ const AcidConfirmationModal = ({
 							onClick={onConfirm}
 							disabled={!acidCodeInput.trim()}
 						>
-							✅ Confirm & Issue ACID
+							✅ تأكيد وإصدار
 						</button>
 					</div>
 				</div>

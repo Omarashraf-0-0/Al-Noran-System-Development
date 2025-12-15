@@ -32,15 +32,6 @@ const AuthNavbar = () => {
 						>
 							الرئيسية
 						</Link>
-						<Link
-							to="/home"
-							className="text-gray-700 hover:text-red-800 transition-colors font-medium"
-						>
-							تتبع شحنة
-						</Link>
-						<span className="text-gray-700 hover:text-red-800 transition-colors font-medium cursor-pointer">
-							الدعم
-						</span>
 					</nav>
 
 					{/* Right Section - Auth Links */}

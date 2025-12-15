@@ -169,6 +169,9 @@ const getAllShipments = async (req, res) => {
 		if (userType === "client") {
 			query.user_id = userId;
 			console.log(`🔒 Client filter applied for user: ${userId}`);
+		} else if (userType === "employee" && req.query.createdBy === "me") {
+			query.employee_id = userId;
+			console.log(`🔒 Employee filter applied for user: ${userId}`);
 		}
 		// If user is employee or admin, show all shipments (or filter by employee_id if needed)
 		// For now, employees and admins see all shipments

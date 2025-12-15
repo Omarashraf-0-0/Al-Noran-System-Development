@@ -99,6 +99,7 @@ export default function AddEmployeePopUp({ onClose, onEmployeeAdded }) {
 					...formData,
 					type: "employee",
 					permissions: selectedPermissions,
+					verified: true,
 				},
 				{
 					headers: {

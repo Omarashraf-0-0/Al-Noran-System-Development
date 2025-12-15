@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import TrackingPage from "./pages/HomePage";
+import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ForgetPasswordPage from "./pages/ForgetPasswordPage";
@@ -162,7 +162,7 @@ const App = () => {
 					path="/home"
 					element={
 						<ClientRoute>
-							<TrackingPage />
+							<HomePage />
 						</ClientRoute>
 					}
 				/>

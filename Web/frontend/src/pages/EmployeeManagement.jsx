@@ -10,6 +10,7 @@ import bannerPic from "../assets/images/Untitled design (8) 2.png";
 import searchIcon from "../assets/images/search.svg";
 import AddEmployeePopUp from "../pages/AddEmployeePopUp";
 import EmployeeDetailsModal from "../components/EmployeeDetailsModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 export default function EmployeeManagement() {
 	const [employees, setEmployees] = useState([]);
@@ -18,6 +19,8 @@ export default function EmployeeManagement() {
 	const [loading, setLoading] = useState(true);
 	const [selectedEmployee, setSelectedEmployee] = useState(null);
 	const [showDetailsModal, setShowDetailsModal] = useState(false);
+	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [employeeToDelete, setEmployeeToDelete] = useState(null);
 
 	// TODO: RBAC - Get user permissions from context/store
 	// Example: const { user, hasPermission } = useAuth();
@@ -53,7 +56,6 @@ export default function EmployeeManagement() {
 					phone: emp.phone,
 					status: emp.active ? "نشط" : "غير نشط",
 					employeeType: emp.employeeDetails?.employeeType || "Regular Employee",
-					verified: emp.employeeDetails?.verified || false,
 					createdAt: emp.createdAt,
 				}));
 
@@ -99,14 +101,17 @@ export default function EmployeeManagement() {
 		}
 	};
 
-	const handleDeleteEmployee = async (employeeId) => {
-		if (!window.confirm("هل أنت متأكد من حذف هذا الموظف؟")) {
-			return;
-		}
+	const handleDeleteEmployee = (employeeId) => {
+		setEmployeeToDelete(employeeId);
+		setDeleteModalOpen(true);
+	};
+
+	const confirmDelete = async () => {
+		if (!employeeToDelete) return;
 
 		try {
 			await axios.delete(
-				`${import.meta.env.VITE_API_URL}/api/users/${employeeId}`,
+				`${import.meta.env.VITE_API_URL}/api/users/${employeeToDelete}`,
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -119,6 +124,9 @@ export default function EmployeeManagement() {
 		} catch (error) {
 			console.error("Error deleting employee:", error);
 			toast.error("فشل حذف الموظف");
+		} finally {
+			setDeleteModalOpen(false);
+			setEmployeeToDelete(null);
 		}
 	};
 
@@ -218,6 +226,16 @@ export default function EmployeeManagement() {
 					onUpdate={fetchEmployees}
 				/>
 			)}
+			<ConfirmDialog
+				isOpen={deleteModalOpen}
+				onConfirm={confirmDelete}
+				onCancel={() => {
+					setDeleteModalOpen(false);
+					setEmployeeToDelete(null);
+				}}
+				title="تأكيد الحذف"
+				message="هل أنت متأكد من أنك تريد حذف هذا الموظف؟ لا يمكن التراجع عن هذا الإجراء."
+			/>
 			<div className="mt-16">
 				<Footer />
 			</div>

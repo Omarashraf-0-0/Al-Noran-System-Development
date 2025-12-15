@@ -10,7 +10,6 @@ import folderCheck from "../assets/images/folder_check.png";
 import pdfPic from "../assets/images/picture_as_pdf.png";
 
 const Header = () => {
-	const primaryColor = "#690000";
 	const [showNotifications, setShowNotifications] = useState(false);
 	const [showMobileMenu, setShowMobileMenu] = useState(false);
 	const [showUserMenu, setShowUserMenu] = useState(false);
