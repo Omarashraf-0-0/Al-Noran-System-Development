@@ -63,7 +63,7 @@
                 <TableView fx:id="invoiceTable" prefHeight="380" prefWidth="880" stylesheets="@invoices-table.css">
                     <columns>
                         <TableColumn fx:id="colDesc" prefWidth="580" text="الوصف" />
-                        <TableColumn fx:id="colPrice" prefWidth="200" text="السعر (جنيه)" />
+                        <TableColumn fx:id="colPrice" prefWidth="200" text="السعر " />
                     </columns>
                 </TableView>
             </StackPane>
