@@ -1,6 +1,7 @@
 const UCRRequest = require("../models/ucrRequest");
 const ExportShipment = require("../models/exportShipment");
 const Upload = require("../models/upload");
+const { getPresignedUrl } = require("../utils/s3Helpers");
 
 // =====================================================
 // CLIENT ENDPOINTS
@@ -64,12 +65,13 @@ const createUCRRequest = async (req, res) => {
 			});
 		}
 
-		// Validate sea shipment fields
-		if (shippingMethod === "sea") {
+		// Validate sea shipment fields - only require containers if seaShipmentType is 'containers'
+		const seaShipmentType = req.body.seaShipmentType;
+		if (shippingMethod === "sea" && seaShipmentType === "containers") {
 			if (!containersCount || containersCount < 1) {
 				return res.status(400).json({
 					success: false,
-					message: "عدد الحاويات مطلوب للشحن البحري",
+					message: "عدد الحاويات مطلوب للشحن البحري بالحاويات",
 				});
 			}
 		}
@@ -91,6 +93,7 @@ const createUCRRequest = async (req, res) => {
 			valueInEGP,
 			originalInvoiceNumber,
 			invoiceDate: new Date(invoiceDate),
+			seaShipmentType,
 			quantity,
 			weightUnit,
 			containersCount,
@@ -139,9 +142,34 @@ const getMyUCRRequests = async (req, res) => {
 			.populate("uploads")
 			.populate("certificateOfOrigin");
 
+		// Generate presigned URLs for uploads in each request
+		const requestsWithUrls = await Promise.all(
+			requests.map(async (request) => {
+				const requestData = request.toObject();
+				if (requestData.uploads && requestData.uploads.length > 0) {
+					const uploadsWithUrls = await Promise.all(
+						requestData.uploads.map(async (upload) => {
+							try {
+								if (upload.s3Key) {
+									const presignedUrl = await getPresignedUrl(upload.s3Key, 3600);
+									return { ...upload, url: presignedUrl, presignedUrl };
+								}
+								return upload;
+							} catch (err) {
+								console.error(`Error generating presigned URL:`, err.message);
+								return upload;
+							}
+						})
+					);
+					requestData.uploads = uploadsWithUrls;
+				}
+				return requestData;
+			})
+		);
+
 		res.json({
 			success: true,
-			data: requests,
+			data: requestsWithUrls,
 		});
 	} catch (error) {
 		console.error("Error fetching UCR requests:", error);
@@ -185,9 +213,35 @@ const getUCRRequestById = async (req, res) => {
 			});
 		}
 
+		// Convert to plain object to modify
+		const requestData = request.toObject();
+
+		// Generate presigned URLs for uploads
+		if (requestData.uploads && requestData.uploads.length > 0) {
+			const uploadsWithUrls = await Promise.all(
+				requestData.uploads.map(async (upload) => {
+					try {
+						if (upload.s3Key) {
+							const presignedUrl = await getPresignedUrl(upload.s3Key, 3600); // 1 hour
+							return {
+								...upload,
+								url: presignedUrl,
+								presignedUrl: presignedUrl,
+							};
+						}
+						return upload;
+					} catch (err) {
+						console.error(`Error generating presigned URL for upload ${upload._id}:`, err.message);
+						return upload; // Return original if presigned URL fails
+					}
+				})
+			);
+			requestData.uploads = uploadsWithUrls;
+		}
+
 		res.json({
 			success: true,
-			data: request,
+			data: requestData,
 		});
 	} catch (error) {
 		console.error("Error fetching UCR request:", error);
@@ -225,13 +279,16 @@ const updateUCRRequest = async (req, res) => {
 			});
 		}
 
-		// Check if editable (only pending requests)
-		if (request.status !== "pending") {
+		// Check if editable (pending or needs_revision requests)
+		if (request.status !== "pending" && request.status !== "needs_revision") {
 			return res.status(400).json({
 				success: false,
 				message: "لا يمكن تعديل الطلب بعد بدء المعالجة",
 			});
 		}
+
+		// If was needs_revision, reset to pending after edit
+		const wasNeedsRevision = request.status === "needs_revision";
 
 		// Update allowed fields
 		const updateFields = [
@@ -247,7 +304,9 @@ const updateUCRRequest = async (req, res) => {
 			"weightUnit",
 			"containersCount",
 			"containerWeights",
+			"seaShipmentType",
 			"items",
+			"uploads",
 			"clientNotes",
 		];
 
@@ -260,6 +319,12 @@ const updateUCRRequest = async (req, res) => {
 		// Recalculate fee if value changed
 		if (req.body.valueInEGP !== undefined) {
 			request.calculateExportFee();
+		}
+
+		// If was needs_revision, reset to pending after edit
+		if (wasNeedsRevision) {
+			request.status = "pending";
+			request.employeeNotes = ""; // Clear old notes
 		}
 
 		await request.save();
@@ -352,9 +417,34 @@ const getAllUCRRequestsForEmployee = async (req, res) => {
 			.populate("uploads")
 			.populate("reviewingBy", "fullname");
 
+		// Generate presigned URLs for uploads in each request
+		const requestsWithUrls = await Promise.all(
+			requests.map(async (request) => {
+				const requestData = request.toObject();
+				if (requestData.uploads && requestData.uploads.length > 0) {
+					const uploadsWithUrls = await Promise.all(
+						requestData.uploads.map(async (upload) => {
+							try {
+								if (upload.s3Key) {
+									const presignedUrl = await getPresignedUrl(upload.s3Key, 3600);
+									return { ...upload, url: presignedUrl, presignedUrl };
+								}
+								return upload;
+							} catch (err) {
+								console.error(`Error generating presigned URL:`, err.message);
+								return upload;
+							}
+						})
+					);
+					requestData.uploads = uploadsWithUrls;
+				}
+				return requestData;
+			})
+		);
+
 		res.json({
 			success: true,
-			data: requests,
+			data: requestsWithUrls,
 		});
 	} catch (error) {
 		console.error("Error fetching UCR requests for employee:", error);
@@ -450,7 +540,7 @@ const unlockUCRRequest = async (req, res) => {
 };
 
 /**
- * Issue UCR Number
+ * Issue UCR Number and Create Export Shipment
  * @route POST /api/ucr/employee/:id/issue-ucr
  * @access Private (Employee)
  */
@@ -458,6 +548,7 @@ const issueUCRNumber = async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { ucrNumber } = req.body;
+		const employeeId = req.user._id;
 
 		if (!ucrNumber) {
 			return res.status(400).json({
@@ -475,10 +566,11 @@ const issueUCRNumber = async (req, res) => {
 			});
 		}
 
-		if (request.status !== "pending") {
+		// Allow issuance from pending or approved status
+		if (!["pending", "approved", "under_review"].includes(request.status)) {
 			return res.status(400).json({
 				success: false,
-				message: "لا يمكن إصدار UCR لهذا الطلب",
+				message: "لا يمكن إصدار UCR لهذا الطلب - الحالة الحالية: " + request.status,
 			});
 		}
 
@@ -488,10 +580,66 @@ const issueUCRNumber = async (req, res) => {
 
 		await request.save();
 
+		// Auto-create Export Shipment if not already created
+		let exportShipment = null;
+		if (!request.hasExportShipment) {
+			try {
+				const shipmentNumber = await ExportShipment.generateShipmentNumber(request.shippingMethod);
+
+				exportShipment = new ExportShipment({
+					userId: request.userId,
+					ucrRequestId: request._id,
+					shipmentNumber,
+					ucrNumber: ucrNumber,
+					certificationType: request.certificationType,
+					shippingMethod: request.shippingMethod,
+					destinationCountry: request.destinationCountry,
+					destinationPort: request.destinationPort,
+					generalDescription: request.generalDescription,
+					items: request.items,
+					totalWeight: request.totalWeight,
+					packagesCount: request.packagesCount,
+					valueInEGP: request.valueInEGP,
+					containersCount: request.containersCount,
+					containerWeights: request.containerWeights,
+					exportFee: request.exportFee,
+					serviceFees: request.serviceFees,
+					totalFees: request.totalFees,
+					regulatoryBody: request.regulatoryBody,
+					form46Number: request.customsEntryNumber46,
+					assignedEmployee: employeeId,
+					certificateOfOriginStatus: request.certificationType === "noran" ? "pending" : "not_required",
+					certificateIssuedBy: request.certificationType,
+					currentStatus: "documents_verification", // Explicitly set initial status
+					statusHistory: [{
+						status: "documents_verification",
+						changedAt: new Date(),
+						changedBy: employeeId,
+						notes: "تم إنشاء شحنة التصدير"
+					}]
+				});
+
+				await exportShipment.save();
+
+				// Update UCR Request with shipment info
+				request.hasExportShipment = true;
+				request.exportShipmentId = exportShipment._id;
+				request.exportShipmentCreatedAt = new Date();
+
+				await request.save();
+			} catch (shipmentError) {
+				console.error("Error creating export shipment:", shipmentError);
+				// Continue even if shipment creation fails
+			}
+		}
+
 		res.json({
 			success: true,
-			message: "تم إصدار رقم UCR بنجاح",
+			message: exportShipment 
+				? "تم إصدار رقم UCR وإنشاء شحنة التصدير بنجاح" 
+				: "تم إصدار رقم UCR بنجاح",
 			request,
+			shipment: exportShipment,
 		});
 	} catch (error) {
 		console.error("Error issuing UCR number:", error);
@@ -737,6 +885,13 @@ const createExportShipmentFromUCR = async (req, res) => {
 			assignedEmployee: employeeId,
 			certificateOfOriginStatus: ucrRequest.certificationType === "noran" ? "pending" : "not_required",
 			certificateIssuedBy: ucrRequest.certificationType,
+			currentStatus: "documents_verification", // Explicitly set initial status
+			statusHistory: [{
+				status: "documents_verification",
+				changedAt: new Date(),
+				changedBy: employeeId,
+				notes: "تم إنشاء شحنة التصدير"
+			}]
 		});
 
 		await exportShipment.save();
@@ -762,6 +917,132 @@ const createExportShipmentFromUCR = async (req, res) => {
 	}
 };
 
+/**
+ * Update document status (Employee review a specific document)
+ * @route PATCH /api/ucr/employee/:id/document/:uploadId/status
+ * @access Private (Employee)
+ */
+const updateDocumentStatus = async (req, res) => {
+	try {
+		const { id, uploadId } = req.params;
+		const { status, employeeNotes } = req.body;
+		const employeeId = req.user._id;
+
+		if (!status || !["pending", "approved", "rejected", "needs_revision"].includes(status)) {
+			return res.status(400).json({
+				success: false,
+				message: "حالة المستند غير صالحة",
+			});
+		}
+
+		const request = await UCRRequest.findById(id);
+
+		if (!request) {
+			return res.status(404).json({
+				success: false,
+				message: "طلب UCR غير موجود",
+			});
+		}
+
+		// Find if document status already exists
+		const existingIndex = request.documentStatuses.findIndex(
+			(ds) => ds.uploadId?.toString() === uploadId
+		);
+
+		if (existingIndex !== -1) {
+			// Update existing
+			request.documentStatuses[existingIndex].status = status;
+			request.documentStatuses[existingIndex].employeeNotes = employeeNotes || "";
+			request.documentStatuses[existingIndex].reviewedBy = employeeId;
+			request.documentStatuses[existingIndex].reviewedAt = new Date();
+		} else {
+			// Add new
+			request.documentStatuses.push({
+				uploadId,
+				status,
+				employeeNotes: employeeNotes || "",
+				reviewedBy: employeeId,
+				reviewedAt: new Date(),
+			});
+		}
+
+		await request.save();
+		await request.populate("documentStatuses.reviewedBy", "fullname");
+
+		res.json({
+			success: true,
+			message: status === "approved" ? "تمت الموافقة على المستند" : 
+			         status === "rejected" ? "تم رفض المستند" : 
+			         "تم تحديث حالة المستند",
+			documentStatuses: request.documentStatuses,
+		});
+	} catch (error) {
+		console.error("Error updating document status:", error);
+		res.status(500).json({
+			success: false,
+			message: "خطأ في تحديث حالة المستند",
+		});
+	}
+};
+
+/**
+ * Employee add document to UCR request
+ * @route POST /api/ucr/employee/:id/add-document
+ * @access Private (Employee)
+ */
+const employeeAddDocument = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { uploadId, documentType } = req.body;
+		const employeeId = req.user._id;
+
+		const request = await UCRRequest.findById(id);
+
+		if (!request) {
+			return res.status(404).json({
+				success: false,
+				message: "طلب UCR غير موجود",
+			});
+		}
+
+		// Add upload to request
+		if (!request.uploads.includes(uploadId)) {
+			request.uploads.push(uploadId);
+		}
+
+		// Add document status as approved (since employee added it)
+		const existingIndex = request.documentStatuses.findIndex(
+			(ds) => ds.uploadId?.toString() === uploadId
+		);
+
+		if (existingIndex === -1) {
+			request.documentStatuses.push({
+				uploadId,
+				documentType,
+				status: "approved",
+				employeeNotes: "تم إضافته بواسطة الموظف",
+				reviewedBy: employeeId,
+				reviewedAt: new Date(),
+			});
+		}
+
+		await request.save();
+		await request.populate("uploads");
+
+		res.json({
+			success: true,
+			message: "تم إضافة المستند بنجاح",
+			uploads: request.uploads,
+		});
+	} catch (error) {
+		console.error("Error adding document:", error);
+		res.status(500).json({
+			success: false,
+			message: "خطأ في إضافة المستند",
+		});
+	}
+};
+
 module.exports = {
 	// Client
 	createUCRRequest,
@@ -778,4 +1059,6 @@ module.exports = {
 	uploadCertificateOfOrigin,
 	setRegulatoryBody,
 	createExportShipmentFromUCR,
+	updateDocumentStatus,
+	employeeAddDocument,
 };

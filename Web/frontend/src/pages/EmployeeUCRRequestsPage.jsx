@@ -71,6 +71,8 @@ const EmployeeUCRRequestsPage = () => {
 	const [processingAction, setProcessingAction] = useState(false);
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [isSortOpen, setIsSortOpen] = useState(false);
+	const [ucrNumber, setUcrNumber] = useState("");
+	const [issueUcrModal, setIssueUcrModal] = useState({ open: false, request: null });
 
 	// Status options for filter
 	const statusOptions = [
@@ -346,6 +348,57 @@ const EmployeeUCRRequestsPage = () => {
 		}
 	};
 
+	// Handle Issue UCR and Create Shipment
+	const handleIssueUCR = async () => {
+		if (!issueUcrModal.request || !ucrNumber.trim()) {
+			toast.error("يجب إدخال رقم UCR");
+			return;
+		}
+
+		setProcessingAction(true);
+		try {
+			const token = localStorage.getItem("token");
+			const response = await axios.post(
+				`${import.meta.env.VITE_API_URL}/api/ucr/employee/${issueUcrModal.request._id}/issue-ucr`,
+				{
+					ucrNumber: ucrNumber.trim(),
+				},
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				}
+			);
+
+			if (response.data.success) {
+				toast.success(response.data.message || "تم إصدار UCR وإنشاء الشحنة بنجاح");
+				setIssueUcrModal({ open: false, request: null });
+				setUcrNumber("");
+				fetchRequests();
+
+				// Navigate to export shipments if shipment was created
+				if (response.data.shipment) {
+					navigate("/employee/export-shipments");
+				}
+			}
+		} catch (error) {
+			console.error("Error issuing UCR:", error);
+			toast.error(error.response?.data?.message || "فشل في إصدار UCR");
+		} finally {
+			setProcessingAction(false);
+		}
+	};
+
+	// Open Issue UCR modal
+	const openIssueUcrModal = (request) => {
+		setIssueUcrModal({ open: true, request });
+		setUcrNumber("");
+	};
+
+	// Close Issue UCR modal
+	const closeIssueUcrModal = () => {
+		setIssueUcrModal({ open: false, request: null });
+		setUcrNumber("");
+	};
+
 	// Open action modal
 	const openActionModal = (request, type) => {
 		setSelectedRequest(request);
@@ -524,6 +577,16 @@ const EmployeeUCRRequestsPage = () => {
 					) : (
 						<div className="overflow-x-auto">
 							<table className="w-full text-right border-separate border-spacing-y-3">
+								<thead>
+									<tr className="text-gray-600 text-sm">
+										<th className="py-2 px-4 font-semibold text-right">العميل</th>
+										<th className="py-2 px-4 font-semibold text-right">رقم UCR / نوع الشحن</th>
+										<th className="py-2 px-4 font-semibold text-right">الوجهة</th>
+										<th className="py-2 px-4 font-semibold text-right">القيمة</th>
+										<th className="py-2 px-4 font-semibold text-right">الحالة</th>
+										<th className="py-2 px-4 font-semibold text-right">الإجراءات</th>
+									</tr>
+								</thead>
 								<tbody>
 									{filteredRequests.map((request) => {
 										const statusStyle = getStatusStyle(request.status);
@@ -536,19 +599,16 @@ const EmployeeUCRRequestsPage = () => {
 														: "bg-gray-100 hover:bg-gray-200"
 												}`}
 											>
-												{/* Client Info */}
 												<td className="py-3 px-4 align-top">
 													<div className="flex flex-col text-sm">
 														<span className="text-gray-700 text-base font-semibold">
-															{request.userId?.name || "—"}
+															{request.userId?.fullname || request.userId?.name || "—"}
 														</span>
 														<span className="text-gray-500 text-xs">
 															{formatDate(request.createdAt)}
 														</span>
 													</div>
 												</td>
-
-												{/* UCR Number */}
 												<td className="py-3 px-4 align-top">
 													<div className="flex flex-col text-sm">
 														<span className="font-semibold text-gray-800 flex items-center gap-1">
@@ -560,8 +620,6 @@ const EmployeeUCRRequestsPage = () => {
 														</span>
 													</div>
 												</td>
-
-												{/* Destination */}
 												<td className="py-3 px-4 align-top">
 													<div className="flex flex-col text-sm">
 														<span className="text-gray-700 text-base">
@@ -574,15 +632,11 @@ const EmployeeUCRRequestsPage = () => {
 														)}
 													</div>
 												</td>
-
-												{/* Value */}
 												<td className="py-3 px-4 align-top">
 													<span className="text-gray-600 text-sm">
 														{formatCurrency(request.valueInEGP)}
 													</span>
 												</td>
-
-												{/* Status */}
 												<td className="py-3 px-4 align-top">
 													<span
 														className={`${statusStyle.className} text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit`}
@@ -596,8 +650,6 @@ const EmployeeUCRRequestsPage = () => {
 														{STATUS_CONFIG[request.status]?.label || request.status}
 													</span>
 												</td>
-
-												{/* Actions */}
 												<td className="py-3 px-4 align-top">
 													<div className="flex flex-wrap items-center gap-2">
 														<button
@@ -606,8 +658,6 @@ const EmployeeUCRRequestsPage = () => {
 														>
 															عرض
 														</button>
-
-														{/* Lock (only for pending requests) */}
 														{request.status === "pending" && !request.isLocked && (
 															<>
 																<span className="text-gray-300">|</span>
@@ -619,8 +669,6 @@ const EmployeeUCRRequestsPage = () => {
 																</button>
 															</>
 														)}
-
-														{/* Actions for under_review or locked pending */}
 														{(request.status === "under_review" ||
 															(request.status === "pending" && request.isLocked)) && (
 															<>
@@ -645,6 +693,32 @@ const EmployeeUCRRequestsPage = () => {
 																</button>
 															</>
 														)}
+
+														{/* Issue UCR button for approved requests */}
+														{request.status === "approved" && (
+															<>
+																<span className="text-gray-300">|</span>
+																<button
+																	onClick={() => openIssueUcrModal(request)}
+																	className="text-indigo-600 text-sm font-medium cursor-pointer hover:text-indigo-800"
+																>
+																	📋 إصدار UCR
+																</button>
+															</>
+														)}
+
+														{/* Track shipment for ucr_issued requests */}
+														{request.status === "ucr_issued" && request.hasExportShipment && (
+															<>
+																<span className="text-gray-300">|</span>
+																<button
+																	onClick={() => navigate("/employee/export-shipments")}
+																	className="text-green-600 text-sm font-medium cursor-pointer hover:text-green-800"
+																>
+																	📦 متابعة الشحنة
+																</button>
+															</>
+														)}
 													</div>
 												</td>
 											</tr>
@@ -656,6 +730,85 @@ const EmployeeUCRRequestsPage = () => {
 					)}
 				</div>
 			</section>
+
+			{/* Issue UCR Modal */}
+			{issueUcrModal.open && issueUcrModal.request && (
+				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+					<div className="bg-white rounded-lg max-w-md w-full p-6">
+						<h3 className="text-lg font-bold mb-4">📋 إصدار رقم UCR</h3>
+
+						<p className="text-sm text-gray-600 mb-4">
+							العميل:{" "}
+							<span className="font-medium">
+								{issueUcrModal.request.userId?.fullname || "غير محدد"}
+							</span>
+						</p>
+
+						<p className="text-sm text-gray-600 mb-4">
+							الوصف:{" "}
+							<span className="font-medium">
+								{issueUcrModal.request.generalDescription?.slice(0, 50)}
+								{issueUcrModal.request.generalDescription?.length > 50 ? "..." : ""}
+							</span>
+						</p>
+
+						<div className="mb-4">
+							<label className="block text-sm font-medium text-gray-700 mb-1">
+								رقم UCR من النافذة الواحدة *
+							</label>
+							<input
+								type="text"
+								value={ucrNumber}
+								onChange={(e) => setUcrNumber(e.target.value)}
+								className="w-full p-2 border border-gray-300 rounded-lg bg-white text-black focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								placeholder="أدخل رقم UCR..."
+								dir="ltr"
+							/>
+						</div>
+
+						<p className="text-xs text-gray-500 mb-4">
+							⚠️ سيتم إنشاء شحنة تصدير جديدة تلقائياً عند إصدار رقم UCR
+						</p>
+
+						<div className="flex justify-end gap-2">
+							<button
+								onClick={closeIssueUcrModal}
+								disabled={processingAction}
+								className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+							>
+								إلغاء
+							</button>
+							<button
+								onClick={handleIssueUCR}
+								disabled={processingAction || !ucrNumber.trim()}
+								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+							>
+								{processingAction && (
+									<svg
+										className="animate-spin h-4 w-4"
+										viewBox="0 0 24 24"
+									>
+										<circle
+											className="opacity-25"
+											cx="12"
+											cy="12"
+											r="10"
+											stroke="currentColor"
+											strokeWidth="4"
+										></circle>
+										<path
+											className="opacity-75"
+											fill="currentColor"
+											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+										></path>
+									</svg>
+								)}
+								إصدار UCR وإنشاء الشحنة
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* Action Modal */}
 			{actionModal.open && selectedRequest && (

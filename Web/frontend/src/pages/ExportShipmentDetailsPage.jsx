@@ -4,65 +4,53 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import BackgroundContainer from "../components/BackgroundContainer";
-import FormContainer from "../components/FormContainer";
-import LoadingSpinner from "../components/LoadingSpinner";
+import Datafield from "../components/DataField";
+import contractIcon from "../assets/images/contract.png";
+import mainIllustration from "../assets/images/Untitled design (7) 1.png";
 
-// Status configurations
+// Status configurations - aligned with backend ExportShipment model
 const STATUS_CONFIG = {
-	pending_ucr: {
-		label: "في انتظار UCR",
-		color: "bg-gray-100 text-gray-800 border-gray-200",
-		icon: "⏳",
-		step: 1,
-	},
-	documents_submitted: {
-		label: "المستندات مرفوعة",
+	documents_verification: {
+		label: "التحقق من المستندات",
 		color: "bg-blue-100 text-blue-800 border-blue-200",
 		icon: "📄",
-		step: 2,
+		step: 1,
 	},
-	documents_verified: {
-		label: "المستندات موثقة",
-		color: "bg-indigo-100 text-indigo-800 border-indigo-200",
-		icon: "✅",
-		step: 3,
-	},
-	regulatory_check: {
-		label: "الفحص التنظيمي",
+	regulatory_inspection: {
+		label: "فحص الجهات الرقابية",
 		color: "bg-purple-100 text-purple-800 border-purple-200",
 		icon: "🔍",
-		step: 4,
+		step: 2,
 	},
-	customs_clearance: {
-		label: "التخليص الجمركي",
+	payment_cleared: {
+		label: "تم السداد",
 		color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-		icon: "🏛️",
-		step: 5,
+		icon: "💳",
+		step: 3,
 	},
-	ready_to_ship: {
-		label: "جاهز للشحن",
+	goods_loaded: {
+		label: "تم التحميل",
 		color: "bg-cyan-100 text-cyan-800 border-cyan-200",
 		icon: "📦",
-		step: 6,
+		step: 4,
 	},
-	shipped: {
-		label: "تم الشحن",
+	in_transit: {
+		label: "في الطريق",
+		color: "bg-orange-100 text-orange-800 border-orange-200",
+		icon: "🚚",
+		step: 5,
+	},
+	delivered: {
+		label: "تم التسليم",
 		color: "bg-green-100 text-green-800 border-green-200",
-		icon: "🚀",
-		step: 7,
+		icon: "✅",
+		step: 6,
 	},
 	completed: {
 		label: "مكتمل",
 		color: "bg-green-200 text-green-900 border-green-300",
 		icon: "✨",
-		step: 8,
-	},
-	on_hold: {
-		label: "معلق",
-		color: "bg-orange-100 text-orange-800 border-orange-200",
-		icon: "⚠️",
-		step: 0,
+		step: 7,
 	},
 	cancelled: {
 		label: "ملغي",
@@ -72,22 +60,111 @@ const STATUS_CONFIG = {
 	},
 };
 
+// Status flow - 7 steps for progress stepper
 const STATUS_STEPS = [
-	"pending_ucr",
-	"documents_submitted",
-	"documents_verified",
-	"regulatory_check",
-	"customs_clearance",
-	"ready_to_ship",
-	"shipped",
-	"completed",
+	{ key: "documents_verification", label: "التحقق من المستندات" },
+	{ key: "regulatory_inspection", label: "فحص الجهات الرقابية" },
+	{ key: "payment_cleared", label: "تم السداد" },
+	{ key: "goods_loaded", label: "تم التحميل" },
+	{ key: "in_transit", label: "في الطريق" },
+	{ key: "delivered", label: "تم التسليم" },
+	{ key: "completed", label: "مكتمل" },
 ];
 
+// Export Shipment Stepper Component (matching ShipmentStatus.jsx design)
+const ExportStepper = ({ currentStatus }) => {
+	const getStepIndex = (status) => {
+		const index = STATUS_STEPS.findIndex((s) => s.key === status);
+		return index >= 0 ? index : 0;
+	};
+
+	const activeStepIndex = getStepIndex(currentStatus);
+
+	// Special case for cancelled
+	if (currentStatus === "cancelled") {
+		return (
+			<div className="w-full py-4">
+				<div className="bg-red-50 border-red-200 border rounded-lg p-4 text-center">
+					<span className="text-3xl mb-2 block">❌</span>
+					<p className="text-red-800 font-bold">تم إلغاء الشحنة</p>
+				</div>
+			</div>
+		);
+	}
+
+	// Show 7 steps with scroll on mobile
+	return (
+		<div className="w-full pb-4">
+			<div className="flex items-start justify-between py-6 px-2 overflow-x-auto">
+				{STATUS_STEPS.map((step, index) => {
+					const isActive = index <= activeStepIndex;
+					const isCurrent = index === activeStepIndex;
+					const isLastStep = index === STATUS_STEPS.length - 1;
+
+					const circleClass = isActive
+						? isCurrent
+							? "bg-red-900 ring-4 ring-red-200"
+							: "bg-red-900"
+						: "bg-gray-300";
+					const textClass = isActive
+						? "text-red-900 font-bold"
+						: "text-gray-400";
+					const nextStepIsActive =
+						index < STATUS_STEPS.length - 1 && index + 1 <= activeStepIndex;
+					const lineClass = nextStepIsActive ? "bg-red-900" : "bg-gray-300";
+
+					return (
+						<React.Fragment key={step.key}>
+							<div className="flex flex-col items-center text-center flex-shrink-0" style={{ minWidth: "70px" }}>
+								<div
+									className={`w-10 h-10 rounded-full transition-all duration-500 ${circleClass} relative z-10 flex items-center justify-center`}
+								>
+									{isActive && (
+										<span className="text-white text-lg">
+											{isCurrent ? "●" : "✓"}
+										</span>
+									)}
+								</div>
+								<p
+									className={`mt-3 text-xs ${textClass} px-1 max-w-[80px]`}
+									style={{ lineHeight: "1.3" }}
+								>
+									{step.label}
+								</p>
+							</div>
+							{!isLastStep && (
+								<div
+									className={`h-1.5 transition-colors duration-500 ${lineClass} self-start flex-shrink-0`}
+									style={{
+										width: "40px",
+										marginTop: "18px",
+									}}
+								/>
+							)}
+						</React.Fragment>
+					);
+				})}
+			</div>
+		</div>
+	);
+};
+
 const ExportShipmentDetailsPage = () => {
-	const { id } = useParams();
+	const { shipmentId, id } = useParams();
+	const actualId = shipmentId || id; // Support both parameter names
 	const navigate = useNavigate();
 	const [loading, setLoading] = useState(true);
 	const [shipment, setShipment] = useState(null);
+	const [userType, setUserType] = useState("client");
+
+	// Check user type
+	useEffect(() => {
+		const storedUser = localStorage.getItem("user");
+		if (storedUser) {
+			const user = JSON.parse(storedUser);
+			setUserType(user.type || "client");
+		}
+	}, []);
 
 	// Fetch shipment details
 	const fetchShipmentDetails = useCallback(async () => {
@@ -101,20 +178,20 @@ const ExportShipmentDetailsPage = () => {
 			}
 
 			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/export-shipments/${id}`,
+				`${import.meta.env.VITE_API_URL}/api/export-shipments/${actualId}`,
 				{
 					headers: { Authorization: `Bearer ${token}` },
 				}
 			);
 
 			if (response.data.success) {
-				setShipment(response.data.data);
+				setShipment(response.data.shipment || response.data.data);
 			}
 		} catch (error) {
 			console.error("Error fetching shipment details:", error);
 			if (error.response?.status === 404) {
 				toast.error("الشحنة غير موجودة");
-				navigate("/export-shipments");
+				navigate(userType === "employee" ? "/employee/export-shipments" : "/export-shipments");
 			} else if (error.response?.status === 401) {
 				toast.error("انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى");
 				navigate("/login");
@@ -124,7 +201,7 @@ const ExportShipmentDetailsPage = () => {
 		} finally {
 			setLoading(false);
 		}
-	}, [id, navigate]);
+	}, [actualId, navigate, userType]);
 
 	useEffect(() => {
 		fetchShipmentDetails();
@@ -137,8 +214,6 @@ const ExportShipmentDetailsPage = () => {
 			year: "numeric",
 			month: "long",
 			day: "numeric",
-			hour: "2-digit",
-			minute: "2-digit",
 		});
 	};
 
@@ -153,11 +228,18 @@ const ExportShipmentDetailsPage = () => {
 
 	if (loading) {
 		return (
-			<div className="min-h-screen flex flex-col bg-gray-50" dir="rtl">
+			<div className="bg-gray-50 min-h-screen text-gray-800">
 				<Header />
-				<div className="flex-1 flex justify-center items-center">
-					<LoadingSpinner />
-				</div>
+				<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+					<div className="max-w-5xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-sm">
+						<div className="flex justify-center items-center py-12 gap-4">
+							<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
+							<span className="text-gray-600 text-lg">
+								جاري تحميل بيانات الشحنة...
+							</span>
+						</div>
+					</div>
+				</main>
 				<Footer />
 			</div>
 		);
@@ -165,339 +247,236 @@ const ExportShipmentDetailsPage = () => {
 
 	if (!shipment) {
 		return (
-			<div className="min-h-screen flex flex-col bg-gray-50" dir="rtl">
+			<div className="bg-gray-50 min-h-screen text-gray-800">
 				<Header />
-				<div className="flex-1 flex flex-col justify-center items-center">
-					<span className="text-5xl mb-4">❌</span>
-					<p className="text-gray-600 mb-4">الشحنة غير موجودة</p>
-					<button
-						onClick={() => navigate("/export-shipments")}
-						className="px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800"
-					>
-						العودة للشحنات
-					</button>
-				</div>
+				<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+					<div className="max-w-5xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-sm text-center">
+						<span className="text-6xl mb-4 block">❌</span>
+						<p className="text-gray-600 mb-4 text-lg">الشحنة غير موجودة</p>
+						<button
+							onClick={() =>
+								navigate(
+									userType === "employee"
+										? "/employee/export-shipments"
+										: "/export-shipments"
+								)
+							}
+							className="px-6 py-3 bg-red-800 text-white rounded-lg hover:bg-red-700 transition font-bold"
+						>
+							العودة للشحنات
+						</button>
+					</div>
+				</main>
 				<Footer />
 			</div>
 		);
 	}
 
-	const statusConfig = STATUS_CONFIG[shipment.currentStatus] || STATUS_CONFIG.pending_ucr;
-	const currentStepIndex = STATUS_STEPS.indexOf(shipment.currentStatus);
+	const statusConfig = STATUS_CONFIG[shipment.currentStatus] || STATUS_CONFIG.documents_verification;
+	const currentStepIndex = STATUS_STEPS.findIndex((s) => s.key === shipment.currentStatus);
+	const progressPercent = Math.round(((currentStepIndex + 1) / STATUS_STEPS.length) * 100);
 
 	return (
-		<div className="min-h-screen flex flex-col bg-gray-50" dir="rtl">
+		<div className="bg-gray-50 min-h-screen text-gray-800">
 			<Header />
 
-			<BackgroundContainer>
-				<FormContainer
-					title={
-						<div className="flex items-center gap-3">
-							<span className="text-2xl">
-								{shipment.exportType === "air" ? "✈️" : "🚢"}
-							</span>
-							<span>تفاصيل الشحنة التصديرية</span>
-						</div>
-					}
-				>
+			<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+				<div className="max-w-5xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-sm">
 					{/* Back Button */}
 					<button
-						onClick={() => navigate("/export-shipments")}
-						className="mb-4 text-gray-600 hover:text-gray-800 flex items-center gap-2"
+						onClick={() =>
+							navigate(
+								userType === "employee"
+									? "/employee/export-shipments"
+									: "/export-shipments"
+							)
+						}
+						className="mb-6 text-red-800 hover:text-red-600 flex items-center gap-2 font-medium"
 					>
 						<span>→</span>
 						<span>العودة للشحنات</span>
 					</button>
 
-					{/* Status Header */}
-					<div className="bg-gradient-to-l from-red-50 to-white p-6 rounded-lg border border-red-100 mb-6">
-						<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-							<div className="flex items-center gap-4">
-								<span className="text-4xl">{statusConfig.icon}</span>
-								<div>
-									<h3 className="text-xl font-bold text-gray-800">
-										{shipment.exportShipmentNumber ||
-											`شحنة #${shipment._id.slice(-8)}`}
-									</h3>
-									<p className="text-gray-500">
-										آخر تحديث: {formatDate(shipment.updatedAt)}
-									</p>
-								</div>
-							</div>
-							<span
-								className={`px-4 py-2 rounded-full text-sm font-medium border ${statusConfig.color}`}
-							>
-								{statusConfig.icon} {statusConfig.label}
+					{/* Header with Status Badge */}
+					<div className="flex items-center justify-between mb-6">
+						<div className="flex items-center gap-4">
+							<span className="text-4xl">
+								{shipment.shippingMethod === "air" ? "✈️" : "🚢"}
 							</span>
-						</div>
-
-						{/* Progress Tracker */}
-						{!["cancelled", "on_hold"].includes(shipment.currentStatus) && (
-							<div className="mt-6">
-								<div className="flex items-center justify-between mb-2">
-									<span className="text-sm text-gray-600">تقدم الشحنة</span>
-									<span className="text-sm font-medium text-red-700">
-										{Math.round(((currentStepIndex + 1) / STATUS_STEPS.length) * 100)}%
-									</span>
-								</div>
-								<div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-									<div
-										className="h-full bg-gradient-to-l from-green-500 to-green-400 transition-all duration-700"
-										style={{
-											width: `${((currentStepIndex + 1) / STATUS_STEPS.length) * 100}%`,
-										}}
-									/>
-								</div>
-
-								{/* Step Indicators */}
-								<div className="mt-4 grid grid-cols-4 md:grid-cols-8 gap-2">
-									{STATUS_STEPS.map((step, index) => {
-										const stepConfig = STATUS_CONFIG[step];
-										const isCompleted = index < currentStepIndex;
-										const isCurrent = index === currentStepIndex;
-
-										return (
-											<div
-												key={step}
-												className={`flex flex-col items-center p-2 rounded-lg ${
-													isCurrent
-														? "bg-red-100 border border-red-200"
-														: isCompleted
-														? "bg-green-50"
-														: "bg-gray-50"
-												}`}
-											>
-												<span
-													className={`text-lg ${
-														isCurrent
-															? "scale-125"
-															: isCompleted
-															? "opacity-60"
-															: "opacity-30"
-													}`}
-												>
-													{stepConfig.icon}
-												</span>
-												<span className="text-xs text-center mt-1 text-gray-600">
-													{stepConfig.label}
-												</span>
-											</div>
-										);
-									})}
-								</div>
+							<div>
+								<h1 className="text-2xl font-bold text-gray-800">
+									شحنة تصديرية - {shipment.shippingMethod === "air" ? "جوي" : "بحري"}
+								</h1>
+								<p className="text-gray-500 text-sm">
+									رقم الشحنة: {shipment.shipmentNumber || `#${shipment._id?.slice(-8)}`}
+								</p>
 							</div>
+						</div>
+						<span
+							className={`px-4 py-2 rounded-full text-sm font-bold border-2 ${statusConfig.color}`}
+						>
+							{statusConfig.icon} {statusConfig.label}
+						</span>
+					</div>
+
+					{/* Top Illustration */}
+					<div className="flex justify-center mb-8">
+						<img
+							src={mainIllustration}
+							alt="Export Shipment Illustration"
+							className="w-full max-w-md h-auto"
+						/>
+					</div>
+
+					{/* Progress Stepper */}
+					<div className="bg-gray-50 rounded-xl p-6 mb-8">
+						<div className="flex items-center justify-between mb-4">
+							<h2 className="text-xl font-bold text-red-900">📊 حالة الشحنة</h2>
+							{currentStepIndex >= 0 && (
+								<span className="text-sm font-bold text-red-800 bg-red-100 px-3 py-1 rounded-full">
+									{progressPercent}% مكتمل
+								</span>
+							)}
+						</div>
+						<ExportStepper currentStatus={shipment.currentStatus} />
+					</div>
+
+					{/* Cancel Reason */}
+					{shipment.currentStatus === "cancelled" && shipment.notes && (
+						<div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6">
+							<p className="font-bold text-red-800 mb-2">❌ سبب الإلغاء:</p>
+							<p className="text-red-700">{shipment.notes}</p>
+						</div>
+					)}
+
+					{/* UCR Number Display (if issued) */}
+					{shipment.ucrRequestId?.ucrNumber && (
+						<div className="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 mb-6 text-center">
+							<p className="font-bold text-indigo-800 mb-2">📋 رقم UCR</p>
+							<p className="text-3xl font-mono text-indigo-900">
+								{shipment.ucrRequestId.ucrNumber}
+							</p>
+						</div>
+					)}
+
+					{/* Data Fields Section */}
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mt-8 mb-8">
+						<Datafield
+							label="رقم الشحنة"
+							value={shipment.shipmentNumber || "—"}
+							icon={<img src={contractIcon} alt="icon" className="w-5 h-5" />}
+						/>
+						<Datafield
+							label="نوع الشحن"
+							value={shipment.shippingMethod === "air" ? "✈️ جوي" : "🚢 بحري"}
+							icon={<img src={contractIcon} alt="icon" className="w-5 h-5" />}
+						/>
+						<Datafield
+							label="بلد الوجهة"
+							value={shipment.destinationCountry || "غير محدد"}
+							icon={<img src={contractIcon} alt="icon" className="w-5 h-5" />}
+						/>
+						<Datafield
+							label={shipment.shippingMethod === "air" ? "المطار" : "الميناء"}
+							value={shipment.destinationPort || "غير محدد"}
+							icon={<img src={contractIcon} alt="icon" className="w-5 h-5" />}
+						/>
+						{shipment.ucrRequestId?.valueInEGP && (
+							<Datafield
+								label="قيمة البضاعة"
+								value={formatCurrency(shipment.ucrRequestId.valueInEGP)}
+								icon={<img src={contractIcon} alt="icon" className="w-5 h-5" />}
+							/>
+						)}
+						{shipment.ucrRequestId?.certificationType && (
+							<Datafield
+								label="نوع الشهادة"
+								value={
+									shipment.ucrRequestId.certificationType === "noran"
+										? "🟢 شهادة النوران"
+										: "🟡 شهادة العميل"
+								}
+								icon={<img src={contractIcon} alt="icon" className="w-5 h-5" />}
+							/>
+						)}
+						<Datafield
+							label="تاريخ الإنشاء"
+							value={formatDate(shipment.createdAt)}
+							icon={<img src={contractIcon} alt="icon" className="w-5 h-5" />}
+						/>
+						<Datafield
+							label="آخر تحديث"
+							value={formatDate(shipment.updatedAt)}
+							icon={<img src={contractIcon} alt="icon" className="w-5 h-5" />}
+						/>
+						{shipment.estimatedShippingDate && (
+							<Datafield
+								label="تاريخ الشحن المتوقع"
+								value={formatDate(shipment.estimatedShippingDate)}
+								icon={<img src={contractIcon} alt="icon" className="w-5 h-5" />}
+							/>
+						)}
+						{shipment.actualShippingDate && (
+							<Datafield
+								label="تاريخ الشحن الفعلي"
+								value={formatDate(shipment.actualShippingDate)}
+								icon={<img src={contractIcon} alt="icon" className="w-5 h-5" />}
+							/>
 						)}
 					</div>
 
-					{/* Main Details Grid */}
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-						{/* Shipment Info */}
-						<div className="bg-white p-4 rounded-lg border border-gray-200">
-							<h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-								<span className="w-2 h-2 bg-red-700 rounded-full"></span>
-								معلومات الشحنة
-							</h4>
-							<div className="space-y-3">
-								<div className="flex justify-between">
-									<span className="text-gray-600">رقم الشحنة:</span>
-									<span className="font-medium font-mono">
-										{shipment.exportShipmentNumber || "—"}
-									</span>
-								</div>
-								<div className="flex justify-between">
-									<span className="text-gray-600">نوع الشحن:</span>
-									<span className="font-medium">
-										{shipment.exportType === "air" ? "✈️ جوي" : "🚢 بحري"}
-									</span>
-								</div>
-								<div className="flex justify-between">
-									<span className="text-gray-600">تاريخ الإنشاء:</span>
-									<span className="font-medium">{formatDate(shipment.createdAt)}</span>
-								</div>
-								{shipment.estimatedShippingDate && (
-									<div className="flex justify-between">
-										<span className="text-gray-600">تاريخ الشحن المتوقع:</span>
-										<span className="font-medium text-blue-600">
-											{formatDate(shipment.estimatedShippingDate)}
-										</span>
-									</div>
-								)}
-								{shipment.actualShippingDate && (
-									<div className="flex justify-between">
-										<span className="text-gray-600">تاريخ الشحن الفعلي:</span>
-										<span className="font-medium text-green-600">
-											{formatDate(shipment.actualShippingDate)}
-										</span>
-									</div>
-								)}
+					{/* Certificate of Origin Section */}
+					<div className="bg-purple-50 rounded-xl p-6 mb-6">
+						<h3 className="font-bold text-purple-800 mb-4">📜 شهادة المنشأ</h3>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div className="bg-white p-3 rounded-lg border border-purple-200">
+								<p className="text-xs text-gray-500">حالة الشهادة</p>
+								<p className={`font-bold ${
+									shipment.certificateOfOriginStatus === "issued" ? "text-green-600" : 
+									shipment.certificateOfOriginStatus === "pending" ? "text-yellow-600" : 
+									"text-gray-400"
+								}`}>
+									{shipment.certificateOfOriginStatus === "issued" ? "✅ صادرة" : 
+									 shipment.certificateOfOriginStatus === "pending" ? "⏳ قيد الإصدار" : 
+									 "❌ لم يتم التقديم"}
+								</p>
 							</div>
-						</div>
-
-						{/* Destination Info */}
-						<div className="bg-white p-4 rounded-lg border border-gray-200">
-							<h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-								<span className="w-2 h-2 bg-blue-700 rounded-full"></span>
-								الوجهة
-							</h4>
-							<div className="space-y-3">
-								<div className="flex justify-between">
-									<span className="text-gray-600">بلد الوجهة:</span>
-									<span className="font-medium">{shipment.destinationCountry}</span>
-								</div>
-								<div className="flex justify-between">
-									<span className="text-gray-600">
-										{shipment.exportType === "air" ? "المطار:" : "الميناء:"}
-									</span>
-									<span className="font-medium">
-										{shipment.destinationPort || "غير محدد"}
-									</span>
-								</div>
-							</div>
-						</div>
-
-						{/* UCR Info */}
-						{shipment.ucrRequestId && (
-							<div className="bg-white p-4 rounded-lg border border-gray-200">
-								<h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-									<span className="w-2 h-2 bg-green-700 rounded-full"></span>
-									طلب UCR المرتبط
-								</h4>
-								<div className="space-y-3">
-									<div className="flex justify-between">
-										<span className="text-gray-600">رقم UCR:</span>
-										<span className="font-medium text-blue-600">
-											{shipment.ucrRequestId.ucrNumber || "—"}
-										</span>
-									</div>
-									<div className="flex justify-between">
-										<span className="text-gray-600">نوع الشهادة:</span>
-										<span
-											className={`px-2 py-0.5 rounded text-sm ${
-												shipment.ucrRequestId.certificationType === "noran"
-													? "bg-green-100 text-green-800"
-													: "bg-yellow-100 text-yellow-800"
-											}`}
-										>
-											{shipment.ucrRequestId.certificationType === "noran"
-												? "شهادة النوران"
-												: "شهادة العميل"}
-										</span>
-									</div>
-									<div className="flex justify-between">
-										<span className="text-gray-600">القيمة:</span>
-										<span className="font-medium">
-											{formatCurrency(shipment.ucrRequestId.valueInEGP)}
-										</span>
-									</div>
-									<button
-										onClick={() =>
-											navigate(`/ucr-request/${shipment.ucrRequestId._id}`)
-										}
-										className="w-full mt-2 px-3 py-1.5 text-sm text-blue-700 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
-									>
-										عرض تفاصيل UCR
-									</button>
-								</div>
-							</div>
-						)}
-
-						{/* Certificate of Origin */}
-						<div className="bg-white p-4 rounded-lg border border-gray-200">
-							<h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-								<span className="w-2 h-2 bg-purple-700 rounded-full"></span>
-								شهادة المنشأ
-							</h4>
-							<div className="space-y-3">
-								<div className="flex justify-between items-center">
-									<span className="text-gray-600">حالة الطلب:</span>
-									<span
-										className={`px-2 py-1 rounded text-sm ${
-											shipment.certificateOfOrigin?.applied
-												? "bg-green-100 text-green-800"
-												: "bg-gray-100 text-gray-600"
-										}`}
-									>
-										{shipment.certificateOfOrigin?.applied
-											? "✅ تم التقديم"
-											: "❌ لم يتم التقديم"}
-									</span>
-								</div>
-								<div className="flex justify-between items-center">
-									<span className="text-gray-600">حالة الإصدار:</span>
-									<span
-										className={`px-2 py-1 rounded text-sm ${
-											shipment.certificateOfOrigin?.issued
-												? "bg-green-100 text-green-800"
-												: "bg-yellow-100 text-yellow-800"
-										}`}
-									>
-										{shipment.certificateOfOrigin?.issued
-											? "✅ صادرة"
-											: "⏳ لم تصدر بعد"}
-									</span>
-								</div>
-								{shipment.certificateOfOrigin?.certificateNumber && (
-									<div className="flex justify-between">
-										<span className="text-gray-600">رقم الشهادة:</span>
-										<span className="font-medium font-mono">
-											{shipment.certificateOfOrigin.certificateNumber}
-										</span>
-									</div>
-								)}
-								{shipment.certificateOfOrigin?.issuedDate && (
-									<div className="flex justify-between">
-										<span className="text-gray-600">تاريخ الإصدار:</span>
-										<span className="font-medium">
-											{formatDate(shipment.certificateOfOrigin.issuedDate)}
-										</span>
-									</div>
-								)}
-							</div>
-						</div>
-					</div>
-
-					{/* Sea Shipment - Container Details */}
-					{shipment.exportType === "sea" && shipment.containerDetails && (
-						<div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
-							<h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-								<span className="text-xl">🚢</span>
-								تفاصيل الحاويات
-							</h4>
-							<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-								<div>
-									<p className="text-xs text-blue-600">عدد الحاويات</p>
-									<p className="text-xl font-bold text-blue-800">
-										{shipment.containerDetails.count || 0}
+							{shipment.certificateOfOriginNumber && (
+								<div className="bg-white p-3 rounded-lg border border-purple-200">
+									<p className="text-xs text-gray-500">رقم الشهادة</p>
+									<p className="font-mono font-bold text-purple-800">
+										{shipment.certificateOfOriginNumber}
 									</p>
 								</div>
-								{shipment.containerDetails.type && (
-									<div>
-										<p className="text-xs text-blue-600">نوع الحاوية</p>
-										<p className="font-medium text-blue-800">
-											{shipment.containerDetails.type}
+							)}
+						</div>
+					</div>
+
+					{/* Sea Shipment: Container Info */}
+					{shipment.shippingMethod === "sea" && shipment.containerWeights && shipment.containerWeights.length > 0 && (
+						<div className="bg-blue-50 rounded-xl p-6 mb-6">
+							<h3 className="font-bold text-blue-800 mb-3">
+								🚢 أوزان الحاويات ({shipment.containerWeights.length} حاوية)
+							</h3>
+							<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+								{shipment.containerWeights.map((container, idx) => (
+									<div key={idx} className="bg-white p-3 rounded-lg border border-blue-200">
+										<p className="text-xs text-blue-600">
+											{container.containerNumber || `حاوية ${idx + 1}`}
+										</p>
+										<p className="text-xl font-bold text-blue-800">
+											{container.weight?.toLocaleString() || container} {container.unit || "كجم"}
 										</p>
 									</div>
-								)}
-								{shipment.containerDetails.sealNumbers &&
-									shipment.containerDetails.sealNumbers.length > 0 && (
-										<div className="md:col-span-2">
-											<p className="text-xs text-blue-600">أرقام الختم</p>
-											<p className="font-mono text-sm text-blue-800">
-												{shipment.containerDetails.sealNumbers.join(", ")}
-											</p>
-										</div>
-									)}
+								))}
 							</div>
 						</div>
 					)}
 
 					{/* Status History */}
 					{shipment.statusHistory && shipment.statusHistory.length > 0 && (
-						<div className="bg-white p-4 rounded-lg border border-gray-200 mb-6">
-							<h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-								<span className="w-2 h-2 bg-indigo-700 rounded-full"></span>
-								سجل الحالات
-							</h4>
+						<div className="bg-gray-50 rounded-xl p-6 mb-6">
+							<h3 className="font-bold text-gray-800 mb-4">📋 سجل الحالات</h3>
 							<div className="relative">
 								{/* Timeline Line */}
 								<div className="absolute right-4 top-2 bottom-2 w-0.5 bg-gray-200" />
@@ -508,20 +487,20 @@ const ExportShipmentDetailsPage = () => {
 										.reverse()
 										.map((history, index) => {
 											const historyConfig =
-												STATUS_CONFIG[history.status] || STATUS_CONFIG.pending_ucr;
+												STATUS_CONFIG[history.status] || STATUS_CONFIG.documents_verification;
 											return (
 												<div key={index} className="flex gap-4 pr-2">
 													{/* Timeline Dot */}
 													<div
 														className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${
 															index === 0
-																? "bg-red-700 text-white"
+																? "bg-red-800 text-white"
 																: "bg-gray-100 text-gray-600"
 														}`}
 													>
 														{historyConfig.icon}
 													</div>
-													<div className="flex-1 bg-gray-50 p-3 rounded-lg">
+													<div className="flex-1 bg-white p-3 rounded-lg border">
 														<div className="flex justify-between items-start">
 															<div>
 																<p className="font-medium">
@@ -546,33 +525,104 @@ const ExportShipmentDetailsPage = () => {
 						</div>
 					)}
 
-					{/* Notes */}
+					{/* Shipment Notes */}
 					{shipment.notes && (
-						<div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-							<h4 className="font-bold text-gray-800 mb-2">ملاحظات</h4>
+						<div className="bg-yellow-50 rounded-xl p-6 mb-6">
+							<h3 className="font-bold text-yellow-800 mb-3">💬 ملاحظات</h3>
 							<p className="text-gray-700">{shipment.notes}</p>
 						</div>
 					)}
 
-					{/* Actions */}
-					<div className="flex justify-end gap-3 border-t pt-4">
+					{/* Documents Section from UCR Request */}
+					{shipment.ucrRequestId?.uploads && shipment.ucrRequestId.uploads.length > 0 && (
+						<div className="bg-green-50 rounded-xl p-6 mb-6">
+							<h3 className="font-bold text-green-800 mb-3">
+								📄 المستندات المرفقة ({shipment.ucrRequestId.uploads.length})
+							</h3>
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+								{shipment.ucrRequestId.uploads.map((doc, index) => {
+									const docLabels = {
+										bank_waiver: "إعفاء بنكي",
+										export_invoice: "فاتورة التصدير",
+										export_packing_list: "قائمة التعبئة",
+										shipping_permit: "تصريح الشحن",
+										awb: "بوليصة الشحن الجوي",
+										bl: "بوليصة الشحن البحري",
+									};
+									return (
+										<div
+											key={index}
+											className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200"
+										>
+											<div className="flex items-center gap-2">
+												<span className="text-green-600 text-xl">📄</span>
+												<div>
+													<p className="font-medium text-sm">
+														{docLabels[doc.documentType] || doc.documentType}
+													</p>
+													<p className="text-xs text-gray-500 truncate max-w-[120px]" title={doc.originalname || doc.filename}>
+														{doc.originalname || doc.filename || "مستند"}
+													</p>
+												</div>
+											</div>
+											{doc.url && (
+												<a
+													href={doc.url}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition flex items-center gap-1"
+												>
+													👁️ عرض
+												</a>
+											)}
+										</div>
+									);
+								})}
+							</div>
+						</div>
+					)}
+
+					{/* Action Buttons */}
+					<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-8 pt-6 border-t-2">
+						{/* Back to list */}
 						<button
-							onClick={() => navigate("/export-shipments")}
-							className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+							onClick={() =>
+								navigate(
+									userType === "employee"
+										? "/employee/export-shipments"
+										: "/export-shipments"
+								)
+							}
+							className="w-full sm:w-auto px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition"
 						>
-							العودة للشحنات
+							← العودة للشحنات
 						</button>
+
+						{/* View UCR Request */}
 						{shipment.ucrRequestId?._id && (
 							<button
-								onClick={() => navigate(`/ucr-request/${shipment.ucrRequestId._id}`)}
-								className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+								onClick={() => navigate(
+									userType === "employee" 
+										? `/employee/ucr-request/${shipment.ucrRequestId._id}`
+										: `/ucr-request/${shipment.ucrRequestId._id}`
+								)}
+								className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2"
 							>
-								عرض طلب UCR
+								<span>📄</span>
+								<span>عرض طلب UCR</span>
 							</button>
 						)}
+
+						{/* Completed message */}
+						{shipment.currentStatus === "completed" && (
+							<span className="w-full sm:w-auto px-6 py-3 bg-green-100 text-green-800 font-bold rounded-lg flex items-center justify-center gap-2">
+								<span>✨</span>
+								<span>تم إكمال الشحنة بنجاح!</span>
+							</span>
+						)}
 					</div>
-				</FormContainer>
-			</BackgroundContainer>
+				</div>
+			</main>
 
 			<Footer />
 		</div>

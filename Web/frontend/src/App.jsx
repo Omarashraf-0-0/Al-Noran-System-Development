@@ -449,6 +449,14 @@ const App = () => {
 						</EmployeeRoute>
 					}
 				/>
+				<Route
+					path="/employee/export-shipment/:shipmentId"
+					element={
+						<EmployeeRoute>
+							<ExportShipmentDetailsPage />
+						</EmployeeRoute>
+					}
+				/>
 
 				{/* NEW */}
 				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
