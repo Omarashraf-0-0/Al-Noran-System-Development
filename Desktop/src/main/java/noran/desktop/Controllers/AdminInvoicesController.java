@@ -1,10 +1,15 @@
 package noran.desktop.Controllers;
 
+// JavaFX Imports
+import com.itextpdf.layout.element.Cell;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -12,83 +17,101 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.layout.GridPane;
-import javafx.geometry.Insets;
-import javafx.stage.Modality;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
-import noran.desktop.AppSession;
-import noran.desktop.Database.DatabaseConnection;
 
+// MongoDB Imports
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.Updates;
+import org.bson.Document;
+import org.bson.conversions.Bson;
+
+// PDF & Arabic Support Imports
+import com.ibm.icu.text.ArabicShaping;
+import com.ibm.icu.text.ArabicShapingException;
+import com.ibm.icu.text.Bidi;
+import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.io.image.ImageDataFactory;
+import com.itextpdf.kernel.colors.ColorConstants;
+import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.font.PdfFont;
+import com.itextpdf.kernel.font.PdfFontFactory;
+import com.itextpdf.kernel.geom.PageSize;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.element.*;
+import com.itextpdf.layout.element.Image;
+import com.itextpdf.layout.properties.BaseDirection;
+import com.itextpdf.layout.properties.Property;
+import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
+
+// Internal Imports
+import noran.desktop.AppSession;
+import noran.desktop.Database.MongoConnection;
+
+import java.io.File;
 import java.io.IOException;
-import java.sql.*;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 public class AdminInvoicesController {
 
-    @FXML private TableView<InvoiceAdmin> adminInvoicesTable;
-    @FXML private TableColumn<InvoiceAdmin, String> colInvoiceNumber;
-    @FXML private TableColumn<InvoiceAdmin, String> colClientName;
-    @FXML private TableColumn<InvoiceAdmin, Double> colTotal;
-    @FXML private TableColumn<InvoiceAdmin, String> colDate;
-    @FXML private TableColumn<InvoiceAdmin, String> colStatus;
-    @FXML private TableColumn<InvoiceAdmin, Void> colActions;
+    @FXML private TableView<InvoiceAdminModel> adminInvoicesTable;
+    @FXML private TableColumn<InvoiceAdminModel, String> colInvoiceNumber;
+    @FXML private TableColumn<InvoiceAdminModel, String> colClientName;
+    @FXML private TableColumn<InvoiceAdminModel, String> colTotal;
+    @FXML private TableColumn<InvoiceAdminModel, String> colDate;
+    @FXML private TableColumn<InvoiceAdminModel, String> colStatus;
+    @FXML private TableColumn<InvoiceAdminModel, Void> colActions;
     @FXML private ComboBox<String> statusFilter;
 
     @FXML private SidebarController sidebarController;
     @FXML private TopBarController topBarController;
 
-    private final ObservableList<InvoiceAdmin> invoices = FXCollections.observableArrayList();
-    private static final DateTimeFormatter AR_DATE = DateTimeFormatter
-            .ofPattern("dd MMMM yyyy - hh:mm a", new Locale("ar"))
-            .withZone(ZoneId.of("Africa/Cairo"));
+    private final ObservableList<InvoiceAdminModel> invoicesList = FXCollections.observableArrayList();
 
     @FXML
     private void initialize() {
         setupColumns();
-        setupRowClickListener();
+
         statusFilter.setValue("الكل");
-        statusFilter.setItems(FXCollections.observableArrayList("الكل", "pending", "accepted", "rejected"));
+        statusFilter.setItems(FXCollections.observableArrayList("الكل", "في انتظار الموافقة", "مقبولة", "مرفوضة"));
         statusFilter.valueProperty().addListener((obs, old, newVal) -> refreshTable());
+
         refreshTable();
 
-        if (sidebarController != null) {
-            sidebarController.setActivePage("invoice completion");
-        }
+        if (sidebarController != null) sidebarController.setActivePage("invoice completion");
+        setupTopBar();
+    }
 
-        // 8. Configure TopBar (Title + User Info + Search Logic)
-        User currentUser = AppSession.getInstance().getCurrentUser();
+    private void setupTopBar() {
         if (topBarController != null) {
-
-            // Set Page Title
             topBarController.setPageTitle("تخليص الفواتير");
-            // Set User Info
-            if (currentUser != null) {
-                String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
-                String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
-                topBarController.setUserData(name, id);
-            }
+            User u = AppSession.getInstance().getCurrentUser();
+            if(u != null) topBarController.setUserData(u.getName(), "ID: " + u.getId());
         }
     }
 
     private void setupColumns() {
         colInvoiceNumber.setCellValueFactory(new PropertyValueFactory<>("invoiceNumber"));
         colClientName.setCellValueFactory(new PropertyValueFactory<>("clientName"));
-        colTotal.setCellValueFactory(new PropertyValueFactory<>("total"));
-        colDate.setCellValueFactory(new PropertyValueFactory<>("formattedDate"));
+        colTotal.setCellValueFactory(new PropertyValueFactory<>("totalDisplay"));
+        colDate.setCellValueFactory(new PropertyValueFactory<>("date"));
         colStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
 
         colActions.setCellFactory(param -> new TableCell<>() {
-            private final Button acceptBtn = new Button("قبول");
-            private final Button rejectBtn = new Button("رفض");
-            private final HBox hbox = new HBox(10, acceptBtn, rejectBtn);
+            private final Button actionBtn = new Button("عرض / اتخاذ إجراء");
 
             {
-                acceptBtn.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-padding: 6 14; -fx-background-radius: 6;");
-                rejectBtn.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-padding: 6 14; -fx-background-radius: 6;");
+                actionBtn.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-padding: 6 12; -fx-background-radius: 5; -fx-font-weight: bold;");
+                actionBtn.setCursor(javafx.scene.Cursor.HAND);
             }
 
             @Override
@@ -97,480 +120,291 @@ public class AdminInvoicesController {
                 if (empty || getTableRow() == null || getTableRow().getItem() == null) {
                     setGraphic(null);
                 } else {
-                    InvoiceAdmin inv = getTableRow().getItem();
-                    acceptBtn.setOnAction(e -> updateStatus(inv.getInvoiceNumber(), "accepted"));
-                    rejectBtn.setOnAction(e -> updateStatus(inv.getInvoiceNumber(), "rejected"));
-                    acceptBtn.setDisable("accepted".equals(inv.getStatus()));
-                    rejectBtn.setDisable("rejected".equals(inv.getStatus()));
-                    setGraphic(hbox);
+                    InvoiceAdminModel inv = getTableRow().getItem();
+                    actionBtn.setOnAction(e -> showInvoiceDetailsDialog(inv));
+                    setGraphic(actionBtn);
                 }
             }
         });
 
-        adminInvoicesTable.setItems(invoices);
-    }
-
-    private void setupRowClickListener() {
-        adminInvoicesTable.setRowFactory(tv -> {
-            TableRow<InvoiceAdmin> row = new TableRow<>();
-            row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && (!row.isEmpty())) {
-                    InvoiceAdmin invoice = row.getItem();
-                    showInvoiceDetails(invoice.getInvoiceNumber());
-                }
-            });
-            return row;
-        });
+        adminInvoicesTable.setItems(invoicesList);
     }
 
     @FXML
     private void refreshTable() {
-        invoices.clear();
-        String filter = statusFilter.getValue();
-        String sql = """
-            SELECT sf.invoiceNumber, sf.createdAt, sf.invoiceStatus,
-                   u.fullname, u.taxNumber,
-                   (COALESCE(sf.Port_fee_price,0) + COALESCE(sf.Clearance_Fees_price,0) +
-                    COALESCE(sf.Expense_Tips_price,0) + COALESCE(sf.Sundries_price,0) +
-                    COALESCE(sf.Additional_Services_price,0) + COALESCE(sf.unsupportedItemPrice,0)) AS total
-            FROM shipment_fees sf
-            JOIN shipments s ON sf.shipmentId = s.shipment_id
-            JOIN users u ON s.clientId = u._id
-            WHERE sf.invoiceNumber IS NOT NULL
-            """ + (filter != null && !filter.equals("الكل") ? " AND sf.invoiceStatus = ?" : "") +
-                " ORDER BY sf.createdAt DESC";
+        invoicesList.clear();
+        String filterStatus = statusFilter.getValue();
 
-        try (Connection conn = DatabaseConnection.connect();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            MongoCollection<Document> collection = db.getCollection("invoices");
 
-            if (filter != null && !filter.equals("الكل")) {
-                ps.setString(1, filter);
+            List<Bson> pipeline = new ArrayList<>();
+
+            // 1. Join with Users
+            pipeline.add(Aggregates.lookup("users", "userId", "_id", "userDetails"));
+
+            // 2. Filter Status
+            if (filterStatus != null && !"الكل".equals(filterStatus)) {
+                pipeline.add(Aggregates.match(Filters.eq("status", filterStatus)));
             }
 
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    String invNum = rs.getString("invoiceNumber");
-                    String client = rs.getString("fullname");
-                    String taxNumber = rs.getString("taxNumber");
-                    if (taxNumber != null && !taxNumber.isEmpty()) {
-                        client += " (" + taxNumber + ")";
+            // 3. Sort
+            pipeline.add(Aggregates.sort(Sorts.descending("createdAt")));
+
+            for (Document doc : collection.aggregate(pipeline)) {
+                String invNum = doc.getString("invoiceNumber");
+                String status = doc.getString("status");
+
+                Date dateObj = doc.getDate("createdAt");
+                String dateStr = dateObj != null ? new SimpleDateFormat("dd/MM/yyyy").format(dateObj) : "N/A";
+
+                String clientName = "غير معروف";
+                List<Document> users = doc.getList("userDetails", Document.class);
+                if (users != null && !users.isEmpty()) {
+                    Document user = users.get(0);
+                    clientName = user.getString("fullname");
+                    if (clientName == null) clientName = user.getString("username");
+                }
+
+                // Calculate Totals form Items Array
+                List<Document> items = doc.getList("invoiceItems", Document.class);
+                double sumEGP = 0;
+                double sumUSD = 0;
+
+                if (items != null) {
+                    for (Document item : items) {
+                        double price = getDoubleSafe(item, "itemPrice");
+                        String curr = item.getString("currencyType");
+                        if ("USD".equalsIgnoreCase(curr)) sumUSD += price;
+                        else sumEGP += price;
                     }
-                    double total = rs.getDouble("total");
-                    String rawDate = rs.getString("createdAt");
-                    String status = rs.getString("invoiceStatus");
-                    if (status == null) status = "pending";
-
-                    String niceDate = formatDate(rawDate);
-
-                    invoices.add(new InvoiceAdmin(invNum, client, total, niceDate, status));
                 }
+
+                StringBuilder totalStr = new StringBuilder();
+                if (sumEGP > 0) totalStr.append(String.format("%.2f EGP", sumEGP));
+                if (sumEGP > 0 && sumUSD > 0) totalStr.append(" + ");
+                if (sumUSD > 0) totalStr.append(String.format("%.2f USD", sumUSD));
+                if (totalStr.length() == 0) totalStr.append("0.00");
+
+                invoicesList.add(new InvoiceAdminModel(invNum, clientName, totalStr.toString(), dateStr, status, doc));
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            showAlert("خطأ", "فشل تحميل الفواتير: " + e.getMessage());
-        }
-    }
-
-    private void showInvoiceDetails(String invoiceNumber) {
-        try {
-            // Load ALL invoice details from shipment_fees table
-            ShipmentFeeDetails details = getShipmentFeeDetails(invoiceNumber);
-
-            if (details != null) {
-                createAndShowDetailsDialog(details);
-            } else {
-                showAlert("خطأ", "لم يتم العثور على تفاصيل الفاتورة: " + invoiceNumber);
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            showAlert("خطأ", "فشل تحميل تفاصيل الفاتورة: " + e.getMessage());
-        }
-    }
-
-    private ShipmentFeeDetails getShipmentFeeDetails(String invoiceNumber) throws SQLException {
-        String sql = """
-            SELECT 
-                sf.id,
-                sf.invoiceNumber,
-                sf.unsupportedItemName,
-                sf.unsupportedItemPrice,
-                sf.shipmentId,
-                sf.feeName,
-                sf.feePrice,
-                sf.createdAt,
-                sf.Port_fee_price,
-                sf.Additional_Services_price,
-                sf.Clearance_Fees_price,
-                sf.Expense_Tips_price,
-                sf.Sundries_price,
-                sf.invoiceStatus,
-                (COALESCE(sf.Port_fee_price,0) + COALESCE(sf.Clearance_Fees_price,0) +
-                 COALESCE(sf.Expense_Tips_price,0) + COALESCE(sf.Sundries_price,0) +
-                 COALESCE(sf.Additional_Services_price,0) + COALESCE(sf.unsupportedItemPrice,0)) AS total
-            FROM shipment_fees sf
-            WHERE sf.invoiceNumber = ?
-            """;
-
-        try (Connection conn = DatabaseConnection.connect();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, invoiceNumber);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return new ShipmentFeeDetails(
-                            rs.getInt("id"),
-                            rs.getString("invoiceNumber"),
-                            rs.getString("unsupportedItemName"),
-                            rs.getDouble("unsupportedItemPrice"),
-                            rs.getInt("shipmentId"),
-                            rs.getString("feeName"),
-                            rs.getDouble("feePrice"),
-                            rs.getString("createdAt"),
-                            rs.getDouble("Port_fee_price"),
-                            rs.getDouble("Additional_Services_price"),
-                            rs.getDouble("Clearance_Fees_price"),
-                            rs.getDouble("Expense_Tips_price"),
-                            rs.getDouble("Sundries_price"),
-                            rs.getString("invoiceStatus"),
-                            rs.getDouble("total")
-                    );
-                }
-            }
-        }
-        return null;
-    }
-
-    private void createAndShowDetailsDialog(ShipmentFeeDetails details) {
-        try {
-            Stage dialogStage = new Stage();
-            dialogStage.initModality(Modality.APPLICATION_MODAL);
-            dialogStage.initStyle(StageStyle.DECORATED);
-            dialogStage.setTitle("تفاصيل الفاتورة - " + details.getInvoiceNumber());
-
-            VBox root = new VBox(20);
-            root.setPadding(new Insets(20));
-            root.setStyle("-fx-background-color: #f4f6f9;");
-
-            ScrollPane scroll = new ScrollPane(root);
-            scroll.setFitToWidth(true);
-
-            // 🔹 عنوان أعلى الصفحة
-            Label header = new Label("تفاصيل الفاتورة #" + details.getInvoiceNumber());
-            header.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
-
-            // ======================================================
-            // CARD COMPONENT FUNCTION
-            // ======================================================
-
-
-            // ======================================================
-            // BASIC INFO CARD
-            // ======================================================
-            VBox basicCard = makeCard("المعلومات الأساسية");
-
-            GridPane basicGrid = new GridPane();
-            basicGrid.setHgap(20);
-            basicGrid.setVgap(10);
-
-            addLabelValue(basicGrid, 0, "رقم الفاتورة:", details.getInvoiceNumber());
-            addLabelValue(basicGrid, 1, "رقم الشحنة:", String.valueOf(details.getShipmentId()));
-            addLabelValue(basicGrid, 2, "الحالة:", getStatusArabic(details.getStatus()));
-            addLabelValue(basicGrid, 3, "تاريخ الإنشاء:", formatDate(details.getCreatedAt()));
-
-            basicCard.getChildren().add(basicGrid);
-
-            // ======================================================
-            // FEES CARD
-            // ======================================================
-            VBox feesCard = makeCard("تفاصيل الرسوم");
-
-            GridPane feesGrid = new GridPane();
-            feesGrid.setHgap(20);
-            feesGrid.setVgap(10);
-
-            int row = 0;
-            if (details.getPortFee() > 0) addLabelValue(feesGrid, row++, "رسوم الميناء:", f(details.getPortFee()));
-            if (details.getClearanceFees() > 0) addLabelValue(feesGrid, row++, "رسوم التخليص:", f(details.getClearanceFees()));
-            if (details.getExpenseTips() > 0) addLabelValue(feesGrid, row++, "النثريات:", f(details.getExpenseTips()));
-            if (details.getSundries() > 0) addLabelValue(feesGrid, row++, "مصروفات متنوعة:", f(details.getSundries()));
-            if (details.getAdditionalServices() > 0) addLabelValue(feesGrid, row++, "خدمات إضافية:", f(details.getAdditionalServices()));
-            if (details.getUnsupportedItemPrice() > 0) {
-                addLabelValue(feesGrid, row++, "بند غير مدعوم:", details.getUnsupportedItemName());
-                addLabelValue(feesGrid, row++, "سعره:", f(details.getUnsupportedItemPrice()));
-            }
-
-            feesCard.getChildren().add(feesGrid);
-
-            // ======================================================
-            // SUMMARY CARD
-            // ======================================================
-            VBox sumCard = makeCard("الملخص");
-
-            Label totalLabel = new Label("الإجمالي: " + f(details.getTotal()));
-            totalLabel.setStyle("-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #27ae60;");
-
-            sumCard.getChildren().add(totalLabel);
-
-            // ======================================================
-            // ACTION BUTTONS
-            // ======================================================
-            HBox actions = new HBox(15);
-            actions.setPadding(new Insets(10));
-            actions.setStyle("-fx-alignment: center;");
-
-            Button closeBtn = new Button("إغلاق");
-            closeBtn.setStyle(btn("gray"));
-            closeBtn.setOnAction(e -> dialogStage.close());
-
-            Button acceptBtn = new Button("قبول");
-            acceptBtn.setStyle(btn("green"));
-            acceptBtn.setDisable(details.getStatus().equals("accepted"));
-            acceptBtn.setOnAction(e -> {
-                updateStatus(details.getInvoiceNumber(), "accepted");
-                dialogStage.close();
-            });
-
-            Button rejectBtn = new Button("رفض");
-            rejectBtn.setStyle(btn("red"));
-            rejectBtn.setDisable(details.getStatus().equals("rejected"));
-            rejectBtn.setOnAction(e -> {
-                updateStatus(details.getInvoiceNumber(), "rejected");
-                dialogStage.close();
-            });
-
-            actions.getChildren().addAll(closeBtn, acceptBtn, rejectBtn);
-
-            // Add components
-            root.getChildren().addAll(header, basicCard, feesCard, sumCard, actions);
-
-            Scene scene = new Scene(scroll, 700, 650);
-            dialogStage.setScene(scene);
-            dialogStage.showAndWait();
 
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("خطأ", "فشل عرض تفاصيل الفاتورة: " + e.getMessage());
+            new Alert(Alert.AlertType.ERROR, "خطأ في تحميل البيانات: " + e.getMessage()).show();
         }
     }
 
-    private String btn(String color) {
-        return switch (color) {
-            case "green" -> "-fx-background-color:#27ae60; -fx-text-fill:white; -fx-padding:10 25; -fx-background-radius:8;";
-            case "red" -> "-fx-background-color:#c0392b; -fx-text-fill:white; -fx-padding:10 25; -fx-background-radius:8;";
-            default -> "-fx-background-color:#7f8c8d; -fx-text-fill:white; -fx-padding:10 25; -fx-background-radius:8;";
-        };
-    }
+    private void showInvoiceDetailsDialog(InvoiceAdminModel invoice) {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("تفاصيل الفاتورة: " + invoice.getInvoiceNumber());
+        dialog.setHeaderText("العميل: " + invoice.getClientName() + "\nالحالة الحالية: " + invoice.getStatus());
 
-    private String f(double n) {
-        return String.format("%.2f", n);
-    }
+        ButtonType closeType = new ButtonType("إغلاق", ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialog.getDialogPane().getButtonTypes().add(closeType);
 
-    VBox makeCard(String title) {
-        VBox box = new VBox(10);
-        box.setStyle("-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 10;"
-                + "-fx-border-color: #dfe6e9; -fx-border-radius: 10;");
-        Label t = new Label(title);
-        t.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
-        box.getChildren().add(t);
-        return box;
-    }
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        content.setStyle("-fx-min-width: 500px;");
 
+        TableView<Document> itemsTable = new TableView<>();
+        itemsTable.setPrefHeight(200);
 
-    private String generateRawDataString(ShipmentFeeDetails details) {
-        return String.format(
-                "ID: %d\n" +
-                        "Invoice Number: %s\n" +
-                        "Shipment ID: %d\n" +
-                        "Created At: %s\n" +
-                        "Status: %s\n" +
-                        "Port Fee: %.2f\n" +
-                        "Clearance Fees: %.2f\n" +
-                        "Expense Tips: %.2f\n" +
-                        "Sundries: %.2f\n" +
-                        "Additional Services: %.2f\n" +
-                        "Unsupported Item: %s (%.2f)\n" +
-                        "Fee Name: %s\n" +
-                        "Fee Price: %.2f\n" +
-                        "Total Calculated: %.2f",
-                details.getId(),
-                details.getInvoiceNumber(),
-                details.getShipmentId(),
-                details.getCreatedAt(),
-                details.getStatus(),
-                details.getPortFee(),
-                details.getClearanceFees(),
-                details.getExpenseTips(),
-                details.getSundries(),
-                details.getAdditionalServices(),
-                details.getUnsupportedItemName(),
-                details.getUnsupportedItemPrice(),
-                details.getFeeName(),
-                details.getFeePrice(),
-                details.getTotal()
-        );
-    }
+        TableColumn<Document, String> colItem = new TableColumn<>("البند");
+        colItem.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getString("item")));
+        colItem.setPrefWidth(250);
 
-    private void addLabelValue(GridPane grid, int row, String label, String value) {
-        Label lbl = new Label(label);
-        lbl.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
-        grid.add(lbl, 0, row);
+        TableColumn<Document, String> colPrice = new TableColumn<>("السعر");
+        colPrice.setCellValueFactory(data -> {
+            Double p = getDoubleSafe(data.getValue(), "itemPrice");
+            String c = data.getValue().getString("currencyType");
+            return new SimpleStringProperty(String.format("%.2f %s", p, c));
+        });
+        colPrice.setPrefWidth(150);
 
-        Label val = new Label(value != null ? value : "غير محدد");
-        val.setStyle("-fx-font-size: 14px; -fx-text-fill: #495057;");
-        grid.add(val, 1, row);
-    }
+        itemsTable.getColumns().addAll(colItem, colPrice);
 
-    private String getStatusArabic(String status) {
-        if (status == null) return "غير محدد";
-        return switch (status.toLowerCase()) {
-            case "accepted" -> "مقبولة";
-            case "rejected" -> "مرفوضة";
-            case "pending" -> "قيد الانتظار";
-            default -> status;
-        };
-    }
+        List<Document> items = invoice.getSourceDoc().getList("invoiceItems", Document.class);
+        if (items != null) itemsTable.setItems(FXCollections.observableArrayList(items));
 
-    private void updateStatus(String invoiceNumber, String newStatus) {
-        String sql = "UPDATE shipment_fees SET invoiceStatus = ? WHERE invoiceNumber = ?";
-        try (Connection conn = DatabaseConnection.connect();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, newStatus);
-            ps.setString(2, invoiceNumber);
-            int rows = ps.executeUpdate();
-            if (rows > 0) {
-                showAlert("تم بنجاح", "تم تغيير حالة الفاتورة " + invoiceNumber + " إلى: " +
-                        ("accepted".equals(newStatus) ? "مقبولة" : "مرفوضة"));
-                refreshTable();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            showAlert("خطأ", "فشل تحديث الحالة: " + e.getMessage());
+        content.getChildren().addAll(new Label("بنود الفاتورة:"), itemsTable);
+
+        HBox actions = new HBox(15);
+        actions.setAlignment(Pos.CENTER);
+
+        Button acceptBtn = new Button("قبول الفاتورة");
+        acceptBtn.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: bold;");
+
+        Button rejectBtn = new Button("رفض الفاتورة");
+        rejectBtn.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-weight: bold;");
+
+        Button pdfBtn = new Button("طباعة PDF");
+        pdfBtn.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-font-weight: bold;");
+
+        if (!"في انتظار الموافقة".equals(invoice.getStatus())) {
+            acceptBtn.setDisable(true);
+            rejectBtn.setDisable(true);
         }
+
+        acceptBtn.setOnAction(e -> {
+            updateInvoiceStatus(invoice, "مقبولة");
+            dialog.close();
+        });
+
+        rejectBtn.setOnAction(e -> {
+            updateInvoiceStatus(invoice, "مرفوضة");
+            dialog.close();
+        });
+
+        pdfBtn.setOnAction(e -> generatePdf(invoice));
+
+        actions.getChildren().addAll(acceptBtn, rejectBtn, pdfBtn);
+        content.getChildren().add(actions);
+
+        dialog.getDialogPane().setContent(content);
+        dialog.show();
     }
 
-    private String formatDate(String timestamp) {
-        if (timestamp == null || timestamp.trim().isEmpty()) return "غير محدد";
+    private void updateInvoiceStatus(InvoiceAdminModel invoice, String newStatus) {
         try {
-            long millis = Long.parseLong(timestamp);
-            return Instant.ofEpochMilli(millis).atZone(ZoneId.of("Africa/Cairo")).format(AR_DATE);
+            MongoDatabase db = MongoConnection.getDatabase();
+            MongoCollection<Document> collection = db.getCollection("invoices");
+
+            collection.updateOne(
+                    Filters.eq("invoiceNumber", invoice.getInvoiceNumber()),
+                    Updates.set("status", newStatus)
+            );
+
+            new Alert(Alert.AlertType.INFORMATION, "تم تحديث الحالة إلى: " + newStatus).show();
+            refreshTable();
+
         } catch (Exception e) {
-            return "تاريخ غير صحيح: " + timestamp;
+            e.printStackTrace();
+            new Alert(Alert.AlertType.ERROR, "فشل التحديث: " + e.getMessage()).show();
         }
     }
 
-    private void showAlert(String title, String message) {
-        Alert a = new Alert("تم بنجاح".equals(title) ? Alert.AlertType.INFORMATION : Alert.AlertType.ERROR);
-        a.setTitle(title);
-        a.setHeaderText(null);
-        a.setContentText(message);
-        a.showAndWait();
+    private void generatePdf(InvoiceAdminModel invoice) {
+        FileChooser chooser = new FileChooser();
+        chooser.setInitialFileName("فاتورة_" + invoice.getInvoiceNumber() + ".pdf");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
+        File file = chooser.showSaveDialog(null);
+        if (file == null) return;
+
+        try {
+            PdfWriter writer = new PdfWriter(file);
+            PdfDocument pdf = new PdfDocument(writer);
+            com.itextpdf.layout.Document document = new com.itextpdf.layout.Document(pdf, PageSize.A4);
+            document.setMargins(50, 50, 50, 50);
+
+            document.setTextAlignment(TextAlignment.RIGHT);
+            document.setProperty(Property.BASE_DIRECTION, BaseDirection.RIGHT_TO_LEFT);
+
+            String fontPath = "C:/Windows/Fonts/arial.ttf";
+            PdfFont font = PdfFontFactory.createFont(fontPath, PdfEncodings.IDENTITY_H);
+
+            // Header
+            document.add(new Paragraph(shapeArabic("فاتورة رسمية")).setFont(font).setFontSize(24).setBold().setTextAlignment(TextAlignment.CENTER));
+            document.add(new Paragraph("\n"));
+            document.add(new Paragraph(shapeArabic("رقم الفاتورة: " + invoice.getInvoiceNumber())).setFont(font));
+            document.add(new Paragraph(shapeArabic("العميل: " + invoice.getClientName())).setFont(font));
+            document.add(new Paragraph(shapeArabic("التاريخ: " + invoice.getDate())).setFont(font));
+            document.add(new Paragraph("\n"));
+
+            // Table
+            Table table = new Table(UnitValue.createPercentArray(new float[]{4, 2, 2})).useAllAvailableWidth();
+            table.setTextAlignment(TextAlignment.RIGHT);
+            table.setProperty(Property.BASE_DIRECTION, BaseDirection.RIGHT_TO_LEFT);
+
+            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("البند")).setFont(font).setBold().setBackgroundColor(ColorConstants.LIGHT_GRAY)));
+            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("السعر")).setFont(font).setBold().setBackgroundColor(ColorConstants.LIGHT_GRAY)));
+            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("العملة")).setFont(font).setBold().setBackgroundColor(ColorConstants.LIGHT_GRAY)));
+
+            List<Document> items = invoice.getSourceDoc().getList("invoiceItems", Document.class);
+            if (items != null) {
+                for (Document item : items) {
+                    String desc = item.getString("item");
+                    double price = getDoubleSafe(item, "itemPrice");
+                    String curr = item.getString("currencyType");
+
+                    table.addCell(new Cell().add(new Paragraph(shapeArabic(desc)).setFont(font)));
+                    table.addCell(new Cell().add(new Paragraph(String.format("%.2f", price)).setFont(font)));
+                    table.addCell(new Cell().add(new Paragraph(curr).setFont(font)));
+                }
+            }
+
+            document.add(table);
+
+            document.add(new Paragraph("\n"));
+            document.add(new Paragraph(shapeArabic("الإجمالي: " + invoice.getTotalDisplay()))
+                    .setFont(font).setFontSize(16).setBold()
+                    .setTextAlignment(TextAlignment.RIGHT));
+
+            document.close();
+            new Alert(Alert.AlertType.INFORMATION, "تم حفظ PDF بنجاح").show();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            new Alert(Alert.AlertType.ERROR, "فشل إنشاء PDF: " + e.getMessage()).show();
+        }
     }
 
-    @FXML
-    private void goBack() throws IOException {
-        Stage stage = (Stage) adminInvoicesTable.getScene().getWindow();
-        Parent root = FXMLLoader.load(getClass().getResource("/noran/desktop/dashboard.fxml"));
-        stage.setScene(new Scene(root));
-        stage.setTitle("لوحة تحكم المدير");
-        stage.centerOnScreen();
+    // Helper: Handle integer vs double storage in MongoDB
+    private double getDoubleSafe(Document doc, String key) {
+        Object val = doc.get(key);
+        if (val instanceof Number) {
+            return ((Number) val).doubleValue();
+        }
+        return 0.0;
     }
 
-    @FXML
-    public void navigateToDashboard(ActionEvent event) throws IOException {
-        loadPage(event, "/noran/desktop/dashboard.fxml");
+    private String shapeArabic(String text) {
+        if (text == null) return "";
+        try {
+            ArabicShaping shaper = new ArabicShaping(ArabicShaping.LETTERS_SHAPE);
+            String shaped = shaper.shape(text);
+            Bidi bidi = new Bidi(shaped, Bidi.DIRECTION_RIGHT_TO_LEFT);
+            return bidi.writeReordered(Bidi.DO_MIRRORING | Bidi.REMOVE_BIDI_CONTROLS);
+        } catch (ArabicShapingException e) {
+            return text;
+        }
     }
 
-    private void loadPage(ActionEvent event, String fxmlPath) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
-        Parent root = loader.load();
-        Scene scene = new Scene(root);
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
-    }
-
-    @FXML
-    public void refresh(ActionEvent event) {
-        refreshTable();
-    }
-
-    // Inner class for ALL shipment_fees table details
-    public static class ShipmentFeeDetails {
-        private final int id;
+    // Model Class
+    public static class InvoiceAdminModel {
         private final String invoiceNumber;
-        private final String unsupportedItemName;
-        private final double unsupportedItemPrice;
-        private final int shipmentId;
-        private final String feeName;
-        private final double feePrice;
-        private final String createdAt;
-        private final double portFee;
-        private final double additionalServices;
-        private final double clearanceFees;
-        private final double expenseTips;
-        private final double sundries;
+        private final String clientName;
+        private final String totalDisplay;
+        private final String date;
         private final String status;
-        private final double total;
+        private final Document sourceDoc;
 
-        public ShipmentFeeDetails(int id, String invoiceNumber, String unsupportedItemName,
-                                  double unsupportedItemPrice, int shipmentId, String feeName,
-                                  double feePrice, String createdAt, double portFee,
-                                  double additionalServices, double clearanceFees,
-                                  double expenseTips, double sundries, String status, double total) {
-            this.id = id;
-            this.invoiceNumber = invoiceNumber;
-            this.unsupportedItemName = unsupportedItemName;
-            this.unsupportedItemPrice = unsupportedItemPrice;
-            this.shipmentId = shipmentId;
-            this.feeName = feeName;
-            this.feePrice = feePrice;
-            this.createdAt = createdAt;
-            this.portFee = portFee;
-            this.additionalServices = additionalServices;
-            this.clearanceFees = clearanceFees;
-            this.expenseTips = expenseTips;
-            this.sundries = sundries;
-            this.status = status != null ? status : "pending";
-            this.total = total;
-        }
-
-        // Getters for all fields
-        public int getId() { return id; }
-        public String getInvoiceNumber() { return invoiceNumber; }
-        public String getUnsupportedItemName() { return unsupportedItemName; }
-        public double getUnsupportedItemPrice() { return unsupportedItemPrice; }
-        public int getShipmentId() { return shipmentId; }
-        public String getFeeName() { return feeName; }
-        public double getFeePrice() { return feePrice; }
-        public String getCreatedAt() { return createdAt; }
-        public double getPortFee() { return portFee; }
-        public double getAdditionalServices() { return additionalServices; }
-        public double getClearanceFees() { return clearanceFees; }
-        public double getExpenseTips() { return expenseTips; }
-        public double getSundries() { return sundries; }
-        public String getStatus() { return status; }
-        public double getTotal() { return total; }
-    }
-
-    // Existing InvoiceAdmin class remains the same
-    public static class InvoiceAdmin {
-        private final String invoiceNumber, clientName, formattedDate, status;
-        private final double total;
-
-        public InvoiceAdmin(String invoiceNumber, String clientName, double total, String formattedDate, String status) {
-            this.invoiceNumber = invoiceNumber;
-            this.clientName = clientName;
-            this.total = total;
-            this.formattedDate = formattedDate;
-            this.status = status != null ? status : "pending";
+        public InvoiceAdminModel(String inv, String client, String total, String date, String status, Document source) {
+            this.invoiceNumber = inv;
+            this.clientName = client;
+            this.totalDisplay = total;
+            this.date = date;
+            this.status = status;
+            this.sourceDoc = source;
         }
 
         public String getInvoiceNumber() { return invoiceNumber; }
         public String getClientName() { return clientName; }
-        public double getTotal() { return total; }
-        public String getFormattedDate() { return formattedDate; }
+        public String getTotalDisplay() { return totalDisplay; }
+        public String getDate() { return date; }
         public String getStatus() { return status; }
+        public Document getSourceDoc() { return sourceDoc; }
+    }
+
+    @FXML public void onDashboardClick(ActionEvent e) throws IOException { navigate(e, "/noran/desktop/dashboard.fxml"); }
+    @FXML public void refresh(ActionEvent e) { refreshTable(); }
+
+    private void navigate(ActionEvent event, String fxml) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
+        Parent root = loader.load();
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(new Scene(root));
+        stage.show();
     }
 }

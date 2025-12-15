@@ -1,8 +1,15 @@
 package noran.desktop.Controllers;
 
+import org.bson.conversions.Bson;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.UnwindOptions;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import noran.desktop.AppSession;
-import noran.desktop.Database.DatabaseConnection;
-
+import noran.desktop.Database.MongoConnection; // Your Mongo Class
+import noran.desktop.models.Shipment;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -16,116 +23,183 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import noran.desktop.Services.APIService;
-import noran.desktop.models.Shipment;
-
-import org.json.JSONObject;
+import org.bson.Document;
+import org.bson.types.ObjectId;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class ShipmentsManagementController {
 
     @FXML private TableView<Shipment> clientTable;
+
+    // Updated columns based on your request
+    @FXML private TableColumn<Shipment, String> colCustomerName;
+    @FXML private TableColumn<Shipment, String> colAcid;
     @FXML private TableColumn<Shipment, String> colPortName;
-    @FXML private TableColumn<Shipment, String> colContainerNumber;
-    @FXML private TableColumn<Shipment, String> colCounrty;
+    @FXML private TableColumn<Shipment, String> colCountry;
     @FXML private TableColumn<Shipment, String> colShipmentStatus;
-    @FXML private TableColumn<Shipment, String> colPolicy;
 
-    // --- Data Lists ---
     private final ObservableList<Shipment> shipments = FXCollections.observableArrayList();
-    private FilteredList<Shipment> filteredData; // Wrapper for search
+    private FilteredList<Shipment> filteredData;
 
-    // --- Injected Controllers ---
     @FXML private SidebarController sidebarController;
     @FXML private TopBarController topBarController;
 
     @FXML
     public void initialize() {
-        // 1. Setup Columns
+        // Setup Columns
+        colCustomerName.setCellValueFactory(data -> data.getValue().customerNameProperty());
+        colAcid.setCellValueFactory(data -> data.getValue().acidProperty());
         colPortName.setCellValueFactory(data -> data.getValue().portNameProperty());
-        colContainerNumber.setCellValueFactory(data -> data.getValue().numOfContainersProperty().asString());
-        colCounrty.setCellValueFactory(data -> data.getValue().countryProperty());
+        colCountry.setCellValueFactory(data -> data.getValue().countryProperty());
         colShipmentStatus.setCellValueFactory(data -> data.getValue().statusProperty());
-        colPolicy.setCellValueFactory(data -> data.getValue().policyProperty());
 
-        // 2. Wrap the ObservableList in a FilteredList (initially display all data)
+        // Setup Sorting and Filtering
         filteredData = new FilteredList<>(shipments, p -> true);
-
-        // 3. Wrap the FilteredList in a SortedList (to allow sorting by clicking headers)
         SortedList<Shipment> sortedData = new SortedList<>(filteredData);
         sortedData.comparatorProperty().bind(clientTable.comparatorProperty());
-
-        // 4. Bind the table to the SortedList
         clientTable.setItems(sortedData);
 
-        // 5. Load Data
-        loadShipments();
+        // Load Data directly from MongoDB
+        loadShipmentsFromMongo();
 
-        // 6. Setup Sidebar
-        if (sidebarController != null) {
-            sidebarController.setActivePage("shipments");
+        if (sidebarController != null) sidebarController.setActivePage("shipments");
+        setupTopBar();
+    }
+
+    public void loadShipmentsFromMongo() {
+        // Create a background task to fetch data so UI doesn't freeze
+        Task<List<Shipment>> fetchDataTask = new Task<>() {
+            @Override
+            protected List<Shipment> call() {
+                List<Shipment> loadedList = new ArrayList<>();
+
+                try {
+                    MongoDatabase db = MongoConnection.getDatabase();
+                    MongoCollection<Document> collection = db.getCollection("shipments");
+
+                    // Join shipments.user_id == users._id to get Customer Name
+                    List<Bson> pipeline = Arrays.asList(
+                            Aggregates.lookup("users", "user_id", "_id", "userDetails"),
+                            Aggregates.unwind("$userDetails", new UnwindOptions().preserveNullAndEmptyArrays(true))
+                    );
+
+                    for (Document doc : collection.aggregate(pipeline)) {
+
+                        // 1. Extract Shipment ID
+                        String id = doc.getObjectId("_id").toString();
+
+                        // 2. Extract User ID (Required for the 9-argument constructor)
+                        String userId = "";
+                        if (doc.get("user_id") != null) {
+                            userId = doc.getObjectId("user_id").toString();
+                        }
+
+                        // 3. Extract Customer Name
+                        String customerName = "Unknown";
+                        Document userDetails = (Document) doc.get("userDetails");
+                        if (userDetails != null && userDetails.getString("fullname") != null) {
+                            customerName = userDetails.getString("fullname");
+                        }
+
+                        // 4. Extract other fields
+                        String acid = doc.getString("acid") != null ? doc.getString("acid") : "";
+                        String portName = doc.getString("port_name") != null ? doc.getString("port_name") : "";
+                        String country = doc.getString("country") != null ? doc.getString("country") : "";
+                        String status = doc.getString("status") != null ? doc.getString("status") : "Pending";
+                        int containers = doc.getInteger("num_of_containers", 0);
+                        String policy = doc.getString("policy") != null ? doc.getString("policy") : "";
+
+                        // ✅ FIX: Pass 'userId' as the 2nd argument (Total 9 arguments)
+                        loadedList.add(new Shipment(id, userId, customerName, acid, portName, country, status, containers, policy));
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Platform.runLater(() -> showAlert("Error connecting to MongoDB: " + e.getMessage()));
+                }
+                return loadedList;
+            }
+        };
+
+        // When task finishes successfully
+        fetchDataTask.setOnSucceeded(event -> {
+            shipments.setAll(fetchDataTask.getValue());
+        });
+
+        // Run the task
+        new Thread(fetchDataTask).start();
+    }    // --- OTHER METHODS (Add/Edit/Delete) ---
+    // You should update these to use MongoConnection directly instead of RestMongoSyncClient later
+
+    @FXML
+    public void deleteShipment(ActionEvent event) {
+        Shipment selected = clientTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Select a shipment to delete.");
+            return;
         }
 
-        // 7. Setup TopBar (User Info + Search Logic)
-        User currentUser = AppSession.getInstance().getCurrentUser();
+        // Direct Delete Logic (Optional - replacing your sync client)
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            db.getCollection("shipments").deleteOne(new Document("_id", new ObjectId(selected.getId())));
+            shipments.remove(selected);
+            System.out.println("Deleted from MongoDB");
+        } catch (Exception e) {
+            showAlert("Failed to delete: " + e.getMessage());
+        }
+    }
+
+    // ... Keep your Edit, OpenPopup, Navigation, and SetupTopBar methods ...
+    // Note: In editShipment, ensure you pass the new fields correctly.
+
+
+    private void showAlert(String msg) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setHeaderText(null);
+        alert.setContentText(msg);
+        alert.showAndWait();
+    }
+
+    // --- NAVIGATION HELPERS (Kept same) ---
+    private void setupTopBar() {
         if (topBarController != null) {
-
-            // Set Page Title
             topBarController.setPageTitle("إدارة الشحنات");
-
-            // Set User Info
-            if (currentUser != null) {
-                String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
-                String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
-                topBarController.setUserData(name, id);
-            }
-
-            // --- DYNAMIC SEARCH LOGIC ---
+            // Search Logic
             topBarController.setOnSearchAction(searchText -> {
                 filteredData.setPredicate(shipment -> {
-                    // If filter text is empty, display all shipments.
-                    if (searchText == null || searchText.isEmpty()) {
-                        return true;
-                    }
-
-                    String lowerCaseFilter = searchText.toLowerCase();
-
-                    // Search specifically by Port Name
-                    if (shipment.getPortName() != null && shipment.getPortName().toLowerCase().contains(lowerCaseFilter)) {
-                        return true;
-                    }
-
-                    return false; // No Match
+                    if (searchText == null || searchText.isEmpty()) return true;
+                    String lower = searchText.toLowerCase();
+                    // Search by Port OR Customer Name OR ACID
+                    return (shipment.getPortName() != null && shipment.getPortName().toLowerCase().contains(lower)) ||
+                            (shipment.getCustomerName() != null && shipment.getCustomerName().toLowerCase().contains(lower)) ||
+                            (shipment.getAcid() != null && shipment.getAcid().toLowerCase().contains(lower));
                 });
             });
         }
     }
+    // Inside ShipmentsManagementController.java
 
-    public void loadShipments() {
-        shipments.clear(); // Automatically updates the table because of binding
-        try (Connection conn = DatabaseConnection.connect()) {
-            String sql = "SELECT shipment_id, port_name, country, num_of_containers, status, policy FROM shipments";
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                shipments.add(new Shipment(
-                        rs.getInt("shipment_id"),
-                        rs.getString("port_name"),
-                        rs.getInt("num_of_containers"),
-                        rs.getString("country"),
-                        rs.getString("status"),
-                        rs.getString("policy")
-                ));
-            }
-            // Note: clientTable.setItems(shipments) is REMOVED because it's bound to sortedData
-        } catch (Exception e) {
-            e.printStackTrace();
+    @FXML
+    public void editShipment(ActionEvent event) {
+        Shipment selected = clientTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Select a shipment to edit.");
+            return;
         }
+        // Pass the actual object (or a clone if you prefer)
+        openShipmentPopup(selected);
+    }
+
+    // For ADDING a new shipment (Connect this to your Add Button)
+    @FXML
+    public void addShipment(ActionEvent event) {
+        // Create an empty dummy shipment
+        Shipment newShipment = new Shipment(null, "", "", "", "", "", "Pending", 0, "");
+        openShipmentPopup(newShipment);
     }
 
     private void openShipmentPopup(Shipment shipment) {
@@ -139,78 +213,52 @@ public class ShipmentsManagementController {
             Stage stage = new Stage();
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setScene(new Scene(root));
-            stage.setTitle(shipment.getId()==0 ? "Add Shipment" : "Edit Shipment");
             stage.showAndWait();
 
             if (popupController.isSaved()) {
-                if (shipment.getId()==0) {
-                    // Create remotely first
-                    int remoteId = addShipmentRemotely(shipment);
-                    if (remoteId == 0) {
-                        showAlert("Failed to add shipment on remote server.");
-                        return;
-                    }
-                    // set server id and insert into local
-                    shipment.setId(remoteId);
-                    insertLocalShipment(shipment);
-                    shipments.add(shipment); // Updates UI
-                } else {
-                    // update remote first
-                    boolean ok = updateShipmentRemotely(shipment);
-                    if (!ok) {
-                        showAlert("Failed to update shipment on remote server.");
-                        return;
-                    }
-                    updateLocalShipment(shipment);
-                    // No need to add to list, object is updated in place
-                }
-                clientTable.refresh();
+                saveShipmentToMongo(shipment);
+                loadShipmentsFromMongo(); // Refresh Table
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
-            showAlert("Error: " + e.getMessage());
         }
     }
 
-    @FXML
-    public void deleteShipment(ActionEvent event) {
-        Shipment selected = clientTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Select a shipment to delete.");
-            return;
-        }
+    private void saveShipmentToMongo(Shipment s) {
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            MongoCollection<Document> collection = db.getCollection("shipments");
 
-        // Delete local only
-        try (Connection conn = DatabaseConnection.connect()) {
-            String sql = "DELETE FROM shipments WHERE shipment_id = ?";
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setInt(1, selected.getId());
-            int deleted = ps.executeUpdate();
+            Document doc = new Document()
+                    .append("user_id", new ObjectId(s.getUserId())) // Link to User
+                    .append("acid", s.getAcid())
+                    .append("port_name", s.getPortName())
+                    .append("country", s.getCountry())
+                    .append("num_of_containers", s.getNumOfContainers())
+                    .append("status", s.getStatus())
+                    .append("policy", s.getPolicy())
+                    .append("updatedAt", new java.util.Date());
 
-            if (deleted > 0) {
-                shipments.remove(selected); // Updates UI
-                clientTable.refresh();
-                showAlert("Shipment deleted succesfully.");
+            if (s.getId() == null || s.getId().isEmpty()) {
+                // INSERT NEW
+                doc.append("createdAt", new java.util.Date());
+                collection.insertOne(doc);
+                System.out.println("Inserted new shipment");
             } else {
-                showAlert("Shipment not found in local database.");
+                // UPDATE EXISTING
+                collection.updateOne(
+                        new Document("_id", new ObjectId(s.getId())),
+                        new Document("$set", doc)
+                );
+                System.out.println("Updated shipment: " + s.getId());
             }
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Local delete failed: " + e.getMessage());
+            showAlert("Error saving to database: " + e.getMessage());
         }
     }
 
-    @FXML
-    public void editShipment(ActionEvent event) {
-        Shipment selected = clientTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Select a shipment to edit.");
-            return;
-        }
-        openShipmentPopup(selected);
-    }
-
-    // --- NAVIGATION ---
+    // Navigation methods...
     @FXML public void onDashboardClick(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/dashboard.fxml"); }
     @FXML public void onInvoiceManagementClick(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/client-data-invoice.fxml"); }
     @FXML public void client_management_btn_handle(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/client-data.fxml"); }
@@ -223,117 +271,5 @@ public class ShipmentsManagementController {
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.setScene(scene);
         stage.show();
-    }
-
-    // --- DB HELPERS ---
-    private void insertLocalShipment(Shipment s) {
-        try (Connection conn = DatabaseConnection.connect()) {
-            String sql = "INSERT INTO shipments (shipment_id, port_name, country, num_of_containers, status, policy) VALUES (?, ?, ?, ?, ?, ?)";
-            PreparedStatement ps = conn.prepareStatement(sql);
-            long now = System.currentTimeMillis();
-            ps.setInt(1, s.getId());
-            ps.setString(2, s.getPortName());
-            ps.setString(3, s.getCountry());
-            ps.setInt(4, s.getNumOfContainers());
-            ps.setString(5, s.getStatus());
-            ps.setString(6, s.getPolicy());
-            ps.executeUpdate();
-            System.out.println("✔ Inserted shipment locally");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void updateLocalShipment(Shipment s) {
-        try (Connection conn = DatabaseConnection.connect()) {
-            String sql = "UPDATE shipments SET port_name=?, country=?, num_of_containers=?, status=?, policy=? WHERE shipment_id=?";
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setString(1, s.getPortName());
-            ps.setString(2, s.getCountry());
-            ps.setInt(3, s.getNumOfContainers());
-            ps.setString(4, s.getStatus());
-            ps.setString(5, s.getPolicy());
-            ps.setInt(6, s.getId());
-            ps.executeUpdate();
-            System.out.println("✔ Updated shipment locally");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void showAlert(String msg) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setHeaderText(null);
-        alert.setContentText(msg);
-        alert.showAndWait();
-    }
-
-    // --- REMOTE API HELPERS ---
-    private static final String REMOTE_USERS_GET_URL = "http://localhost:3500/api/users/getAll";
-    private static final String REMOTE_USERS_CREATE_URL = "http://localhost:3500/api/users/getAll";
-    private static final String REMOTE_SHIPMENTS_URL = "http://localhost:3500/api/shipments";
-
-    public static int addShipmentRemotely(Shipment shipment) {
-        try {
-            JSONObject payload = new JSONObject();
-            payload.put("acid", shipment.getAcid());
-            payload.put("port_name", shipment.getPortName());
-            payload.put("country", shipment.getCountry());
-            payload.put("num_of_containers", shipment.getNumOfContainers());
-            payload.put("status", shipment.getStatus() == null || shipment.getStatus().isBlank() ? "Pending" : shipment.getStatus());
-            payload.put("policy", shipment.getPolicy());
-
-            System.out.println("Sending shipment payload:\n" + payload.toString(2));
-
-            String response = APIService.post(REMOTE_SHIPMENTS_URL, payload.toString());
-
-            if (response == null) return 0;
-
-            JSONObject respJson = new JSONObject(response);
-
-            if (respJson.has("shipment") && respJson.getJSONObject("shipment").has("id")) {
-                return respJson.getJSONObject("shipment").getInt("id");
-            }
-
-            System.out.println("Server response did not contain shipment.id: " + response);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return 0;
-    }
-
-    public static boolean updateShipmentRemotely(Shipment shipment) {
-        try {
-            JSONObject payload = new JSONObject();
-            payload.put("_id", shipment.getId());
-            payload.put("acid", shipment.getAcid());
-            payload.put("port_name", shipment.getPortName());
-            payload.put("country", shipment.getCountry());
-            payload.put("num_of_containers", shipment.getNumOfContainers());
-            payload.put("status", shipment.getStatus());
-            payload.put("policy", shipment.getPolicy());
-
-            String updateUrl = REMOTE_SHIPMENTS_URL + "/" + shipment.getId();
-            String response = APIService.put(updateUrl, payload.toString());
-
-            JSONObject respJson = new JSONObject(response);
-            return !respJson.has("error");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    public static boolean deleteShipmentRemotely(String shipmentId) {
-        if (shipmentId == null || shipmentId.isBlank()) return false;
-        try {
-            String deleteUrl = REMOTE_SHIPMENTS_URL + "/" + shipmentId;
-            String response = APIService.delete(deleteUrl);
-            JSONObject respJson = new JSONObject(response);
-            return respJson.has("message") && respJson.getString("message").toLowerCase().contains("deleted");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
     }
 }

@@ -2,31 +2,27 @@ package noran.desktop;
 
 import noran.desktop.Controllers.User;
 
-/**
- * Simple application session holder (singleton) to keep app-scoped objects like the current user.
- */
-public final class AppSession {
-
-    private static final AppSession INSTANCE = new AppSession();
-
+public class AppSession {
+    private static AppSession instance;
     private User currentUser;
+    private String authToken; // 🔴 NEW: Store the token
 
-    private AppSession() {
-    }
+    private AppSession() {}
 
     public static AppSession getInstance() {
-        return INSTANCE;
+        if (instance == null) instance = new AppSession();
+        return instance;
     }
 
-    public User getCurrentUser() {
-        return currentUser;
-    }
+    public User getCurrentUser() { return currentUser; }
+    public void setCurrentUser(User currentUser) { this.currentUser = currentUser; }
 
-    public void setCurrentUser(User user) {
-        this.currentUser = user;
-    }
+    // 🔴 NEW Getters & Setters for Token
+    public String getAuthToken() { return authToken; }
+    public void setAuthToken(String authToken) { this.authToken = authToken; }
 
-    public void clear() {
-        this.currentUser = null;
+    public void logout() {
+        currentUser = null;
+        authToken = null;
     }
 }

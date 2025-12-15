@@ -1,21 +1,10 @@
 package noran.desktop;
 
-import com.ibm.icu.text.ArabicShaping;
-import com.ibm.icu.text.ArabicShapingException;
-import com.ibm.icu.text.Bidi;
-import com.itextpdf.io.font.PdfEncodings;
-import com.itextpdf.io.image.ImageDataFactory;
-import com.itextpdf.kernel.font.PdfFont;
-import com.itextpdf.kernel.font.PdfFontFactory;
-import com.itextpdf.kernel.geom.PageSize;
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.layout.Document;
-import com.itextpdf.layout.element.*;
-import com.itextpdf.layout.element.Cell;
-import com.itextpdf.layout.properties.TextAlignment;
-import com.itextpdf.layout.properties.UnitValue;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
@@ -24,33 +13,27 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
-import javafx.stage.Modality;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
+import noran.desktop.AppSession;
 import noran.desktop.Controllers.SidebarController;
-import noran.desktop.Controllers.TopBarController; // Import TopBar
+import noran.desktop.Controllers.TopBarController;
 import noran.desktop.Controllers.User;
+import noran.desktop.Database.MongoConnection;
 import noran.desktop.models.InvoiceItem;
 import noran.desktop.models.Shipment;
-import noran.desktop.Database.DatabaseConnection;
+import org.bson.Document;
+import org.bson.types.ObjectId;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.sql.*;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.ResourceBundle;
+import java.util.*;
 
 public class HelloController implements Initializable {
 
@@ -60,99 +43,48 @@ public class HelloController implements Initializable {
     @FXML private Label invoiceDateLabel;
     @FXML private ComboBox<Shipment> clientShipmentComboBox;
 
-    // Table Setup
     @FXML private TableView<InvoiceItem> invoicesTable;
     @FXML private TableColumn<InvoiceItem, String> colDescription;
-    @FXML private TableColumn<InvoiceItem, Double> colPrice;
-    @FXML private TableColumn<InvoiceItem, String> colDate; // Note: mapped to 'date' or status
-    @FXML private Label totalCost;
+    @FXML private TableColumn<InvoiceItem, String> colPrice;
+    @FXML private TableColumn<InvoiceItem, String> colDate; // Currency Column
+    @FXML private Label totalCost1;
 
-    // Data Lists
     private final ObservableList<Shipment> shipmentList = FXCollections.observableArrayList();
     private final ObservableList<InvoiceItem> invoiceItems = FXCollections.observableArrayList();
-    private FilteredList<InvoiceItem> filteredData; // Wrapper for search
+    private FilteredList<InvoiceItem> filteredData;
 
     private String selectedClientId;
-    private String selectedClientRank = "low";
     private Shipment selectedShipment;
 
-    // Injected Controllers
     @FXML private SidebarController sidebarController;
-    @FXML private TopBarController topBarController; // Inject TopBar
+    @FXML private TopBarController topBarController;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         setupTable();
         setupComboBox();
 
-        // Listener for total calculation (always calculate based on master list)
-        invoiceItems.addListener((javafx.collections.ListChangeListener<InvoiceItem>) c -> updateTotal());
-
+        invoiceItems.addListener((ListChangeListener<InvoiceItem>) c -> updateTotal());
         invoiceDateLabel.setText("التاريخ: " + new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
 
-        // Setup Sidebar
-        if (sidebarController != null) {
-            sidebarController.setActivePage("invoices");
-        } else {
-            System.err.println("SidebarController was not injected. Check fx:id in FXML.");
-        }
-
-        // Setup TopBar (User Info + Search Logic)
+        if (sidebarController != null) sidebarController.setActivePage("invoices");
         setupTopBar();
-    }
-
-    private void setupTopBar() {
-        if (topBarController != null) {
-            // Set User Info (Optional - grab from AppSession if needed)
-            User currentUser = AppSession.getInstance().getCurrentUser();
-            if (currentUser != null) {
-                String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
-                String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
-                topBarController.setUserData(name, id);
-            }
-
-            topBarController.setPageTitle("إنشاء فاتورة");
-
-            // --- SEARCH LOGIC ---
-            topBarController.setOnSearchAction(searchText -> {
-                filteredData.setPredicate(item -> {
-                    // If filter text is empty, display all items.
-                    if (searchText == null || searchText.isEmpty()) {
-                        return true;
-                    }
-
-                    String lowerCaseFilter = searchText.toLowerCase();
-
-                    // Search by Description
-                    if (item.getDescription() != null && item.getDescription().toLowerCase().contains(lowerCaseFilter)) {
-                        return true;
-                    }
-                    // Optional: Search by 'Status' (which is mapped to colDate)
-                    else if (item.getDate() != null && item.getDate().toLowerCase().contains(lowerCaseFilter)) {
-                        return true;
-                    }
-
-                    return false; // Does not match.
-                });
-            });
-        }
     }
 
     private void setupTable() {
         colDescription.setCellValueFactory(new PropertyValueFactory<>("description"));
-        colPrice.setCellValueFactory(new PropertyValueFactory<>("price"));
-        colDate.setCellValueFactory(new PropertyValueFactory<>("date"));
 
-        // 1. Wrap the ObservableList in a FilteredList
+        // Format Price
+        colPrice.setCellValueFactory(cellData ->
+                new SimpleStringProperty(String.format("%.2f", cellData.getValue().getPrice())));
+
+        // Currency
+        colDate.setText("العملة");
+        colDate.setCellValueFactory(new PropertyValueFactory<>("currency"));
+
         filteredData = new FilteredList<>(invoiceItems, p -> true);
-
-        // 2. Wrap the FilteredList in a SortedList
         SortedList<InvoiceItem> sortedData = new SortedList<>(filteredData);
-
-        // 3. Bind the SortedList comparator to the TableView comparator
         sortedData.comparatorProperty().bind(invoicesTable.comparatorProperty());
-
-        // 4. Set items to the sorted/filtered list
         invoicesTable.setItems(sortedData);
     }
 
@@ -161,479 +93,237 @@ public class HelloController implements Initializable {
         clientShipmentComboBox.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
             if (newVal != null) {
                 selectedShipment = newVal;
-                generateInvoiceForShipment(newVal);
+                prepareInvoiceHeader(newVal);
             }
         });
     }
 
     public void setSelectedClient(String name, String taxNumber, String clientType, String id, String rank) {
         if (id != null) id = id.trim();
-        System.out.println("[DEBUG] setSelectedClient called with id='" + id + "', name='" + name + "', rank='" + rank + "'");
         this.selectedClientId = id;
-        this.selectedClientRank = (rank == null || rank.isEmpty()) ? "low" : rank.toLowerCase();
+
         clientNameLabel.setText("اسم العميل: " + (name != null ? name : "غير محدد"));
         taxNumberLabel.setText("الرقم الضريبي: " + (taxNumber != null && !taxNumber.equals("-") ? taxNumber : "غير متوفر"));
+
         invoiceItems.clear();
         shipmentList.clear();
+        updateTotal();
+
         if (id != null && !id.isEmpty()) {
-            loadShipmentsForClient(id);
+            loadShipmentsFromMongo(id);
         } else {
             clientShipmentComboBox.setPromptText("لا توجد شحنات لهذا العميل");
         }
     }
 
-    private void loadShipmentsForClient(String clientId) {
+    // ✅ 1. Load Shipments from MongoDB
+    private void loadShipmentsFromMongo(String clientId) {
         shipmentList.clear();
-        String sql = "SELECT shipment_id, port_name, num_of_containers, type_of_containers_json, status, dragt FROM shipments WHERE clientId = ? AND (dragt = 0 OR dragt IS NULL) ORDER BY shipment_id DESC";
-        try (Connection conn = DatabaseConnection.connect();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, clientId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    int id = rs.getInt("shipment_id");
-                    String port = rs.getString("port_name");
-                    int num = rs.getInt("num_of_containers");
-                    String types = rs.getString("type_of_containers_json");
-                    String status = rs.getString("status");
-                    Shipment s = new Shipment(id, port, num, status);
-                    s.setTypeOfContainersJson(types);
-                    shipmentList.add(s);
-                }
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            MongoCollection<Document> collection = db.getCollection("shipments");
+
+            // Find shipments for this user
+            List<Document> found = collection.find(new Document("user_id", new ObjectId(clientId))).into(new ArrayList<>());
+
+            for (Document doc : found) {
+                String id = doc.getObjectId("_id").toString();
+
+                // 🛑 FIX: Extract ACID from MongoDB
+                String acid = doc.getString("acid");
+                if (acid == null) acid = "غير محدد"; // Fallback if missing
+
+                String port = doc.getString("port_name");
+                int num = doc.getInteger("num_of_containers", 0);
+                String status = doc.getString("status");
+
+                // 🛑 FIX: Pass the 'acid' variable (4th argument) instead of ""
+                Shipment s = new Shipment(id, clientId, "Client", acid, port, "", status, num, "");
+
+                shipmentList.add(s);
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
+            new Alert(Alert.AlertType.ERROR, "خطأ في تحميل الشحنات: " + e.getMessage()).show();
         }
         clientShipmentComboBox.setPromptText(shipmentList.isEmpty() ? "لا توجد شحنات" : "اختر الشحنة");
     }
-
-    private void generateInvoiceForShipment(Shipment shipment) {
-        invoiceItems.clear(); // Clears master list -> filtered list updates -> table updates
-        double portPrice = getPortPrice(shipment.getPortName());
-        int containers = Math.max(shipment.getNumOfContainers(), 1);
-        double extraContainers = containers > 2 ? (containers - 2) * 500 : 0;
-
-        double clearancePer = 0, expensesPer = 0, sundriesPer = 0;
-        String json = shipment.getTypeOfContainersJson();
-        if (json != null && !json.trim().isEmpty()) {
-            json = json.replaceAll("[\\[\\]\"]", "").trim();
-            for (String type : json.split(",")) {
-                String t = type.trim().toLowerCase();
-                if (t.contains("20")) { clearancePer += 5000; expensesPer += 3000; sundriesPer += 1000; }
-                else if (t.contains("40")) { clearancePer += 6000; expensesPer += 3500; sundriesPer += 1500; }
-                else if (!t.isEmpty()) { clearancePer += 5500; expensesPer += 3250; sundriesPer += 1250; }
-            }
-        }
-        if (clearancePer == 0) {
-            clearancePer = 5500; expensesPer = 3250; sundriesPer = 1250;
-        }
-
-        double clearanceFees = clearancePer * containers;
-        double expensesTips = expensesPer * containers;
-        double sundries = sundriesPer * containers;
-        double singleWindow = 1000;
-
-        double rankMultiplier = switch (selectedClientRank) {
-            case "med", "rank2" -> 1.015;
-            case "high", "rank3" -> 1.025;
-            default -> 1.0;
-        };
-
-        double adjPort = portPrice * rankMultiplier;
-        double adjClearance = clearanceFees * rankMultiplier;
-        double adjExpenses = expensesTips * rankMultiplier;
-        double adjSundries = sundries * rankMultiplier;
-        double adjExtra = extraContainers * rankMultiplier;
-        double adjSingle = singleWindow * rankMultiplier;
-
-        invoiceItems.add(new InvoiceItem("رسوم الميناء", adjPort, "مُحسب"));
-        invoiceItems.add(new InvoiceItem("رسوم التخليص", adjClearance, "مُحسب"));
-        invoiceItems.add(new InvoiceItem("مصروفات وإكراميات", adjExpenses, "مُحسب"));
-        invoiceItems.add(new InvoiceItem("مصروفات متفرقة", adjSundries, "مُحسب"));
-        invoiceItems.add(new InvoiceItem("رسوم اضافية للحاويات الزائدة", adjExtra, "مُحسب"));
-        invoiceItems.add(new InvoiceItem("رسوم النافذة الواحدة", adjSingle, "مُحسب"));
-
-        invoiceNumberLabel.setText("رقم الفاتورة: INV-" + shipment.getId() + "-" + (System.currentTimeMillis() % 10000));
+    private void prepareInvoiceHeader(Shipment shipment) {
+        invoiceItems.clear();
+        // Generate Invoice Number (Example: INV-LAST6DIGITS)
+        String shortId = shipment.getId().substring(Math.max(0, shipment.getId().length() - 6));
+        invoiceNumberLabel.setText("INV-" + shortId.toUpperCase());
         updateTotal();
-
-        markShipmentAsInvoiced(shipment.getId());
-        saveInvoiceToDatabase(shipment.getId(), adjPort, adjClearance, adjExpenses, adjSundries, adjExtra, adjSingle);
-    }
-
-    private double getPortPrice(String port) {
-        return switch (port) {
-            case "Port of Alexandria" -> 5000;
-            case "Port of El-Dekheila" -> 4800;
-            case "Port of Damietta" -> 4500;
-            case "Port Said" -> 4200;
-            case "Port of Suez" -> 4000;
-            case "Port of Adabiya" -> 3800;
-            case "Port of Ain Sukhna" -> 3700;
-            case "Port of Safaga" -> 3500;
-            case "Port of Nuweiba" -> 3300;
-            case "Port of Ras Shukeir" -> 3100;
-            default -> 4100;
-        };
-    }
-
-    private void markShipmentAsInvoiced(int shipmentId) {
-        String sql = "UPDATE shipments SET dragt = 1 WHERE shipment_id = ?";
-        try (Connection c = DatabaseConnection.connect(); PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setInt(1, shipmentId);
-            ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
-    }
-
-    private void saveInvoiceToDatabase(int shipmentId, double port, double clearance, double expenses, double sundries, double extra, double single) {
-        String invoiceNum = invoiceNumberLabel.getText().replace("رقم الفاتورة: ", "");
-        String sql = "INSERT INTO shipment_fees (invoiceNumber, shipmentId, feeName, feePrice, " +
-                "Port_fee_price, Clearance_Fees_price, Expense_Tips_price, Sundries_price, " +
-                "Additional_Services_price, invoiceStatus, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)";
-        Timestamp now = new Timestamp(System.currentTimeMillis());
-        try (Connection c = DatabaseConnection.connect();
-             PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, invoiceNum); ps.setInt(2, shipmentId);
-            // (Note: This looks like a partial logic from your original code, kept as is)
-        } catch (SQLException e) { e.printStackTrace(); }
     }
 
     @FXML
     public void addNewInvoiceRow() {
-        TextInputDialog dialog = new TextInputDialog();
-        dialog.setTitle("إضافة عنصر يدوي");
-        dialog.setHeaderText("أدخل اسم العنصر والسعر");
-        dialog.setContentText("الاسم:");
+        Dialog<InvoiceItem> dialog = new Dialog<>();
+        dialog.setTitle("إضافة بند للفاتورة");
+        dialog.setHeaderText("أدخل تفاصيل البند");
 
-        dialog.showAndWait().ifPresent(name -> {
+        ButtonType loginButtonType = new ButtonType("إضافة", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
 
-            if (name == null || name.trim().isEmpty() || name.trim().matches("\\d+")) {
-                Alert a = new Alert(Alert.AlertType.ERROR, "يجب إدخال اسم صحيح يحتوي على حرف واحد على الأقل!");
-                a.show();
-                return;
-            }
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
 
-            TextInputDialog priceDialog = new TextInputDialog("100");
-            priceDialog.setTitle("السعر");
-            priceDialog.setContentText("السعر:");
+        TextField nameField = new TextField();
+        nameField.setPromptText("اسم البند / الخدمة");
 
-            priceDialog.showAndWait().ifPresent(p -> {
+        TextField priceField = new TextField();
+        priceField.setPromptText("السعر");
+
+        ComboBox<String> currencyCombo = new ComboBox<>();
+        currencyCombo.getItems().addAll("EGP", "USD");
+        currencyCombo.setValue("EGP");
+
+        grid.add(new Label("البند:"), 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(new Label("السعر:"), 0, 1);
+        grid.add(priceField, 1, 1);
+        grid.add(new Label("العملة:"), 0, 2);
+        grid.add(currencyCombo, 1, 2);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == loginButtonType) {
                 try {
-                    double price = Double.parseDouble(p);
-
-                    if (price < 100) {
-                        Alert a = new Alert(Alert.AlertType.ERROR, "السعر يجب أن يكون 100 أو أكثر!");
-                        a.show();
-                        return;
-                    }
-
-                    invoiceItems.add(new InvoiceItem(name, price, "يدوي"));
-                    updateTotal();
-                } catch (Exception ex) {
-                    Alert a = new Alert(Alert.AlertType.ERROR, "السعر غير صحيح!");
-                    a.show();
+                    String name = nameField.getText();
+                    double price = Double.parseDouble(priceField.getText());
+                    String curr = currencyCombo.getValue();
+                    return new InvoiceItem(name, price, curr, "Manual");
+                } catch (NumberFormatException e) {
+                    return null;
                 }
-            });
+            }
+            return null;
+        });
+
+        Optional<InvoiceItem> result = dialog.showAndWait();
+        result.ifPresent(item -> {
+            invoiceItems.add(item);
+            updateTotal();
         });
     }
 
     @FXML
     public void deleteSelectedRow() {
         InvoiceItem selected = invoicesTable.getSelectionModel().getSelectedItem();
-        if (selected != null && "يدوي".equals(selected.getDate())) {
+        if (selected != null) {
             invoiceItems.remove(selected);
             updateTotal();
-        } else {
-            Alert a = new Alert(Alert.AlertType.WARNING, "اختر عنصرًا يدويًا للحذف");
-            a.show();
         }
     }
 
     private void updateTotal() {
-        // We calculate total from the Master List (all items), not just the filtered ones
-        double total = invoiceItems.stream().mapToDouble(InvoiceItem::getPrice).sum();
-        totalCost.setText(String.format("المجموع الكلي: %.2f جنيه", total));
-    }
+        double totalEGP = 0;
+        double totalUSD = 0;
 
-    // =================== Arabic Text Shaping Helper ===================
-    private String shapeArabic(String text) {
-        if (text == null) return "";
-        try {
-            ArabicShaping shaper = new ArabicShaping(ArabicShaping.LETTERS_SHAPE);
-            String shaped = shaper.shape(text);
-            Bidi bidi = new Bidi(shaped, Bidi.DIRECTION_RIGHT_TO_LEFT);
-            return bidi.writeReordered(Bidi.DO_MIRRORING | Bidi.REMOVE_BIDI_CONTROLS);
-        } catch (ArabicShapingException e) {
-            return text;
-        }
-    }
-
-    // =================== Professional PDF Export ===================
-    @FXML
-    private void downloadInvoicePDF() {
-        if (invoiceItems.isEmpty()) {
-            new Alert(Alert.AlertType.WARNING, "لا توجد عناصر في الفاتورة لتصديرها.").show();
-            return;
-        }
-
-        FileChooser chooser = new FileChooser();
-        chooser.setInitialFileName("فاتورة_" + invoiceNumberLabel.getText().replace("رقم الفاتورة: ", "") + ".pdf");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
-        File file = chooser.showSaveDialog(invoicesTable.getScene().getWindow());
-        if (file == null) return;
-
-        try {
-            PdfWriter writer = new PdfWriter(file);
-            PdfDocument pdf = new PdfDocument(writer);
-            Document document = new Document(pdf, PageSize.A4);
-            document.setMargins(70, 50, 70, 50);
-
-            // Font
-            String fontPath = "C:/Windows/Fonts/arial.ttf";
-            PdfFont font = PdfFontFactory.createFont(fontPath, PdfEncodings.IDENTITY_H);
-
-            // Watermark
-            try {
-                Image logo = new Image(ImageDataFactory.create(getClass().getResource("/noran/desktop/images/Logo.png")));
-                logo.setFixedPosition(0, 0);
-                logo.setWidth(pdf.getDefaultPageSize().getWidth());
-                logo.setHeight(pdf.getDefaultPageSize().getHeight());
-                logo.setOpacity(0.08f);
-                document.add(logo);
-            } catch (Exception ignored) {}
-
-            // Title
-            document.add(new Paragraph(shapeArabic("فاتورة رسمية"))
-                    .setFont(font).setFontSize(26).setBold()
-                    .setTextAlignment(TextAlignment.CENTER));
-
-            document.add(new Paragraph("\n"));
-
-            // Client Info
-            document.add(new Paragraph(shapeArabic(clientNameLabel.getText())).setFont(font).setFontSize(14));
-            document.add(new Paragraph(shapeArabic(taxNumberLabel.getText())).setFont(font).setFontSize(14));
-            document.add(new Paragraph(shapeArabic(invoiceNumberLabel.getText())).setFont(font).setFontSize(14));
-            document.add(new Paragraph(shapeArabic(invoiceDateLabel.getText())).setFont(font).setFontSize(14));
-            document.add(new Paragraph("\n"));
-
-            // Table
-            Table table = new Table(UnitValue.createPercentArray(new float[]{5, 2, 2}))
-                    .useAllAvailableWidth()
-                    .setTextAlignment(TextAlignment.RIGHT);
-
-            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("الوصف")).setFont(font).setBold().setBackgroundColor(com.itextpdf.kernel.colors.DeviceGray.GRAY)));
-            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("السعر")).setFont(font).setBold().setBackgroundColor(com.itextpdf.kernel.colors.DeviceGray.GRAY)));
-            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("الحالة")).setFont(font).setBold().setBackgroundColor(com.itextpdf.kernel.colors.DeviceGray.GRAY)));
-
-            double total = 0;
-            // Use master list for PDF, or use filteredData if you only want to print what is searched
-            for (InvoiceItem item : invoiceItems) {
-                table.addCell(new Cell().add(new Paragraph(shapeArabic(item.getDescription())).setFont(font)));
-                table.addCell(new Cell().add(new Paragraph(String.format("%.2f", item.getPrice())).setFont(font).setTextAlignment(TextAlignment.LEFT)));
-                table.addCell(new Cell().add(new Paragraph(shapeArabic(item.getDate())).setFont(font)));
-                total += item.getPrice();
+        for (InvoiceItem item : invoiceItems) {
+            if ("USD".equals(item.getCurrency())) {
+                totalUSD += item.getPrice();
+            } else {
+                totalEGP += item.getPrice();
             }
-
-            document.add(table);
-
-            // Total
-            document.add(new Paragraph("\n"));
-            document.add(new Paragraph(shapeArabic("المجموع الكلي: " + String.format("%.2f جنيه مصري", total)))
-                    .setFont(font).setFontSize(18).setBold()
-                    .setTextAlignment(TextAlignment.RIGHT));
-
-            document.close();
-
-            new Alert(Alert.AlertType.INFORMATION, "تم حفظ الفاتورة بنجاح في: " + file.getName()).show();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "فشل في إنشاء الفاتورة:\n" + e.getMessage()).show();
         }
+
+        StringBuilder sb = new StringBuilder("المجموع: ");
+        if (totalEGP > 0) sb.append(String.format("%.2f EGP", totalEGP));
+        if (totalEGP > 0 && totalUSD > 0) sb.append(" + ");
+        if (totalUSD > 0) sb.append(String.format("%.2f USD", totalUSD));
+
+        if (totalEGP == 0 && totalUSD == 0) sb.append("0.00");
+
+        totalCost1.setText(sb.toString());
     }
 
+    // 🛑 KEY METHOD: SEND TO MONGODB 🛑
     @FXML
     private void sendInvoiceToDatabase() {
         if (selectedShipment == null || invoiceItems.isEmpty()) {
-            new Alert(Alert.AlertType.WARNING, "اختر شحنة وأنشئ فاتورة أولاً!").show();
+            new Alert(Alert.AlertType.WARNING, "يجب اختيار شحنة وإضافة بنود أولاً").show();
             return;
         }
 
-        String invoiceNum = invoiceNumberLabel.getText().replace("رقم الفاتورة: ", "").trim();
-        int shipmentId = selectedShipment.getId();
-        Timestamp now = new Timestamp(System.currentTimeMillis());
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            MongoCollection<Document> invoicesCol = db.getCollection("invoices");
 
-        double portFee = 0, clearanceFee = 0, expenseTips = 0, sundries = 0, additionalServices = 0;
-        StringBuilder manualNames = new StringBuilder();
-        double manualTotal = 0;
+            String invoiceNum = invoiceNumberLabel.getText().replace("رقم الفاتورة: ", "");
+            User currentUser = AppSession.getInstance().getCurrentUser();
+            String employeeIdStr = (currentUser != null) ? currentUser.getId() : "";
+            String username = (currentUser != null) ? currentUser.getName() : "Unknown";
 
-        for (InvoiceItem item : invoiceItems) {
-            String desc = item.getDescription().trim();
-            double price = item.getPrice();
-
-            if (desc.contains("رسوم الميناء")) {
-                portFee = price;
-            } else if (desc.contains("رسوم التخليص")) {
-                clearanceFee = price;
-            } else if (desc.contains("مصروفات وإكراميات")) {
-                expenseTips = price;
-            } else if (desc.contains("مصروفات متفرقة")) {
-                sundries = price;
-            } else if (desc.contains("رسوم النافذة الواحدة") || desc.contains("رسوم اضافية للحاويات الزائدة")) {
-                additionalServices += price;
-            } else {
-                if (manualNames.length() > 0) manualNames.append("، ");
-                manualNames.append(desc);
-                manualTotal += price;
+            // 1. Prepare Items Array
+            List<Document> itemsDocs = new ArrayList<>();
+            for (InvoiceItem item : invoiceItems) {
+                Document itemDoc = new Document()
+                        .append("item", item.getDescription())
+                        .append("itemPrice", item.getPrice())
+                        .append("currencyType", item.getCurrency());
+                itemsDocs.add(itemDoc);
             }
-        }
 
-        String sql = """
-        INSERT INTO shipment_fees (
-            invoiceNumber, shipmentId,
-            Port_fee_price, Clearance_Fees_price, Expense_Tips_price, Sundries_price,
-            Additional_Services_price,
-            unsupportedItemName, unsupportedItemPrice,
-            createdAt
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """;
+            // 2. Create Invoice Document
+            Document invoiceDoc = new Document()
+                    .append("invoiceNumber", invoiceNum)
+                    .append("userId", new ObjectId(selectedClientId))
+                    .append("shipmentId", new ObjectId(selectedShipment.getId()))
+                    .append("employeeId", !employeeIdStr.isEmpty() ? new ObjectId(employeeIdStr) : null)
+                    .append("username", username)
+                    .append("invoiceItems", itemsDocs) // Array of items
+                    .append("status", "في انتظار الموافقة") // Status as requested
+                    .append("createdAt", new Date())
+                    .append("updatedAt", new Date());
 
-        try (Connection conn = DatabaseConnection.connect();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+            // 3. Insert into MongoDB
+            invoicesCol.insertOne(invoiceDoc);
 
-            ps.setString(1, invoiceNum);
-            ps.setInt(2, shipmentId);
-            ps.setDouble(3, portFee);
-            ps.setDouble(4, clearanceFee);
-            ps.setDouble(5, expenseTips);
-            ps.setDouble(6, sundries);
-            ps.setDouble(7, additionalServices);
-            ps.setString(8, manualNames.length() > 0 ? manualNames.toString() : null);
-            ps.setDouble(9, manualTotal);
-            ps.setTimestamp(10, now);
-
-            ps.executeUpdate();
-            markShipmentAsInvoiced(shipmentId);
-            showSuccessDialog(invoiceNum, shipmentId, portFee, clearanceFee, expenseTips, sundries, additionalServices, manualNames.toString(), manualTotal);
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "فشل في الحفظ:\n" + e.getMessage()).show();
-        }
-    }
-
-    private void showSuccessDialog(String invoiceNum, int shipmentId, double port, double clearance,
-                                   double expenses, double sundries, double additional, String manualName, double manualTotal) {
-
-        String content = String.format("""
-        تم حفظ الفاتورة بنجاح في قاعدة البيانات!
-        
-        رقم الفاتورة: %s
-        معرف الشحنة: %d
-        التاريخ: %s
-        
-        ═══════════════════════════════
-        التفاصيل المالية:
-        • رسوم الميناء          : %,12.2f جنيه
-        • رسوم التخليص          : %,12.2f جنيه
-        • مصروفات وإكراميات     : %,12.2f جنيه
-        • مصروفات متفرقة        : %,12.2f جنيه
-        • خدمات إضافية + نافذة    : %,12.2f جنيه
-        %s%s : %,12.2f جنيه
-        ═══════════════════════════════
-        المجموع الكلي           : %,12.2f جنيه
-        """,
-                invoiceNum, shipmentId, invoiceDateLabel.getText().replace("التاريخ: ", ""),
-                port, clearance, expenses, sundries, additional,
-                manualName.isEmpty() ? "" : "• عناصر يدوية (" + manualName + ")\n",
-                manualName.isEmpty() ? "" : " ".repeat(25),
-                manualTotal,
-                invoiceItems.stream().mapToDouble(InvoiceItem::getPrice).sum()
-        );
-
-        Stage dialog = new Stage();
-        dialog.setTitle("تم الإرسال بنجاح");
-        dialog.initModality(Modality.APPLICATION_MODAL);
-
-        TextArea textArea = new TextArea(content);
-        textArea.setEditable(false);
-        textArea.setWrapText(true);
-        textArea.setStyle("-fx-font-family: 'Courier New', monospace; -fx-font-size: 14px;");
-        textArea.setPrefSize(680, 500);
-
-        Button copyBtn = new Button("نسخ إلى الحافظة");
-        copyBtn.setOnAction(e -> {
-            Clipboard.getSystemClipboard().setContent(
-                    new ClipboardContent() {{ putString(content); }}
+            // 4. Update Shipment Status (Optional)
+            MongoCollection<Document> shipmentsCol = db.getCollection("shipments");
+            shipmentsCol.updateOne(
+                    new Document("_id", new ObjectId(selectedShipment.getId())),
+                    new Document("$set", new Document("is_invoiced", true))
             );
-            copyBtn.setText("تم النسخ!");
-        });
 
-        Button closeBtn = new Button("إغلاق");
-        closeBtn.setOnAction(e -> dialog.close());
+            new Alert(Alert.AlertType.INFORMATION, "تم إرسال الفاتورة للموافقة بنجاح").show();
 
-        HBox buttons = new HBox(15, copyBtn, closeBtn);
-        buttons.setAlignment(Pos.CENTER);
-        buttons.setPadding(new Insets(10));
+            // Navigate back to client list or clear form
+            onInvoiceManagementClick(null);
 
-        VBox root = new VBox(10, textArea, buttons);
-        root.setPadding(new Insets(15));
-        root.setStyle("-fx-background-color: #f8fff8; -fx-border-color: #4caf50; -fx-border-width: 3;");
-
-        dialog.setScene(new Scene(root));
-        dialog.showAndWait();
+        } catch (Exception e) {
+            e.printStackTrace();
+            new Alert(Alert.AlertType.ERROR, "فشل الحفظ: " + e.getMessage()).show();
+        }
     }
 
-    @FXML
-    private void onSearch(ActionEvent e) {
-        // Legacy method, unused if TopBar search is active
+    // Navigation Logic
+    private void setupTopBar() {
+        if (topBarController != null) {
+            topBarController.setPageTitle("إنشاء فاتورة");
+            User u = AppSession.getInstance().getCurrentUser();
+            if(u != null) topBarController.setUserData(u.getName(), "ID: " + u.getId());
+        }
     }
 
-    @FXML
-    private void invoice_management_btn_handle(ActionEvent event)throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/invoices-management.fxml"));
+    @FXML public void onDashboardClick(ActionEvent e) throws Exception { navigate(e, "/noran/desktop/dashboard.fxml"); }
+    // This goes back to the client selection list
+    @FXML public void onInvoiceManagementClick(ActionEvent e) throws IOException { navigate(e, "/noran/desktop/client-data-invoice.fxml"); }
+
+    private void navigate(ActionEvent event, String fxml) throws IOException {
+        if (event == null) return; // Guard clause
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
         Parent root = loader.load();
-        Scene scene = new Scene(root);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
-    }
-
-    @FXML public void client_management(ActionEvent event)throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/client-data.fxml"));
-        Parent root = loader.load();
-        Scene scene = new Scene(root);
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
-    }
-
-    @FXML public void onDashboardClick(ActionEvent e) throws Exception {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/dashboard.fxml"));
-        Parent root = loader.load();
-        Stage stage = (Stage)((Node)e.getSource()).getScene().getWindow();
         stage.setScene(new Scene(root));
         stage.show();
     }
 
-    @FXML
-    public void onTa5les(ActionEvent event) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/AdminInvoices.fxml"));
-        Parent root = loader.load();
-        Scene scene = new Scene(root);
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
-    }
-
-    public void employee_management_btn_handle(ActionEvent event)throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/employee-management.fxml"));
-        Parent root = loader.load();
-        Scene scene = new Scene(root);
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
-    }
-
-    public void refresh(ActionEvent event) {
-
-    }
+    @FXML public void refresh(ActionEvent event) {}
+    @FXML private void onSearch(ActionEvent e) {}
+    @FXML private void downloadInvoicePDF() {}
 }

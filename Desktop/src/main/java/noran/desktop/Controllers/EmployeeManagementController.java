@@ -1,9 +1,15 @@
 package noran.desktop.Controllers;
 
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -16,13 +22,14 @@ import javafx.scene.control.TableView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import noran.desktop.AppSession;
-import noran.desktop.Database.DatabaseConnection;
-import noran.desktop.Database.RestMongoSyncClient;
+import noran.desktop.Database.MongoConnection; // Direct Mongo Access
 import noran.desktop.models.Employee;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 
 public class EmployeeManagementController {
 
@@ -48,7 +55,7 @@ public class EmployeeManagementController {
         colEmail.setCellValueFactory(data -> data.getValue().emailProperty());
         colPhone.setCellValueFactory(data -> data.getValue().phoneProperty());
         colType.setCellValueFactory(data -> data.getValue().jobTypeProperty());
-        colRank.setCellValueFactory(data -> data.getValue().rankProperty());
+        colRank.setCellValueFactory(data -> data.getValue().rankProperty()); // Assuming 'active' status is mapped here or rank logic
 
         // 2. Wrap the ObservableList
         filteredData = new FilteredList<>(employees, p -> true);
@@ -56,8 +63,8 @@ public class EmployeeManagementController {
         sortedData.comparatorProperty().bind(clientTable.comparatorProperty());
         clientTable.setItems(sortedData);
 
-        // 3. Load Data (Syncs automatically)
-        loadEmployees();
+        // 3. Load Data from MongoDB
+        loadEmployeesFromMongo();
 
         // 4. Setup Sidebar
         if (sidebarController != null) {
@@ -68,43 +75,48 @@ public class EmployeeManagementController {
         setupTopBar();
     }
 
-    public void loadEmployees() {
-        // ✅ STEP 1: Sync Local DB with Remote Server First
-        try {
-            System.out.println("🔄 Syncing local database with remote server...");
-            RestMongoSyncClient.syncUsersWithRemote();
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.err.println("⚠ Sync failed. Loading existing local data only.");
-        }
+    // ✅ 1. LOAD FROM MONGODB
+    public void loadEmployeesFromMongo() {
+        Task<List<Employee>> task = new Task<>() {
+            @Override
+            protected List<Employee> call() {
+                List<Employee> list = new ArrayList<>();
+                try {
+                    MongoDatabase db = MongoConnection.getDatabase();
+                    MongoCollection<Document> users = db.getCollection("users");
 
-        // ✅ STEP 2: Clear old UI data
-        employees.clear();
+                    // Filter for type='employee'
+                    for (Document doc : users.find(new Document("type", "employee"))) {
+                        String id = doc.getObjectId("_id").toString();
+                        String fullname = doc.getString("fullname");
+                        String email = doc.getString("email");
+                        String phone = doc.getString("phone");
+                        boolean active = doc.getBoolean("active", true);
+                        String password = doc.getString("password");
 
-        // ✅ STEP 3: Load fresh data from SQLite
-        try (Connection conn = DatabaseConnection.connect()) {
-            String sql = "SELECT _id, fullname, email, phone, clientType, employeeType, active, password FROM users WHERE type='employee'";
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            ResultSet rs = stmt.executeQuery();
+                        // Handle job title variations
+                        String jobTitle = doc.getString("employeeType");
+                        if (jobTitle == null || jobTitle.isBlank()) {
+                            jobTitle = doc.getString("clientType"); // Fallback
+                        }
+                        if (jobTitle == null) jobTitle = "موظف";
 
-            while (rs.next()) {
-                String jobTitle = rs.getString("employeeType");
-                if (jobTitle == null || jobTitle.isBlank()) jobTitle = rs.getString("clientType");
-
-                employees.add(new Employee(
-                        rs.getString("_id"),
-                        rs.getString("fullname"),
-                        rs.getString("email"),
-                        rs.getString("phone"),
-                        jobTitle,
-                        rs.getBoolean("active"),
-                        rs.getString("password")
-                ));
+                        list.add(new Employee(id, fullname, email, phone, jobTitle, active, password));
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Platform.runLater(() -> showAlert("Connection Error: " + e.getMessage()));
+                }
+                return list;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("Error loading employees: " + e.getMessage());
-        }
+        };
+
+        task.setOnSucceeded(e -> {
+            employees.setAll(task.getValue());
+            clientTable.refresh();
+        });
+
+        new Thread(task).start();
     }
 
     // --- CRUD OPERATIONS ---
@@ -122,19 +134,7 @@ public class EmployeeManagementController {
             showAlert("Select an employee to edit.");
             return;
         }
-
-        // 🛑 Create a COPY of the employee so we don't modify the table directly
-        Employee tempEmployee = new Employee(
-                selected.getId(),
-                selected.getFullname(),
-                selected.getEmail(),
-                selected.getPhone(),
-                selected.getJobType(),
-                selected.isActive(),
-                selected.getPassword()
-        );
-
-        openEmployeePopup(tempEmployee);
+        openEmployeePopup(selected);
     }
 
     private void openEmployeePopup(Employee employee) {
@@ -152,7 +152,7 @@ public class EmployeeManagementController {
             stage.showAndWait();
 
             if (popupController.isSaved()) {
-                handleRemoteSave(employee);
+                saveEmployeeToMongo(employee);
             }
 
         } catch (Exception e) {
@@ -161,34 +161,47 @@ public class EmployeeManagementController {
         }
     }
 
-    /**
-     * ✅ REMOTE FIRST SAVE LOGIC
-     */
-    private void handleRemoteSave(Employee employee) {
-        boolean success = false;
-        String operation = "";
+    // ✅ 2. SAVE (ADD/UPDATE) TO MONGODB
+    private void saveEmployeeToMongo(Employee emp) {
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            MongoCollection<Document> users = db.getCollection("users");
 
-        if (employee.getId() == null || employee.getId().isBlank()) {
-            operation = "add";
-            // Uses addEmployeeRemotely which returns the new ID
-            String remoteId = RestMongoSyncClient.addEmployeeRemotely(employee);
-            success = (remoteId != null && !remoteId.isBlank());
-        } else {
-            operation = "update";
-            // Uses updateEmployeeRemotely (Self-Healing version)
-            success = RestMongoSyncClient.updateEmployeeRemotely(employee);
-        }
+            Document doc = new Document()
+                    .append("fullname", emp.getFullname())
+                    .append("username", emp.getFullname()) // Sync username
+                    .append("email", emp.getEmail())
+                    .append("phone", emp.getPhone())
+                    .append("employeeType", emp.getJobType()) // Save job title
+                    .append("type", "employee") // Enforce type
+                    .append("active", emp.isActive())
+                    .append("password", emp.getPassword());
 
-        if (success) {
-            System.out.println("✔ Remote " + operation + " successful.");
-            // loadEmployees() handles the sync and refresh
-            loadEmployees();
-            clientTable.refresh();
-        } else {
-            showAlert("فشل الاتصال بالخادم. لم يتم حفظ البيانات.");
+            if (emp.getId() == null || emp.getId().isBlank()) {
+                // INSERT
+                doc.append("createdAt", new java.util.Date());
+                users.insertOne(doc);
+                System.out.println("✔ Inserted new employee");
+            } else {
+                // UPDATE
+                doc.append("updatedAt", new java.util.Date());
+                users.updateOne(
+                        Filters.eq("_id", new ObjectId(emp.getId())),
+                        new Document("$set", doc)
+                );
+                System.out.println("✔ Updated employee: " + emp.getId());
+            }
+
+            // Refresh UI
+            loadEmployeesFromMongo();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Failed to save: " + e.getMessage());
         }
     }
 
+    // ✅ 3. DELETE FROM MONGODB
     @FXML
     public void deleteEmployee(ActionEvent event) {
         Employee selected = clientTable.getSelectionModel().getSelectedItem();
@@ -197,18 +210,20 @@ public class EmployeeManagementController {
             return;
         }
 
-        // 1. DELETE FROM REMOTE DATABASE FIRST
-        boolean remoteDeleted = RestMongoSyncClient.deleteUserRemotely(selected.getId());
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            db.getCollection("users").deleteOne(Filters.eq("_id", new ObjectId(selected.getId())));
 
-        if (remoteDeleted) {
-            System.out.println("✔ Remote delete successful.");
-            // Sync & Reload handles local deletion
-            loadEmployees();
-        } else {
-            showAlert("Failed to delete employee from server.");
+            employees.remove(selected);
+            System.out.println("✔ Deleted employee: " + selected.getId());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Failed to delete: " + e.getMessage());
         }
     }
 
+    // ✅ 4. FREEZE (TOGGLE ACTIVE) IN MONGODB
     @FXML
     public void freezeEmployee(ActionEvent event) {
         Employee selected = clientTable.getSelectionModel().getSelectedItem();
@@ -217,29 +232,23 @@ public class EmployeeManagementController {
             return;
         }
 
-        boolean originalStatus = selected.isActive();
-        boolean newStatus = !originalStatus;
+        boolean newStatus = !selected.isActive();
 
-        // Create temp copy for update
-        Employee tempEmp = new Employee(
-                selected.getId(),
-                selected.getFullname(),
-                selected.getEmail(),
-                selected.getPhone(),
-                selected.getJobType(),
-                newStatus, // Apply new status
-                selected.getPassword()
-        );
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            db.getCollection("users").updateOne(
+                    Filters.eq("_id", new ObjectId(selected.getId())),
+                    Updates.set("active", newStatus)
+            );
 
-        // Send update to server
-        boolean success = RestMongoSyncClient.updateEmployeeRemotely(tempEmp);
+            // Update UI locally to reflect change immediately
+            selected.setActive(newStatus);
+            clientTable.refresh();
+            System.out.println("✔ Employee status updated to: " + newStatus);
 
-        if (success) {
-            // Sync and reload to get the official change
-            loadEmployees();
-            System.out.println("✔ Freeze/Unfreeze synced successfully.");
-        } else {
-            showAlert("Failed to sync status with server.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Failed to update status: " + e.getMessage());
         }
     }
 
@@ -251,7 +260,7 @@ public class EmployeeManagementController {
     }
 
     public void refresh(ActionEvent event) {
-        loadEmployees();
+        loadEmployeesFromMongo();
     }
 
     // --- NAVIGATION ---
@@ -268,13 +277,26 @@ public class EmployeeManagementController {
             topBarController.setOnSearchAction(searchText -> {
                 filteredData.setPredicate(employee -> {
                     if (searchText == null || searchText.isEmpty()) return true;
-                    String lowerCaseFilter = searchText.toLowerCase();
-                    if (employee.getFullname() != null && employee.getFullname().toLowerCase().contains(lowerCaseFilter)) return true;
-                    if (employee.getPhone() != null && employee.getPhone().contains(lowerCaseFilter)) return true;
-                    return false;
+                    String lower = searchText.toLowerCase();
+                    return (employee.getFullname() != null && employee.getFullname().toLowerCase().contains(lower)) ||
+                            (employee.getPhone() != null && employee.getPhone().contains(lower));
                 });
             });
         }
     }
 
+    // Navigation methods...
+    @FXML public void onDashboardClick(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/dashboard.fxml"); }
+    @FXML public void onInvoiceManagementClick(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/client-data-invoice.fxml"); }
+    @FXML public void client_management_btn_handle(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/client-data.fxml"); }
+    @FXML public void shipments_management(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/shipments-management.fxml"); }
+
+    private void navigate(ActionEvent event, String fxmlPath) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setScene(scene);
+        stage.show();
+    }
 }

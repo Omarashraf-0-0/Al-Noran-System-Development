@@ -21,51 +21,50 @@
     <top>
         <fx:include fx:id="topBar" source="TopBar.fxml" />
     </top>
-   <right>
-      <AnchorPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
-         <children>
-            <Button fx:id="updateClientBtn1" layoutX="50.0" layoutY="30.0" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
-   
-      
-                  <ImageView fitHeight="284.0" fitWidth="548.0" layoutX="190.0" layoutY="-33.0" preserveRatio="true">
-                   <image>
-                       <Image url="@images/invoice-illustration.png" />
-                   </image>
-               </ImageView>
-               <!-- Table container -->
-               <StackPane layoutX="6.0" layoutY="218.0" prefHeight="331.0" prefWidth="942.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 12;">
-               <children>
-                      <TableView fx:id="clientTable" prefHeight="380.0" prefWidth="880.0" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css">
-      
-                                <columns>
-                              <TableColumn fx:id="colPortName" prefWidth="220" text="اسم الميناء" />
-                              <TableColumn fx:id="colContainerNumber" prefWidth="220" text="عدد الحاويات" />
-                              <TableColumn fx:id="colCounrty" prefWidth="220" text="الدولة" />
-                              <TableColumn fx:id="colShipmentStatus" prefWidth="220" text="حالة الشحنة" />
-                              <TableColumn fx:id="colPolicy" prefWidth="220" text="البوليصة" />
-                          </columns>
-                      </TableView>
-               </children>
-               </StackPane>
-               <!-- Buttons -->
-               <HBox alignment="CENTER_RIGHT" spacing="12" style="-fx-padding: 12 0 0 0;">
-   
-                      <Region HBox.hgrow="ALWAYS" />
-               </HBox>
+    <right>
+        <AnchorPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+            <children>
+                <Button fx:id="updateClientBtn1" layoutX="50.0" layoutY="30.0" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
 
-                      <Button fx:id="updateClientBtn" layoutX="455.0" layoutY="578.0" onAction="#editShipment" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" text="تعديل الشحنة" />
+                <ImageView fitHeight="284.0" fitWidth="548.0" layoutX="190.0" layoutY="-33.0" preserveRatio="true">
+                    <image>
+                        <Image url="@images/invoice-illustration.png" />
+                    </image>
+                </ImageView>
 
-                      <Button fx:id="deleteClientBtn" layoutX="323.0" layoutY="576.0" onAction="#deleteShipment" prefHeight="44.0" prefWidth="119.0" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="مسح الشحنة" textFill="WHITE">
-               <font>
-                  <Font name="Arial Bold" size="12.0" />
-               </font>
-            </Button>
-            <ImageView fitHeight="47.0" fitWidth="61.0" layoutX="47.0" layoutY="34.0" pickOnBounds="true" preserveRatio="true">
-               <image>
-                  <Image url="@images/cached.png" />
-               </image>
-            </ImageView>
-         </children>
-      </AnchorPane>
-   </right>
+                <StackPane layoutX="6.0" layoutY="218.0" prefHeight="331.0" prefWidth="942.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 12;">
+                    <children>
+                        <TableView fx:id="clientTable" prefHeight="380.0" prefWidth="880.0" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css">
+
+                            <columns>
+                                <TableColumn fx:id="colCustomerName" prefWidth="200" text="اسم العميل" />
+                                <TableColumn fx:id="colAcid" prefWidth="150" text="ACID" />
+                                <TableColumn fx:id="colPortName" prefWidth="150" text="اسم الميناء" />
+                                <TableColumn fx:id="colCountry" prefWidth="150" text="الدولة" />
+                                <TableColumn fx:id="colShipmentStatus" prefWidth="150" text="الحالة" />
+                            </columns>
+                        </TableView>
+                    </children>
+                </StackPane>
+
+                <Button fx:id="updateClientBtn" layoutX="455.0" layoutY="578.0" onAction="#editShipment" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" text="تعديل الشحنة" />
+
+                <Button fx:id="deleteClientBtn" layoutX="323.0" layoutY="576.0" onAction="#deleteShipment" prefHeight="44.0" prefWidth="119.0" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="مسح الشحنة" textFill="WHITE">
+                    <font>
+                        <Font name="Arial Bold" size="12.0" />
+                    </font>
+                </Button>
+
+                <Button layoutX="47.0" layoutY="34.0" onAction="#initialize" style="-fx-background-color: transparent;">
+                    <graphic>
+                        <ImageView fitHeight="47.0" fitWidth="61.0" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="@images/cached.png" />
+                            </image>
+                        </ImageView>
+                    </graphic>
+                </Button>
+            </children>
+        </AnchorPane>
+    </right>
 </BorderPane>

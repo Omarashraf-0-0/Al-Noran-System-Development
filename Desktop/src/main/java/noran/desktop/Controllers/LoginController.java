@@ -52,6 +52,12 @@ public class LoginController {
                 showAlert(Alert.AlertType.ERROR, "فشل تسجيل الدخول", json.getString("error"));
             } else if (json.has("token")) {
 
+                // ---------------------------------------------------------
+                // 🔴 CRITICAL FIX: Save Token to AppSession immediately
+                // ---------------------------------------------------------
+                String token = json.getString("token");
+                noran.desktop.AppSession.getInstance().setAuthToken(token);
+
                 String extractedId = "";
                 String extractedName = "";
                 String extractedRole = "";

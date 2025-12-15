@@ -1,9 +1,14 @@
 package noran.desktop.Controllers;
 
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -16,14 +21,14 @@ import javafx.scene.control.TableView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import noran.desktop.AppSession;
-import noran.desktop.Database.DatabaseConnection;
-import noran.desktop.Database.RestMongoSyncClient;
+import noran.desktop.Database.MongoConnection; // Your MongoDB Connection Class
 import noran.desktop.models.Client;
+import org.bson.Document;
+import org.bson.types.ObjectId;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ClientDataController {
 
@@ -44,8 +49,8 @@ public class ClientDataController {
     public void initialize() {
         setupTable();
 
-        // 1. Initial Load (Forces Sync)
-        loadClients();
+        // Load data directly from MongoDB
+        loadClientsFromMongo();
 
         if (sidebarController != null) sidebarController.setActivePage("clients");
         setupTopBar();
@@ -64,41 +69,47 @@ public class ClientDataController {
         clientTable.setItems(sortedData);
     }
 
-    public void loadClients() {
-        // ✅ STEP 1: Sync Local DB with Remote Server First
-        // This makes sure SQLite matches MongoDB exactly before we read from it.
-        try {
-            System.out.println("🔄 Syncing local database with remote server...");
-            RestMongoSyncClient.syncUsersWithRemote();
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.err.println("⚠ Sync failed. Loading existing local data only.");
-            // We don't show an alert here to avoid annoying the user if they are offline
-        }
+    // ✅ 1. LOAD DIRECTLY FROM MONGODB
+    public void loadClientsFromMongo() {
+        Task<List<Client>> loadTask = new Task<>() {
+            @Override
+            protected List<Client> call() {
+                List<Client> loadedList = new ArrayList<>();
+                try {
+                    MongoDatabase db = MongoConnection.getDatabase();
+                    MongoCollection<Document> usersCol = db.getCollection("users");
 
-        // ✅ STEP 2: Clear old UI data
-        clients.clear();
+                    // Filter only 'client' type users
+                    for (Document doc : usersCol.find(new Document("type", "client"))) {
+                        String id = doc.getObjectId("_id").toString();
+                        String name = doc.getString("fullname");
+                        String email = doc.getString("email");
+                        String ssn = doc.getString("ssn"); // Or taxNumber depending on your schema
+                        String phone = doc.getString("phone");
+                        String clientType = doc.getString("clientType");
+                        String password = doc.getString("password"); // If you need it
 
-        // ✅ STEP 3: Load fresh data from SQLite
-        try (Connection conn = DatabaseConnection.connect()) {
-            String sql = "SELECT _id, fullname, email, ssn, phone, clientType, password FROM users WHERE type='client'";
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            ResultSet rs = stmt.executeQuery();
+                        // Handle nulls safely
+                        if (name == null) name = doc.getString("username");
+                        if (ssn == null) ssn = doc.getString("taxNumber"); // Fallback
+                        if (clientType == null) clientType = "Unknown";
 
-            while (rs.next()) {
-                clients.add(new Client(
-                        rs.getString("_id"),
-                        rs.getString("fullname"),
-                        rs.getString("email"),
-                        rs.getString("ssn"),
-                        rs.getString("phone"),
-                        rs.getString("clientType"),
-                        rs.getString("password")
-                ));
+                        loadedList.add(new Client(id, name, email, ssn, phone, clientType, password));
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Platform.runLater(() -> showAlert("Connection Error: " + e.getMessage()));
+                }
+                return loadedList;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        };
+
+        loadTask.setOnSucceeded(e -> {
+            clients.setAll(loadTask.getValue());
+            clientTable.refresh();
+        });
+
+        new Thread(loadTask).start();
     }
 
     @FXML
@@ -114,22 +125,7 @@ public class ClientDataController {
             showAlert("يرجى تحديد عميل للتعديل.");
             return;
         }
-
-        // Create a copy so we don't modify the table row directly
-        Client tempClient = new Client(
-                selected.getId(),
-                selected.getFullname(),
-                selected.getEmail(),
-                selected.getSsn(),
-                selected.getPhone(),
-                selected.getClientType(),
-                selected.getPassword()
-        );
-
-        openClientPopup(tempClient);
-        // Note: loadClients() is called inside handleRemoteSave() if successful,
-        // so we don't need it here explicitly unless the popup was cancelled,
-        // but adding it doesn't hurt.
+        openClientPopup(selected);
     }
 
     private void openClientPopup(Client clientToEdit) {
@@ -143,11 +139,11 @@ public class ClientDataController {
             Stage stage = new Stage();
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setScene(new Scene(root));
-            stage.setTitle(clientToEdit.getId().isBlank() ? "Add Client" : "Edit Client");
+            stage.setTitle(clientToEdit.getId() == null || clientToEdit.getId().isEmpty() ? "Add Client" : "Edit Client");
             stage.showAndWait();
 
             if (popupController.isSaved()) {
-                handleRemoteSave(clientToEdit);
+                saveClientToMongo(clientToEdit);
             }
 
         } catch (Exception e) {
@@ -156,29 +152,49 @@ public class ClientDataController {
         }
     }
 
-    private void handleRemoteSave(Client client) {
-        boolean success = false;
-        String operation = "";
+    // ✅ 2. SAVE DIRECTLY TO MONGODB
+    private void saveClientToMongo(Client client) {
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            MongoCollection<Document> usersCol = db.getCollection("users");
 
-        if (client.getId() == null || client.getId().isBlank()) {
-            operation = "add";
-            String remoteId = RestMongoSyncClient.addClientRemotely(client);
-            success = (remoteId != null && !remoteId.isBlank());
-        } else {
-            operation = "update";
-            success = RestMongoSyncClient.updateClientRemotely(client);
-        }
+            Document doc = new Document()
+                    .append("fullname", client.getFullname())
+                    .append("username", client.getFullname()) // Keep username synced if needed
+                    .append("email", client.getEmail())
+                    .append("phone", client.getPhone())
+                    .append("ssn", client.getSsn()) // Or taxNumber
+                    .append("taxNumber", client.getSsn()) // Redundant safety
+                    .append("clientType", client.getClientType())
+                    .append("type", "client") // Force type to 'client'
+                    .append("active", true)
+                    .append("password", client.getPassword());
 
-        if (success) {
-            System.out.println("✔ Remote " + operation + " successful.");
-            // loadClients() now handles the sync automatically!
-            loadClients();
-            clientTable.refresh();
-        } else {
-            showAlert("فشل الاتصال بالخادم. لم يتم حفظ البيانات.");
+            if (client.getId() == null || client.getId().isEmpty()) {
+                // INSERT NEW
+                doc.append("createdAt", new java.util.Date());
+                usersCol.insertOne(doc);
+                System.out.println("✔ Inserted new client");
+            } else {
+                // UPDATE EXISTING
+                doc.append("updatedAt", new java.util.Date());
+                usersCol.updateOne(
+                        Filters.eq("_id", new ObjectId(client.getId())),
+                        new Document("$set", doc)
+                );
+                System.out.println("✔ Updated client: " + client.getId());
+            }
+
+            // Refresh Table
+            loadClientsFromMongo();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("فشل الحفظ في قاعدة البيانات: " + e.getMessage());
         }
     }
 
+    // ✅ 3. DELETE DIRECTLY FROM MONGODB
     @FXML
     private void deleteClient() {
         Client selected = clientTable.getSelectionModel().getSelectedItem();
@@ -187,14 +203,16 @@ public class ClientDataController {
             return;
         }
 
-        boolean deleted = RestMongoSyncClient.deleteClientRemotely(selected.getId());
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            db.getCollection("users").deleteOne(Filters.eq("_id", new ObjectId(selected.getId())));
 
-        if (deleted) {
-            System.out.println("✔ Remote delete successful.");
-            // loadClients() now handles the sync automatically!
-            loadClients();
-        } else {
-            showAlert("Failed to delete client remotely.");
+            clients.remove(selected);
+            System.out.println("✔ Deleted client: " + selected.getId());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("فشل الحذف من الخادم: " + e.getMessage());
         }
     }
 
@@ -229,8 +247,7 @@ public class ClientDataController {
     }
 
     public void refresh(ActionEvent event) {
-        // Just calling loadClients is enough now because it includes sync
-        loadClients();
+        loadClientsFromMongo();
     }
 
     // --- Navigation Methods ---
