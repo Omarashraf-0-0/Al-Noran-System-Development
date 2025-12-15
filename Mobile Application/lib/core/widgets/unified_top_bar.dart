@@ -314,7 +314,15 @@ class _UnifiedTopBarState extends State<UnifiedTopBar> {
       ),
       child: IconButton(
         icon: const Icon(Icons.arrow_forward, color: Colors.white, size: 26),
-        onPressed: widget.onBackPressed ?? () => context.pop(),
+        onPressed:
+            widget.onBackPressed ??
+            () {
+              if (GoRouter.of(context).canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
       ),
     );
   }
@@ -407,7 +415,15 @@ class SimpleTopBar extends StatelessWidget {
                   color: Colors.white,
                   size: 26,
                 ),
-                onPressed: onBackPressed ?? () => GoRouter.of(context).pop(),
+                onPressed:
+                    onBackPressed ??
+                    () {
+                      if (GoRouter.of(context).canPop()) {
+                        GoRouter.of(context).pop();
+                      } else {
+                        GoRouter.of(context).go('/home');
+                      }
+                    },
               ),
             ),
           ],

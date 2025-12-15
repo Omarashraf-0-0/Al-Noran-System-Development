@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
@@ -32,10 +33,42 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
 
       final userData = await SecureStorage.getUserData();
       final userId = userData?['_id'] ?? userData?['id'];
-      _clientType = userData?['clientDetails']?['clientType'] ?? 'personal';
+
+      // Try multiple paths to get clientType
+      String? rawClientType =
+          userData?['clientDetails']?['clientType'] ??
+          userData?['clientType'] ??
+          userData?['client_type'] ??
+          userData?['type'];
+
+      // إذا لم نجد clientType في userData، نجربه من SharedPreferences
+      if (rawClientType == null || rawClientType.toString().isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        rawClientType = prefs.getString('client_type');
+        print(
+          '📋 [DocumentsSettings] Got clientType from SharedPreferences: $rawClientType',
+        );
+      }
+
+      // Normalize clientType to lowercase for comparison
+      _clientType = rawClientType?.toString().toLowerCase() ?? 'personal';
+
+      // Debug logging
+      print('📋 [DocumentsSettings] Full userData: $userData');
+      print(
+        '📋 [DocumentsSettings] clientDetails: ${userData?['clientDetails']}',
+      );
+      print('📋 [DocumentsSettings] Raw clientType: $rawClientType');
+      print('📋 [DocumentsSettings] Normalized clientType: $_clientType');
 
       // تحديد المستندات المطلوبة بناءً على نوع العميل
       _requiredDocuments = _getRequiredDocumentsByType(_clientType);
+      print(
+        '📋 [DocumentsSettings] Required documents count: ${_requiredDocuments.length}',
+      );
+      print(
+        '📋 [DocumentsSettings] Required documents: ${_requiredDocuments.map((d) => d['type']).toList()}',
+      );
 
       if (userId != null) {
         final response = await ApiService.getUploads(
@@ -78,17 +111,20 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
   }
 
   List<Map<String, dynamic>> _getRequiredDocumentsByType(String clientType) {
+    // These must match EXACTLY what is uploaded during registration
     switch (clientType) {
       case 'personal':
+        // From personalRegistration.dart
         return [
           {
-            'type': 'national_id',
-            'name': 'بطاقة الهوية',
+            'type': 'personal_id',
+            'name': 'البطاقة الشخصية',
             'icon': Icons.credit_card,
           },
-          {'type': 'contract', 'name': 'العقد', 'icon': Icons.description},
+          {'type': 'power_of_attorney', 'name': 'التوكيل', 'icon': Icons.gavel},
         ];
       case 'commercial':
+        // From commercialRegistration.dart
         return [
           {'type': 'contract', 'name': 'العقد', 'icon': Icons.description},
           {
@@ -111,9 +147,9 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
             'name': 'بطاقة استيراد/تصدير',
             'icon': Icons.credit_card,
           },
-          {'type': 'power_of_attorney', 'name': 'التوكيل', 'icon': Icons.gavel},
         ];
       case 'factory':
+        // From factoryRegistration.dart
         return [
           {'type': 'contract', 'name': 'العقد', 'icon': Icons.description},
           {
@@ -122,9 +158,9 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
             'icon': Icons.receipt_long,
           },
           {
-            'type': 'industrial_register',
-            'name': 'السجل الصناعي',
-            'icon': Icons.factory,
+            'type': 'commercial_register',
+            'name': 'السجل التجاري',
+            'icon': Icons.business,
           },
           {
             'type': 'certificate_vat',
@@ -137,20 +173,19 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
             'icon': Icons.inventory,
           },
           {
-            'type': 'import_export_card',
-            'name': 'بطاقة استيراد/تصدير',
-            'icon': Icons.credit_card,
+            'type': 'industrial_register',
+            'name': 'السجل الصناعي',
+            'icon': Icons.factory,
           },
-          {'type': 'power_of_attorney', 'name': 'التوكيل', 'icon': Icons.gavel},
         ];
       default:
         return [
           {
-            'type': 'national_id',
-            'name': 'بطاقة الهوية',
+            'type': 'personal_id',
+            'name': 'البطاقة الشخصية',
             'icon': Icons.credit_card,
           },
-          {'type': 'contract', 'name': 'العقد', 'icon': Icons.description},
+          {'type': 'power_of_attorney', 'name': 'التوكيل', 'icon': Icons.gavel},
         ];
     }
   }
@@ -159,8 +194,93 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
     return _documents.any((doc) => doc['documentType'] == docType);
   }
 
+  /// Get document by type
+  Map<String, dynamic>? _getDocumentByType(String docType) {
+    try {
+      return _documents.firstWhere((doc) => doc['documentType'] == docType);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get document approval status
+  String _getDocumentStatus(String docType) {
+    final doc = _getDocumentByType(docType);
+    if (doc == null) return 'not_uploaded';
+    return doc['approvalStatus']?.toString() ?? 'pending';
+  }
+
+  /// Check if all required documents are approved
+  bool get _allDocumentsApproved {
+    for (var reqDoc in _requiredDocuments) {
+      final status = _getDocumentStatus(reqDoc['type']);
+      if (status != 'approved') return false;
+    }
+    return true;
+  }
+
+  /// Check if there are any rejected documents
+  bool get _hasRejectedDocuments {
+    return _documents.any((doc) => doc['approvalStatus'] == 'rejected');
+  }
+
+  /// Check if there are missing required documents
+  bool get _hasMissingDocuments {
+    return _requiredDocuments.any(
+      (reqDoc) => !_isDocumentUploaded(reqDoc['type']),
+    );
+  }
+
+  /// Get status color
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'approved':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      case 'pending':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  /// Get status text
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'approved':
+        return 'تمت الموافقة';
+      case 'rejected':
+        return 'مرفوض';
+      case 'pending':
+        return 'قيد المراجعة';
+      case 'not_uploaded':
+        return 'غير مرفوع';
+      default:
+        return 'غير محدد';
+    }
+  }
+
+  /// Get status icon
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'approved':
+        return Icons.check_circle;
+      case 'rejected':
+        return Icons.cancel;
+      case 'pending':
+        return Icons.access_time;
+      case 'not_uploaded':
+        return Icons.upload_file;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
   String _getDocumentTypeName(String? type) {
     switch (type) {
+      case 'personal_id':
+        return 'البطاقة الشخصية';
       case 'national_id':
         return 'بطاقة الهوية';
       case 'contract':
@@ -362,24 +482,124 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
                                 children: [
                                   Expanded(
                                     child: _buildStatCard(
-                                      'المرفوعة',
-                                      '${_documents.length}',
-                                      const Color(0xFF1ba3b6),
+                                      'مقبولة',
+                                      '${_documents.where((d) => d['approvalStatus'] == 'approved').length}',
+                                      Colors.green,
                                       Icons.check_circle,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: _buildStatCard(
-                                      'المطلوبة',
-                                      '${_requiredDocuments.length}',
-                                      const Color(0xFF690000),
-                                      Icons.description,
+                                      'قيد المراجعة',
+                                      '${_documents.where((d) => d['approvalStatus'] == 'pending').length}',
+                                      Colors.orange,
+                                      Icons.access_time,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildStatCard(
+                                      'مرفوضة',
+                                      '${_documents.where((d) => d['approvalStatus'] == 'rejected').length}',
+                                      Colors.red,
+                                      Icons.cancel,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 12),
+                              // Second row - upload status
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildStatCard(
+                                      'المرفوعة',
+                                      '${_documents.length}',
+                                      const Color(0xFF1ba3b6),
+                                      Icons.cloud_upload,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildStatCard(
+                                      'ناقصة',
+                                      '${_requiredDocuments.where((r) => !_isDocumentUploaded(r['type'])).length}',
+                                      const Color(0xFF690000),
+                                      Icons.warning_amber,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              // Warning banner if documents not approved
+                              if (!_allDocumentsApproved)
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.orange.shade100,
+                                        Colors.orange.shade50,
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: Colors.orange.shade300,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange,
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.info_outline,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'تنبيه مهم',
+                                              style: TextStyle(
+                                                fontFamily: 'Cairo',
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF2D2D2D),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              _hasMissingDocuments
+                                                  ? 'يوجد مستندات ناقصة. يرجى رفعها لتتمكن من تقديم طلبات ACID و UCR'
+                                                  : _hasRejectedDocuments
+                                                  ? 'يوجد مستندات مرفوضة. يرجى إعادة رفعها للتمكن من تقديم الطلبات'
+                                                  : 'المستندات قيد المراجعة. ستتمكن من تقديم الطلبات بعد الموافقة عليها',
+                                              style: TextStyle(
+                                                fontFamily: 'Cairo',
+                                                fontSize: 12,
+                                                color: Colors.grey[700],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              const SizedBox(height: 8),
 
                               // Required Documents Section
                               Row(
@@ -640,10 +860,15 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
       if (pickedFile != null) {
         setState(() => _isLoading = true);
 
-        final response = await ApiService.uploadFile(
-          filePath: pickedFile.path,
+        // Use uploadToS3 like registration pages for consistency
+        final response = await ApiService.uploadToS3(
+          file: pickedFile,
           category: 'registration',
           documentType: documentType,
+          description: '$documentName - إضافة من صفحة المستندات',
+          tags: [documentType, _clientType, 'registration'],
+          userType: 'client',
+          clientType: _clientType,
         );
 
         setState(() => _isLoading = false);
@@ -651,7 +876,7 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
         if (response['success'] == true) {
           AlNoranPopups.showSuccess(
             context: context,
-            message: 'تم رفع $documentName بنجاح',
+            message: 'تم رفع $documentName بنجاح\nفي انتظار مراجعة الإدارة',
           );
           _loadDocuments();
         } else {
@@ -667,21 +892,480 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
     }
   }
 
+  /// Re-upload rejected document
+  Future<void> _reuploadDocument(Map<String, dynamic> existingDoc) async {
+    final documentType = existingDoc['documentType']?.toString() ?? '';
+    final documentName = _getDocumentTypeName(documentType);
+    final rejectionReason =
+        existingDoc['rejectionReason']?.toString() ?? 'لم يتم تحديد السبب';
+
+    // Show rejection reason first with themed dialog
+    final shouldReupload = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => Directionality(
+            textDirection: TextDirection.rtl,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(0),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.white,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with gradient
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 20,
+                      ),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF690000), Color(0xFF8B0000)],
+                        ),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'المستند مرفوض',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'تم رفض مستند "$documentName" للسبب التالي:',
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF690000).withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFF690000).withOpacity(0.2),
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: const Color(0xFF690000),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    rejectionReason,
+                                    style: const TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 13,
+                                      color: Color(0xFF690000),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.cloud_upload_outlined,
+                                  color: const Color(0xFF1ba3b6),
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Text(
+                                    'يرجى رفع المستند الصحيح لإكمال عملية التسجيل',
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 12,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Actions
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                side: BorderSide(color: Colors.grey.shade300),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'لاحقاً',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF690000),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.upload_file,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'رفع المستند',
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+    );
+
+    if (shouldReupload == true) {
+      // Delete old document first, then upload new one
+      try {
+        final uploadId = existingDoc['_id']?.toString();
+        if (uploadId != null) {
+          await ApiService.deleteUpload(uploadId: uploadId);
+        }
+        // Now upload new document
+        await _uploadDocument(documentType, documentName);
+      } catch (e) {
+        print('❌ [ReuploadDocument] Error: $e');
+        // Still try to upload even if delete fails
+        await _uploadDocument(documentType, documentName);
+      }
+    }
+  }
+
+  /// Replace/Edit pending document (same as re-upload but for pending status)
+  Future<void> _replaceDocument(Map<String, dynamic> existingDoc) async {
+    final documentType = existingDoc['documentType']?.toString() ?? '';
+    final documentName = _getDocumentTypeName(documentType);
+
+    // Show confirmation dialog with themed design
+    final shouldReplace = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => Directionality(
+            textDirection: TextDirection.rtl,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(0),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.white,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with gradient
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 20,
+                      ),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF690000), Color(0xFF8B0000)],
+                        ),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.edit_document,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'تعديل المستند',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'هل تريد استبدال مستند "$documentName" بملف جديد؟',
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1ba3b6).withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFF1ba3b6).withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: const Color(0xFF1ba3b6),
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Text(
+                                    'سيتم حذف الملف الحالي وإضافة الملف الجديد',
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 13,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Actions
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                side: BorderSide(color: Colors.grey.shade300),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'إلغاء',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF690000),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.swap_horiz,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'استبدال',
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+    );
+
+    if (shouldReplace == true) {
+      // Delete old document first, then upload new one
+      try {
+        final uploadId = existingDoc['_id']?.toString();
+        if (uploadId != null) {
+          await ApiService.deleteUpload(uploadId: uploadId);
+        }
+        // Now upload new document
+        await _uploadDocument(documentType, documentName);
+      } catch (e) {
+        print('❌ [ReplaceDocument] Error: $e');
+        // Still try to upload even if delete fails
+        await _uploadDocument(documentType, documentName);
+      }
+    }
+  }
+
   Widget _buildDocumentCard(
     Map<String, dynamic> doc, {
     bool isRequired = false,
   }) {
     final isPDF = doc['mimetype']?.toString().contains('pdf') ?? false;
     final isImage = doc['mimetype']?.toString().contains('image') ?? false;
+    final approvalStatus = doc['approvalStatus']?.toString() ?? 'pending';
+    final statusColor = _getStatusColor(approvalStatus);
+    final statusText = _getStatusText(approvalStatus);
+    final statusIcon = _getStatusIcon(approvalStatus);
+    final isRejected = approvalStatus == 'rejected';
+    final rejectionReason = doc['rejectionReason']?.toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border:
+            isRejected
+                ? Border.all(color: Colors.red.shade300, width: 2)
+                : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color:
+                isRejected
+                    ? Colors.red.withOpacity(0.1)
+                    : Colors.black.withOpacity(0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -736,40 +1420,37 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Document name and status badge row
                       Row(
                         children: [
-                          if (isRequired)
-                            Container(
-                              margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.green,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.check_circle,
-                                    size: 12,
+                          // Approval Status Badge
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(statusIcon, size: 12, color: Colors.white),
+                                const SizedBox(width: 4),
+                                Text(
+                                  statusText,
+                                  style: const TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'مطلوب',
-                                    style: TextStyle(
-                                      fontFamily: 'Cairo',
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
+                          ),
                           Expanded(
                             child: Text(
                               _getDocumentTypeName(doc['documentType']),
@@ -784,6 +1465,40 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
                         ],
                       ),
                       const SizedBox(height: 6),
+                      // Rejection reason if rejected
+                      if (isRejected &&
+                          rejectionReason != null &&
+                          rejectionReason.isNotEmpty)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 14,
+                                color: Colors.red.shade700,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  rejectionReason,
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 11,
+                                    color: Colors.red.shade700,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       Row(
                         children: [
                           Icon(
@@ -833,32 +1548,46 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
           ),
           // Actions Divider
           Divider(height: 1, color: Colors.grey[200]),
-          // Actions Row
+          // Actions Row - different actions based on status
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildActionButton(
-                  icon: Icons.visibility,
-                  label: 'عرض',
-                  color: const Color(0xFF1ba3b6),
-                  onPressed: () => _viewDocument(doc),
-                ),
-                Container(width: 1, height: 30, color: Colors.grey[200]),
-                _buildActionButton(
-                  icon: Icons.edit,
-                  label: 'تعديل',
-                  color: const Color(0xFF690000),
-                  onPressed: () => _editDocument(doc),
-                ),
-                Container(width: 1, height: 30, color: Colors.grey[200]),
-                _buildActionButton(
-                  icon: Icons.delete,
-                  label: 'حذف',
-                  color: Colors.red,
-                  onPressed: () => _deleteDocument(doc),
-                ),
+                // For approved: only view
+                if (approvalStatus == 'approved') ...[
+                  _buildActionButton(
+                    icon: Icons.visibility,
+                    label: 'عرض',
+                    color: const Color(0xFF1ba3b6),
+                    onPressed: () => _viewDocument(doc),
+                  ),
+                ]
+                // For rejected: ONLY re-upload (no view)
+                else if (isRejected) ...[
+                  _buildActionButton(
+                    icon: Icons.cloud_upload_outlined,
+                    label: 'إعادة رفع المستند',
+                    color: const Color(0xFF690000),
+                    onPressed: () => _reuploadDocument(doc),
+                  ),
+                ]
+                // For pending: view + edit
+                else ...[
+                  _buildActionButton(
+                    icon: Icons.visibility,
+                    label: 'عرض',
+                    color: const Color(0xFF1ba3b6),
+                    onPressed: () => _viewDocument(doc),
+                  ),
+                  Container(width: 1, height: 30, color: Colors.grey[200]),
+                  _buildActionButton(
+                    icon: Icons.edit,
+                    label: 'تعديل',
+                    color: const Color(0xFF690000),
+                    onPressed: () => _replaceDocument(doc),
+                  ),
+                ],
               ],
             ),
           ),
@@ -940,13 +1669,22 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
           ),
         );
       }
-      // For PDF or other documents, use in-app web view
+      // For PDF or other documents, open in external application
       else {
         try {
           final uri = Uri.parse(url);
-          print('📄 [ViewDocument] Opening in WebView: $uri');
+          print('📄 [ViewDocument] Opening in external app: $uri');
 
-          bool launched = await launchUrl(uri, mode: LaunchMode.inAppWebView);
+          // Use external application for PDF - works better on mobile
+          bool launched = await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+
+          if (!launched) {
+            // Fallback to platform default
+            launched = await launchUrl(uri);
+          }
 
           if (!launched) {
             throw Exception('Failed to launch URL');

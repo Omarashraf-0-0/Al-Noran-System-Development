@@ -237,6 +237,14 @@ class ApiService {
     await prefs.setString('user_email', user['email'] ?? '');
     await prefs.setString('user_type', user['type'] ?? '');
     await prefs.setString('username', user['username'] ?? '');
+
+    // حفظ clientType بشكل منفصل للوصول السريع
+    final clientType =
+        user['clientDetails']?['clientType']?.toString() ??
+        user['clientType']?.toString() ??
+        'personal';
+    await prefs.setString('client_type', clientType);
+    print('💾 [saveUserData] ClientType saved: $clientType');
     print('💾 [saveUserData] Saved to SharedPreferences');
   }
 
@@ -581,8 +589,35 @@ class ApiService {
       var fileLength = await file.length();
       print('📦 File size: ${(fileLength / 1024).toStringAsFixed(2)} KB');
 
+      // Check if file exists and has content
+      if (!await file.exists()) {
+        print('❌ [Upload] File does not exist at path: ${file.path}');
+        return {
+          'success': false,
+          'message': 'الملف غير موجود',
+          'error': 'File does not exist at path: ${file.path}',
+        };
+      }
+
+      if (fileLength == 0) {
+        print('❌ [Upload] File is empty');
+        return {
+          'success': false,
+          'message': 'الملف فارغ',
+          'error': 'File is empty',
+        };
+      }
+
       // Detect correct mimetype from file extension
-      String fileName = file.path.split('/').last;
+      // Handle both Unix (/) and Windows (\) path separators
+      String fileName = file.path.split(Platform.pathSeparator).last;
+      // Also handle cases where path might have mixed separators
+      if (fileName.contains('/')) {
+        fileName = fileName.split('/').last;
+      }
+      if (fileName.contains('\\')) {
+        fileName = fileName.split('\\').last;
+      }
       String fileExtension = fileName.split('.').last.toLowerCase();
 
       MediaType? contentType;

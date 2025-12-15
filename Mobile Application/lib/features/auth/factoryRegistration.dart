@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
 import '../../util/file_picker_helper.dart'; // FilePickerHelper for PDF support
@@ -450,6 +451,31 @@ class _FactoryRegistrationPageState extends State<FactoryRegistrationPage> {
       }
 
       // JWT Token is automatically saved by ApiService.register
+      // Add a small delay to ensure token is saved to SharedPreferences
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Verify token is saved before uploading
+      final savedToken = await ApiService.getToken();
+      if (savedToken == null || savedToken.isEmpty) {
+        setState(() {
+          _isLoading = false;
+        });
+        AlNoranPopups.showError(
+          context: context,
+          title: 'خطأ في التوثيق',
+          message:
+              'تم إنشاء الحساب لكن حدث خطأ في الجلسة. يرجى تسجيل الدخول ورفع المستندات من الإعدادات',
+        );
+        if (mounted) {
+          context.go('/login');
+        }
+        return;
+      }
+
+      print(
+        '🔑 Token verified before upload: ${savedToken.substring(0, 20)}...',
+      );
+
       // Now upload all required documents to S3
 
       // Prepare documents list with their metadata
@@ -489,8 +515,10 @@ class _FactoryRegistrationPageState extends State<FactoryRegistrationPage> {
       // Upload documents to S3
       bool allUploadsSuccessful = true;
       String? failedDocType;
+      String? failedDocError;
 
       for (var doc in documentsToUpload) {
+        print('📤 Uploading: ${doc['type']}...');
         final uploadResult = await ApiService.uploadToS3(
           file: doc['file'],
           category: 'registration',
@@ -504,8 +532,11 @@ class _FactoryRegistrationPageState extends State<FactoryRegistrationPage> {
         if (!uploadResult['success']) {
           allUploadsSuccessful = false;
           failedDocType = doc['type'];
+          failedDocError = uploadResult['message'] ?? 'خطأ غير معروف';
+          print('❌ Upload failed for ${doc['type']}: $failedDocError');
           break;
         }
+        print('✅ Uploaded: ${doc['type']}');
       }
 
       setState(() {
@@ -513,6 +544,7 @@ class _FactoryRegistrationPageState extends State<FactoryRegistrationPage> {
       });
 
       if (allUploadsSuccessful) {
+        print('✅✅✅ All documents uploaded successfully!');
         await AlNoranPopups.showSuccess(
           context: context,
           title: 'تم التسجيل بنجاح',
@@ -521,27 +553,31 @@ class _FactoryRegistrationPageState extends State<FactoryRegistrationPage> {
         );
 
         if (mounted) {
-          Navigator.of(
-            context,
-          ).pushNamedAndRemoveUntil('/login', (route) => false);
+          context.go('/login');
         }
       } else {
         AlNoranPopups.showError(
           context: context,
-          title: 'تحذير',
+          title: 'خطأ في رفع المستندات',
           message:
-              'تم إنشاء الحساب ولكن فشل رفع مستند: $failedDocType. يرجى تسجيل الدخول ورفع المستند من الإعدادات',
+              'تم إنشاء الحساب ولكن فشل رفع مستند: $failedDocType. السبب: $failedDocError',
         );
+        if (mounted) {
+          context.go('/login');
+        }
       }
     } catch (e) {
+      print('❌ Registration exception: $e');
       setState(() {
         _isLoading = false;
       });
-      AlNoranPopups.showError(
-        context: context,
-        title: 'خطأ في الاتصال',
-        message: 'حدث خطأ أثناء الاتصال بالسيرفر. يرجى المحاولة مرة أخرى',
-      );
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          title: 'خطأ في الاتصال',
+          message: 'حدث خطأ أثناء الاتصال بالسيرفر. يرجى المحاولة مرة أخرى',
+        );
+      }
     }
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/user_cache_service.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../util/file_picker_helper.dart';
 
@@ -19,6 +20,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = true;
   String? _profilePhotoUrl;
   bool _isUploadingPhoto = false;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -28,7 +30,29 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadUserData() async {
     try {
-      setState(() => _isLoading = true);
+      // Only show loading on first load, not on refresh
+      if (_isFirstLoad) {
+        setState(() => _isLoading = true);
+      }
+
+      // Try to get from cache first (fast)
+      final userCache = UserCacheService();
+      if (userCache.isInitialized && _isFirstLoad) {
+        setState(() {
+          _userData = userCache.fullUserData;
+          _profilePhotoUrl = userCache.profilePhotoUrl;
+          _isLoading = false;
+        });
+        print('📱 [ProfilePage] Loaded from cache: ${userCache.userName}');
+
+        // Load documents in background
+        final userId = _userData?['_id'] ?? _userData?['id'];
+        if (userId != null) {
+          _loadDocuments(userId);
+        }
+        _isFirstLoad = false;
+        return;
+      }
 
       // Get user profile from API (includes profile photo URL)
       final profileResponse = await ApiService.getUserProfile();
@@ -39,6 +63,9 @@ class _ProfilePageState extends State<ProfilePage> {
           _userData = user;
           _profilePhotoUrl = user['profilePhotoUrl'];
         });
+
+        // Update cache
+        userCache.updateProfilePhoto(user['profilePhotoUrl']);
         print('📱 [ProfilePage] Profile loaded with photo: $_profilePhotoUrl');
       } else {
         // Fallback to local storage
@@ -68,13 +95,17 @@ class _ProfilePageState extends State<ProfilePage> {
       }
 
       setState(() => _isLoading = false);
+      _isFirstLoad = false;
     } catch (e) {
       print('❌ [ProfilePage] Error loading user data: $e');
       setState(() => _isLoading = false);
-      AlNoranPopups.showError(
-        context: context,
-        message: 'حدث خطأ في تحميل البيانات',
-      );
+      _isFirstLoad = false;
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ في تحميل البيانات',
+        );
+      }
     }
   }
 
@@ -346,7 +377,13 @@ class _ProfilePageState extends State<ProfilePage> {
           actions: [
             IconButton(
               icon: const Icon(Icons.arrow_forward, color: Colors.white),
-              onPressed: () => context.pop(),
+              onPressed: () {
+                if (GoRouter.of(context).canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/home');
+                }
+              },
             ),
           ],
         ),

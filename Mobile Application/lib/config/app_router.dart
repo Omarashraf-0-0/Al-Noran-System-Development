@@ -16,6 +16,7 @@ import '../features/Shipments/UCRReqPage.dart';
 import '../features/profile/profile_page.dart';
 import '../features/profile/profile_settings_page.dart';
 import '../features/profile/settings_menu_page.dart';
+import '../features/profile/documents_settings_page.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -178,6 +179,13 @@ class AppRouter {
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const SettingsMenuPage(),
+      ),
+
+      // Documents Settings
+      GoRoute(
+        path: '/documents',
+        name: 'documents',
+        builder: (context, state) => const DocumentsSettingsPage(),
       ),
     ],
 

@@ -1222,11 +1222,22 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
           ),
         );
       }
-      // For PDF or other documents, use in-app web view
+      // For PDF or other documents, open in external application
       else {
         try {
           final uri = Uri.parse(url);
-          bool launched = await launchUrl(uri, mode: LaunchMode.inAppWebView);
+          print('📄 [ViewShipmentDocument] Opening in external app: $uri');
+
+          // Use external application for PDF - works better on mobile
+          bool launched = await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+
+          if (!launched) {
+            // Fallback to platform default
+            launched = await launchUrl(uri);
+          }
 
           if (!launched) {
             throw Exception('Failed to launch URL');

@@ -24,7 +24,6 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   final ShipmentsCacheService _shipmentsCache = ShipmentsCacheService();
-  StreamSubscription<List<Map<String, dynamic>>>? _shipmentsSubscription;
 
   int _selectedIndex = 1; // الوارد (index 1)
   String _selectedFilter = 'الكل';
@@ -51,12 +50,8 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     _loadShipmentsAndRequests();
     // Profile photo is now handled by UnifiedTopBar via UserCacheService
 
-    // Listen to shipments cache updates
-    _shipmentsSubscription = _shipmentsCache.shipmentsStream.listen((_) {
-      if (mounted) {
-        _loadShipmentsAndRequests();
-      }
-    });
+    // Note: Removed shipmentsStream listener to prevent infinite reload loop
+    // The cache service already handles updates internally
   }
 
   @override
@@ -64,7 +59,6 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _tabController.dispose();
-    _shipmentsSubscription?.cancel();
     super.dispose();
   }
 
