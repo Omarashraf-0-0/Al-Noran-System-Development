@@ -21,13 +21,15 @@ import javafx.scene.control.TableView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import noran.desktop.AppSession;
-import noran.desktop.Database.MongoConnection; // Your MongoDB Connection Class
+import noran.desktop.Database.MongoConnection;
 import noran.desktop.models.Client;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class ClientDataController {
@@ -48,8 +50,6 @@ public class ClientDataController {
     @FXML
     public void initialize() {
         setupTable();
-
-        // Load data directly from MongoDB
         loadClientsFromMongo();
 
         if (sidebarController != null) sidebarController.setActivePage("clients");
@@ -69,7 +69,7 @@ public class ClientDataController {
         clientTable.setItems(sortedData);
     }
 
-    // ✅ 1. LOAD DIRECTLY FROM MONGODB
+    // ✅ 1. LOAD FROM MONGODB
     public void loadClientsFromMongo() {
         Task<List<Client>> loadTask = new Task<>() {
             @Override
@@ -79,20 +79,29 @@ public class ClientDataController {
                     MongoDatabase db = MongoConnection.getDatabase();
                     MongoCollection<Document> usersCol = db.getCollection("users");
 
-                    // Filter only 'client' type users
                     for (Document doc : usersCol.find(new Document("type", "client"))) {
                         String id = doc.getObjectId("_id").toString();
                         String name = doc.getString("fullname");
                         String email = doc.getString("email");
-                        String ssn = doc.getString("ssn"); // Or taxNumber depending on your schema
                         String phone = doc.getString("phone");
-                        String clientType = doc.getString("clientType");
-                        String password = doc.getString("password"); // If you need it
+                        String password = doc.getString("password");
 
-                        // Handle nulls safely
+                        String ssn = "";
+                        String clientType = "Unknown";
+
+                        Document clientDetails = (Document) doc.get("clientDetails");
+                        if (clientDetails != null) {
+                            ssn = clientDetails.getString("ssn");
+                            clientType = clientDetails.getString("clientType");
+                        } else {
+                            ssn = doc.getString("ssn");
+                            if (ssn == null) ssn = doc.getString("taxNumber");
+                            clientType = doc.getString("clientType");
+                        }
+
                         if (name == null) name = doc.getString("username");
-                        if (ssn == null) ssn = doc.getString("taxNumber"); // Fallback
-                        if (clientType == null) clientType = "Unknown";
+                        if (ssn == null) ssn = "-";
+                        if (clientType == null) clientType = "Personal";
 
                         loadedList.add(new Client(id, name, email, ssn, phone, clientType, password));
                     }
@@ -136,15 +145,14 @@ public class ClientDataController {
             ClientPopupController popupController = loader.getController();
             popupController.loadClient(clientToEdit);
 
+            // ✅ PASS SAVE HANDLER TO POPUP
+            popupController.setSaveHandler(this::saveClientToMongo);
+
             Stage stage = new Stage();
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setScene(new Scene(root));
             stage.setTitle(clientToEdit.getId() == null || clientToEdit.getId().isEmpty() ? "Add Client" : "Edit Client");
             stage.showAndWait();
-
-            if (popupController.isSaved()) {
-                saveClientToMongo(clientToEdit);
-            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -152,32 +160,56 @@ public class ClientDataController {
         }
     }
 
-    // ✅ 2. SAVE DIRECTLY TO MONGODB
-    private void saveClientToMongo(Client client) {
+    // ✅ 2. SAVE TO MONGODB (Return Boolean + Handle Duplicates)
+// ✅ 2. SAVE TO MONGODB (With Password Hashing)
+    private boolean saveClientToMongo(Client client) {
         try {
             MongoDatabase db = MongoConnection.getDatabase();
             MongoCollection<Document> usersCol = db.getCollection("users");
 
+            // --- PASSWORD HASHING LOGIC ---
+            String finalPassword = client.getPassword();
+
+            // Only hash if it exists AND it doesn't look like a Bcrypt hash already
+            // (Prevents double-hashing when editing a user without changing password)
+            if (finalPassword != null && !finalPassword.isEmpty()) {
+                if (!finalPassword.startsWith("$2b$") && !finalPassword.startsWith("$2a$")) {
+                    finalPassword = BCrypt.hashpw(finalPassword, BCrypt.gensalt());
+                    System.out.println("🔒 Password hashed successfully.");
+                }
+            }
+            // -----------------------------
+
+            Document clientDetails = new Document()
+                    .append("clientType", client.getClientType())
+                    .append("ssn", client.getSsn());
+
+            Document employeeDetails = new Document()
+                    .append("employeeType", null)
+                    .append("verified", false)
+                    .append("isOnline", false);
+
             Document doc = new Document()
                     .append("fullname", client.getFullname())
-                    .append("username", client.getFullname()) // Keep username synced if needed
+                    .append("username", client.getFullname().replaceAll("\\s+", "").toLowerCase())
                     .append("email", client.getEmail())
                     .append("phone", client.getPhone())
-                    .append("ssn", client.getSsn()) // Or taxNumber
-                    .append("taxNumber", client.getSsn()) // Redundant safety
-                    .append("clientType", client.getClientType())
-                    .append("type", "client") // Force type to 'client'
+                    .append("type", "client")
                     .append("active", true)
-                    .append("password", client.getPassword());
+                    .append("password", finalPassword) // ✅ Save the HASHED password
+                    .append("clientDetails", clientDetails)
+                    .append("employeeDetails", employeeDetails);
 
             if (client.getId() == null || client.getId().isEmpty()) {
-                // INSERT NEW
-                doc.append("createdAt", new java.util.Date());
+                // INSERT
+                doc.append("createdAt", new Date());
+                doc.append("updatedAt", new Date());
+                doc.append("__v", 0);
                 usersCol.insertOne(doc);
                 System.out.println("✔ Inserted new client");
             } else {
-                // UPDATE EXISTING
-                doc.append("updatedAt", new java.util.Date());
+                // UPDATE
+                doc.append("updatedAt", new Date());
                 usersCol.updateOne(
                         Filters.eq("_id", new ObjectId(client.getId())),
                         new Document("$set", doc)
@@ -185,16 +217,33 @@ public class ClientDataController {
                 System.out.println("✔ Updated client: " + client.getId());
             }
 
-            // Refresh Table
             loadClientsFromMongo();
+            return true; // ✅ Success
+
+        } catch (com.mongodb.MongoWriteException e) {
+            // 🛑 HANDLE DUPLICATE (Pop-up stays open)
+            if (e.getError().getCode() == 11000) {
+                String msg = e.getMessage();
+                if (msg.contains("phone")) {
+                    showAlert("تنبيه: رقم الهاتف (" + client.getPhone() + ") مسجل بالفعل لعميل آخر.");
+                } else if (msg.contains("email")) {
+                    showAlert("تنبيه: البريد الإلكتروني (" + client.getEmail() + ") مسجل بالفعل.");
+                } else {
+                    showAlert("تنبيه: توجد بيانات مكررة (هاتف أو إيميل).");
+                }
+            } else {
+                e.printStackTrace();
+                showAlert("خطأ قاعدة بيانات: " + e.getMessage());
+            }
+            return false; // ❌ Fail
 
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("فشل الحفظ في قاعدة البيانات: " + e.getMessage());
+            showAlert("فشل الحفظ: " + e.getMessage());
+            return false; // ❌ Fail
         }
     }
-
-    // ✅ 3. DELETE DIRECTLY FROM MONGODB
+    // ✅ 3. DELETE
     @FXML
     private void deleteClient() {
         Client selected = clientTable.getSelectionModel().getSelectedItem();
@@ -250,19 +299,5 @@ public class ClientDataController {
         loadClientsFromMongo();
     }
 
-    // --- Navigation Methods ---
-    @FXML public void onDashboardClick(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/dashboard.fxml"); }
-    @FXML public void onInvoiceManagementClick(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/client-data-invoice.fxml"); }
-    @FXML public void onTa5les(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/AdminInvoices.fxml"); }
-    public void employee_management_btn_handle(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/employee-management.fxml"); }
-    public void shipments_management(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/shipments-management.fxml"); }
 
-    private void navigate(ActionEvent event, String fxml) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
-        Parent root = loader.load();
-        Scene scene = new Scene(root);
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
-    }
 }

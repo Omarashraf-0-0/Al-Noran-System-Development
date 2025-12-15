@@ -22,13 +22,15 @@ import javafx.scene.control.TableView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import noran.desktop.AppSession;
-import noran.desktop.Database.MongoConnection; // Direct Mongo Access
+import noran.desktop.Database.MongoConnection;
 import noran.desktop.models.Employee;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class EmployeeManagementController {
@@ -40,11 +42,9 @@ public class EmployeeManagementController {
     @FXML private TableColumn<Employee, String> colType;
     @FXML private TableColumn<Employee, String> colRank;
 
-    // --- Data Lists ---
     private final ObservableList<Employee> employees = FXCollections.observableArrayList();
     private FilteredList<Employee> filteredData;
 
-    // --- Injected Controllers ---
     @FXML private SidebarController sidebarController;
     @FXML private TopBarController topBarController;
 
@@ -55,27 +55,26 @@ public class EmployeeManagementController {
         colEmail.setCellValueFactory(data -> data.getValue().emailProperty());
         colPhone.setCellValueFactory(data -> data.getValue().phoneProperty());
         colType.setCellValueFactory(data -> data.getValue().jobTypeProperty());
-        colRank.setCellValueFactory(data -> data.getValue().rankProperty()); // Assuming 'active' status is mapped here or rank logic
 
-        // 2. Wrap the ObservableList
+        // Display "Active" or "Frozen" based on boolean
+        colRank.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(data.getValue().isActive() ? "نشط" : "مجمد")
+        );
+
+        // 2. Wrap List
         filteredData = new FilteredList<>(employees, p -> true);
         SortedList<Employee> sortedData = new SortedList<>(filteredData);
         sortedData.comparatorProperty().bind(clientTable.comparatorProperty());
         clientTable.setItems(sortedData);
 
-        // 3. Load Data from MongoDB
+        // 3. Load Data
         loadEmployeesFromMongo();
 
-        // 4. Setup Sidebar
-        if (sidebarController != null) {
-            sidebarController.setActivePage("employees");
-        }
-
-        // 5. Setup TopBar
+        if (sidebarController != null) sidebarController.setActivePage("employees");
         setupTopBar();
     }
 
-    // ✅ 1. LOAD FROM MONGODB
+    // ✅ 1. LOAD FROM MONGODB (Matching JSON Structure)
     public void loadEmployeesFromMongo() {
         Task<List<Employee>> task = new Task<>() {
             @Override
@@ -85,7 +84,7 @@ public class EmployeeManagementController {
                     MongoDatabase db = MongoConnection.getDatabase();
                     MongoCollection<Document> users = db.getCollection("users");
 
-                    // Filter for type='employee'
+                    // Filter only 'employee' type
                     for (Document doc : users.find(new Document("type", "employee"))) {
                         String id = doc.getObjectId("_id").toString();
                         String fullname = doc.getString("fullname");
@@ -94,12 +93,16 @@ public class EmployeeManagementController {
                         boolean active = doc.getBoolean("active", true);
                         String password = doc.getString("password");
 
-                        // Handle job title variations
-                        String jobTitle = doc.getString("employeeType");
-                        if (jobTitle == null || jobTitle.isBlank()) {
-                            jobTitle = doc.getString("clientType"); // Fallback
+                        // 🛑 EXTRACT NESTED employeeDetails
+                        String jobTitle = "موظف"; // Default
+                        Document empDetails = (Document) doc.get("employeeDetails");
+
+                        if (empDetails != null && empDetails.getString("employeeType") != null) {
+                            jobTitle = empDetails.getString("employeeType");
+                        } else if (doc.getString("clientType") != null) {
+                            // Fallback for old data format
+                            jobTitle = doc.getString("clientType");
                         }
-                        if (jobTitle == null) jobTitle = "موظف";
 
                         list.add(new Employee(id, fullname, email, phone, jobTitle, active, password));
                     }
@@ -137,6 +140,9 @@ public class EmployeeManagementController {
         openEmployeePopup(selected);
     }
 
+    // -------------------------------------------------------------
+    // REPLACE openEmployeePopup WITH THIS
+    // -------------------------------------------------------------
     private void openEmployeePopup(Employee employee) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/add-employee-popup.fxml"));
@@ -145,15 +151,17 @@ public class EmployeeManagementController {
             EmployeePopupController popupController = loader.getController();
             popupController.loadEmployee(employee);
 
+            // ✅ PASS THE SAVE FUNCTION TO THE POPUP
+            popupController.setSaveHandler(this::saveEmployeeToMongo);
+
             Stage stage = new Stage();
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setScene(new Scene(root));
             stage.setTitle(employee.getId().isBlank() ? "Add Employee" : "Edit Employee");
             stage.showAndWait();
 
-            if (popupController.isSaved()) {
-                saveEmployeeToMongo(employee);
-            }
+            // We don't need to check isSaved() here anymore because the saving
+            // happens inside the popup flow now.
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -161,30 +169,54 @@ public class EmployeeManagementController {
         }
     }
 
-    // ✅ 2. SAVE (ADD/UPDATE) TO MONGODB
-    private void saveEmployeeToMongo(Employee emp) {
+    // -------------------------------------------------------------
+    // REPLACE saveEmployeeToMongo WITH THIS (Returns Boolean)
+    // -------------------------------------------------------------
+    // ✅ 2. SAVE TO MONGODB (With Password Hashing)
+    private boolean saveEmployeeToMongo(Employee emp) {
         try {
             MongoDatabase db = MongoConnection.getDatabase();
             MongoCollection<Document> users = db.getCollection("users");
 
+            // --- PASSWORD HASHING LOGIC ---
+            String finalPassword = emp.getPassword();
+
+            // Only hash if it exists AND it doesn't look like a Bcrypt hash already
+            // (Prevents double-hashing when editing an employee without changing password)
+            if (finalPassword != null && !finalPassword.isEmpty()) {
+                if (!finalPassword.startsWith("$2b$") && !finalPassword.startsWith("$2a$")) {
+                    finalPassword = BCrypt.hashpw(finalPassword, BCrypt.gensalt());
+                    System.out.println("🔒 Password hashed successfully.");
+                }
+            }
+            // -----------------------------
+
+            Document employeeDetails = new Document()
+                    .append("employeeType", emp.getJobType())
+                    .append("verified", false)
+                    .append("isOnline", false);
+
             Document doc = new Document()
                     .append("fullname", emp.getFullname())
-                    .append("username", emp.getFullname()) // Sync username
+                    .append("username", emp.getFullname().replaceAll("\\s+", "").toLowerCase())
                     .append("email", emp.getEmail())
                     .append("phone", emp.getPhone())
-                    .append("employeeType", emp.getJobType()) // Save job title
-                    .append("type", "employee") // Enforce type
+                    .append("password", finalPassword) // ✅ Save HASHED password
+                    .append("type", "employee")
                     .append("active", emp.isActive())
-                    .append("password", emp.getPassword());
+                    .append("employeeDetails", employeeDetails)
+                    .append("clientDetails", new Document("clientType", null).append("ssn", ""));
 
             if (emp.getId() == null || emp.getId().isBlank()) {
                 // INSERT
-                doc.append("createdAt", new java.util.Date());
+                doc.append("createdAt", new Date());
+                doc.append("updatedAt", new Date());
+                doc.append("__v", 0);
                 users.insertOne(doc);
                 System.out.println("✔ Inserted new employee");
             } else {
                 // UPDATE
-                doc.append("updatedAt", new java.util.Date());
+                doc.append("updatedAt", new Date());
                 users.updateOne(
                         Filters.eq("_id", new ObjectId(emp.getId())),
                         new Document("$set", doc)
@@ -192,16 +224,33 @@ public class EmployeeManagementController {
                 System.out.println("✔ Updated employee: " + emp.getId());
             }
 
-            // Refresh UI
             loadEmployeesFromMongo();
+            return true; // ✅ Success
+
+        } catch (com.mongodb.MongoWriteException e) {
+            // 🛑 HANDLE DUPLICATE (Pop-up stays open)
+            if (e.getError().getCode() == 11000) {
+                String msg = e.getMessage();
+                if (msg.contains("phone")) {
+                    showAlert("تنبيه: رقم الهاتف (" + emp.getPhone() + ") مسجل بالفعل لموظف آخر.");
+                } else if (msg.contains("email")) {
+                    showAlert("تنبيه: البريد الإلكتروني (" + emp.getEmail() + ") مسجل بالفعل.");
+                } else {
+                    showAlert("تنبيه: توجد بيانات مكررة (هاتف أو إيميل).");
+                }
+            } else {
+                e.printStackTrace();
+                showAlert("خطأ قاعدة بيانات: " + e.getMessage());
+            }
+            return false; // ❌ Fail
 
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Failed to save: " + e.getMessage());
+            showAlert("فشل الحفظ: " + e.getMessage());
+            return false; // ❌ Fail
         }
     }
-
-    // ✅ 3. DELETE FROM MONGODB
+    // ✅ 3. DELETE
     @FXML
     public void deleteEmployee(ActionEvent event) {
         Employee selected = clientTable.getSelectionModel().getSelectedItem();
@@ -223,7 +272,7 @@ public class EmployeeManagementController {
         }
     }
 
-    // ✅ 4. FREEZE (TOGGLE ACTIVE) IN MONGODB
+    // ✅ 4. FREEZE
     @FXML
     public void freezeEmployee(ActionEvent event) {
         Employee selected = clientTable.getSelectionModel().getSelectedItem();
@@ -241,7 +290,6 @@ public class EmployeeManagementController {
                     Updates.set("active", newStatus)
             );
 
-            // Update UI locally to reflect change immediately
             selected.setActive(newStatus);
             clientTable.refresh();
             System.out.println("✔ Employee status updated to: " + newStatus);
@@ -285,18 +333,5 @@ public class EmployeeManagementController {
         }
     }
 
-    // Navigation methods...
-    @FXML public void onDashboardClick(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/dashboard.fxml"); }
-    @FXML public void onInvoiceManagementClick(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/client-data-invoice.fxml"); }
-    @FXML public void client_management_btn_handle(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/client-data.fxml"); }
-    @FXML public void shipments_management(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/shipments-management.fxml"); }
 
-    private void navigate(ActionEvent event, String fxmlPath) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
-        Parent root = loader.load();
-        Scene scene = new Scene(root);
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
-    }
 }

@@ -5,6 +5,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import noran.desktop.models.Employee;
+import java.util.function.Function;
 
 public class EmployeePopupController {
 
@@ -12,14 +13,20 @@ public class EmployeePopupController {
     @FXML private TextField emailField;
     @FXML private TextField phoneField;
     @FXML private TextField passwordField;
-    @FXML private ComboBox<String> jobTypeField; // Defines Role (Manager, Staff, etc.)
+    @FXML private ComboBox<String> jobTypeField;
 
     private Employee originalEmployee;
     private boolean saved = false;
 
+    // Function that takes an Employee and returns Boolean (Success/Fail)
+    private Function<Employee, Boolean> saveHandler;
+
+    public void setSaveHandler(Function<Employee, Boolean> saveHandler) {
+        this.saveHandler = saveHandler;
+    }
+
     public void loadEmployee(Employee emp) {
         this.originalEmployee = emp;
-
         fullnameField.setText(emp.getFullname());
         emailField.setText(emp.getEmail());
         phoneField.setText(emp.getPhone());
@@ -34,15 +41,24 @@ public class EmployeePopupController {
             return;
         }
 
-        saved = true;
-
+        // 1. Update the object with UI data
         originalEmployee.setFullname(fullnameField.getText());
         originalEmployee.setEmail(emailField.getText());
         originalEmployee.setPhone(phoneField.getText());
         originalEmployee.setJobType(jobTypeField.getValue());
         originalEmployee.setPassword(passwordField.getText());
 
-        close();
+        // 2. Call the Save Handler (in Main Controller)
+        if (saveHandler != null) {
+            boolean success = saveHandler.apply(originalEmployee);
+
+            // 3. ONLY CLOSE IF SUCCESSFUL
+            if (success) {
+                saved = true;
+                close();
+            }
+            // If success is false, we DO NOT close. The alert is shown by the main controller.
+        }
     }
 
     @FXML
