@@ -98,7 +98,7 @@ const getExportShipmentById = async (req, res) => {
 				select: "requestNumber ucrNumber valueInEGP certificationType uploads shippingMethod destinationCountry destinationPort",
 				populate: {
 					path: "uploads",
-					select: "documentType originalname url filename"
+					select: "documentType originalname url filename s3Key"
 				}
 			})
 			.populate("userId", "fullname name email phone clientDetails")

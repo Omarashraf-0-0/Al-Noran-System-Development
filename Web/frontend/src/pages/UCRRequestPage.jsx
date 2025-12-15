@@ -85,7 +85,7 @@ const UCRRequestPage = () => {
 		originalInvoiceNumber: "",
 		invoiceDate: "",
 		// Sea specific
-		seaShipmentType: "parcels", // 'parcels' (طرد) or 'containers' (حاويات)
+		seaShipmentType: "fcl", // 'fcl' (Full Container Load - حاويات), 'lcl' (Less than Container Load - بضايع عامة), 'parcels' (طرود)
 		quantity: "",
 		weightUnit: "kilograms",
 		containersCount: "",
@@ -156,7 +156,7 @@ const UCRRequestPage = () => {
 					valueInEGP: request.valueInEGP?.toString() || "",
 					originalInvoiceNumber: request.originalInvoiceNumber || "",
 					invoiceDate: request.invoiceDate ? new Date(request.invoiceDate).toISOString().split("T")[0] : "",
-					seaShipmentType: request.seaShipmentType || "parcels",
+					seaShipmentType: request.seaShipmentType || "fcl",
 					quantity: request.quantity?.toString() || "",
 					weightUnit: request.weightUnit || "kilograms",
 					containersCount: request.containersCount?.toString() || "",
@@ -382,7 +382,11 @@ const UCRRequestPage = () => {
 			return;
 		}
 
-		if (!formData.packagesCount) {
+		// packagesCount is required only for air shipments, sea parcels, or sea LCL
+		const needsPackagesCount = formData.shippingMethod === "air" || 
+			(formData.shippingMethod === "sea" && (formData.seaShipmentType === "parcels" || formData.seaShipmentType === "lcl"));
+		
+		if (needsPackagesCount && !formData.packagesCount) {
 			toast.error("الرجاء إدخال عدد الطرود");
 			return;
 		}
@@ -409,7 +413,7 @@ const UCRRequestPage = () => {
 
 		// 2. Numeric validations - no negative numbers
 		const totalWeight = parseFloat(formData.totalWeight);
-		const packagesCount = parseInt(formData.packagesCount);
+		const packagesCount = parseInt(formData.packagesCount) || 0;
 		const valueInEGP = parseFloat(parseFormattedNumber(formData.valueInEGP));
 
 		if (isNaN(totalWeight) || totalWeight <= 0) {
@@ -422,14 +426,17 @@ const UCRRequestPage = () => {
 			return;
 		}
 
-		if (isNaN(packagesCount) || packagesCount <= 0) {
-			toast.error("عدد الطرود يجب أن يكون رقم صحيح موجب");
-			return;
-		}
+		// Validate packagesCount only when required
+		if (needsPackagesCount) {
+			if (isNaN(packagesCount) || packagesCount <= 0) {
+				toast.error("عدد الطرود يجب أن يكون رقم صحيح موجب");
+				return;
+			}
 
-		if (packagesCount > 10000) {
-			toast.error("عدد الطرود يبدو كبيرًا جدًا. الرجاء التحقق من القيمة");
-			return;
+			if (packagesCount > 10000) {
+				toast.error("عدد الطرود يبدو كبيرًا جدًا. الرجاء التحقق من القيمة");
+				return;
+			}
 		}
 
 		if (isNaN(valueInEGP) || valueInEGP <= 0) {
@@ -453,7 +460,7 @@ const UCRRequestPage = () => {
 
 		// 4. Sea shipment specific validations
 		if (formData.shippingMethod === "sea") {
-			if (formData.seaShipmentType === "containers") {
+			if (formData.seaShipmentType === "fcl") {
 				const containersCount = parseInt(formData.containersCount);
 				if (!containersCount || containersCount <= 0) {
 					toast.error("الرجاء إدخال عدد الحاويات للشحن البحري");
@@ -839,43 +846,68 @@ const UCRRequestPage = () => {
 									<label className="block text-sm font-medium text-gray-700 mb-3">
 										نوع الشحنة البحرية <span className="text-red-500">*</span>
 									</label>
-									<div className="flex gap-4">
-										<label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-100 transition-colors bg-white flex-1">
-											<input
-												type="radio"
-												name="seaShipmentType"
-												value="parcels"
-												checked={formData.seaShipmentType === "parcels"}
-												onChange={handleInputChange}
-												className="w-4 h-4 text-blue-600"
-											/>
-											<span className="text-xl">📦</span>
-											<div>
-												<span className="font-medium">طرود</span>
-												<p className="text-xs text-gray-500">شحن بالطرود والكراتين</p>
+									<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+										{/* FCL - Full Container Load */}
+										<label className={`flex flex-col items-center justify-center text-center cursor-pointer p-4 border-2 rounded-lg hover:bg-blue-100 transition-colors bg-white ${formData.seaShipmentType === "fcl" ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}>
+											<div className="flex items-center gap-2 mb-2">
+												<span className="text-2xl">🚢</span>
+												<input
+													type="radio"
+													name="seaShipmentType"
+													value="fcl"
+													checked={formData.seaShipmentType === "fcl"}
+													onChange={handleInputChange}
+													className="w-4 h-4 text-blue-600"
+												/>
 											</div>
+											<span className="font-semibold text-gray-800">حاويات</span>
+											<span className="text-sm text-blue-600 font-medium">(FCL)</span>
+											<p className="text-xs text-gray-500 mt-1">Full Container Load</p>
+											<p className="text-xs text-gray-400">حاوية كاملة أو أكثر</p>
 										</label>
-										<label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-100 transition-colors bg-white flex-1">
-											<input
-												type="radio"
-												name="seaShipmentType"
-												value="containers"
-												checked={formData.seaShipmentType === "containers"}
-												onChange={handleInputChange}
-												className="w-4 h-4 text-blue-600"
-											/>
-											<span className="text-xl">🚢</span>
-											<div>
-												<span className="font-medium">حاويات</span>
-												<p className="text-xs text-gray-500">شحن بالكونتينرات</p>
+										
+										{/* LCL - Less than Container Load */}
+										<label className={`flex flex-col items-center justify-center text-center cursor-pointer p-4 border-2 rounded-lg hover:bg-blue-100 transition-colors bg-white ${formData.seaShipmentType === "lcl" ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}>
+											<div className="flex items-center gap-2 mb-2">
+												<span className="text-2xl">📦🚢</span>
+												<input
+													type="radio"
+													name="seaShipmentType"
+													value="lcl"
+													checked={formData.seaShipmentType === "lcl"}
+													onChange={handleInputChange}
+													className="w-4 h-4 text-blue-600"
+												/>
 											</div>
+											<span className="font-semibold text-gray-800">بضايع عامة</span>
+											<span className="text-sm text-blue-600 font-medium">(LCL)</span>
+											<p className="text-xs text-gray-500 mt-1">Less than Container Load</p>
+											<p className="text-xs text-gray-400">أقل من حاوية كاملة</p>
+										</label>
+										
+										{/* Parcels */}
+										<label className={`flex flex-col items-center justify-center text-center cursor-pointer p-4 border-2 rounded-lg hover:bg-blue-100 transition-colors bg-white ${formData.seaShipmentType === "parcels" ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}>
+											<div className="flex items-center gap-2 mb-2">
+												<span className="text-2xl">📦</span>
+												<input
+													type="radio"
+													name="seaShipmentType"
+													value="parcels"
+													checked={formData.seaShipmentType === "parcels"}
+													onChange={handleInputChange}
+													className="w-4 h-4 text-blue-600"
+												/>
+											</div>
+											<span className="font-semibold text-gray-800">طرود</span>
+											<p className="text-xs text-gray-500 mt-1">شحن بالطرود والكراتين</p>
+											<p className="text-xs text-gray-400">بضاعة منفصلة</p>
 										</label>
 									</div>
 								</div>
 							)}
 
-							{/* Packages Count - shown for AIR or SEA+PARCELS */}
-							{(formData.shippingMethod === "air" || (formData.shippingMethod === "sea" && formData.seaShipmentType === "parcels")) && (
+							{/* Packages Count - shown for AIR, SEA+PARCELS, or SEA+LCL */}
+							{(formData.shippingMethod === "air" || (formData.shippingMethod === "sea" && (formData.seaShipmentType === "parcels" || formData.seaShipmentType === "lcl"))) && (
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<InputField
 										id="packagesCount"
@@ -909,8 +941,8 @@ const UCRRequestPage = () => {
 								</div>
 							)}
 
-							{/* Containers - shown for SEA+CONTAINERS */}
-							{formData.shippingMethod === "sea" && formData.seaShipmentType === "containers" && (
+							{/* Containers - shown for SEA+FCL */}
+							{formData.shippingMethod === "sea" && formData.seaShipmentType === "fcl" && (
 								<div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 										<InputField
@@ -1192,8 +1224,8 @@ const UCRRequestPage = () => {
 											/>
 										</div>
 										<div>
-											<label className="text-xs text-gray-600 mb-1 block">
-												البند الجمركي (HS Code) <span className="text-gray-400">(اختياري)</span>
+											<label className="text-xs text-gray-600 mb-1 block whitespace-nowrap">
+												البند الجمركي (HS Code)
 											</label>
 											<input
 												type="text"
