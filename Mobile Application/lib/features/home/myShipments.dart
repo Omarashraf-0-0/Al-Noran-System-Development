@@ -1350,13 +1350,13 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
               setState(() => _selectedIndex = 1);
             }
           } else if (index == 2) {
-            // الصادر - قيد التطوير (don't change state)
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('قسم الشحنات الصادرة قيد التطوير'),
-                backgroundColor: Color(0xFF1ba3b6),
-                duration: Duration(seconds: 2),
-              ),
+            // الصادر - navigate to exports page
+            context.go(
+              '/exports',
+              extra: {
+                'userName': widget.userName,
+                'userEmail': widget.userEmail,
+              },
             );
           } else if (index == 3) {
             // الفواتير (don't change state)

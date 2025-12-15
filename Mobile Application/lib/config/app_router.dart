@@ -8,9 +8,11 @@ import '../features/auth/OtpVerificationPage.dart';
 import '../features/auth/reset_password_page.dart';
 import '../features/home/homePage.dart';
 import '../features/home/myShipments.dart';
+import '../features/home/myExports.dart';
 import '../features/Shipments/ShipmentsDetailsPage.dart';
 import '../features/Shipments/ChatPage.dart';
 import '../features/Shipments/ACIDReqPage.dart';
+import '../features/Shipments/UCRReqPage.dart';
 import '../features/profile/profile_page.dart';
 import '../features/profile/profile_settings_page.dart';
 import '../features/profile/settings_menu_page.dart';
@@ -81,13 +83,26 @@ class AppRouter {
         },
       ),
 
-      // My Shipments
+      // My Shipments (Imports)
       GoRoute(
         path: '/shipments',
         name: 'shipments',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
           return MyShipmentsPage(
+            userName: extra?['userName'] ?? 'مستخدم',
+            userEmail: extra?['userEmail'] ?? 'user@alnoran.com',
+          );
+        },
+      ),
+
+      // My Exports
+      GoRoute(
+        path: '/exports',
+        name: 'exports',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return MyExportsPage(
             userName: extra?['userName'] ?? 'مستخدم',
             userEmail: extra?['userEmail'] ?? 'user@alnoran.com',
           );
@@ -125,6 +140,19 @@ class AppRouter {
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
           return AcidRequestPage(
+            userName: extra?['userName'],
+            userEmail: extra?['userEmail'],
+          );
+        },
+      ),
+
+      // UCR Request (Export)
+      GoRoute(
+        path: '/ucr-request',
+        name: 'ucr-request',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return UcrRequestPage(
             userName: extra?['userName'],
             userEmail: extra?['userEmail'],
           );

@@ -1106,10 +1106,12 @@ class _HomePageState extends State<HomePage> {
                       'طلب رقم UCR\n(الصادر)',
                       Icons.flight_takeoff_rounded,
                       onTap: () {
-                        AlNoranPopups.showInfo(
-                          context: context,
-                          title: 'طلب رقم UCR',
-                          message: 'قسم الشحنات الصادرة قيد التطوير',
+                        context.push(
+                          '/ucr-request',
+                          extra: {
+                            'userName': widget.userName,
+                            'userEmail': widget.userEmail,
+                          },
                         );
                       },
                     ),
@@ -1634,11 +1636,11 @@ class _HomePageState extends State<HomePage> {
         );
         break;
       case 2:
-        // الصادر - قيد التطوير (don't change selected index)
-        AlNoranPopups.showInfo(
-          context: context,
-          title: 'الصادر',
-          message: 'قسم الشحنات الصادرة قيد التطوير',
+        // الصادر - Navigate to exports page
+        setState(() => _selectedIndex = index);
+        context.go(
+          '/exports',
+          extra: {'userName': widget.userName, 'userEmail': widget.userEmail},
         );
         break;
       case 3:

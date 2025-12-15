@@ -1689,6 +1689,44 @@ class ApiService {
     }
   }
 
+  /// Get upload details by ID
+  static Future<Map<String, dynamic>> getUploadDetails(String uploadId) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📥 [getUploadDetails] Fetching upload: $uploadId');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/uploads/$uploadId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📥 [getUploadDetails] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('✅ [getUploadDetails] Success');
+        return {'success': true, 'upload': data['upload'] ?? data['data']};
+      } else {
+        print('❌ [getUploadDetails] Failed: ${response.statusCode}');
+        return {'success': false, 'message': 'فشل في جلب معلومات الملف'};
+      }
+    } catch (e) {
+      print('❌ [getUploadDetails] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب معلومات الملف',
+        'error': e.toString(),
+      };
+    }
+  }
+
   // ============= CHAT API =============
 
   /// Get all chats for current user
@@ -2237,6 +2275,101 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في حذف صورة البروفايل',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // =====================================================
+  // UCR REQUEST ENDPOINTS (Export)
+  // =====================================================
+
+  /// Create UCR Request
+  /// Creates a new UCR (export) request
+  static Future<Map<String, dynamic>> createUcrRequest(
+    Map<String, dynamic> requestData,
+  ) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📤 [createUcrRequest] Creating UCR request...');
+      print('📤 [createUcrRequest] Data: $requestData');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/ucr'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(requestData),
+      );
+
+      print('📤 [createUcrRequest] Status: ${response.statusCode}');
+      print('📤 [createUcrRequest] Response: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم إنشاء طلب UCR بنجاح',
+          'request': data['request'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل إنشاء طلب UCR',
+        };
+      }
+    } catch (e) {
+      print('❌ [createUcrRequest] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في إنشاء طلب UCR',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get My UCR Requests
+  /// Gets all UCR requests for current user
+  static Future<Map<String, dynamic>> getMyUcrRequests() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📋 [getMyUcrRequests] Fetching UCR requests...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/ucr'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📋 [getMyUcrRequests] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'data': data['data'] ?? []};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب طلبات UCR',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMyUcrRequests] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب طلبات UCR',
         'error': e.toString(),
       };
     }

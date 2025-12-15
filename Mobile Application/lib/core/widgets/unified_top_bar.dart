@@ -22,6 +22,9 @@ class UnifiedTopBar extends StatefulWidget {
   /// Whether to show back button instead of menu
   final bool showBackButton;
 
+  /// Custom callback for back button (defaults to context.pop)
+  final VoidCallback? onBackPressed;
+
   /// Callback when menu is pressed
   final VoidCallback? onMenuPressed;
 
@@ -44,6 +47,7 @@ class UnifiedTopBar extends StatefulWidget {
     this.showNotification = true,
     this.showMenu = true,
     this.showBackButton = false,
+    this.onBackPressed,
     this.onMenuPressed,
     this.onNotificationPressed,
     this.onProfilePressed,
@@ -310,7 +314,7 @@ class _UnifiedTopBarState extends State<UnifiedTopBar> {
       ),
       child: IconButton(
         icon: const Icon(Icons.arrow_forward, color: Colors.white, size: 26),
-        onPressed: () => context.pop(),
+        onPressed: widget.onBackPressed ?? () => context.pop(),
       ),
     );
   }
