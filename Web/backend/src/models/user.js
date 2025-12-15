@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const Counter = require("./Counter");
 
 const UserSchema = new mongoose.Schema(
 	{
@@ -13,6 +14,12 @@ const UserSchema = new mongoose.Schema(
 			required: [true, "Please provide a username"],
 			unique: true,
 			trim: true,
+		},
+		clientId: {
+			type: Number,
+			unique: true,
+			sparse: true, 
+			index: true,
 		},
 		phone: {
 			type: String,
@@ -121,6 +128,24 @@ const UserSchema = new mongoose.Schema(
 		timestamps: true,
 	}
 );
+UserSchema.pre("save", async function (next) {
+	if (this.type !== "client" || this.clientId) {
+		return next();
+	}
+
+	try {
+		const counter = await Counter.findOneAndUpdate(
+			{ name: "clientId" },
+			{ $inc: { seq: 1 } },
+			{ new: true, upsert: true }
+		);
+
+		this.clientId = counter.seq;
+		next();
+	} catch (err) {
+		next(err);
+	}
+});
 
 UserSchema.pre("save", async function (next) {
 	if (!this.isModified("password")) {
