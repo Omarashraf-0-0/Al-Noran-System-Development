@@ -113,7 +113,7 @@ const ucrRequestSchema = new mongoose.Schema(
 		// =====================
 		seaShipmentType: {
 			type: String,
-			enum: ["parcels", "containers", null],
+			enum: ["fcl", "lcl", "parcels", "containers", null], // fcl=Full Container Load, lcl=Less than Container Load (بضايع عامة), parcels=طرود, containers=legacy
 			default: null,
 		},
 		quantity: {

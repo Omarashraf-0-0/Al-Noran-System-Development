@@ -608,6 +608,30 @@ const UCRRequestDetailsPage = () => {
 						</p>
 					</div>
 
+					{/* Sea Shipment Type Info */}
+					{request.shippingMethod === "sea" && request.seaShipmentType && (
+						<div className="bg-blue-50 rounded-xl p-4 mb-6">
+							<div className="flex items-center gap-3">
+								<span className="text-2xl">
+									{request.seaShipmentType === "fcl" || request.seaShipmentType === "containers" ? "🚢" : 
+									 request.seaShipmentType === "lcl" ? "📦🚢" : "📦"}
+								</span>
+								<div>
+									<p className="font-bold text-blue-800">
+										{request.seaShipmentType === "fcl" || request.seaShipmentType === "containers" ? "حاويات (FCL) - Full Container Load" : 
+										 request.seaShipmentType === "lcl" ? "بضايع عامة (LCL) - Less than Container Load" : 
+										 "طرود"}
+									</p>
+									<p className="text-sm text-blue-600">
+										{request.seaShipmentType === "fcl" || request.seaShipmentType === "containers" ? "شحن بحاوية كاملة أو أكثر" : 
+										 request.seaShipmentType === "lcl" ? "شحن بضاعة أقل من حاوية كاملة" : 
+										 "شحن بالطرود والكراتين"}
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
+
 					{/* Sea Shipment: Container Info */}
 					{request.shippingMethod === "sea" && request.containersCount > 0 && (
 						<div className="bg-blue-50 rounded-xl p-6 mb-6">
@@ -625,10 +649,20 @@ const UCRRequestDetailsPage = () => {
 											<p className="font-medium">
 												{container.containerNumber || `#${index + 1}`}
 											</p>
-											<p className="text-sm text-gray-600">
-												{container.weight}{" "}
-												{container.unit === "tons" ? "طن" : "كجم"}
-											</p>
+											{container.size && (
+												<p className="text-sm text-blue-600 font-medium">
+													{container.size === "20ft" ? "20 قدم" : 
+													 container.size === "40ft" ? "40 قدم" : 
+													 container.size === "40ft-hc" ? "40 قدم HC" : 
+													 container.size === "45ft" ? "45 قدم" : container.size}
+												</p>
+											)}
+											{container.weight && (
+												<p className="text-sm text-gray-600">
+													{container.weight}{" "}
+													{container.unit === "tons" ? "طن" : "كجم"}
+												</p>
+											)}
 										</div>
 									))}
 								</div>
