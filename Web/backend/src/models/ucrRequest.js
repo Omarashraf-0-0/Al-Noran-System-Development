@@ -111,6 +111,11 @@ const ucrRequestSchema = new mongoose.Schema(
 		// =====================
 		// Sea Shipment Additional Fields
 		// =====================
+		seaShipmentType: {
+			type: String,
+			enum: ["parcels", "containers", null],
+			default: null,
+		},
 		quantity: {
 			type: Number,
 			default: null,
@@ -127,6 +132,7 @@ const ucrRequestSchema = new mongoose.Schema(
 		containerWeights: [
 			{
 				containerNumber: { type: String },
+				size: { type: String, enum: ["20ft", "40ft", "40ft-hc", "45ft", null] },
 				weight: { type: Number },
 				unit: { type: String, enum: ["tons", "kilograms"] },
 			},
@@ -153,6 +159,38 @@ const ucrRequestSchema = new mongoose.Schema(
 			{
 				type: mongoose.Schema.Types.ObjectId,
 				ref: "Upload",
+			},
+		],
+
+		// =====================
+		// Document Status Tracking (Employee review)
+		// =====================
+		documentStatuses: [
+			{
+				uploadId: {
+					type: mongoose.Schema.Types.ObjectId,
+					ref: "Upload",
+				},
+				documentType: {
+					type: String,
+					enum: ["bank_waiver", "export_invoice", "export_packing_list", "shipping_permit", "awb", "bl", "other"],
+				},
+				status: {
+					type: String,
+					enum: ["pending", "approved", "rejected", "needs_revision"],
+					default: "pending",
+				},
+				employeeNotes: {
+					type: String,
+					default: "",
+				},
+				reviewedBy: {
+					type: mongoose.Schema.Types.ObjectId,
+					ref: "User",
+				},
+				reviewedAt: {
+					type: Date,
+				},
 			},
 		],
 

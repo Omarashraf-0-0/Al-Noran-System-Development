@@ -18,7 +18,7 @@ const getMyExportShipments = async (req, res) => {
 			.sort({ createdAt: -1 })
 			.populate("documents")
 			.populate("certificateOfOrigin")
-			.populate("ucrRequestId", "requestNumber");
+			.populate("ucrRequestId", "ucrNumber requestNumber valueInEGP certificationType");
 
 		res.json({
 			success: true,
@@ -49,8 +49,15 @@ const getExportShipmentById = async (req, res) => {
 			.populate("certificateOfOrigin")
 			.populate("form46Document")
 			.populate("regulatoryApprovalDocument")
-			.populate("ucrRequestId")
-			.populate("userId", "fullname email phone clientDetails")
+			.populate({
+				path: "ucrRequestId",
+				select: "requestNumber ucrNumber valueInEGP certificationType uploads shippingMethod destinationCountry destinationPort",
+				populate: {
+					path: "uploads",
+					select: "documentType originalname url filename"
+				}
+			})
+			.populate("userId", "fullname name email phone clientDetails")
 			.populate("assignedEmployee", "fullname email")
 			.populate("statusHistory.changedBy", "fullname");
 
@@ -61,8 +68,9 @@ const getExportShipmentById = async (req, res) => {
 			});
 		}
 
-		// Check access
-		if (userType === "client" && shipment.userId._id.toString() !== userId.toString()) {
+		// Check access - get userId whether populated or not
+		const shipmentUserId = shipment.userId?._id?.toString() || shipment.userId?.toString();
+		if (userType === "client" && shipmentUserId !== userId.toString()) {
 			return res.status(403).json({
 				success: false,
 				message: "غير مصرح لك بعرض هذه الشحنة",
@@ -157,9 +165,9 @@ const getAllExportShipmentsForEmployee = async (req, res) => {
 
 		const shipments = await ExportShipment.find(filter)
 			.sort({ createdAt: -1 })
-			.populate("userId", "fullname email phone clientDetails")
+			.populate("userId", "fullname name email phone clientDetails")
 			.populate("assignedEmployee", "fullname")
-			.populate("ucrRequestId", "requestNumber");
+			.populate("ucrRequestId", "ucrNumber requestNumber valueInEGP certificationType");
 
 		res.json({
 			success: true,

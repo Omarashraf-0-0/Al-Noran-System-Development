@@ -17,6 +17,8 @@ const {
 	uploadCertificateOfOrigin,
 	setRegulatoryBody,
 	createExportShipmentFromUCR,
+	updateDocumentStatus,
+	employeeAddDocument,
 } = require("../controllers/ucrController");
 
 // =====================================================
@@ -76,6 +78,16 @@ router.post("/employee/:id/regulatory-body", protect, setRegulatoryBody);
 // @desc    Create export shipment from UCR request
 // @access  Private (Employee)
 router.post("/employee/:id/create-shipment", protect, createExportShipmentFromUCR);
+
+// @route   PATCH /api/ucr/employee/:id/document/:uploadId/status
+// @desc    Update document status (approve/reject)
+// @access  Private (Employee)
+router.patch("/employee/:id/document/:uploadId/status", protect, updateDocumentStatus);
+
+// @route   POST /api/ucr/employee/:id/add-document
+// @desc    Employee add document to UCR request
+// @access  Private (Employee)
+router.post("/employee/:id/add-document", protect, employeeAddDocument);
 
 // =====================================================
 // CLIENT ROUTES (with :id parameter - must be after /employee/ routes)

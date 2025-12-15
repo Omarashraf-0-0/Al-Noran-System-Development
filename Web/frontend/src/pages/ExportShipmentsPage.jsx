@@ -8,61 +8,49 @@ import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import LoadingSpinner from "../components/LoadingSpinner";
 
-// Status configurations for export shipments
+// Status configurations for export shipments (matching backend model)
 const STATUS_CONFIG = {
-	pending_ucr: {
-		label: "في انتظار UCR",
-		color: "bg-gray-100 text-gray-800 border-gray-200",
-		icon: "⏳",
-		step: 1,
-	},
-	documents_submitted: {
-		label: "المستندات مرفوعة",
+	documents_verification: {
+		label: "التحقق من المستندات",
 		color: "bg-blue-100 text-blue-800 border-blue-200",
 		icon: "📄",
-		step: 2,
+		step: 1,
 	},
-	documents_verified: {
-		label: "المستندات موثقة",
-		color: "bg-indigo-100 text-indigo-800 border-indigo-200",
-		icon: "✅",
-		step: 3,
-	},
-	regulatory_check: {
-		label: "الفحص التنظيمي",
+	regulatory_inspection: {
+		label: "فحص الجهات الرقابية",
 		color: "bg-purple-100 text-purple-800 border-purple-200",
 		icon: "🔍",
-		step: 4,
+		step: 2,
 	},
-	customs_clearance: {
-		label: "التخليص الجمركي",
+	payment_cleared: {
+		label: "تم السداد",
 		color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-		icon: "🏛️",
-		step: 5,
+		icon: "💰",
+		step: 3,
 	},
-	ready_to_ship: {
-		label: "جاهز للشحن",
+	goods_loaded: {
+		label: "تم التحميل",
 		color: "bg-cyan-100 text-cyan-800 border-cyan-200",
 		icon: "📦",
-		step: 6,
+		step: 4,
 	},
-	shipped: {
-		label: "تم الشحن",
+	in_transit: {
+		label: "في الطريق",
+		color: "bg-indigo-100 text-indigo-800 border-indigo-200",
+		icon: "🚢",
+		step: 5,
+	},
+	delivered: {
+		label: "تم التسليم",
 		color: "bg-green-100 text-green-800 border-green-200",
-		icon: "🚀",
-		step: 7,
+		icon: "✅",
+		step: 6,
 	},
 	completed: {
 		label: "مكتمل",
 		color: "bg-green-200 text-green-900 border-green-300",
 		icon: "✨",
-		step: 8,
-	},
-	on_hold: {
-		label: "معلق",
-		color: "bg-orange-100 text-orange-800 border-orange-200",
-		icon: "⚠️",
-		step: 0,
+		step: 7,
 	},
 	cancelled: {
 		label: "ملغي",
@@ -100,7 +88,7 @@ const ExportShipmentsPage = () => {
 			);
 
 			if (response.data.success) {
-				setShipments(response.data.data);
+				setShipments(response.data.shipments || []);
 			}
 		} catch (error) {
 			console.error("Error fetching export shipments:", error);
@@ -133,7 +121,7 @@ const ExportShipmentsPage = () => {
 			const query = searchQuery.toLowerCase();
 			result = result.filter(
 				(shipment) =>
-					shipment.exportShipmentNumber?.toLowerCase().includes(query) ||
+					shipment.shipmentNumber?.toLowerCase().includes(query) ||
 					shipment.destinationCountry?.toLowerCase().includes(query) ||
 					shipment.destinationPort?.toLowerCase().includes(query) ||
 					shipment.ucrRequestId?.ucrNumber?.toLowerCase().includes(query)
@@ -203,30 +191,30 @@ const ExportShipmentsPage = () => {
 								<div>
 									<p className="text-xs text-blue-600">قيد المعالجة</p>
 									<p className="text-xl font-bold text-blue-800">
-										{getStatusCount("documents_submitted") +
-											getStatusCount("documents_verified")}
+										{getStatusCount("documents_verification") +
+											getStatusCount("regulatory_inspection")}
 									</p>
 								</div>
 							</div>
 						</div>
 						<div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
 							<div className="flex items-center gap-2">
-								<span className="text-2xl">🏛️</span>
+								<span className="text-2xl">💰</span>
 								<div>
-									<p className="text-xs text-yellow-600">التخليص الجمركي</p>
+									<p className="text-xs text-yellow-600">في انتظار السداد</p>
 									<p className="text-xl font-bold text-yellow-800">
-										{getStatusCount("customs_clearance")}
+										{getStatusCount("payment_cleared")}
 									</p>
 								</div>
 							</div>
 						</div>
 						<div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
 							<div className="flex items-center gap-2">
-								<span className="text-2xl">📦</span>
+								<span className="text-2xl">🚢</span>
 								<div>
-									<p className="text-xs text-cyan-600">جاهز للشحن</p>
+									<p className="text-xs text-cyan-600">في الطريق</p>
 									<p className="text-xl font-bold text-cyan-800">
-										{getStatusCount("ready_to_ship")}
+										{getStatusCount("goods_loaded") + getStatusCount("in_transit")}
 									</p>
 								</div>
 							</div>
@@ -237,7 +225,7 @@ const ExportShipmentsPage = () => {
 								<div>
 									<p className="text-xs text-green-600">مكتمل</p>
 									<p className="text-xl font-bold text-green-800">
-										{getStatusCount("completed")}
+										{getStatusCount("delivered") + getStatusCount("completed")}
 									</p>
 								</div>
 							</div>
@@ -320,7 +308,7 @@ const ExportShipmentsPage = () => {
 						<div className="space-y-4">
 							{filteredShipments.map((shipment) => {
 								const statusConfig =
-									STATUS_CONFIG[shipment.currentStatus] || STATUS_CONFIG.pending_ucr;
+									STATUS_CONFIG[shipment.currentStatus] || STATUS_CONFIG.documents_verification;
 
 								return (
 									<div
@@ -332,11 +320,11 @@ const ExportShipmentsPage = () => {
 											<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-3">
 												<div className="flex items-center gap-3">
 													<span className="text-xl">
-														{shipment.exportType === "air" ? "✈️" : "🚢"}
+														{shipment.shippingMethod === "air" ? "✈️" : "🚢"}
 													</span>
 													<div>
 														<h3 className="font-bold text-gray-800">
-															{shipment.exportShipmentNumber ||
+															{shipment.shipmentNumber ||
 																`شحنة #${shipment._id.slice(-6)}`}
 														</h3>
 														<p className="text-sm text-gray-500">
@@ -358,7 +346,7 @@ const ExportShipmentsPage = () => {
 														className="h-full bg-gradient-to-l from-green-500 to-green-400 transition-all duration-500"
 														style={{
 															width: `${Math.max(
-																(statusConfig.step / 8) * 100,
+																(statusConfig.step / 7) * 100,
 																5
 															)}%`,
 														}}
@@ -366,7 +354,7 @@ const ExportShipmentsPage = () => {
 												</div>
 												<div className="flex justify-between text-xs text-gray-500 mt-1">
 													<span>بداية</span>
-													<span>{Math.round((statusConfig.step / 8) * 100)}%</span>
+													<span>{Math.round((statusConfig.step / 7) * 100)}%</span>
 													<span>مكتمل</span>
 												</div>
 											</div>
@@ -394,25 +382,26 @@ const ExportShipmentsPage = () => {
 												<div>
 													<p className="text-xs text-gray-500">شهادة المنشأ</p>
 													<p className="font-medium">
-														{shipment.certificateOfOrigin?.issued ? (
+														{shipment.certificateOfOriginStatus === "issued" ? (
 															<span className="text-green-600">✅ صادرة</span>
-														) : shipment.certificateOfOrigin?.applied ? (
-															<span className="text-yellow-600">⏳ قيد التطبيق</span>
+														) : shipment.certificateOfOriginStatus === "pending" ? (
+															<span className="text-yellow-600">⏳ قيد الإصدار</span>
+														) : shipment.certificateOfOriginStatus === "not_required" ? (
+															<span className="text-gray-400">غير مطلوبة</span>
 														) : (
-															<span className="text-gray-400">لم تُطبق</span>
+															<span className="text-gray-400">—</span>
 														)}
 													</p>
 												</div>
 											</div>
 
 											{/* Sea Shipment Container Info */}
-											{shipment.exportType === "sea" &&
-												shipment.containerDetails && (
+											{shipment.shippingMethod === "sea" &&
+												shipment.containerWeights &&
+												shipment.containerWeights.length > 0 && (
 													<div className="bg-blue-50 p-2 rounded mb-3 text-sm">
 														<span className="text-blue-700">
-															🚢 {shipment.containerDetails.count || 0} حاوية
-															{shipment.containerDetails.type &&
-																` - ${shipment.containerDetails.type}`}
+															🚢 {shipment.containersCount || shipment.containerWeights.length} حاوية
 														</span>
 													</div>
 												)}
