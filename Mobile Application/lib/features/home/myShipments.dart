@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/shipments_cache_service.dart';
+import '../../core/widgets/unified_top_bar.dart';
 
 class MyShipmentsPage extends StatefulWidget {
   final String userName;
@@ -20,6 +23,9 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
+  final ShipmentsCacheService _shipmentsCache = ShipmentsCacheService();
+  StreamSubscription<List<Map<String, dynamic>>>? _shipmentsSubscription;
+
   int _selectedIndex = 1; // الوارد (index 1)
   String _selectedFilter = 'الكل';
   String _selectedSort = 'الأحدث';
@@ -43,6 +49,14 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     _tabController = TabController(length: 3, vsync: this);
     _searchController.addListener(_onSearchChanged);
     _loadShipmentsAndRequests();
+    // Profile photo is now handled by UnifiedTopBar via UserCacheService
+
+    // Listen to shipments cache updates
+    _shipmentsSubscription = _shipmentsCache.shipmentsStream.listen((_) {
+      if (mounted) {
+        _loadShipmentsAndRequests();
+      }
+    });
   }
 
   @override
@@ -50,6 +64,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _tabController.dispose();
+    _shipmentsSubscription?.cancel();
     super.dispose();
   }
 
@@ -220,52 +235,44 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
 
       print('🚢 [MyShipments] Loading shipments and ACID requests...');
 
-      // Load shipments and ACID requests in parallel
+      // Load shipments from cache and ACID requests from API in parallel
       final results = await Future.wait([
-        ApiService.getAllShipments(),
+        _shipmentsCache.getAllShipments(), // Use cache service
         ApiService.getAllAcidRequests(),
       ]);
 
-      final shipmentsResponse = results[0];
-      final acidRequestsResponse = results[1];
+      final shipments = results[0] as List<Map<String, dynamic>>;
+      final acidRequestsResponse = results[1] as Map<String, dynamic>;
 
-      print('🚢 [MyShipments] Shipments Response: $shipmentsResponse');
+      print('🚢 [MyShipments] Got ${shipments.length} shipments from cache');
       print('📦 [MyShipments] ACID Requests Response: $acidRequestsResponse');
 
       // Process Shipments
       final current = <Map<String, dynamic>>[];
       final completed = <Map<String, dynamic>>[];
 
-      if (shipmentsResponse['success'] == true) {
-        final shipments = List<Map<String, dynamic>>.from(
-          shipmentsResponse['shipments'] ?? [],
-        );
+      print('🚢 [MyShipments] Found ${shipments.length} shipments');
 
-        print('🚢 [MyShipments] Found ${shipments.length} shipments');
+      for (var shipment in shipments) {
+        final mappedShipment = {
+          'id': shipment['acid'] ?? 'N/A',
+          'type': _getShipmentType(shipment['acid']),
+          'polNumber': shipment['number46'] ?? 'غير محدد',
+          'date': _formatDate(shipment['arrivalDate'] ?? shipment['createdAt']),
+          'status': shipment['status'] ?? 'غير محدد',
+          'isUrgent': _isUrgent(shipment['status']),
+          'hasDocuments': shipment['invoiceUrl'] != null,
+          'importerName': shipment['importerName'],
+          'employerName': shipment['employerName'],
+          'description': shipment['shipmentDescription'],
+          'rawData': shipment,
+          'itemType': 'shipment',
+        };
 
-        for (var shipment in shipments) {
-          final mappedShipment = {
-            'id': shipment['acid'] ?? 'N/A',
-            'type': _getShipmentType(shipment['acid']),
-            'polNumber': shipment['number46'] ?? 'غير محدد',
-            'date': _formatDate(
-              shipment['arrivalDate'] ?? shipment['createdAt'],
-            ),
-            'status': shipment['status'] ?? 'غير محدد',
-            'isUrgent': _isUrgent(shipment['status']),
-            'hasDocuments': shipment['invoiceUrl'] != null,
-            'importerName': shipment['importerName'],
-            'employerName': shipment['employerName'],
-            'description': shipment['shipmentDescription'],
-            'rawData': shipment,
-            'itemType': 'shipment',
-          };
-
-          if (shipment['status'] == 'تمت بنجاح') {
-            completed.add(mappedShipment);
-          } else {
-            current.add(mappedShipment);
-          }
+        if (shipment['status'] == 'تمت بنجاح') {
+          completed.add(mappedShipment);
+        } else {
+          current.add(mappedShipment);
         }
       }
 
@@ -396,165 +403,47 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildTopBar(),
-              _buildSearchBar(),
-              const SizedBox(height: 12),
-              _buildTabs(),
-              const SizedBox(height: 16),
-              Expanded(
-                child:
-                    _isLoading
-                        ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF690000),
-                          ),
-                        )
-                        : TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _buildShipmentsList(_currentShipments, true),
-                            _buildShipmentsList(_completedShipments, false),
-                            _buildAcidRequestsList(),
-                          ],
-                        ),
+        body: Column(
+          children: [
+            UnifiedTopBar(showBackButton: true, showMenu: false),
+            Expanded(
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  children: [
+                    _buildSearchBar(),
+                    const SizedBox(height: 12),
+                    _buildTabs(),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child:
+                          _isLoading
+                              ? const Center(
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFF690000),
+                                ),
+                              )
+                              : TabBarView(
+                                controller: _tabController,
+                                children: [
+                                  _buildShipmentsList(_currentShipments, true),
+                                  _buildShipmentsList(
+                                    _completedShipments,
+                                    false,
+                                  ),
+                                  _buildAcidRequestsList(),
+                                ],
+                              ),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
         floatingActionButton: _buildFloatingActionButton(),
         floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
         bottomNavigationBar: _buildBottomNavigationBar(),
-      ),
-    );
-  }
-
-  Widget _buildTopBar() {
-    String firstName = widget.userName.split(' ').first;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF690000),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(25),
-          bottomRight: Radius.circular(25),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Profile Picture & Notification (على اليمين في RTL - أول عناصر في Row)
-          Row(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
-                    width: 2,
-                  ),
-                ),
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.white,
-                  child: Icon(
-                    Icons.person,
-                    color: const Color(0xFF690000),
-                    size: 24,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.notifications,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      onPressed: () {},
-                    ),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1ba3b6),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          // Title - عرض اسم المستخدم الفعلي
-          Column(
-            children: [
-              Text(
-                firstName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-              Text(
-                widget.userEmail,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-            ],
-          ),
-
-          // Back Button (على الشمال في RTL - آخر عنصر في Row)
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(
-                Icons.arrow_forward,
-                color: Colors.white,
-                size: 24,
-              ),
-              onPressed: () {
-                context.go(
-                  '/home',
-                  extra: {
-                    'userName': widget.userName,
-                    'userEmail': widget.userEmail,
-                  },
-                );
-              },
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -609,6 +498,24 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
             ),
           ),
           const SizedBox(width: 8),
+          InkWell(
+            onTap: _showFilterBottomSheet,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1ba3b6).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.filter_list_rounded,
+                color: const Color(0xFF1ba3b6),
+                size: 22,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
           InkWell(
             onTap: _showSortBottomSheet,
             borderRadius: BorderRadius.circular(12),
@@ -681,7 +588,15 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     // Combine shipments and ACID requests
     final combinedList = <Map<String, dynamic>>[];
 
-    if (isCurrent) {
+    // If a type filter is selected (بحري/جوي), show from both current and completed
+    if (_selectedFilter == 'بحري' || _selectedFilter == 'جوي') {
+      // Add filtered shipments from both current and completed
+      combinedList.addAll(_currentShipments);
+      combinedList.addAll(_completedShipments);
+      print(
+        '🔍 [MyShipments] Type Filter "$_selectedFilter" - Total: ${combinedList.length}',
+      );
+    } else if (isCurrent) {
       combinedList.addAll(_currentShipments);
       combinedList.addAll(_currentAcidRequests);
       print(
@@ -722,12 +637,6 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
             isCurrent
                 ? 'لا توجد شحنات جوية جارية'
                 : 'لا توجد شحنات جوية مكتملة';
-      } else if (_selectedFilter == 'بري') {
-        emptyIcon = Icons.local_shipping_outlined;
-        emptyMessage =
-            isCurrent
-                ? 'لا توجد شحنات برية جارية'
-                : 'لا توجد شحنات برية مكتملة';
       } else {
         emptyIcon = Icons.inventory_2_outlined;
         emptyMessage =
@@ -1079,41 +988,40 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                 ),
               ],
             ),
-            if (shipment['hasDocuments']) ...[
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    context.push('/shipment-details/${shipment['id']}');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF690000),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    elevation: 0,
+            // Always show view details button
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  context.push('/shipment-details/${shipment['id']}');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF690000),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text(
-                        'عرض تفاصيل الشحنة',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
-                        ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  elevation: 0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Text(
+                      'عرض تفاصيل الشحنة',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
                       ),
-                      SizedBox(width: 8),
-                      Icon(Icons.visibility_rounded, size: 18),
-                    ],
-                  ),
+                    ),
+                    SizedBox(width: 8),
+                    Icon(Icons.visibility_rounded, size: 18),
+                  ],
                 ),
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -1357,11 +1265,17 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
 
   Widget _buildFloatingActionButton() {
     return FloatingActionButton.extended(
-      onPressed: _showAddShipmentBottomSheet,
+      onPressed: () {
+        // Navigate directly to ACID request page
+        context.push(
+          '/acid-request',
+          extra: {'userName': widget.userName, 'userEmail': widget.userEmail},
+        );
+      },
       backgroundColor: const Color(0xFF690000),
       elevation: 4,
       label: const Text(
-        'إضافة شحنة',
+        'طلب ACID',
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
@@ -1369,7 +1283,11 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
           color: Colors.white,
         ),
       ),
-      icon: const Icon(Icons.add_rounded, size: 24, color: Colors.white),
+      icon: const Icon(
+        Icons.receipt_long_rounded,
+        size: 24,
+        color: Colors.white,
+      ),
     );
   }
 
@@ -1557,8 +1475,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                   _buildFilterOption('الكل', Icons.list_rounded),
                   _buildFilterOption('بحري', Icons.directions_boat_rounded),
                   _buildFilterOption('جوي', Icons.flight_takeoff_rounded),
-                  _buildFilterOption('بري', Icons.local_shipping_rounded),
-                  _buildFilterOption('طلبات ACID', Icons.receipt_long_rounded),
+                  // _buildFilterOption('طلبات ACID', Icons.receipt_long_rounded),
                   const SizedBox(height: 20),
                 ],
               ),

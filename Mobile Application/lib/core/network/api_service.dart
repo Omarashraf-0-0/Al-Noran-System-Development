@@ -17,10 +17,10 @@ class ApiService {
     // لو Android (Emulator أو Physical Device)
     if (Platform.isAndroid) {
       // للـ Emulator - استخدم IP الخاص
-      return 'http://10.0.2.2:3500';
+      // return 'http://10.0.2.2:3500';
 
       // لو موبايل حقيقي، استخدم IP اللابتوب:
-      // return 'http://10.250.15.105:3500';
+      return 'http://10.129.171.105:3500';
     }
 
     // لو iOS Simulator أو جهاز حقيقي
@@ -1251,6 +1251,61 @@ class ApiService {
     }
   }
 
+  /// Mark Document as Uploaded
+  /// Updates the required document status to uploaded with the file ID
+  static Future<Map<String, dynamic>> markDocumentAsUploaded({
+    required String shipmentId,
+    required String documentId,
+    required String fileId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📝 [markDocumentAsUploaded] Marking document: $documentId');
+      print('📝 [markDocumentAsUploaded] For shipment: $shipmentId');
+      print('📝 [markDocumentAsUploaded] With file ID: $fileId');
+
+      final response = await http.patch(
+        Uri.parse(
+          '$baseUrl/api/shipments/id/$shipmentId/required-documents/$documentId',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'fileId': fileId}),
+      );
+
+      print('📝 [markDocumentAsUploaded] Status: ${response.statusCode}');
+      print('📝 [markDocumentAsUploaded] Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم تحديث حالة المستند',
+          'data': data['data'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث حالة المستند',
+        };
+      }
+    } catch (e) {
+      print('❌ [markDocumentAsUploaded] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث حالة المستند',
+        'error': e.toString(),
+      };
+    }
+  }
+
   /// Create Shipment
   /// Creates a new shipment
   static Future<Map<String, dynamic>> createShipment({
@@ -1527,6 +1582,7 @@ class ApiService {
     required String category,
     String? documentType,
     String? relatedId,
+    String? clientType,
   }) async {
     try {
       final token = await SecureStorage.getToken();
@@ -1534,11 +1590,29 @@ class ApiService {
         return {'success': false, 'message': 'لم يتم تسجيل الدخول'};
       }
 
+      // Auto-detect clientType for registration category if not provided
+      String? effectiveClientType = clientType;
+      if (category == 'registration' && effectiveClientType == null) {
+        try {
+          final userData = await SecureStorage.getUserData();
+          effectiveClientType = userData?['clientDetails']?['clientType'];
+          print(
+            '📤 [uploadFile] Auto-detected clientType: $effectiveClientType',
+          );
+        } catch (e) {
+          print('📤 [uploadFile] Could not auto-detect clientType: $e');
+        }
+      }
+
       print('📤 [uploadFile] Uploading: $filePath');
+      print('📤 [uploadFile] URL: $baseUrl/api/uploads');
+      print(
+        '📤 [uploadFile] Category: $category, ClientType: $effectiveClientType',
+      );
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/api/uploads/upload'),
+        Uri.parse('$baseUrl/api/uploads'),
       );
 
       request.headers.addAll({
@@ -1546,11 +1620,44 @@ class ApiService {
         'ngrok-skip-browser-warning': 'true',
       });
 
-      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+      // Get filename and detect mimetype
+      String fileName = filePath.split('/').last;
+      if (fileName.contains('\\')) {
+        fileName = fileName.split('\\').last;
+      }
+      String fileExtension = fileName.split('.').last.toLowerCase();
+
+      MediaType? contentType;
+      if (fileExtension == 'pdf') {
+        contentType = MediaType('application', 'pdf');
+      } else if (['jpg', 'jpeg'].contains(fileExtension)) {
+        contentType = MediaType('image', 'jpeg');
+      } else if (fileExtension == 'png') {
+        contentType = MediaType('image', 'png');
+      } else if (fileExtension == 'gif') {
+        contentType = MediaType('image', 'gif');
+      } else if (fileExtension == 'webp') {
+        contentType = MediaType('image', 'webp');
+      } else {
+        contentType = MediaType('application', 'octet-stream');
+      }
+
+      print('📤 [uploadFile] File: $fileName, Type: ${contentType.mimeType}');
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          filePath,
+          contentType: contentType,
+        ),
+      );
 
       request.fields['category'] = category;
       if (documentType != null) request.fields['documentType'] = documentType;
       if (relatedId != null) request.fields['relatedId'] = relatedId;
+      if (effectiveClientType != null)
+        request.fields['clientType'] = effectiveClientType;
+      request.fields['userType'] = 'client';
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -1744,6 +1851,392 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في إرسال الرسالة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get Upload By ID
+  /// Fetches complete file details including URL, mimetype, filename, etc.
+  static Future<Map<String, dynamic>> getUploadById({
+    required String uploadId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📄 [getUploadById] Fetching upload: $uploadId');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/uploads/$uploadId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📄 [getUploadById] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'upload': data['upload']};
+      } else if (response.statusCode == 404) {
+        return {'success': false, 'message': 'الملف غير موجود'};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحميل بيانات الملف',
+        };
+      }
+    } catch (e) {
+      print('❌ [getUploadById] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل بيانات الملف',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // ============= PROFILE PHOTO APIS =============
+
+  /// Get User Profile with Photo
+  /// Fetches user profile including profile photo presigned URL
+  static Future<Map<String, dynamic>> getUserProfile() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('👤 [getUserProfile] Fetching user profile...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/users/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('👤 [getUserProfile] Status: ${response.statusCode}');
+      print('👤 [getUserProfile] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final user = data['user'];
+
+        print(
+          '👤 [getUserProfile] User profilePhoto field: ${user?['profilePhoto']}',
+        );
+
+        // Get presigned URL for profile photo if exists
+        if (user != null && user['profilePhoto'] != null) {
+          final photoKey = user['profilePhoto'];
+          print('👤 [getUserProfile] Photo key: $photoKey');
+
+          if (photoKey.toString().isNotEmpty &&
+              !photoKey.toString().startsWith('http')) {
+            try {
+              print(
+                '👤 [getUserProfile] Getting presigned URL for key: $photoKey',
+              );
+              final photoUrl = await getPresignedUrl(photoKey.toString());
+              print('👤 [getUserProfile] Got presigned URL: $photoUrl');
+              if (photoUrl != null) {
+                user['profilePhotoUrl'] = photoUrl;
+              }
+            } catch (e) {
+              print('⚠️ [getUserProfile] Could not get photo URL: $e');
+            }
+          } else if (photoKey.toString().startsWith('http')) {
+            print('👤 [getUserProfile] Photo is already a URL');
+            user['profilePhotoUrl'] = photoKey;
+          }
+        } else {
+          print('👤 [getUserProfile] No profile photo found');
+        }
+
+        return {'success': true, 'user': user};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحميل بيانات المستخدم',
+        };
+      }
+    } catch (e) {
+      print('❌ [getUserProfile] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل بيانات المستخدم',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get Presigned URL for S3 Key
+  static Future<String?> getPresignedUrl(String s3Key) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) return null;
+
+      final encodedKey = Uri.encodeComponent(s3Key);
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/uploads/presigned-url/$encodedKey'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['url'];
+      }
+      return null;
+    } catch (e) {
+      print('❌ [getPresignedUrl] Error: $e');
+      return null;
+    }
+  }
+
+  /// Upload Profile Photo
+  /// Uploads a profile photo to S3 and updates user profile
+  static Future<Map<String, dynamic>> uploadProfilePhoto({
+    required File file,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📸 [uploadProfilePhoto] Uploading profile photo...');
+
+      // First upload to S3
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/uploads'),
+      );
+
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Detect mimetype
+      String fileName = file.path.split('/').last;
+      String fileExtension = fileName.split('.').last.toLowerCase();
+      MediaType contentType;
+
+      if (['jpg', 'jpeg'].contains(fileExtension)) {
+        contentType = MediaType('image', 'jpeg');
+      } else if (fileExtension == 'png') {
+        contentType = MediaType('image', 'png');
+      } else {
+        contentType = MediaType('image', 'jpeg');
+      }
+
+      var fileStream = http.ByteStream(file.openRead());
+      var fileLength = await file.length();
+
+      var multipartFile = http.MultipartFile(
+        'file',
+        fileStream,
+        fileLength,
+        filename: fileName,
+        contentType: contentType,
+      );
+      request.files.add(multipartFile);
+
+      // Use 'archive' category since 'profile' is not supported
+      request.fields['category'] = 'archive';
+      // Don't send documentType for profile photos (not in backend enum)
+      request.fields['description'] = 'صورة البروفايل';
+      request.fields['userType'] = 'client';
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      print('📸 [uploadProfilePhoto] Upload status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final uploadData = jsonDecode(response.body);
+        final s3Key =
+            uploadData['data']?['s3Key'] ?? uploadData['upload']?['s3Key'];
+
+        if (s3Key != null) {
+          // Update user profile with the S3 key
+          final updateResult = await updateUserProfilePhoto(s3Key: s3Key);
+          if (updateResult['success'] == true) {
+            // Get presigned URL for the new photo
+            final photoUrl = await getPresignedUrl(s3Key);
+            return {
+              'success': true,
+              'message': 'تم رفع صورة البروفايل بنجاح',
+              's3Key': s3Key,
+              'photoUrl': photoUrl,
+            };
+          } else {
+            return updateResult;
+          }
+        }
+
+        return {
+          'success': true,
+          'message': 'تم رفع الصورة بنجاح',
+          'data': uploadData,
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل رفع صورة البروفايل',
+        };
+      }
+    } catch (e) {
+      print('❌ [uploadProfilePhoto] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في رفع صورة البروفايل',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update User Profile Photo
+  /// Updates user's profilePhoto field with S3 key
+  static Future<Map<String, dynamic>> updateUserProfilePhoto({
+    required String s3Key,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      // Get current user data first
+      final profileResponse = await http.get(
+        Uri.parse('$baseUrl/api/users/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (profileResponse.statusCode != 200) {
+        return {'success': false, 'message': 'فشل جلب بيانات المستخدم'};
+      }
+
+      final profileData = jsonDecode(profileResponse.body);
+      final user = profileData['user'];
+
+      print('📸 [updateUserProfilePhoto] Updating profile photo to: $s3Key');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/users/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'fullname': user['fullname'],
+          'username': user['username'],
+          'phone': user['phone'],
+          'email': user['email'],
+          'profilePhoto': s3Key,
+        }),
+      );
+
+      print('📸 [updateUserProfilePhoto] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        // Update local storage
+        final data = jsonDecode(response.body);
+        if (data['user'] != null) {
+          await SecureStorage.saveUserData(data['user']);
+        }
+        return {
+          'success': true,
+          'message': 'تم تحديث صورة البروفايل بنجاح',
+          'user': data['user'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث صورة البروفايل',
+        };
+      }
+    } catch (e) {
+      print('❌ [updateUserProfilePhoto] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث صورة البروفايل',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Delete Profile Photo
+  /// Removes profile photo from user profile
+  static Future<Map<String, dynamic>> deleteProfilePhoto() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      // Get current user data first
+      final profileResponse = await http.get(
+        Uri.parse('$baseUrl/api/users/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (profileResponse.statusCode != 200) {
+        return {'success': false, 'message': 'فشل جلب بيانات المستخدم'};
+      }
+
+      final profileData = jsonDecode(profileResponse.body);
+      final user = profileData['user'];
+
+      print('🗑️ [deleteProfilePhoto] Removing profile photo...');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/users/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'fullname': user['fullname'],
+          'username': user['username'],
+          'phone': user['phone'],
+          'email': user['email'],
+          'profilePhoto': null,
+        }),
+      );
+
+      print('🗑️ [deleteProfilePhoto] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'تم حذف صورة البروفايل بنجاح'};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل حذف صورة البروفايل',
+        };
+      }
+    } catch (e) {
+      print('❌ [deleteProfilePhoto] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في حذف صورة البروفايل',
         'error': e.toString(),
       };
     }

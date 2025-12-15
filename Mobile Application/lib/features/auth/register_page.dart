@@ -50,7 +50,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         color: Color(0xFF690000),
                         size: 28,
                       ),
-                      onPressed: () => context.pop(),
+                      onPressed: () => context.go('/login'),
                     ),
                     const Spacer(),
                   ],

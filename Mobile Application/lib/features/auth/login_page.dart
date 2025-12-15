@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/user_cache_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/widgets/al_noran_loading.dart';
 import '../../util/validators.dart';
@@ -254,7 +255,7 @@ class _LoginPageState extends State<LoginPage> {
                       alignment: Alignment.centerRight,
                       child: TextButton.icon(
                         onPressed: () {
-                          context.push('/register');
+                          context.push('/forgot-password');
                         },
                         icon: const Icon(
                           Icons.lock_outline,
@@ -319,7 +320,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         TextButton(
                           onPressed: () {
-                            context.push('/forgot-password');
+                            context.push('/register');
                           },
                           child: const Text(
                             'إنشاء حساب',
@@ -401,6 +402,10 @@ class _LoginPageState extends State<LoginPage> {
                 ApiService.saveUserData(result['data']['user']),
             ]);
             print('✅ [Login] Token and user data saved to storage');
+
+            // Initialize user cache after login
+            await UserCacheService().initialize(forceRefresh: true);
+            print('✅ [Login] User cache initialized');
           }
 
           // الحصول على اسم المستخدم والبريد الإلكتروني من البيانات

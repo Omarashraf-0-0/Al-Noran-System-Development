@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
+import '../../core/widgets/unified_top_bar.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/file_picker_helper.dart';
 
@@ -33,8 +34,6 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
   final TextEditingController _customsItemController = TextEditingController();
 
   // State
-  String? _userName;
-  String? _userEmail;
   bool _isSubmitting = false;
 
   // Selected shipment type
@@ -47,25 +46,7 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      final userData = await ApiService.getUserData();
-      if (mounted) {
-        setState(() {
-          _userName =
-              widget.userName ??
-              userData['fullname'] ??
-              userData['username'] ??
-              'مستخدم';
-          _userEmail = widget.userEmail ?? userData['email'] ?? '';
-        });
-      }
-    } catch (e) {
-      print('❌ Error loading user data: $e');
-    }
+    // No need to load user data - UnifiedTopBar handles it
   }
 
   @override
@@ -106,15 +87,42 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
         context.pop(); // Close loading
 
         if (uploadResult['success'] == true) {
-          setState(() {
-            _uploadedFileName = result.path.split('/').last;
-            _uploadedFileId = uploadResult['upload']['_id'];
-          });
+          // Get upload ID from response - try multiple paths
+          final upload = uploadResult['upload'] ?? uploadResult['data'];
+          final uploadId = upload?['_id'] ?? upload?['id'];
 
-          AlNoranPopups.showSuccess(
-            context: context,
-            message: 'تم رفع الفاتورة بنجاح',
-          );
+          print('📄 [ACIDReq] Upload response: $uploadResult');
+          print('📄 [ACIDReq] Upload ID: $uploadId');
+
+          if (uploadId != null) {
+            setState(() {
+              _uploadedFileName = result.path.split('/').last;
+              if (_uploadedFileName!.contains('\\')) {
+                _uploadedFileName = _uploadedFileName!.split('\\').last;
+              }
+              _uploadedFileId = uploadId.toString();
+            });
+
+            AlNoranPopups.showSuccess(
+              context: context,
+              message: 'تم رفع الفاتورة بنجاح',
+            );
+          } else {
+            // File uploaded but no ID returned - still consider success
+            setState(() {
+              _uploadedFileName = result.path.split('/').last;
+              if (_uploadedFileName!.contains('\\')) {
+                _uploadedFileName = _uploadedFileName!.split('\\').last;
+              }
+              // Use a placeholder ID since upload succeeded
+              _uploadedFileId = 'uploaded';
+            });
+
+            AlNoranPopups.showSuccess(
+              context: context,
+              message: 'تم رفع الفاتورة بنجاح',
+            );
+          }
         } else {
           AlNoranPopups.showError(
             context: context,
@@ -234,177 +242,45 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildTopBar(),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 24),
+        body: Column(
+          children: [
+            UnifiedTopBar(showBackButton: true, showMenu: false),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 24),
 
-                      // Logo and Title
-                      _buildHeader(),
+                    // Logo and Title
+                    _buildHeader(),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                      // Shipment Type Toggle
-                      _buildTypeToggle(),
+                    // Shipment Type Toggle
+                    _buildTypeToggle(),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                      // Invoice Upload Section
-                      _buildInvoiceUpload(),
+                    // Invoice Upload Section
+                    _buildInvoiceUpload(),
 
-                      const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                      // Form Fields
-                      _buildFormFields(),
+                    // Form Fields
+                    _buildFormFields(),
 
-                      const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-                      // Submit Button
-                      _buildSubmitButton(),
+                    // Submit Button
+                    _buildSubmitButton(),
 
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar() {
-    String firstName = _userName?.split(' ').first ?? 'مستخدم';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF690000),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(25),
-          bottomRight: Radius.circular(25),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Profile Picture & Notification (على اليمين في RTL)
-          Row(
-            children: [
-              InkWell(
-                onTap: () {
-                  context.push('/profile');
-                },
-                borderRadius: BorderRadius.circular(50),
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 2,
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.person,
-                      color: const Color(0xFF690000),
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.notifications,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      onPressed: () {},
-                    ),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1ba3b6),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          // Title - عرض اسم المستخدم الفعلي
-          Column(
-            children: [
-              Text(
-                firstName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-              if (_userEmail != null && _userEmail!.isNotEmpty)
-                Text(
-                  _userEmail!,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    fontFamily: 'Cairo',
-                  ),
-                ),
-            ],
-          ),
-
-          // Back Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
             ),
-            child: IconButton(
-              icon: const Icon(
-                Icons.arrow_forward,
-                color: Colors.white,
-                size: 24,
-              ),
-              onPressed: () {
-                context.go('/home');
-              },
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -942,4 +818,3 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
     );
   }
 }
-

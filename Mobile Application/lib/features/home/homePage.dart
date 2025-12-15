@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
-import '../../core/storage/secure_storage.dart';
+import '../../core/services/user_cache_service.dart';
+import '../../core/services/shipments_cache_service.dart';
+import '../../core/widgets/unified_top_bar.dart';
 
 class HomePage extends StatefulWidget {
   final String userName;
@@ -18,6 +21,12 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   final TextEditingController _trackingController = TextEditingController();
 
+  // User cache service - still needed for logout and refresh operations
+  final UserCacheService _userCache = UserCacheService();
+  final ShipmentsCacheService _shipmentsCache = ShipmentsCacheService();
+  StreamSubscription? _userDataSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _shipmentsSubscription;
+
   // بيانات ديناميكية ستأتي من الـ Backend
   Map<String, dynamic> _userStats = {
     'totalShipments': 0,
@@ -31,12 +40,38 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+
+    // Initialize user cache (for logout operations and other usage)
+    _initializeUserData();
     _loadRecentShipments();
+
+    // Listen to shipments cache updates
+    _shipmentsSubscription = _shipmentsCache.shipmentsStream.listen((_) {
+      if (mounted) {
+        _updateShipmentsFromCache();
+      }
+    });
   }
 
-  Future<void> _loadUserData() async {
-    // TODO: Implement API call to get user statistics
+  @override
+  void dispose() {
+    _userDataSubscription?.cancel();
+    _shipmentsSubscription?.cancel();
+    _trackingController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeUserData() async {
+    try {
+      await _userCache.initialize();
+    } catch (e) {
+      print('❌ [HomePage] Error initializing user cache: $e');
+    }
+  }
+
+  void _updateShipmentsFromCache() {
+    final shipments = _shipmentsCache.allShipments;
+    _processShipments(shipments);
   }
 
   Future<void> _loadRecentShipments() async {
@@ -44,57 +79,53 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       setState(() => _isLoadingShipments = true);
 
-      print('🏠 [HomePage] Loading recent shipments...');
+      print('🏠 [HomePage] Loading recent shipments from cache...');
 
-      final response = await ApiService.getAllShipments();
-
-      if (response['success'] == true) {
-        final shipments = List<Map<String, dynamic>>.from(
-          response['shipments'] ?? [],
-        );
-
-        print('🏠 [HomePage] Found ${shipments.length} shipments');
-
-        // أخذ آخر 3 شحنات فقط
-        final recent =
-            shipments.take(3).map((shipment) {
-              return {
-                'id': shipment['acid'] ?? 'N/A',
-                'name': shipment['shipmentDescription'] ?? 'شحنة',
-                'polNumber': shipment['number46'] ?? 'غير محدد',
-                'date': _formatDate(
-                  shipment['arrivalDate'] ?? shipment['createdAt'],
-                ),
-                'status': shipment['status'] ?? 'غير محدد',
-                'isUrgent': _isUrgent(shipment['status']),
-                'rawData': shipment,
-              };
-            }).toList();
-
-        if (!mounted) return;
-        setState(() {
-          _recentShipments = recent;
-          _isLoadingShipments = false;
-          // تحديث الإحصائيات
-          _userStats = {
-            'totalShipments': shipments.length,
-            'activeShipments':
-                shipments.where((s) => s['status'] != 'تمت بنجاح').length,
-            'completedShipments':
-                shipments.where((s) => s['status'] == 'تمت بنجاح').length,
-          };
-        });
-
-        print('🏠 [HomePage] Recent shipments loaded: ${recent.length}');
-      } else {
-        if (!mounted) return;
-        setState(() => _isLoadingShipments = false);
-      }
+      // Use the cache service instead of direct API call
+      final shipments = await _shipmentsCache.getAllShipments();
+      _processShipments(shipments);
     } catch (e) {
       print('❌ [HomePage] Error loading shipments: $e');
       if (!mounted) return;
       setState(() => _isLoadingShipments = false);
     }
+  }
+
+  void _processShipments(List<Map<String, dynamic>> shipments) {
+    if (!mounted) return;
+
+    print('🏠 [HomePage] Processing ${shipments.length} shipments');
+
+    // أخذ آخر 3 شحنات فقط
+    final recent =
+        shipments.take(3).map((shipment) {
+          return {
+            'id': shipment['acid'] ?? 'N/A',
+            'name': shipment['shipmentDescription'] ?? 'شحنة',
+            'polNumber': shipment['number46'] ?? 'غير محدد',
+            'date': _formatDate(
+              shipment['arrivalDate'] ?? shipment['createdAt'],
+            ),
+            'status': shipment['status'] ?? 'غير محدد',
+            'isUrgent': _isUrgent(shipment['status']),
+            'rawData': shipment,
+          };
+        }).toList();
+
+    setState(() {
+      _recentShipments = recent;
+      _isLoadingShipments = false;
+      // تحديث الإحصائيات
+      _userStats = {
+        'totalShipments': shipments.length,
+        'activeShipments':
+            shipments.where((s) => s['status'] != 'تمت بنجاح').length,
+        'completedShipments':
+            shipments.where((s) => s['status'] == 'تمت بنجاح').length,
+      };
+    });
+
+    print('🏠 [HomePage] Recent shipments loaded: ${recent.length}');
   }
 
   bool _isUrgent(String? status) {
@@ -143,14 +174,19 @@ class _HomePageState extends State<HomePage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Top Bar
-              _buildTopBar(),
+        body: Column(
+          children: [
+            // Top Bar - Uses UnifiedTopBar with UserCacheService
+            UnifiedTopBar(
+              showBackButton: false,
+              showMenu: true,
+              onMenuPressed: () => _showMenu(),
+            ),
 
-              // Main Content
-              Expanded(
+            // Main Content
+            Expanded(
+              child: SafeArea(
+                top: false,
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
@@ -179,136 +215,10 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
         bottomNavigationBar: _buildBottomNavigationBar(),
-      ),
-    );
-  }
-
-  Widget _buildTopBar() {
-    // استخراج الاسم الأول من الاسم الكامل
-    String firstName = widget.userName.split(' ').first;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF690000),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(25),
-          bottomRight: Radius.circular(25),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Profile Picture & Notification (على اليمين في RTL - أول عناصر في Row)
-          Row(
-            children: [
-              InkWell(
-                onTap: () {
-                  context.push('/profile');
-                },
-                borderRadius: BorderRadius.circular(50),
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 2,
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.person,
-                      color: const Color(0xFF690000),
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.notifications,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      onPressed: () {},
-                    ),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1ba3b6),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          // Title - عرض اسم المستخدم الفعلي
-          Column(
-            children: [
-              Text(
-                firstName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-              Text(
-                widget.userEmail,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-            ],
-          ),
-
-          // Menu Icon (على الشمال في RTL - آخر عنصر في Row)
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white, size: 26),
-              onPressed: () {
-                _showMenu();
-              },
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -996,7 +906,9 @@ class _HomePageState extends State<HomePage> {
                               onPressed: () async {
                                 // حذف جميع بيانات المستخدم والـ Token
                                 await ApiService.removeToken();
-                                await SecureStorage.clearAll();
+
+                                // Clear user cache
+                                _userCache.clear();
 
                                 // إغلاق الـ dialog ثم الانتقال لصفحة تسجيل الدخول
                                 if (mounted) {
@@ -1163,7 +1075,7 @@ class _HomePageState extends State<HomePage> {
                       'إعدادات الحساب',
                       Icons.settings_outlined,
                       onTap: () {
-                        context.push('/profile-settings');
+                        context.push('/settings');
                       },
                     ),
                   ),
@@ -1738,11 +1650,5 @@ class _HomePageState extends State<HomePage> {
         );
         break;
     }
-  }
-
-  @override
-  void dispose() {
-    _trackingController.dispose();
-    super.dispose();
   }
 }

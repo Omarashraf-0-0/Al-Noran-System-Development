@@ -44,10 +44,24 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
         );
 
         if (response['success'] == true) {
+          final allUploads = List<Map<String, dynamic>>.from(
+            response['uploads'] ?? [],
+          );
+
+          // Filter only registration documents
+          final registrationDocs =
+              allUploads.where((doc) {
+                final category = doc['category']?.toString() ?? '';
+                return category == 'registration';
+              }).toList();
+
+          print('📄 [DocumentsSettings] Total uploads: ${allUploads.length}');
+          print(
+            '📄 [DocumentsSettings] Registration docs: ${registrationDocs.length}',
+          );
+
           setState(() {
-            _documents = List<Map<String, dynamic>>.from(
-              response['uploads'] ?? [],
-            );
+            _documents = registrationDocs;
           });
         }
       }
@@ -888,7 +902,10 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
 
   Future<void> _viewDocument(Map<String, dynamic> doc) async {
     try {
-      final url = doc['url']?.toString();
+      // Use presignedUrl from backend (with fallback to url)
+      final url = doc['presignedUrl']?.toString() ?? doc['url']?.toString();
+      final mimetype = doc['mimetype']?.toString() ?? '';
+
       if (url == null || url.isEmpty) {
         AlNoranPopups.showError(
           context: context,
@@ -897,22 +914,58 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
         return;
       }
 
-      print('📄 [ViewDocument] Opening URL: $url');
-
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        AlNoranPopups.showError(
+      // Check if there was a permission error
+      if (doc['permissionError'] == true) {
+        AlNoranPopups.showWarning(
           context: context,
-          message: 'لا يمكن فتح المستند',
+          message: 'لا يمكن عرض المستند - مشكلة في صلاحيات الوصول',
         );
+        return;
+      }
+
+      print('📄 [ViewDocument] Document data: $doc');
+      print('📄 [ViewDocument] Opening URL: $url');
+      print('📄 [ViewDocument] Mimetype: $mimetype');
+
+      // If it's an image, show in full screen viewer inside the app
+      if (mimetype.contains('image')) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => _ImageViewerPage(
+                  imageUrl: url,
+                  title: _getDocumentTypeName(doc['documentType']),
+                ),
+          ),
+        );
+      }
+      // For PDF or other documents, use in-app web view
+      else {
+        try {
+          final uri = Uri.parse(url);
+          print('📄 [ViewDocument] Opening in WebView: $uri');
+
+          bool launched = await launchUrl(uri, mode: LaunchMode.inAppWebView);
+
+          if (!launched) {
+            throw Exception('Failed to launch URL');
+          }
+
+          print('📄 [ViewDocument] Document opened successfully');
+        } catch (e) {
+          print('❌ [ViewDocument] Launch error: $e');
+          AlNoranPopups.showError(
+            context: context,
+            message: 'تعذر فتح المستند',
+          );
+        }
       }
     } catch (e) {
       print('❌ [ViewDocument] Error: $e');
       AlNoranPopups.showError(
         context: context,
-        message: 'حدث خطأ في فتح المستند',
+        message: 'حدث خطأ في فتح المستند: ${e.toString()}',
       );
     }
   }
@@ -924,71 +977,247 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
 
     final result = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder:
-          (context) => Directionality(
+          (dialogContext) => Directionality(
             textDirection: TextDirection.rtl,
-            child: AlertDialog(
+            child: Dialog(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(25),
               ),
-              title: const Text(
-                'تعديل المستند',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'نوع المستند: ${_getDocumentTypeName(doc['documentType'])}',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 14,
-                      color: Colors.grey,
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: descriptionController,
-                    decoration: InputDecoration(
-                      labelText: 'الوصف',
-                      labelStyle: const TextStyle(fontFamily: 'Cairo'),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF690000),
+                            const Color(0xFF8B0000),
+                          ],
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(25),
+                          topRight: Radius.circular(25),
+                        ),
                       ),
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.edit_document,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'تعديل المستند',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'تحديث معلومات المستند',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 13,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    style: const TextStyle(fontFamily: 'Cairo'),
-                    maxLines: 3,
-                  ),
-                ],
+
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Document Type Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1ba3b6).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: const Color(0xFF1ba3b6).withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.label,
+                                  size: 18,
+                                  color: Color(0xFF1ba3b6),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _getDocumentTypeName(doc['documentType']),
+                                  style: const TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF1ba3b6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Description Field
+                          const Text(
+                            'الوصف (اختياري)',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF2D2D2D),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: TextField(
+                              controller: descriptionController,
+                              decoration: const InputDecoration(
+                                hintText: 'أضف وصف للمستند...',
+                                hintStyle: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  color: Color(0xFFBDBDBD),
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.all(16),
+                              ),
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 14,
+                              ),
+                              maxLines: 4,
+                              textDirection: TextDirection.rtl,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Actions
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed:
+                                  () => Navigator.pop(dialogContext, false),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                side: BorderSide(
+                                  color: Colors.grey.shade300,
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'إلغاء',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF424242),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed:
+                                  () => Navigator.pop(dialogContext, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF690000),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'حفظ التغييرات',
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => context.pop(false),
-                  child: const Text(
-                    'إلغاء',
-                    style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () => context.pop(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF690000),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'حفظ',
-                    style: TextStyle(fontFamily: 'Cairo', color: Colors.white),
-                  ),
-                ),
-              ],
             ),
           ),
     );
@@ -1061,14 +1290,14 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => context.pop(false),
+                  onPressed: () => Navigator.pop(context, false),
                   child: const Text(
                     'إلغاء',
                     style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => context.pop(true),
+                  onPressed: () => Navigator.pop(context, true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     shape: RoundedRectangleBorder(
@@ -1130,5 +1359,155 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
     } catch (e) {
       return 'غير محدد';
     }
+  }
+}
+
+// Image Viewer Page - Full screen image viewer with zoom
+class _ImageViewerPage extends StatelessWidget {
+  final String imageUrl;
+  final String title;
+
+  const _ImageViewerPage({required this.imageUrl, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black87,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          centerTitle: true,
+          actions: [
+            Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+                tooltip: 'إغلاق',
+              ),
+            ),
+          ],
+        ),
+        body: Center(
+          child: InteractiveViewer(
+            minScale: 0.5,
+            maxScale: 4.0,
+            child: Image.network(
+              imageUrl,
+              fit: BoxFit.contain,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        value:
+                            loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                        color: Colors.white,
+                        strokeWidth: 3,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'جاري تحميل الصورة...',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.error_outline,
+                          color: Colors.white,
+                          size: 64,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'فشل تحميل الصورة',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'تحقق من اتصال الإنترنت',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        bottomNavigationBar: Container(
+          color: Colors.black87,
+          padding: const EdgeInsets.all(12),
+          child: SafeArea(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.zoom_in,
+                  color: Colors.white.withOpacity(0.7),
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'اسحب بإصبعين للتكبير والتصغير',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
