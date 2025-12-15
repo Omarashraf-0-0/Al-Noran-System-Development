@@ -16,15 +16,17 @@ import com.itextpdf.layout.element.*;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
+import com.mongodb.client.MongoCollection;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.stage.FileChooser;
 import noran.desktop.AppSession;
+import noran.desktop.Database.MongoDirectConnection;
+import org.bson.types.ObjectId;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -40,61 +42,49 @@ public class AdminAddInvoiceController {
     @FXML private TableColumn<InvoiceRow, Double> colPrice;
     @FXML private Label totalLabel;
 
-    @FXML private SidebarController sidebarController;
-    @FXML private TopBarController topBarController;
-
     private final ObservableList<InvoiceRow> items = FXCollections.observableArrayList();
 
+    // ================= INITIALIZE =================
+
     public void initialize() {
-        // Table setup
+
         colDesc.setCellValueFactory(new PropertyValueFactory<>("description"));
         colPrice.setCellValueFactory(new PropertyValueFactory<>("price"));
         invoiceTable.setItems(items);
 
-        // Invoice number & date
-        invoiceNumberLabel.setText("INV-" + System.currentTimeMillis() % 1000000);
+        invoiceNumberLabel.setText("INV-" + System.currentTimeMillis());
         invoiceDateLabel.setText(new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
 
-        // Recalculate total whenever list changes
         items.addListener((javafx.collections.ListChangeListener<InvoiceRow>) c -> updateTotal());
-
-        // Add a default empty row so user can start typing immediately
-        addEmptyRow();
-
-        if (sidebarController != null) {
-            sidebarController.setActivePage("new invoice");
-        }
-
-        // 8. Configure TopBar (Title + User Info + Search Logic)
-        User currentUser = AppSession.getInstance().getCurrentUser();
-        topBarController.setPageTitle("إضافة فاتورة جديدة");
-
-        // Set User Info
-        if (currentUser != null) {
-            String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
-            String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
-            topBarController.setUserData(name, id);
-        }
     }
 
-    private InvoiceRow showAddItemDialog() {
-        // إنشاء Dialog
+    // ================= CURRENCY CONVERSION =================
+
+    private double convertToEGP(double price, String currency) {
+        if ("USD".equalsIgnoreCase(currency)) {
+            return price * 50;
+        }
+        return price; // EGP
+    }
+
+    // ================= ADD ITEM =================
+
+    @FXML
+    private void addNewRow() {
+
         Dialog<InvoiceRow> dialog = new Dialog<>();
         dialog.setTitle("إضافة بند جديد");
-        dialog.setHeaderText("اكتب اسم البند والسعر");
 
-        // زر تأكيد وإلغاء
-        ButtonType addButtonType = new ButtonType("إضافة", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+        ButtonType addBtn = new ButtonType("إضافة", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(addBtn, ButtonType.CANCEL);
 
-        // عناصر الإدخال
         TextField descField = new TextField();
-        descField.setPromptText("اسم البند");
-
         TextField priceField = new TextField();
-        priceField.setPromptText("السعر");
 
-        // تصميم بسيط
+        ChoiceBox<String> currencyBox = new ChoiceBox<>();
+        currencyBox.getItems().addAll("EGP", "USD");
+        currencyBox.setValue("EGP");
+
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
@@ -105,85 +95,58 @@ public class AdminAddInvoiceController {
         grid.add(new Label("السعر:"), 0, 1);
         grid.add(priceField, 1, 1);
 
+        grid.add(new Label("العملة:"), 0, 2);
+        grid.add(currencyBox, 1, 2);
+
         dialog.getDialogPane().setContent(grid);
 
-        // منع إضافة بند بدون بيانات
-        Node addButton = dialog.getDialogPane().lookupButton(addButtonType);
-        addButton.setDisable(true);
-
-        // تفعيل الزر عند إدخال اسم وسعر
-        descField.textProperty().addListener((obs, oldVal, newVal) -> {
-            addButton.setDisable(newVal.trim().isEmpty() || priceField.getText().trim().isEmpty());
-        });
-
-        priceField.textProperty().addListener((obs, oldVal, newVal) -> {
-            addButton.setDisable(newVal.trim().isEmpty() || descField.getText().trim().isEmpty());
-        });
-
-        // عند الضغط على إضافة، يرجّع InvoiceRow جديد
-        dialog.setResultConverter(button -> {
-            if (button == addButtonType) {
+        dialog.setResultConverter(btn -> {
+            if (btn == addBtn) {
                 try {
-                    double price = Double.parseDouble(priceField.getText().trim());
-                    return new InvoiceRow(descField.getText().trim(), price);
-                } catch (NumberFormatException e) {
-                    new Alert(Alert.AlertType.ERROR, "السعر يجب أن يكون رقمًا صحيحًا!").show();
+                    return new InvoiceRow(
+                            descField.getText().trim(),
+                            Double.parseDouble(priceField.getText().trim()),
+                            currencyBox.getValue()
+                    );
+                } catch (Exception e) {
+                    new Alert(Alert.AlertType.ERROR, "بيانات غير صحيحة").show();
                 }
             }
             return null;
         });
 
-        return dialog.showAndWait().orElse(null);
+        dialog.showAndWait().ifPresent(items::add);
     }
 
-
-
-    @FXML
-    private void addNewRow() {
-        InvoiceRow newItem = showAddItemDialog();
-
-        if (newItem != null) {
-            items.add(newItem);
-            updateTotal();
-        }
-    }
-
-
-    private void addEmptyRow() {
-        int newRowIndex = items.size();
-        items.add(new InvoiceRow("اضغط هنا لكتابة الوصف", 0.0));
-
-        // ننتظر قليلاً حتى يُضاف الصف ثم نبدأ التعديل
-        javafx.application.Platform.runLater(() -> {
-            invoiceTable.scrollTo(newRowIndex);
-            invoiceTable.getSelectionModel().select(newRowIndex);
-            invoiceTable.getFocusModel().focus(newRowIndex, colDesc);
-            invoiceTable.edit(newRowIndex, colDesc); // الطريقة الصحيحة الآن
-        });
-    }
+    // ================= DELETE =================
 
     @FXML
     private void deleteSelectedRow() {
-        InvoiceRow selected = invoiceTable.getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            items.remove(selected);
-        } else {
-            new Alert(Alert.AlertType.WARNING, "يرجى اختيار بند للحذف").show();
-        }
+        InvoiceRow row = invoiceTable.getSelectionModel().getSelectedItem();
+        if (row != null) items.remove(row);
     }
 
+    // ================= TOTAL =================
+
     private void updateTotal() {
-        double total = items.stream().mapToDouble(InvoiceRow::getPrice).sum();
-        totalLabel.setText(String.format("المجموع الكلي: %, .2f جنيه", total));
+        double total = items.stream()
+                .mapToDouble(r -> convertToEGP(r.getPrice(), r.getCurrency()))
+                .sum();
+
+        totalLabel.setText(String.format("المجموع الكلي: %,.2f جنيه مصري", total));
     }
+
+    // ================= GENERATE PDF (UNCHANGED FORM) =================
 
     @FXML
     private void generatePdf() {
+
         String clientName = clientNameField.getText().trim();
         if (clientName.isEmpty()) {
             new Alert(Alert.AlertType.ERROR, "يرجى إدخال اسم العميل").show();
             return;
         }
+
         if (items.isEmpty() || items.stream().allMatch(i -> i.getPrice() <= 0)) {
             new Alert(Alert.AlertType.WARNING, "أضف على الأقل بند واحد بقيمة أكبر من صفر").show();
             return;
@@ -201,12 +164,11 @@ public class AdminAddInvoiceController {
             Document document = new Document(pdf, PageSize.A4);
             document.setMargins(70, 50, 70, 50);
 
-            String fontPath = "C:/Windows/Fonts/arial.ttf"; // or any Arabic-supporting font
-            PdfFont font = PdfFontFactory.createFont(fontPath, "Identity-H");
+            PdfFont font = PdfFontFactory.createFont("C:/Windows/Fonts/arial.ttf", "Identity-H");
 
-            // Watermark Logo
             try {
-                Image logo = new Image(ImageDataFactory.create(getClass().getResource("/noran/desktop/images/Logo.png")));
+                Image logo = new Image(ImageDataFactory.create(
+                        getClass().getResource("/noran/desktop/images/Logo.png")));
                 logo.setFixedPosition(0, 0);
                 logo.setWidth(pdf.getDefaultPageSize().getWidth());
                 logo.setHeight(pdf.getDefaultPageSize().getHeight());
@@ -214,20 +176,17 @@ public class AdminAddInvoiceController {
                 document.add(logo);
             } catch (Exception ignored) {}
 
-            // Title
             document.add(new Paragraph(shapeArabic("فاتورة رسمية"))
                     .setFont(font).setFontSize(28).setBold()
                     .setTextAlignment(TextAlignment.CENTER));
 
             document.add(new Paragraph("\n"));
 
-            // Header info
             document.add(new Paragraph(shapeArabic("اسم العميل: " + clientName)).setFont(font).setFontSize(16));
             document.add(new Paragraph(shapeArabic("رقم الفاتورة: " + invoiceNumberLabel.getText())).setFont(font).setFontSize(15));
             document.add(new Paragraph(shapeArabic("التاريخ: " + invoiceDateLabel.getText())).setFont(font).setFontSize(15));
             document.add(new Paragraph("\n"));
 
-            // Table
             Table table = new Table(UnitValue.createPercentArray(new float[]{6, 2}))
                     .useAllAvailableWidth()
                     .setTextAlignment(TextAlignment.RIGHT);
@@ -240,16 +199,16 @@ public class AdminAddInvoiceController {
             double total = 0;
             for (InvoiceRow row : items) {
                 if (row.getPrice() > 0) {
+                    double egp = convertToEGP(row.getPrice(), row.getCurrency());
                     table.addCell(new Cell().add(new Paragraph(shapeArabic(row.getDescription())).setFont(font)));
-                    table.addCell(new Cell().add(new Paragraph(String.format("%,.2f", row.getPrice())).setFont(font)));
-                    total += row.getPrice();
+                    table.addCell(new Cell().add(new Paragraph(String.format("%,.2f", egp)).setFont(font)));
+                    total += egp;
                 }
             }
 
             document.add(table);
-
-            // Total
             document.add(new Paragraph("\n"));
+
             document.add(new Paragraph(shapeArabic("المجموع الكلي: " + String.format("%,.2f جنيه مصري", total)))
                     .setFont(font).setFontSize(20).setBold()
                     .setTextAlignment(TextAlignment.RIGHT)
@@ -258,8 +217,10 @@ public class AdminAddInvoiceController {
 
             document.close();
 
+            saveInvoiceToMongo(clientName);
+
             new Alert(Alert.AlertType.INFORMATION,
-                    "تم إنشاء الفاتورة بنجاح!\nالملف: " + file.getAbsolutePath()).show();
+                    "تم إنشاء الفاتورة بنجاح وحفظها في قاعدة البيانات").show();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -267,23 +228,68 @@ public class AdminAddInvoiceController {
         }
     }
 
-    // Helper class for table rows
-    public static class InvoiceRow {
-        private String description;
-        private double price;
+    // ================= SAVE TO MONGO =================
 
-        public InvoiceRow(String description, double price) {
+    private void saveInvoiceToMongo(String clientName) {
+
+        var db = MongoDirectConnection.connect();
+        if (db == null) return;
+
+        MongoCollection<org.bson.Document> invoices = db.getCollection("invoices");
+
+        User currentUser = AppSession.getInstance().getCurrentUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            MongoDirectConnection.close();
+            return;
+        }
+
+        java.util.List<org.bson.Document> itemsList = new java.util.ArrayList<>();
+
+        for (InvoiceRow row : items) {
+            if (row.getPrice() <= 0) continue;
+
+            itemsList.add(new org.bson.Document()
+                    .append("item", row.getDescription())
+                    .append("itemPrice", convertToEGP(row.getPrice(), row.getCurrency()))
+                    .append("currencyType", row.getCurrency()));
+        }
+
+        Date now = new Date();
+
+        org.bson.Document invoiceDoc = new org.bson.Document()
+                .append("invoiceNumber", invoiceNumberLabel.getText())
+                .append("username", clientName)
+                .append("employeeId", new ObjectId(currentUser.getId()))
+                .append("userId", null)
+                .append("shipmentId", null)
+                .append("items", itemsList)
+                .append("createdAt", now)
+                .append("updatedAt", now);
+
+        invoices.insertOne(invoiceDoc);
+        MongoDirectConnection.close();
+    }
+
+    // ================= MODEL =================
+
+    public static class InvoiceRow {
+        private final String description;
+        private final double price;
+        private final String currency;
+
+        public InvoiceRow(String description, double price, String currency) {
             this.description = description;
             this.price = price;
+            this.currency = currency;
         }
 
         public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
         public double getPrice() { return price; }
-        public void setPrice(double price) { this.price = price; }
+        public String getCurrency() { return currency; }
     }
 
-    // Arabic shaping (same as you already use)
+    // ================= ARABIC =================
+
     private String shapeArabic(String text) {
         if (text == null || text.isEmpty()) return "";
         try {
