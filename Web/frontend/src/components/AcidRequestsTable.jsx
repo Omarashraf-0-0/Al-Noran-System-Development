@@ -47,6 +47,8 @@ const AcidRequestsTable = ({
 										<strong>{request.userId?.username || "N/A"}</strong>
 										<br />
 										<small>{request.userId?.email || ""}</small>
+										<br />
+										<small className="text-gray-500" dir="ltr">{request.userId?.phone || ""}</small>
 									</div>
 								</td>
 								<td>

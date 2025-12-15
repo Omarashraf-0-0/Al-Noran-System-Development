@@ -1151,6 +1151,7 @@ const searchShipments = async (req, res) => {
 				{ third_gomroky: searchRegex },
 				{ number46: searchRegex },
 				{ bl_number: searchRegex },
+				{ shipmentCode: searchRegex },
 			],
 		};
 

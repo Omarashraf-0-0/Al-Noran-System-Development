@@ -18,8 +18,8 @@ const SupplierFormSection = ({ supplierData, onInputChange }) => {
 				<InputField
 					id="supplier.taxNum"
 					type="text"
-					label="نوع الحساب"
-					placeholder="ادخل نوع الحساب"
+					label="الرقم الضريبي"
+					placeholder="ادخل الرقم الضريبي"
 					value={supplierData.taxNum}
 					onChange={onInputChange("supplier.taxNum")}
 				/>

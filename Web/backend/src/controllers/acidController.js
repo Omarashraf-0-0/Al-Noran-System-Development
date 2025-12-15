@@ -229,7 +229,7 @@ const getAllRequestsForEmployee = async (req, res) => {
 
 		// Get all requests without filtering by userId
 		const requests = await AcidRequest.find(query)
-			.populate("userId", "username email")
+			.populate("userId", "username email phone")
 			.populate("uploads")
 			.populate("reviewingBy", "username email")
 			.populate("issuedBy", "username email")
@@ -461,7 +461,7 @@ const issueAcidWithConfirmation = async (req, res) => {
 		const employeeId = req.user._id;
 
 		const request = await AcidRequest.findById(id)
-			.populate("userId", "username email")
+			.populate("userId", "username email phone")
 			.populate("uploads");
 
 		if (!request) {

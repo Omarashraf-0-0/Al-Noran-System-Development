@@ -14,14 +14,13 @@ const TrackingHero = ({
 		const value = e.target.value;
 		setTrackingNumber(value);
 		setShowDropdown(true);
-		onSearch(value, false); // false = just recommendations, not full search
+		onSearch(value, false);
 	};
 
 	const handleSubmit = (e) => {
 		e.preventDefault();
 		if (trackingNumber.trim()) {
 			setShowDropdown(false);
-			// Trigger full search with modal
 			onSearch(trackingNumber, true);
 		}
 	};
@@ -33,90 +32,90 @@ const TrackingHero = ({
 	};
 
 	const handleBlur = () => {
-		// Delay hiding to allow click on dropdown items
 		setTimeout(() => {
 			setShowDropdown(false);
 		}, 200);
 	};
 
 	return (
-		<div
-			className="relative h-[450px] flex items-center justify-center bg-cover bg-center"
-			style={{
-				backgroundImage:
-					'linear-gradient(to right, rgba(13, 110, 113, 0.7), rgba(30, 58, 138, 0.7)), url("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1920")',
-			}}
-		>
-			<div className="relative z-10 w-full max-w-3xl px-4" dir="rtl">
-				<div className="bg-gradient-to-br from-red-900/90 to-red-800/90 backdrop-blur-sm rounded-3xl p-8 md:p-12 shadow-2xl">
-					<h1 className="text-white text-3xl md:text-4xl font-bold text-center mb-8">
-						تتبع شحنتي
-					</h1>
+		<div className="relative h-[500px] flex items-center justify-center -mt-16 pt-16">
+			{/* Background with Overlay */}
+			<div
+				className="absolute inset-0 bg-cover bg-center bg-no-repeat bg-fixed"
+				style={{
+					backgroundImage:
+						'url("https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1920")',
+				}}
+			>
+				<div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent"></div>
+			</div>
 
-					<form onSubmit={handleSubmit} className="space-y-6 relative z-20">
-						<div className="relative">
+			<div className="relative z-30 w-full max-w-4xl px-4" dir="rtl">
+				<div className="text-center mb-10">
+					<h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 drop-shadow-md">
+						مرحباً بك في <span className="text-[#3BA5A8]">النوران</span>
+					</h1>
+					<p className="text-xl text-gray-200 font-light">
+						تتبع شحناتك وأدر عملياتك بسهولة وسرعة
+					</p>
+				</div>
+
+				<div className="bg-white/10 backdrop-blur-xl border border-white/20 p-2 rounded-full shadow-2xl max-w-3xl mx-auto flex items-center">
+					<form onSubmit={handleSubmit} className="flex-1 flex items-center relative z-20">
+						<div className="pl-4 pr-6">
+							<Search className="text-white/80" size={24} />
+						</div>
+						
+						<div className="flex-1 relative">
 							<input
 								type="text"
 								value={trackingNumber}
 								onChange={handleInputChange}
 								onFocus={() => setShowDropdown(true)}
 								onBlur={handleBlur}
-								placeholder="ابحث عن شحنة بالرقم، الميناء، الدولة..."
-								className="w-full px-6 py-4 pr-12 rounded-full text-right text-gray-900 text-lg focus:outline-none focus:ring-4 focus:ring-white/30 transition-all bg-white"
+								placeholder="ابحث عن شحنة (كود الشحنة، ACID، الميناء...)"
+								className="w-full bg-transparent border-none text-white text-lg placeholder:text-gray-300 focus:ring-0 px-0 py-3"
 								autoComplete="off"
 							/>
-							<button
-								type="submit"
-								className="absolute left-2 top-1/2 -translate-y-1/2 bg-red-700 text-white p-3 rounded-full hover:bg-red-800 transition-colors"
-							>
-								<Search size={20} />
-							</button>
 
-							{/* Recommendations Dropdown */}
+							{/* Suggestions Dropdown */}
 							{showDropdown && (recommendations.length > 0 || loading) && (
-								<div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl max-h-96 overflow-y-auto z-[100]">
+								<div className="absolute top-full right-0 mt-4 w-full bg-white rounded-2xl shadow-2xl max-h-80 overflow-y-auto z-[100] border border-gray-100 divide-y divide-gray-50 text-right">
 									{loading ? (
-										<div className="p-4 text-center text-gray-600">
-											<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-800 mx-auto"></div>
-											<p className="mt-2">جاري البحث...</p>
+										<div className="p-4 text-center text-gray-500">
+											<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#690000] mx-auto mb-2"></div>
+											جاري البحث...
 										</div>
 									) : (
-										<div className="p-2">
-											{recommendations.map((shipment) => (
-												<div
-													key={shipment._id}
-													onClick={() => handleSelectShipment(shipment)}
-													className="p-4 hover:bg-red-50 cursor-pointer rounded-lg transition-colors border-b last:border-b-0"
-												>
-													<div className="flex justify-between items-start">
-														<div className="flex-1">
-															<div className="font-bold text-gray-800 text-lg">
-																{shipment.acid || "N/A"}
-															</div>
-															<div className="text-sm text-gray-600 mt-1">
-																{shipment.port_name || "N/A"} •{" "}
-																{shipment.country || "N/A"}
-															</div>
-															{shipment.bl_number && (
-																<div className="text-xs text-gray-500 mt-1">
-																	BL: {shipment.bl_number}
-																</div>
-															)}
-														</div>
-														<span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
-															{shipment.status || "N/A"}
-														</span>
-													</div>
+										recommendations.map((shipment) => (
+											<div
+												key={shipment._id}
+												onClick={() => handleSelectShipment(shipment)}
+												className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+											>
+												<div className="flex justify-between items-center mb-1">
+													<span className="font-bold text-[#690000]">{shipment.shipmentCode || shipment.acid || "N/A"}</span>
+													<span className={`text-xs px-2 py-1 rounded-full ${
+														shipment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+														shipment.status === 'approved' ? 'bg-green-100 text-green-800' :
+														'bg-gray-100 text-gray-800'
+													}`}>
+														{shipment.status || "N/A"}
+													</span>
 												</div>
-											))}
-										</div>
+												<div className="text-sm text-gray-500">
+													{shipment.port_name} • {shipment.country}
+												</div>
+											</div>
+										))
 									)}
 								</div>
 							)}
 						</div>
+						
 						<button
 							type="submit"
-							className="w-full max-w-xs mx-auto block bg-white text-red-900 py-4 rounded-full font-bold text-lg hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg"
+							className="bg-[#690000] hover:bg-[#8B0000] text-white px-8 py-3 rounded-full font-bold transition-all shadow-lg m-1"
 						>
 							تتبع
 						</button>
