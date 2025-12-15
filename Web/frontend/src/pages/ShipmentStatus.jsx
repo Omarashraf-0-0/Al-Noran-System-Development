@@ -295,6 +295,15 @@ const ShipmentStatus = () => {
 									}
 								/>
 								<Datafield
+									label="نوع الشحنة"
+									value={
+										shipment.shipment_type === "جوي" ? "✈️ جوي" : "🚢 بحري"
+									}
+									icon={
+										<img src={contractIcon} alt="icon" className="w-5 h-5" />
+									}
+								/>
+								<Datafield
 									label="الحالة"
 									value={shipment.status || "قيد الانتظار"}
 									icon={
@@ -316,13 +325,167 @@ const ShipmentStatus = () => {
 									}
 								/>
 								<Datafield
-									label="رقم البوليصة"
+									label="ميناء الوصول"
+									value={shipment.port_name || "غير محدد"}
+									icon={
+										<img src={contractIcon} alt="icon" className="w-5 h-5" />
+									}
+								/>
+								<Datafield
+									label="عدد الحاويات"
+									value={shipment.num_of_containers || "غير محدد"}
+									icon={
+										<img src={contractIcon} alt="icon" className="w-5 h-5" />
+									}
+								/>
+								<Datafield
+									label="أنواع الحاويات"
+									value={shipment.type_of_containers?.join(", ") || "غير محدد"}
+									icon={
+										<img src={contractIcon} alt="icon" className="w-5 h-5" />
+									}
+								/>
+								<Datafield
+									label="رقم 46"
 									value={shipment.number46 || "غير محدد"}
 									icon={
 										<img src={contractIcon} alt="icon" className="w-5 h-5" />
 									}
 								/>
+								<Datafield
+									label="الاتفاقية رقم"
+									value={shipment.policy || "غير محدد"}
+									icon={
+										<img src={contractIcon} alt="icon" className="w-5 h-5" />
+									}
+								/>
+								<Datafield
+									label="تاريخ الوصول المتوقع"
+									value={
+										shipment.arrivalDate
+											? new Date(shipment.arrivalDate).toLocaleDateString(
+													"ar-EG"
+											  )
+											: "غير محدد"
+									}
+									icon={
+										<img src={contractIcon} alt="icon" className="w-5 h-5" />
+									}
+								/>
 							</div>
+
+							{/* Proforma Invoice Section - من طلب ACID */}
+							{shipment.acid_request_id?.uploads &&
+								shipment.acid_request_id.uploads.length > 0 && (
+									<div className="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
+										<h2 className="text-2xl font-bold text-red-900 flex items-center gap-2 mb-6">
+											<span>📄</span>
+											<span>الفاتورة المبدئية</span>
+										</h2>
+										<div className="space-y-3">
+											{shipment.acid_request_id.uploads.map((upload, index) => (
+												<div
+													key={upload._id || index}
+													className="flex items-center justify-between bg-white border border-blue-200 rounded-lg p-4 hover:shadow-md transition"
+												>
+													<div className="flex items-center gap-3">
+														<div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+															<span className="text-2xl">📄</span>
+														</div>
+														<div className="text-right">
+															<p className="font-medium text-gray-800">
+																{upload.originalname ||
+																	upload.filename ||
+																	"فاتورة مبدئية"}
+															</p>
+															<p className="text-sm text-gray-500">
+																{upload.createdAt
+																	? new Date(
+																			upload.createdAt
+																	  ).toLocaleDateString("ar-EG")
+																	: ""}
+															</p>
+														</div>
+													</div>
+													<button
+														onClick={async () => {
+															try {
+																toast.loading("جاري تحميل الملف...");
+																console.log(
+																	"📥 Fetching upload with ID:",
+																	upload._id
+																);
+
+																const fileResponse = await axios.get(
+																	`${
+																		import.meta.env.VITE_API_URL
+																	}/api/uploads/${upload._id}`,
+																	{
+																		headers: {
+																			Authorization: `Bearer ${token}`,
+																		},
+																	}
+																);
+
+																console.log(
+																	"✅ Upload response:",
+																	fileResponse.data
+																);
+																toast.dismiss();
+
+																const fileUrl =
+																	fileResponse.data?.presignedUrl ||
+																	fileResponse.data?.upload?.presignedUrl ||
+																	fileResponse.data?.url ||
+																	fileResponse.data?.upload?.url ||
+																	fileResponse.data?.s3Url ||
+																	fileResponse.data?.upload?.s3Url;
+
+																console.log("🔗 File URL:", fileUrl);
+
+																if (fileUrl) {
+																	window.open(fileUrl, "_blank");
+																} else {
+																	console.error(
+																		"❌ No URL found in response:",
+																		fileResponse.data
+																	);
+																	toast.error("لم يتم العثور على رابط الملف");
+																}
+															} catch (error) {
+																toast.dismiss();
+																toast.error("فشل تحميل الملف");
+																console.error(
+																	"❌ Error downloading file:",
+																	error
+																);
+																console.error(
+																	"Error details:",
+																	error.response?.data
+																);
+															}
+														}}
+														className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
+													>
+														<span>عرض</span>
+														<svg
+															className="w-4 h-4"
+															fill="currentColor"
+															viewBox="0 0 20 20"
+														>
+															<path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+															<path
+																fillRule="evenodd"
+																d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+																clipRule="evenodd"
+															/>
+														</svg>
+													</button>
+												</div>
+											))}
+										</div>
+									</div>
+								)}
 
 							{/* Required Documents Section */}
 							{requiredDocuments.length > 0 && (
@@ -330,7 +493,7 @@ const ShipmentStatus = () => {
 									<div className="flex items-center justify-between mb-6">
 										<h2 className="text-2xl font-bold text-red-900 flex items-center gap-2">
 											<span>📋</span>
-											<span>مستندات مطلوبة</span>
+											<span>مستندات الشحنه</span>
 										</h2>
 										{requiredDocuments.filter((doc) => !doc.uploaded).length >
 											0 && (

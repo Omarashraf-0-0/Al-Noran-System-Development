@@ -50,8 +50,7 @@ const UserSchema = new mongoose.Schema(
 		active: {
 			type: Boolean,
 			default: true,
-		},
-		profilePhoto: {
+		},		profilePhoto: {
 			type: String,
 			required: false,
 			default: null,
@@ -84,6 +83,11 @@ const UserSchema = new mongoose.Schema(
 				type: String,
 				enum: ["noran", "client"],
 				default: "noran",
+			},
+
+			documentsVerified: {
+				type: Boolean,
+				default: false,
 			},
 		},
 		employeeDetails: {

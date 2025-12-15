@@ -44,7 +44,7 @@ const AcidRequestHeader = ({ requestData, illustration }) => {
 						})}
 					</p>
 				</div>
-				
+
 				<div className="text-center">
 					<p className="text-gray-500 text-sm">نوع الشحنة</p>
 					<p className="text-gray-700 font-semibold text-lg">

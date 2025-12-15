@@ -245,6 +245,7 @@ uploadSchema.statics.checkRequiredUploads = async function (
 		userId,
 		category: "registration",
 		isActive: true,
+		approvalStatus: "approved",
 	}).distinct("documentType");
 
 	const missing = required.filter((doc) => !uploaded.includes(doc));

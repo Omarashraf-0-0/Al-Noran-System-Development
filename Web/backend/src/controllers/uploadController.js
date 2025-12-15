@@ -209,7 +209,7 @@ const getUploadById = async (req, res) => {
 			try {
 				const { getPresignedUrl } = require("../utils/s3Helpers");
 				const presignedUrl = await getPresignedUrl(upload.s3Key, 3600); // 1 hour expiry
-				
+
 				// Return upload data with presigned URL
 				return res.json({
 					...upload.toObject(),
@@ -287,6 +287,17 @@ const softDeleteUpload = async (req, res) => {
 		upload.isActive = false;
 		await upload.save();
 
+		// Invalidate user verification if it's a client's registration document
+		if (upload.userId && upload.category === "registration") {
+			const User = require("../models/user");
+			const user = await User.findById(upload.userId);
+			if (user && user.type === "client") {
+				user.clientDetails.documentsVerified = false;
+				await user.save();
+				console.log(`User ${user._id} verification invalidated due to document deletion.`);
+			}
+		}
+
 		res.json({ message: "Upload deleted successfully" });
 	} catch (error) {
 		res.status(500).json({ message: error.message });
@@ -312,6 +323,17 @@ const permanentDeleteUpload = async (req, res) => {
 
 		// Delete database record
 		await Upload.findByIdAndDelete(upload._id);
+
+		// Invalidate user verification if it's a client's registration document
+		if (upload.userId && upload.category === "registration") {
+			const User = require("../models/user");
+			const user = await User.findById(upload.userId);
+			if (user && user.type === "client") {
+				user.clientDetails.documentsVerified = false;
+				await user.save();
+				console.log(`User ${user._id} verification invalidated due to permanent document deletion.`);
+			}
+		}
 
 		res.json({ message: "Upload permanently deleted" });
 	} catch (error) {
@@ -403,6 +425,28 @@ const approveDocument = async (req, res) => {
 		document.rejectionReason = null;
 
 		await document.save();
+
+		// Check if user has verified all documents
+		if (document.userId && document.userType === "client") {
+			const Upload = require("../models/upload");
+			const User = require("../models/user");
+			
+			// Re-fetch user to get client details
+			const user = await User.findById(document.userId);
+			
+			if (user && user.type === "client") {
+				const status = await Upload.checkRequiredUploads(
+					document.userId,
+					user.clientDetails.clientType
+				);
+				
+				if (status.completed) {
+					user.clientDetails.documentsVerified = true;
+					await user.save();
+					console.log(`User ${user._id} documents verified!`);
+				}
+			}
+		}
 
 		res.json({
 			success: true,

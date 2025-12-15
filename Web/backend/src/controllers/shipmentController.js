@@ -56,10 +56,38 @@ const createShipment = async (req, res) => {
 			return res.status(400).json({ message: "Invoice file is required" });
 		}
 
-		console.log("Final shipment data to be saved:", shipmentData);
+		console.log("Final shipment data before mapping:", shipmentData);
+
+		// Map frontend field names to database schema
+		const mappedShipmentData = {
+			user_id: shipmentData.user_id,
+			employee_id: shipmentData.employee_id,
+			acid: shipmentData.acid,
+			shipment_type:
+				shipmentData.shipment_type || shipmentData.shipmentType || "بحري",
+			port_name: shipmentData.port_name || shipmentData.portName,
+			country: shipmentData.country,
+			num_of_containers:
+				shipmentData.num_of_containers || shipmentData.numContainers || 1,
+			type_of_containers:
+				shipmentData.type_of_containers || shipmentData.containerTypes || [],
+			status: shipmentData.status || "Pending",
+			policy: shipmentData.policy || "",
+			arrivalDate: shipmentData.arrivalDate,
+			invoiceUrl: shipmentData.invoiceUrl,
+			acid_request_id: shipmentData.acid_request_id,
+			uploads: shipmentData.uploads || [],
+			// Legacy fields for display
+			importerName: shipmentData.importerName || "",
+			employerName: shipmentData.employerName || "",
+			shipmentDescription: shipmentData.shipmentDescription || "",
+			number46: shipmentData.number46 || "",
+		};
+
+		console.log("Mapped shipment data to be saved:", mappedShipmentData);
 
 		// Save shipment in DB
-		const shipment = new Shipment(shipmentData);
+		const shipment = new Shipment(mappedShipmentData);
 		await shipment.save();
 
 		// Generate unique ACID request ID (example)
@@ -228,20 +256,68 @@ const getShipmentById = async (req, res) => {
 			console.log(
 				`Invalid ObjectId format: ${shipmentId}, trying to find by ACID code...`
 			);
-			const shipment = await Shipment.findOne({ acid: shipmentId })
+			let shipment = await Shipment.findOne({ acid: shipmentId })
 				.populate("user_id", "username fullname email")
 				.populate("employee_id", "username fullname email");
+
 			if (!shipment) {
 				return res.status(404).json({ message: "Shipment not found" });
 			}
+
+			// Try to populate acid_request_id with uploads if it exists
+			if (shipment.acid_request_id) {
+				try {
+					shipment = await Shipment.findOne({ acid: shipmentId })
+						.populate("user_id", "username fullname email")
+						.populate("employee_id", "username fullname email")
+						.populate({
+							path: "acid_request_id",
+							populate: {
+								path: "uploads",
+								model: "Upload",
+							},
+						});
+				} catch (populateError) {
+					console.log(
+						"Could not populate acid_request_id uploads:",
+						populateError.message
+					);
+					// Continue without populated uploads
+				}
+			}
+
 			return res.json(shipment);
 		}
 
-		const shipment = await Shipment.findById(shipmentId)
+		let shipment = await Shipment.findById(shipmentId)
 			.populate("user_id", "username fullname email")
 			.populate("employee_id", "username fullname email");
+
 		if (!shipment)
 			return res.status(404).json({ message: "Shipment not found" });
+
+		// Try to populate acid_request_id with uploads if it exists
+		if (shipment.acid_request_id) {
+			try {
+				shipment = await Shipment.findById(shipmentId)
+					.populate("user_id", "username fullname email")
+					.populate("employee_id", "username fullname email")
+					.populate({
+						path: "acid_request_id",
+						populate: {
+							path: "uploads",
+							model: "Upload",
+						},
+					});
+			} catch (populateError) {
+				console.log(
+					"Could not populate acid_request_id uploads:",
+					populateError.message
+				);
+				// Continue without populated uploads
+			}
+		}
+
 		res.json(shipment);
 	} catch (error) {
 		console.error("Error in getShipmentById:", error);

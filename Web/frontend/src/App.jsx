@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -112,6 +112,21 @@ const ClientRoute = ({ children }) => {
 		return <Navigate to="/login" replace />;
 	}
 
+	// NEW: Check if client documents are verified
+	const isVerified = user?.clientDetails?.documentsVerified; 
+	const location = useLocation();
+
+	// List of paths that REQUIRE verification
+	const blockedPaths = ["/acidrequest", "/ucr-request"];
+	
+	// Check if current path starts with any of the blocked paths
+	const isBlockedPath = blockedPaths.some(path => location.pathname.startsWith(path));
+
+	// If user is NOT verified AND tries to access a blocked path, redirect to upload page
+	if (!isVerified && isBlockedPath) {
+		return <Navigate to="/upload-documents" replace />;
+	}
+	
 	return children;
 };
 

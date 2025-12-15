@@ -301,6 +301,14 @@ const EmployeeAcidRequestsPage = () => {
 				acid_request_id: selectedRequest._id, // Link to ACID request
 				uploads: uploadIds, // Send only IDs
 				token: token, // Some endpoints might need this
+				// Add missing fields from ACID request
+				importerName:
+					selectedRequest.supplier?.name ||
+					selectedRequest.userId?.fullname ||
+					selectedRequest.userId?.username,
+				employerName: user.fullname || user.username,
+				shipmentDescription: selectedRequest.goods?.description || "",
+				number46: "", // سيتم إضافته لاحقاً من قبل الموظف
 			};
 
 			console.log("📦 Submitting shipment payload:", payload);

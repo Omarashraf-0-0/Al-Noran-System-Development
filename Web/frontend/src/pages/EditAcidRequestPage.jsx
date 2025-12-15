@@ -374,7 +374,9 @@ const EditAcidRequestPage = () => {
 											name="shipmentType"
 											value="بحري"
 											checked={formData.shipmentType === "بحري"}
-											onChange={(e) => handleInputChange("shipmentType", e.target.value)}
+											onChange={(e) =>
+												handleInputChange("shipmentType", e.target.value)
+											}
 											className="ml-2 w-5 h-5 text-red-900 focus:ring-red-900"
 										/>
 										<span className="text-gray-700 text-lg">🚢 بحري</span>
@@ -385,7 +387,9 @@ const EditAcidRequestPage = () => {
 											name="shipmentType"
 											value="جوي"
 											checked={formData.shipmentType === "جوي"}
-											onChange={(e) => handleInputChange("shipmentType", e.target.value)}
+											onChange={(e) =>
+												handleInputChange("shipmentType", e.target.value)
+											}
 											className="ml-2 w-5 h-5 text-red-900 focus:ring-red-900"
 										/>
 										<span className="text-gray-700 text-lg">✈️ جوي</span>

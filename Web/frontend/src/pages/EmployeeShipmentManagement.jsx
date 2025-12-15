@@ -9,7 +9,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorMessage from "../components/ErrorMessage";
 import StatusControlSection from "../components/StatusControlSection";
 import RequiredDocumentsSection from "../components/RequiredDocumentsSection";
-import EmployeeUploadSection from "../components/EmployeeUploadSection";
+import EmployeeUploadModal from "../components/EmployeeUploadModal";
 import StatusConfirmDialog from "../components/StatusConfirmDialog";
 import RequestDocumentsModal from "../components/RequestDocumentsModal";
 import ShipmentDetailsGrid from "../components/ShipmentDetailsGrid";
@@ -453,29 +453,278 @@ const EmployeeShipmentManagement = () => {
 								onNumber46Update={handleNumber46Update}
 							/>
 
-							{/* Required Documents Status Section */}
-							{/* TODO: RBAC - Only show if hasPermission('shipment:viewDocs') */}
-							<RequiredDocumentsSection
-								requiredDocuments={shipment.requiredDocuments}
-								shipmentId={shipmentId}
-								token={token}
-								onShipmentUpdate={setShipment}
-							/>
+							{/* Unified Shipment Files Section */}
+							{/* TODO: RBAC - Only show if hasPermission('shipment:viewDocs') && hasPermission('shipment:upload') */}
+							<div className="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
+								{/* Header with Action Buttons */}
+								<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+									<h2 className="text-2xl font-bold text-red-900 flex items-center gap-2">
+										<span>📁</span>
+										<span>ملفات الشحنة</span>
+									</h2>
 
-							{/* Employee Document Upload Section */}
-							{/* TODO: RBAC - Only show if hasPermission('shipment:upload') */}
-							<EmployeeUploadSection
-								showUploadForm={showUploadModal}
-								onToggleUploadForm={() => setShowUploadModal(!showUploadModal)}
-								documentName={documentName}
-								onDocumentNameChange={setDocumentName}
-								selectedFile={selectedFile}
-								onFileSelect={handleFileSelect}
-								onUpload={handleUploadDocument}
-								uploadingFile={uploadingFile}
-								requiredDocuments={shipment.requiredDocuments}
-								onDownloadDocument={handleDownloadDocument}
-							/>
+									<div className="flex flex-wrap gap-3">
+										{/* Refresh Button */}
+										<button
+											onClick={() => window.location.reload()}
+											className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition shadow-md"
+										>
+											<svg
+												className="w-5 h-5"
+												fill="currentColor"
+												viewBox="0 0 20 20"
+											>
+												<path
+													fillRule="evenodd"
+													d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+													clipRule="evenodd"
+												/>
+											</svg>
+											<span>تحديث</span>
+										</button>
+
+										{/* Upload Document Button */}
+										<button
+											onClick={() => setShowUploadModal(!showUploadModal)}
+											className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition shadow-md"
+										>
+											<svg
+												className="w-5 h-5"
+												fill="currentColor"
+												viewBox="0 0 20 20"
+											>
+												<path
+													fillRule="evenodd"
+													d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
+													clipRule="evenodd"
+												/>
+											</svg>
+											<span>رفع مستند</span>
+										</button>
+
+										{/* Request Document Button */}
+										<button
+											onClick={() => setShowDocumentModal(true)}
+											className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition shadow-md"
+										>
+											<svg
+												className="w-5 h-5"
+												fill="currentColor"
+												viewBox="0 0 20 20"
+											>
+												<path
+													fillRule="evenodd"
+													d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z"
+													clipRule="evenodd"
+												/>
+											</svg>
+											<span>طلب مستند</span>
+										</button>
+									</div>
+								</div>
+
+								{/* Proforma Invoice Files - من طلب ACID */}
+								{shipment.acid_request_id?.uploads &&
+									shipment.acid_request_id.uploads.length > 0 && (
+										<div className="mb-8">
+											<h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+												<span>📄</span>
+												<span>الفاتورة المبدئية (من طلب ACID)</span>
+											</h3>
+											<div className="space-y-3">
+												{shipment.acid_request_id.uploads.map(
+													(upload, index) => (
+														<div
+															key={upload._id || index}
+															className="flex items-center justify-between bg-white border border-blue-200 rounded-lg p-4 hover:shadow-md transition"
+														>
+															<div className="flex items-center gap-3">
+																<div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+																	<span className="text-2xl">📄</span>
+																</div>
+																<div className="text-right">
+																	<p className="font-medium text-gray-800">
+																		{upload.originalname ||
+																			upload.filename ||
+																			"فاتورة مبدئية"}
+																	</p>
+																	<p className="text-sm text-gray-500">
+																		{upload.createdAt
+																			? new Date(
+																					upload.createdAt
+																			  ).toLocaleDateString("ar-EG")
+																			: ""}
+																	</p>
+																</div>
+															</div>
+															<button
+																onClick={() =>
+																	handleDownloadDocument(
+																		upload._id,
+																		upload.originalname || upload.filename
+																	)
+																}
+																className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
+															>
+																<span>عرض</span>
+																<svg
+																	className="w-4 h-4"
+																	fill="currentColor"
+																	viewBox="0 0 20 20"
+																>
+																	<path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+																	<path
+																		fillRule="evenodd"
+																		d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+																		clipRule="evenodd"
+																	/>
+																</svg>
+															</button>
+														</div>
+													)
+												)}
+											</div>
+										</div>
+									)}
+
+								{/* Uploaded Documents Section */}
+								<div className="mb-8">
+									<h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+										<span>✅</span>
+										<span>المستندات المرفوعة</span>
+									</h3>
+									{shipment.requiredDocuments?.filter((doc) => doc.uploaded)
+										.length > 0 ? (
+										<div className="space-y-3">
+											{shipment.requiredDocuments
+												.filter((doc) => doc.uploaded)
+												.map((doc, index) => (
+													<div
+														key={index}
+														className="flex items-center justify-between bg-white border border-green-200 rounded-lg p-4 hover:shadow-md transition"
+													>
+														<div className="flex items-center gap-3">
+															<div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+																<span className="text-2xl">📄</span>
+															</div>
+															<div className="text-right">
+																<p className="font-medium text-gray-800">
+																	{doc.name}
+																</p>
+																{doc.uploadedAt && (
+																	<p className="text-sm text-gray-500">
+																		{new Date(
+																			doc.uploadedAt
+																		).toLocaleDateString("ar-EG")}
+																	</p>
+																)}
+															</div>
+														</div>
+														<button
+															onClick={() =>
+																handleDownloadDocument(doc.fileId, doc.name)
+															}
+															className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition flex items-center gap-2"
+														>
+															<span>عرض</span>
+															<svg
+																className="w-4 h-4"
+																fill="currentColor"
+																viewBox="0 0 20 20"
+															>
+																<path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+																<path
+																	fillRule="evenodd"
+																	d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+																	clipRule="evenodd"
+																/>
+															</svg>
+														</button>
+													</div>
+												))}
+										</div>
+									) : (
+										<div className="bg-white rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
+											<svg
+												className="w-16 h-16 mx-auto text-gray-400 mb-4"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+												/>
+											</svg>
+											<p className="text-gray-500 text-lg">
+												لا توجد مستندات مرفوعة بعد
+											</p>
+											<p className="text-gray-400 text-sm mt-2">
+												استخدم زر "رفع مستند" لإضافة مستندات
+											</p>
+										</div>
+									)}
+								</div>
+
+								{/* Required Documents Not Uploaded Yet */}
+								<div>
+									<h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+										<span>⏳</span>
+										<span>المستندات المطلوبة (لم ترفع بعد)</span>
+									</h3>
+									{shipment.requiredDocuments?.filter((doc) => !doc.uploaded)
+										.length > 0 ? (
+										<div className="space-y-3">
+											{shipment.requiredDocuments
+												.filter((doc) => !doc.uploaded)
+												.map((doc, index) => (
+													<div
+														key={index}
+														className="flex items-center justify-between bg-white border border-yellow-200 rounded-lg p-4 hover:shadow-md transition"
+													>
+														<div className="flex items-center gap-3">
+															<span className="px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800">
+																⏳ قيد الانتظار
+															</span>
+														</div>
+														<div className="text-right">
+															<p className="font-bold text-gray-900">
+																{doc.name}
+															</p>
+															<p className="text-sm text-gray-500">
+																في انتظار الرفع من العميل
+															</p>
+														</div>
+													</div>
+												))}
+										</div>
+									) : (
+										<div className="bg-white rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
+											<svg
+												className="w-16 h-16 mx-auto text-gray-400 mb-4"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+												/>
+											</svg>
+											<p className="text-gray-500 text-lg">
+												جميع المستندات المطلوبة تم رفعها
+											</p>
+											<p className="text-gray-400 text-sm mt-2">
+												لا توجد مستندات معلقة حالياً
+											</p>
+										</div>
+									)}
+								</div>
+							</div>
 
 							{/* Action Buttons */}
 							<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-12">
@@ -535,6 +784,22 @@ const EmployeeShipmentManagement = () => {
 				onRemoveDocument={handleRemoveRequiredDocument}
 				onSave={handleSaveRequiredDocuments}
 				uploading={uploadingDoc}
+			/>
+
+			{/* Upload Modal */}
+			<EmployeeUploadModal
+				isOpen={showUploadModal}
+				onClose={() => {
+					setShowUploadModal(false);
+					setSelectedFile(null);
+					setDocumentName("");
+				}}
+				documentName={documentName}
+				onDocumentNameChange={setDocumentName}
+				selectedFile={selectedFile}
+				onFileSelect={handleFileSelect}
+				onUpload={handleUploadDocument}
+				uploadingFile={uploadingFile}
 			/>
 
 			<Footer />

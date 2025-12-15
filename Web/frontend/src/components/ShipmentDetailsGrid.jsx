@@ -10,11 +10,11 @@ import { Pencil, Check, X } from "lucide-react";
  * - canViewShipmentDetails: Allow viewing shipment details
  * - canEditNumber46: Allow editing the number46 field
  */
-const ShipmentDetailsGrid = ({ 
-	shipment, 
-	availableStatuses, 
+const ShipmentDetailsGrid = ({
+	shipment,
+	availableStatuses,
 	isEmployee = false,
-	onNumber46Update 
+	onNumber46Update,
 }) => {
 	const [isEditingNumber46, setIsEditingNumber46] = useState(false);
 	const [number46Value, setNumber46Value] = useState(shipment.number46 || "");
@@ -45,6 +45,10 @@ const ShipmentDetailsGrid = ({
 			value: shipment.acid || "غير محدد",
 		},
 		{
+			label: "نوع الشحنة",
+			value: shipment.shipment_type === "جوي" ? "✈️ جوي" : "🚢 بحري",
+		},
+		{
 			label: "الحالة",
 			value: statusLabel,
 		},
@@ -57,18 +61,32 @@ const ShipmentDetailsGrid = ({
 			value: shipment.country || "غير محدد",
 		},
 		{
-			label: "رقم البوليصة",
-			value: shipment.number46 || "غير محدد",
-			editable: isEmployee,
-			fieldKey: "number46",
+			label: "ميناء الوصول",
+			value: shipment.port_name || "غير محدد",
 		},
 		{
 			label: "عدد الحاويات",
 			value: shipment.num_of_containers || "غير محدد",
 		},
 		{
-			label: "ميناء الوصول",
-			value: shipment.port_name || "غير محدد",
+			label: "أنواع الحاويات",
+			value: shipment.type_of_containers?.join(", ") || "غير محدد",
+		},
+		{
+			label: "رقم البوليصة",
+			value: shipment.number46 || "غير محدد",
+			editable: isEmployee,
+			fieldKey: "number46",
+		},
+		{
+			label: "البوليصة",
+			value: shipment.policy || "غير محدد",
+		},
+		{
+			label: "تاريخ الوصول المتوقع",
+			value: shipment.arrivalDate
+				? new Date(shipment.arrivalDate).toLocaleDateString("ar-EG")
+				: "غير محدد",
 		},
 	];
 

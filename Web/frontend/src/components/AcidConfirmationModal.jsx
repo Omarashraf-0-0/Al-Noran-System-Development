@@ -16,9 +16,9 @@ const AcidConfirmationModal = ({
 		try {
 			toast.loading("جاري تحميل المستند...");
 			const token = localStorage.getItem("token");
-			
+
 			console.log("📥 Fetching upload with ID:", uploadId);
-			
+
 			const response = await axios.get(
 				`${import.meta.env.VITE_API_URL}/api/uploads/${uploadId}`,
 				{
@@ -29,19 +29,20 @@ const AcidConfirmationModal = ({
 			);
 
 			console.log("✅ Upload response:", response.data);
-			
+
 			toast.dismiss();
-			
+
 			// Get presigned URL from response - check all possible locations
-			const fileUrl = response.data?.presignedUrl || 
-			                response.data?.upload?.presignedUrl ||
-			                response.data?.url || 
-			                response.data?.upload?.url ||
-			                response.data?.s3Url ||
-			                response.data?.upload?.s3Url;
-			
+			const fileUrl =
+				response.data?.presignedUrl ||
+				response.data?.upload?.presignedUrl ||
+				response.data?.url ||
+				response.data?.upload?.url ||
+				response.data?.s3Url ||
+				response.data?.upload?.s3Url;
+
 			console.log("🔗 File URL:", fileUrl);
-			
+
 			if (fileUrl) {
 				window.open(fileUrl, "_blank");
 			} else {
@@ -72,8 +73,8 @@ const AcidConfirmationModal = ({
 				<div className="modal-body">
 					<div className="confirmation-message">
 						<p className="warning-text">
-							يرجى مراجعة البيانات التالية بعناية قبل إصدار رقم ACID. لا
-							يمكن التراجع عن هذا الإجراء.
+							يرجى مراجعة البيانات التالية بعناية قبل إصدار رقم ACID. لا يمكن
+							التراجع عن هذا الإجراء.
 						</p>
 					</div>
 
@@ -115,7 +116,8 @@ const AcidConfirmationModal = ({
 						<div className="detail-section">
 							<h4>🏭 بيانات المورد</h4>
 							<p>
-								<strong>الاسم:</strong> {confirmData.supplier?.name || "غير متوفر"}
+								<strong>الاسم:</strong>{" "}
+								{confirmData.supplier?.name || "غير متوفر"}
 							</p>
 							<p>
 								<strong>الرقم الضريبي:</strong>{" "}

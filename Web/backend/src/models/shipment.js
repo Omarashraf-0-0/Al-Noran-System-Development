@@ -15,6 +15,12 @@ const shipmentSchema = new mongoose.Schema(
 			ref: "User",
 		},
 
+		// ACID Request reference (optional - links to the original ACID request)
+		acid_request_id: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "AcidRequest",
+		},
+
 		// Basic shipment info
 		acid: {
 			type: String,
@@ -167,6 +173,53 @@ const shipmentSchema = new mongoose.Schema(
 		timestamps: true,
 	}
 );
+
+// Pre-save hook to generate shipment code
+shipmentSchema.pre("save", async function (next) {
+	if (this.shipmentCode) {
+		return next();
+	}
+
+	try {
+		const User = mongoose.model("User");
+		const Counter = mongoose.model("Counter");
+
+		// Get user to find clientId
+		const user = await User.findById(this.user_id);
+		if (!user) {
+			return next(new Error("User not found for shipment code generation"));
+		}
+
+		// Get or create sequence for this user's shipments
+		const counterName = `shipment_seq_${this.user_id}`;
+		const counter = await Counter.findOneAndUpdate(
+			{ name: counterName },
+			{ $inc: { seq: 1 } },
+			{ new: true, upsert: true }
+		);
+
+		// Format components
+		// Prefix: Determine based on shipment_type (sea/air)
+		let prefix = "SEA";
+		const typeLower = (this.shipment_type || "").toLowerCase();
+		if (typeLower.includes("air") || typeLower.includes("جوي")) {
+			prefix = "AIR";
+		}
+		
+		// Client ID: 4 digits (e.g., 0010)
+		const clientIdStr = (user.clientId || 0).toString().padStart(4, "0");
+		
+		// Sequence: 4 digits (e.g., 0001)
+		const seqStr = counter.seq.toString().padStart(4, "0");
+
+		// Set the code
+		this.shipmentCode = `${prefix}-${clientIdStr}-${seqStr}`;
+		
+		next();
+	} catch (error) {
+		next(error);
+	}
+});
 
 // Indexes for better query performance
 shipmentSchema.index({ user_id: 1 });

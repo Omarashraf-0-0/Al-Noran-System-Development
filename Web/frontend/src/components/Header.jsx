@@ -95,10 +95,7 @@ const Header = () => {
 			) {
 				setShowNotifications(false);
 			}
-			if (
-				dropdownRef.current &&
-				!dropdownRef.current.contains(event.target)
-			) {
+			if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
 				setOpenDropdown(null);
 			}
 		};
@@ -134,30 +131,32 @@ const Header = () => {
 			return [
 				{ label: "الرئيسية", path: "/home", icon: "🏠" },
 				// Import Section
-				{ 
-					label: "الاستيراد", 
-					path: "/import", 
+				{
+					label: "الاستيراد",
+					path: "/import",
 					icon: "📥",
 					isDropdown: true,
 					dropdownItems: [
 						{ label: "طلب رقم ACID", path: "/acidrequest", icon: "🔢" },
 						{ label: "طلبات ACID", path: "/acidrequests", icon: "📋" },
 						{ label: "شحنات الاستيراد", path: "/client-shipments", icon: "🚢" },
-					]
+					],
 				},
 				// Export Section
-				{ 
-					label: "التصدير", 
-					path: "/export", 
+				{
+					label: "التصدير",
+					path: "/export",
 					icon: "📤",
 					isDropdown: true,
 					dropdownItems: [
 						{ label: "طلب رقم UCR", path: "/ucr-request", icon: "🔢" },
 						{ label: "طلباتي UCR", path: "/ucr-requests", icon: "📋" },
 						{ label: "شحنات التصدير", path: "/export-shipments", icon: "🚢" },
-					]
+					],
 				},
 				{ label: "رفع المستندات", path: "/upload-documents", icon: "📄" },
+				{ label: "إدارة المدفوعات", path: "/client-payments", icon: "💳" },
+				{ label: "الأرشيف", path: "/client-archive", icon: "📁" },
 				{ label: "الدعم", path: "/chat", icon: "💬" },
 			];
 		}
@@ -167,28 +166,39 @@ const Header = () => {
 			const employeeType = user.employeeDetails?.employeeType;
 			const baseItems = [
 				{ label: "لوحة التحكم", path: "/employeedashboard", icon: "📊" },
-				{ label: "الشحنات", path: "/employee-shipments", icon: "📦" },
 				// Import Section for Employees
-				{ 
-					label: "الاستيراد", 
-					path: "/import", 
+				{
+					label: "الاستيراد",
+					path: "/import",
 					icon: "📥",
 					isDropdown: true,
 					dropdownItems: [
-						{ label: "طلبات ACID", path: "/employee/acid-requests", icon: "📋" },
-						{ label: "شحنات الاستيراد", path: "/employee-shipments", icon: "🚢" },
-					]
+						{
+							label: "طلبات ACID",
+							path: "/employee/acid-requests",
+							icon: "📋",
+						},
+						{
+							label: "شحنات الاستيراد",
+							path: "/employee-shipments",
+							icon: "🚢",
+						},
+					],
 				},
 				// Export Section for Employees
-				{ 
-					label: "التصدير", 
-					path: "/export", 
+				{
+					label: "التصدير",
+					path: "/export",
 					icon: "📤",
 					isDropdown: true,
 					dropdownItems: [
 						{ label: "طلبات UCR", path: "/employee/ucr-requests", icon: "📋" },
-						{ label: "شحنات التصدير", path: "/employee/export-shipments", icon: "🚢" },
-					]
+						{
+							label: "شحنات التصدير",
+							path: "/employee/export-shipments",
+							icon: "🚢",
+						},
+					],
 				},
 				{ label: "عملائي", path: "/my-customers", icon: "👥" },
 				{ label: "الدعم", path: "/support-dashboard", icon: "💬" },
@@ -276,30 +286,43 @@ const Header = () => {
 						{/* Desktop Navigation Links */}
 						<nav className="hidden md:flex items-center" ref={dropdownRef}>
 							<div className="flex items-baseline space-x-4 space-x-reverse">
-								{navigationItems.map((item, index) => (
+								{navigationItems.map((item, index) =>
 									item.isDropdown ? (
 										// Dropdown Navigation Item
 										<div key={index} className="relative">
 											<button
-												onClick={() => setOpenDropdown(openDropdown === item.label ? null : item.label)}
+												onClick={() =>
+													setOpenDropdown(
+														openDropdown === item.label ? null : item.label
+													)
+												}
 												className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1 ${
-													item.dropdownItems?.some(sub => isActivePath(sub.path))
+													item.dropdownItems?.some((sub) =>
+														isActivePath(sub.path)
+													)
 														? "text-red-800 font-bold bg-red-50"
 														: "text-gray-700 hover:text-red-800 hover:bg-gray-50"
 												}`}
 											>
 												<span className="inline-block ml-1">{item.icon}</span>
 												{item.label}
-												<svg 
-													className={`w-4 h-4 transition-transform ${openDropdown === item.label ? 'rotate-180' : ''}`} 
-													fill="none" 
-													stroke="currentColor" 
+												<svg
+													className={`w-4 h-4 transition-transform ${
+														openDropdown === item.label ? "rotate-180" : ""
+													}`}
+													fill="none"
+													stroke="currentColor"
 													viewBox="0 0 24 24"
 												>
-													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M19 9l-7 7-7-7"
+													/>
 												</svg>
 											</button>
-											
+
 											{/* Dropdown Menu */}
 											{openDropdown === item.label && (
 												<div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50 py-2">
@@ -314,7 +337,9 @@ const Header = () => {
 																	: "text-gray-700 hover:text-red-800 hover:bg-gray-50"
 															}`}
 														>
-															<span className="inline-block ml-2">{subItem.icon}</span>
+															<span className="inline-block ml-2">
+																{subItem.icon}
+															</span>
 															{subItem.label}
 														</Link>
 													))}
@@ -336,7 +361,7 @@ const Header = () => {
 											{item.label}
 										</Link>
 									)
-								))}
+								)}
 							</div>
 						</nav>
 					</div>
@@ -484,14 +509,20 @@ const Header = () => {
 				{isMobileMenuOpen && (
 					<div className="md:hidden border-t border-gray-200 py-4">
 						<nav className="flex flex-col space-y-2">
-							{navigationItems.map((item, index) => (
+							{navigationItems.map((item, index) =>
 								item.isDropdown ? (
 									// Dropdown in mobile
 									<div key={index} className="flex flex-col">
 										<button
-											onClick={() => setOpenDropdown(openDropdown === item.label ? null : item.label)}
+											onClick={() =>
+												setOpenDropdown(
+													openDropdown === item.label ? null : item.label
+												)
+											}
 											className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-between ${
-												item.dropdownItems?.some(sub => isActivePath(sub.path))
+												item.dropdownItems?.some((sub) =>
+													isActivePath(sub.path)
+												)
 													? "text-red-800 font-bold bg-red-50"
 													: "text-gray-700 hover:text-red-800 hover:bg-gray-50"
 											}`}
@@ -500,13 +531,20 @@ const Header = () => {
 												<span className="inline-block ml-2">{item.icon}</span>
 												{item.label}
 											</span>
-											<svg 
-												className={`w-4 h-4 transition-transform ${openDropdown === item.label ? 'rotate-180' : ''}`} 
-												fill="none" 
-												stroke="currentColor" 
+											<svg
+												className={`w-4 h-4 transition-transform ${
+													openDropdown === item.label ? "rotate-180" : ""
+												}`}
+												fill="none"
+												stroke="currentColor"
 												viewBox="0 0 24 24"
 											>
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M19 9l-7 7-7-7"
+												/>
 											</svg>
 										</button>
 										{openDropdown === item.label && (
@@ -525,7 +563,9 @@ const Header = () => {
 																: "text-gray-600 hover:text-red-800 hover:bg-gray-50"
 														}`}
 													>
-														<span className="inline-block ml-2">{subItem.icon}</span>
+														<span className="inline-block ml-2">
+															{subItem.icon}
+														</span>
 														{subItem.label}
 													</Link>
 												))}
@@ -547,7 +587,7 @@ const Header = () => {
 										{item.label}
 									</Link>
 								)
-							))}
+							)}
 						</nav>
 					</div>
 				)}

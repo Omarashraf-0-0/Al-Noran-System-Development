@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
@@ -350,14 +351,38 @@ const DocumentApprovalSection = () => {
 											)}
 
 											<div className="flex gap-2">
-												<a
-													href={doc.url}
-													target="_blank"
-													rel="noopener noreferrer"
-													className="flex-1 text-center text-xs text-blue-600 hover:text-blue-900 px-2 py-1 border border-blue-600 rounded hover:bg-blue-50"
-												>
-													👁️ عرض
-												</a>
+													<button
+														onClick={async () => {
+															try {
+																toast.loading("جاري تحميل الملف...");
+																const response = await axios.get(
+																	`${import.meta.env.VITE_API_URL}/api/upload/users/${doc._id}`,
+																	{
+																		headers: { Authorization: `Bearer ${token}` },
+																	}
+																);
+																toast.dismiss();
+																
+																const fileUrl = 
+																	response.data?.upload?.presignedUrl || 
+																	response.data?.presignedUrl || 
+																	doc.url;
+
+																if (fileUrl) {
+																	window.open(fileUrl, "_blank");
+																} else {
+																	toast.error("رابط الملف غير متاح");
+																}
+															} catch (err) {
+																toast.dismiss();
+																console.error("Error fetching file URL:", err);
+																toast.error("فشل تحميل رابط الملف");
+															}
+														}}
+														className="flex-1 text-center text-xs text-blue-600 hover:text-blue-900 px-2 py-1 border border-blue-600 rounded hover:bg-blue-50"
+													>
+														👁️ عرض
+													</button>
 												{doc.approvalStatus === "pending" && (
 													<>
 														<button
@@ -447,14 +472,38 @@ const DocumentApprovalSection = () => {
 										</td>
 										<td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
 											<div className="flex gap-2">
-												<a
-													href={doc.url}
-													target="_blank"
-													rel="noopener noreferrer"
+												<button
+													onClick={async () => {
+														try {
+															toast.loading("جاري تحميل الملف...");
+															const response = await axios.get(
+																`${import.meta.env.VITE_API_URL}/api/upload/users/${doc._id}`,
+																{
+																	headers: { Authorization: `Bearer ${token}` },
+																}
+															);
+															toast.dismiss();
+															
+															const fileUrl = 
+																response.data?.upload?.presignedUrl || 
+																response.data?.presignedUrl || 
+																doc.url;
+
+															if (fileUrl) {
+																window.open(fileUrl, "_blank");
+															} else {
+																toast.error("رابط الملف غير متاح");
+															}
+														} catch (err) {
+															toast.dismiss();
+															console.error("Error fetching file URL:", err);
+															toast.error("فشل تحميل رابط الملف");
+														}
+													}}
 													className="text-blue-600 hover:text-blue-900 px-2 py-1 border border-blue-600 rounded hover:bg-blue-50 text-xs"
 												>
 													👁️ عرض
-												</a>
+												</button>
 												{doc.approvalStatus === "pending" && (
 													<>
 														<button

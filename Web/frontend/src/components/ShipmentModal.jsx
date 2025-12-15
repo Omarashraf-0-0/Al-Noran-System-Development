@@ -43,15 +43,25 @@ const ShipmentModal = ({
 					<form onSubmit={onSubmit} className="shipment-form">
 						<div className="form-group">
 							<label>Port Name *</label>
-							<input
-								type="text"
+							<select
 								required
 								value={shipmentData.portName}
 								onChange={(e) =>
 									onDataChange({ ...shipmentData, portName: e.target.value })
 								}
-								placeholder="Enter port name"
-							/>
+								className="form-select"
+							>
+								<option value="">اختر الميناء</option>
+								<option value="ميناء الإسكندرية">ميناء الإسكندرية (Port of Alexandria)</option>
+								<option value="ميناء الدخيلة">ميناء الدخيلة (El-Dekheila)</option>
+								<option value="ميناء دمياط">ميناء دمياط (Port of Damietta)</option>
+								<option value="ميناء بورسعيد">ميناء بورسعيد (Port Said)</option>
+								<option value="ميناء السويس">ميناء السويس (Port of Suez)</option>
+								<option value="ميناء الأدبية">ميناء الأدبية (Port of Adabiya)</option>
+								<option value="ميناء العين السخنة">ميناء العين السخنة (Port of Ain Sukhna)</option>
+								<option value="ميناء سفاجا">ميناء سفاجا (Port of Safaga)</option>
+								<option value="ميناء نويبع">ميناء نويبع (Port of Nuweiba)</option>
+							</select>
 						</div>
 
 						<div className="form-group">

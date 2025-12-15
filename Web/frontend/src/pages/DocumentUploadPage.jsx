@@ -88,6 +88,9 @@ const DocumentUploadPage = () => {
 			);
 			setUserInfo(response.data.user);
 			setClientType(response.data.user.clientDetails?.clientType || "personal");
+			
+			// Update localStorage with fresh user info to reflect verification status immediately
+			localStorage.setItem("user", JSON.stringify(response.data.user));
 		} catch (error) {
 			console.error("Error fetching user info:", error);
 			// If token invalid, redirect to login
@@ -374,6 +377,26 @@ const DocumentUploadPage = () => {
 							<h1 className="text-3xl font-bold text-gray-800 mb-2">
 								📄 رفع المستندات المطلوبة
 							</h1>
+							
+							{/* Verification Status Warning */}
+							{!userInfo?.clientDetails?.documentsVerified && (
+								<div className="bg-orange-50 border-r-4 border-orange-500 p-4 mb-6 rounded shadow-sm text-right mx-auto max-w-2xl">
+									<div className="flex items-center">
+										<div className="flex-shrink-0 text-orange-500 text-2xl ml-3">
+											⚠️
+										</div>
+										<div>
+											<p className="font-bold text-orange-800">
+												تنبيه هام
+											</p>
+											<p className="text-sm text-orange-700 mt-1">
+												لا يمكنك استخدام باقي خصائص التطبيق حتى يتم رفع جميع المستندات المطلوبة ومراجعتها والموافقة عليها من قبل الإدارة.
+											</p>
+										</div>
+									</div>
+								</div>
+							)}
+
 							<p className="text-gray-600">
 								نوع العميل:{" "}
 								<span className="font-semibold">

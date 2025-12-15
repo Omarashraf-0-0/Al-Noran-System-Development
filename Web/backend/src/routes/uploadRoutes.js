@@ -82,7 +82,11 @@ router.get("/:id", protect, uploadController.getUploadById);
 
 // @route   GET /api/upload/related/:model/:id
 // @desc    Get uploads by related entity (protected route)
-router.get("/related/:model/:id", protect, uploadController.getUploadsByRelatedEntity);
+router.get(
+	"/related/:model/:id",
+	protect,
+	uploadController.getUploadsByRelatedEntity
+);
 
 // @route   PATCH /api/upload/:id
 // @desc    Update upload metadata

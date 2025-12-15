@@ -658,7 +658,12 @@ const deleteUpload = async (req, res) => {
 
 		// Soft delete from database (mark as inactive)
 		upload.isActive = false;
+
 		await upload.save();
+		// we need to change the status of the user.clientDetails.documentsVerified to false
+		const user = await User.findById(userId);
+		user.clientDetails.documentsVerified = false;
+		await user.save();
 
 		res.status(200).json({
 			success: true,
