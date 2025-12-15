@@ -305,6 +305,7 @@ const UCRRequestDetailsPage = () => {
 					approved: "تم اعتماد المستند بنجاح",
 					rejected: "تم رفض المستند",
 					needs_revision: "تم طلب تعديل المستند",
+					pending: "تم إعادة تعيين حالة المستند",
 				};
 				toast.success(messages[status] || "تم تحديث حالة المستند");
 				setDocReviewModal({ open: false, doc: null, action: null });
@@ -447,18 +448,46 @@ const UCRRequestDetailsPage = () => {
 						</div>
 					)}
 
-					{request.status === "needs_revision" && request.employeeNotes && (
+					{request.status === "needs_revision" && (
 						<div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-6">
 							<p className="font-bold text-orange-800 mb-2">
-								⚠️ ملاحظات التعديل المطلوب:
+								⚠️ مطلوب تعديل المستندات التالية:
 							</p>
-							<p className="text-orange-700">{request.employeeNotes}</p>
-							<button
-								onClick={() => navigate(`/ucr-request/${requestId}/edit`)}
-								className="mt-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
-							>
-								تعديل الطلب الآن
-							</button>
+							
+							{/* Show specific documents that need revision */}
+							{request.documentStatuses?.filter(ds => ds.status === "needs_revision").length > 0 ? (
+								<div className="space-y-2 mb-4">
+									{request.documentStatuses.filter(ds => ds.status === "needs_revision").map((ds, idx) => {
+										// Find the matching upload to get document type
+										const upload = request.uploads?.find(u => 
+											(u._id === ds.uploadId) || (u.id === ds.uploadId) || 
+											(u._id?.toString() === ds.uploadId?.toString())
+										);
+										const docName = upload?.documentType 
+											? DOCUMENT_LABELS[upload.documentType] || upload.documentType 
+											: "مستند";
+										return (
+											<div key={idx} className="bg-white rounded-lg p-3 border border-orange-200">
+												<p className="text-orange-700 font-bold">📄 {docName}</p>
+												{ds.employeeNotes && (
+													<p className="text-orange-600 text-sm mt-1 mr-4">💬 {ds.employeeNotes}</p>
+												)}
+											</div>
+										);
+									})}
+								</div>
+							) : request.employeeNotes ? (
+								<p className="text-orange-700 mb-4">{request.employeeNotes}</p>
+							) : null}
+
+							{userType === "client" && (
+								<button
+									onClick={() => navigate(`/ucr-request/${requestId}/edit`)}
+									className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-bold"
+								>
+									✏️ تعديل الطلب الآن
+								</button>
+							)}
 						</div>
 					)}
 
@@ -709,30 +738,41 @@ const UCRRequestDetailsPage = () => {
 													</a>
 												)}
 												
-												{/* Employee review buttons */}
-												{userType === "employee" && status === "pending" && (
-													<div className="flex gap-1">
-														<button
-															onClick={() => openDocReviewModal(doc, "approve")}
-															className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700 transition"
-															title="اعتماد"
-														>
-															✅
-														</button>
-														<button
-															onClick={() => openDocReviewModal(doc, "revision")}
-															className="bg-yellow-600 text-white px-2 py-1 rounded text-xs hover:bg-yellow-700 transition"
-															title="طلب تعديل"
-														>
-															⚠️
-														</button>
-														<button
-															onClick={() => openDocReviewModal(doc, "reject")}
-															className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 transition"
-															title="رفض"
-														>
-															❌
-														</button>
+												{/* Employee review buttons - always visible for employees */}
+												{userType === "employee" && (
+													<div className="flex gap-1 flex-wrap">
+														{/* Show approve/revision/reject for pending documents */}
+														{status === "pending" && (
+															<>
+																<button
+																	onClick={() => openDocReviewModal(doc, "approve")}
+																	className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700 transition"
+																>
+																	اعتماد
+																</button>
+																<button
+																	onClick={() => openDocReviewModal(doc, "revision")}
+																	className="bg-yellow-600 text-white px-2 py-1 rounded text-xs hover:bg-yellow-700 transition"
+																>
+																	طلب تعديل
+																</button>
+																<button
+																	onClick={() => openDocReviewModal(doc, "reject")}
+																	className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 transition"
+																>
+																	رفض
+																</button>
+															</>
+														)}
+														{/* Show reset button for non-pending documents (already reviewed) */}
+														{status !== "pending" && (
+															<button
+																onClick={() => openDocReviewModal(doc, "reset")}
+																className="bg-gray-600 text-white px-2 py-1 rounded text-xs hover:bg-gray-700 transition"
+															>
+																🔄 إعادة تعيين
+															</button>
+														)}
 													</div>
 												)}
 											</div>
@@ -777,18 +817,22 @@ const UCRRequestDetailsPage = () => {
 							← العودة للطلبات
 						</button>
 
-						{/* Edit button (pending only, client only) */}
-						{request.status === "pending" && userType === "client" && (
+						{/* Edit button (pending or needs_revision, client only) */}
+						{(request.status === "pending" || request.status === "needs_revision") && userType === "client" && (
 							<button
 								onClick={() => navigate(`/ucr-request/${requestId}/edit`)}
-								className="w-full sm:w-auto px-6 py-3 bg-yellow-600 text-white font-bold rounded-lg hover:bg-yellow-700 transition"
+								className={`w-full sm:w-auto px-6 py-3 text-white font-bold rounded-lg transition ${
+									request.status === "needs_revision" 
+										? "bg-orange-600 hover:bg-orange-700 animate-pulse" 
+										: "bg-yellow-600 hover:bg-yellow-700"
+								}`}
 							>
-								✏️ تعديل الطلب
+								{request.status === "needs_revision" ? "⚠️ تعديل الطلب (مطلوب تعديل)" : "✏️ تعديل الطلب"}
 							</button>
 						)}
 
-						{/* Delete button (pending only, client only) */}
-						{request.status === "pending" && userType === "client" && (
+						{/* Delete button (pending or needs_revision, client only) */}
+						{(request.status === "pending" || request.status === "needs_revision") && userType === "client" && (
 							<button
 								onClick={handleDelete}
 								className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition"
@@ -827,6 +871,7 @@ const UCRRequestDetailsPage = () => {
 							{docReviewModal.action === "approve" && "✅ اعتماد المستند"}
 							{docReviewModal.action === "reject" && "❌ رفض المستند"}
 							{docReviewModal.action === "revision" && "⚠️ طلب تعديل المستند"}
+							{docReviewModal.action === "reset" && "🔄 إعادة تعيين حالة المستند"}
 						</h3>
 
 						<p className="text-sm text-gray-600 mb-4">
@@ -850,24 +895,34 @@ const UCRRequestDetailsPage = () => {
 							</div>
 						)}
 
-						<div className="mb-4">
-							<label className="block text-sm font-medium text-gray-700 mb-1">
-								{docReviewModal.action === "approve" && "ملاحظات (اختياري)"}
-								{docReviewModal.action === "reject" && "سبب الرفض *"}
-								{docReviewModal.action === "revision" && "ملاحظات التعديل المطلوب *"}
-							</label>
-							<textarea
-								value={docReviewNotes}
-								onChange={(e) => setDocReviewNotes(e.target.value)}
-								rows={3}
-								className="w-full p-2 border border-gray-300 rounded-lg bg-white text-black focus:ring-2 focus:ring-red-500 focus:border-red-500"
-								placeholder={
-									docReviewModal.action === "approve"
-										? "أضف أي ملاحظات (اختياري)..."
-										: "اكتب السبب أو الملاحظات هنا..."
-								}
-							/>
-						</div>
+						{docReviewModal.action !== "reset" && (
+							<div className="mb-4">
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									{docReviewModal.action === "approve" && "ملاحظات (اختياري)"}
+									{docReviewModal.action === "reject" && "سبب الرفض *"}
+									{docReviewModal.action === "revision" && "ملاحظات التعديل المطلوب *"}
+								</label>
+								<textarea
+									value={docReviewNotes}
+									onChange={(e) => setDocReviewNotes(e.target.value)}
+									rows={3}
+									className="w-full p-2 border border-gray-300 rounded-lg bg-white text-black focus:ring-2 focus:ring-red-500 focus:border-red-500"
+									placeholder={
+										docReviewModal.action === "approve"
+											? "أضف أي ملاحظات (اختياري)..."
+											: "اكتب السبب أو الملاحظات هنا..."
+									}
+								/>
+							</div>
+						)}
+
+						{docReviewModal.action === "reset" && (
+							<div className="mb-4 p-3 bg-gray-100 rounded-lg">
+								<p className="text-gray-700 text-sm">
+									سيتم إعادة تعيين حالة المستند إلى "قيد المراجعة" وإزالة أي ملاحظات سابقة.
+								</p>
+							</div>
+						)}
 
 						<div className="flex justify-end gap-2">
 							<button
@@ -882,6 +937,7 @@ const UCRRequestDetailsPage = () => {
 									if (docReviewModal.action === "approve") handleDocumentReview("approved");
 									else if (docReviewModal.action === "reject") handleDocumentReview("rejected");
 									else if (docReviewModal.action === "revision") handleDocumentReview("needs_revision");
+									else if (docReviewModal.action === "reset") handleDocumentReview("pending");
 								}}
 								disabled={processingDocReview}
 								className={`px-4 py-2 text-white rounded-lg disabled:opacity-50 flex items-center gap-2 ${
@@ -889,6 +945,8 @@ const UCRRequestDetailsPage = () => {
 										? "bg-green-600 hover:bg-green-700"
 										: docReviewModal.action === "reject"
 										? "bg-red-600 hover:bg-red-700"
+										: docReviewModal.action === "reset"
+										? "bg-gray-600 hover:bg-gray-700"
 										: "bg-yellow-600 hover:bg-yellow-700"
 								}`}
 							>
@@ -898,6 +956,7 @@ const UCRRequestDetailsPage = () => {
 								{docReviewModal.action === "approve" && "تأكيد الاعتماد"}
 								{docReviewModal.action === "reject" && "تأكيد الرفض"}
 								{docReviewModal.action === "revision" && "إرسال طلب التعديل"}
+								{docReviewModal.action === "reset" && "إعادة تعيين"}
 							</button>
 						</div>
 					</div>

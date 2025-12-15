@@ -279,13 +279,16 @@ const updateUCRRequest = async (req, res) => {
 			});
 		}
 
-		// Check if editable (only pending requests)
-		if (request.status !== "pending") {
+		// Check if editable (pending or needs_revision requests)
+		if (request.status !== "pending" && request.status !== "needs_revision") {
 			return res.status(400).json({
 				success: false,
 				message: "لا يمكن تعديل الطلب بعد بدء المعالجة",
 			});
 		}
+
+		// If was needs_revision, reset to pending after edit
+		const wasNeedsRevision = request.status === "needs_revision";
 
 		// Update allowed fields
 		const updateFields = [
@@ -316,6 +319,12 @@ const updateUCRRequest = async (req, res) => {
 		// Recalculate fee if value changed
 		if (req.body.valueInEGP !== undefined) {
 			request.calculateExportFee();
+		}
+
+		// If was needs_revision, reset to pending after edit
+		if (wasNeedsRevision) {
+			request.status = "pending";
+			request.employeeNotes = ""; // Clear old notes
 		}
 
 		await request.save();

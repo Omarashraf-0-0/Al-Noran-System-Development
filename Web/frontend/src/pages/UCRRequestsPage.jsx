@@ -49,6 +49,16 @@ const STATUS_CONFIG = {
 	},
 };
 
+// Document type labels
+const DOCUMENT_LABELS = {
+	bank_waiver: "التنازل البنكي",
+	export_invoice: "الفاتورة الأصلية",
+	export_packing_list: "كشف العبوة",
+	shipping_permit: "إذن الشحن",
+	awb: "بوليصة الشحن الجوي (AWB)",
+	bl: "بوليصة الشحن البحري (B/L)",
+};
+
 const UCRRequestsPage = () => {
 	const navigate = useNavigate();
 	const [loading, setLoading] = useState(true);
@@ -440,31 +450,67 @@ const UCRRequestsPage = () => {
 												</td>
 
 												<td className="py-3 px-4 align-top">
-													<div className="flex items-center gap-2">
-														<button
-															onClick={() => navigate(`/ucr-request/${request._id}`)}
-															className="text-blue-600 text-sm font-medium underline cursor-pointer hover:text-blue-800"
-														>
-															عرض التفاصيل
-														</button>
-														{request.status === "pending" && (
-															<>
-																<span className="text-gray-300">|</span>
-																<button
-																	onClick={() => navigate(`/ucr-request/${request._id}/edit`)}
-																	className="text-yellow-600 text-sm font-medium underline cursor-pointer hover:text-yellow-800"
-																>
-																	تعديل
-																</button>
-																<span className="text-gray-300">|</span>
-																<button
-																	onClick={() => handleDelete(request._id)}
-																	className="text-red-600 text-sm font-medium underline cursor-pointer hover:text-red-800"
-																>
-																	حذف
-																</button>
-															</>
+													<div className="flex flex-col gap-2">
+														{/* Needs revision alert - show which documents need revision */}
+														{request.status === "needs_revision" && (
+															<div className="bg-orange-100 border border-orange-300 rounded-lg p-2 text-xs">
+																<p className="text-orange-800 font-bold mb-1">⚠️ مطلوب تعديل</p>
+																{/* Show documents that need revision */}
+																{request.documentStatuses?.filter(ds => ds.status === "needs_revision").length > 0 ? (
+																	<div className="space-y-1">
+																		{request.documentStatuses.filter(ds => ds.status === "needs_revision").map((ds, idx) => {
+																			// Find the matching upload to get document type
+																			const upload = request.uploads?.find(u => 
+																				u._id === ds.uploadId || u.id === ds.uploadId
+																			);
+																			const docName = upload?.documentType 
+																				? DOCUMENT_LABELS[upload.documentType] || upload.documentType 
+																				: "مستند";
+																			return (
+																				<div key={idx} className="bg-white/50 rounded p-1">
+																					<p className="text-orange-700 font-medium">📄 {docName}</p>
+																					{ds.employeeNotes && (
+																						<p className="text-orange-600 text-xs mr-4">💬 {ds.employeeNotes}</p>
+																					)}
+																				</div>
+																			);
+																		})}
+																	</div>
+																) : request.employeeNotes ? (
+																	<p className="text-orange-700 text-xs">{request.employeeNotes}</p>
+																) : null}
+															</div>
 														)}
+														<div className="flex items-center gap-2">
+															<button
+																onClick={() => navigate(`/ucr-request/${request._id}`)}
+																className="text-blue-600 text-sm font-medium underline cursor-pointer hover:text-blue-800"
+															>
+																عرض التفاصيل
+															</button>
+															{(request.status === "pending" || request.status === "needs_revision") && (
+																<>
+																	<span className="text-gray-300">|</span>
+																	<button
+																		onClick={() => navigate(`/ucr-request/${request._id}/edit`)}
+																		className={`text-sm font-medium underline cursor-pointer ${request.status === "needs_revision" ? "text-orange-600 hover:text-orange-800 font-bold" : "text-yellow-600 hover:text-yellow-800"}`}
+																	>
+																		{request.status === "needs_revision" ? "✏️ تعديل الآن" : "تعديل"}
+																	</button>
+																</>
+															)}
+															{request.status === "pending" && (
+																<>
+																	<span className="text-gray-300">|</span>
+																	<button
+																		onClick={() => handleDelete(request._id)}
+																		className="text-red-600 text-sm font-medium underline cursor-pointer hover:text-red-800"
+																	>
+																		حذف
+																	</button>
+																</>
+															)}
+														</div>
 													</div>
 												</td>
 											</tr>

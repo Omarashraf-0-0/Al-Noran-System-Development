@@ -1,5 +1,30 @@
 const ExportShipment = require("../models/exportShipment");
 const UCRRequest = require("../models/ucrRequest");
+const { getPresignedUrl } = require("../utils/s3Helpers");
+
+// Helper function to add presigned URLs to documents array
+const addPresignedUrlsToDocuments = async (documents) => {
+	if (!documents || documents.length === 0) return documents;
+	
+	return Promise.all(
+		documents.map(async (doc) => {
+			try {
+				if (doc.s3Key) {
+					const presignedUrl = await getPresignedUrl(doc.s3Key, 3600);
+					return {
+						...doc.toObject ? doc.toObject() : doc,
+						url: presignedUrl,
+						presignedUrl: presignedUrl,
+					};
+				}
+				return doc.toObject ? doc.toObject() : doc;
+			} catch (err) {
+				console.error(`Error generating presigned URL for doc ${doc._id}:`, err.message);
+				return doc.toObject ? doc.toObject() : doc;
+			}
+		})
+	);
+};
 
 // =====================================================
 // CLIENT ENDPOINTS
@@ -20,9 +45,28 @@ const getMyExportShipments = async (req, res) => {
 			.populate("certificateOfOrigin")
 			.populate("ucrRequestId", "ucrNumber requestNumber valueInEGP certificationType");
 
+		// Add presigned URLs to documents
+		const shipmentsWithUrls = await Promise.all(
+			shipments.map(async (shipment) => {
+				const shipmentData = shipment.toObject();
+				if (shipmentData.documents && shipmentData.documents.length > 0) {
+					shipmentData.documents = await addPresignedUrlsToDocuments(shipment.documents);
+				}
+				if (shipmentData.certificateOfOrigin?.s3Key) {
+					try {
+						const presignedUrl = await getPresignedUrl(shipmentData.certificateOfOrigin.s3Key, 3600);
+						shipmentData.certificateOfOrigin.url = presignedUrl;
+					} catch (err) {
+						console.error("Error generating presigned URL:", err.message);
+					}
+				}
+				return shipmentData;
+			})
+		);
+
 		res.json({
 			success: true,
-			shipments,
+			shipments: shipmentsWithUrls,
 		});
 	} catch (error) {
 		console.error("Error fetching export shipments:", error);
@@ -80,10 +124,56 @@ const getExportShipmentById = async (req, res) => {
 		// Calculate progress
 		const progress = shipment.getProgressPercentage();
 
+		// Convert to plain object
+		const shipmentData = shipment.toObject();
+
+		// Generate presigned URLs for shipment documents
+		if (shipmentData.documents && shipmentData.documents.length > 0) {
+			shipmentData.documents = await addPresignedUrlsToDocuments(shipment.documents);
+		}
+
+		// Generate presigned URLs for certificate of origin
+		if (shipmentData.certificateOfOrigin?.s3Key) {
+			try {
+				const presignedUrl = await getPresignedUrl(shipmentData.certificateOfOrigin.s3Key, 3600);
+				shipmentData.certificateOfOrigin.url = presignedUrl;
+				shipmentData.certificateOfOrigin.presignedUrl = presignedUrl;
+			} catch (err) {
+				console.error("Error generating presigned URL for certificate of origin:", err.message);
+			}
+		}
+
+		// Generate presigned URLs for form46Document
+		if (shipmentData.form46Document?.s3Key) {
+			try {
+				const presignedUrl = await getPresignedUrl(shipmentData.form46Document.s3Key, 3600);
+				shipmentData.form46Document.url = presignedUrl;
+				shipmentData.form46Document.presignedUrl = presignedUrl;
+			} catch (err) {
+				console.error("Error generating presigned URL for form46Document:", err.message);
+			}
+		}
+
+		// Generate presigned URLs for regulatoryApprovalDocument
+		if (shipmentData.regulatoryApprovalDocument?.s3Key) {
+			try {
+				const presignedUrl = await getPresignedUrl(shipmentData.regulatoryApprovalDocument.s3Key, 3600);
+				shipmentData.regulatoryApprovalDocument.url = presignedUrl;
+				shipmentData.regulatoryApprovalDocument.presignedUrl = presignedUrl;
+			} catch (err) {
+				console.error("Error generating presigned URL for regulatoryApprovalDocument:", err.message);
+			}
+		}
+
+		// Generate presigned URLs for UCR uploads
+		if (shipmentData.ucrRequestId?.uploads && shipmentData.ucrRequestId.uploads.length > 0) {
+			shipmentData.ucrRequestId.uploads = await addPresignedUrlsToDocuments(shipment.ucrRequestId.uploads);
+		}
+
 		res.json({
 			success: true,
 			shipment: {
-				...shipment.toObject(),
+				...shipmentData,
 				progressPercentage: progress,
 			},
 		});

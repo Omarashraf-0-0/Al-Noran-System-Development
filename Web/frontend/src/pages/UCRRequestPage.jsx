@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
@@ -105,6 +105,23 @@ const UCRRequestPage = () => {
 	// Uploaded documents
 	const [uploadedDocuments, setUploadedDocuments] = useState([]);
 	const [selectedFile, setSelectedFile] = useState(null);
+	
+	// Document statuses for edit mode (to show which docs need revision)
+	const [documentStatuses, setDocumentStatuses] = useState([]);
+	const [requestStatus, setRequestStatus] = useState("pending");
+
+	// Document labels
+	const DOCUMENT_LABELS = {
+		bank_waiver: "التنازل البنكي",
+		export_invoice: "الفاتورة الأصلية",
+		export_packing_list: "كشف العبوة",
+		shipping_permit: "إذن الشحن",
+		awb: "بوليصة الشحن الجوي (AWB)",
+		bl: "بوليصة الشحن البحري (B/L)",
+	};
+
+	// Get documents that need revision
+	const documentsNeedingRevision = documentStatuses.filter(ds => ds.status === "needs_revision");
 
 	// Fetch existing request data when in edit mode
 	const fetchRequestData = useCallback(async () => {
@@ -122,6 +139,10 @@ const UCRRequestPage = () => {
 
 			if (response.data.success) {
 				const request = response.data.data;
+				
+				// Store request status and document statuses
+				setRequestStatus(request.status || "pending");
+				setDocumentStatuses(request.documentStatuses || []);
 				
 				// Populate form data
 				setFormData({
@@ -210,6 +231,19 @@ const UCRRequestPage = () => {
 			fetchRequestData();
 		}
 	}, [navigate, isEditMode, fetchRequestData]);
+
+	// Scroll to documents section if there are documents needing revision
+	useEffect(() => {
+		if (documentsNeedingRevision.length > 0 && !fetchingData) {
+			// Small delay to ensure DOM is ready
+			setTimeout(() => {
+				const docsSection = document.getElementById("documents-section");
+				if (docsSection) {
+					docsSection.scrollIntoView({ behavior: "smooth", block: "center" });
+				}
+			}, 500);
+		}
+	}, [documentsNeedingRevision.length, fetchingData]);
 
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
@@ -333,14 +367,38 @@ const UCRRequestPage = () => {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 
-		// Validation
-		if (!formData.generalDescription || !formData.totalWeight || !formData.packagesCount) {
-			toast.error("الرجاء ملء جميع الحقول الإلزامية");
+		// ==========================================
+		// COMPREHENSIVE VALIDATION
+		// ==========================================
+
+		// 1. Basic required fields
+		if (!formData.generalDescription?.trim()) {
+			toast.error("الرجاء إدخال وصف البضاعة");
 			return;
 		}
 
-		if (!formData.valueInEGP || !formData.originalInvoiceNumber || !formData.invoiceDate) {
-			toast.error("الرجاء ملء بيانات الفاتورة");
+		if (!formData.totalWeight) {
+			toast.error("الرجاء إدخال الوزن الكلي");
+			return;
+		}
+
+		if (!formData.packagesCount) {
+			toast.error("الرجاء إدخال عدد الطرود");
+			return;
+		}
+
+		if (!formData.valueInEGP) {
+			toast.error("الرجاء إدخال قيمة الشحنة بالجنيه المصري");
+			return;
+		}
+
+		if (!formData.originalInvoiceNumber?.trim()) {
+			toast.error("الرجاء إدخال رقم الفاتورة");
+			return;
+		}
+
+		if (!formData.invoiceDate) {
+			toast.error("الرجاء اختيار تاريخ الفاتورة");
 			return;
 		}
 
@@ -349,25 +407,157 @@ const UCRRequestPage = () => {
 			return;
 		}
 
-		// Sea validation - only require containers count if containers type
-		if (formData.shippingMethod === "sea" && formData.seaShipmentType === "containers" && !formData.containersCount) {
-			toast.error("الرجاء إدخال عدد الحاويات للشحن البحري");
+		// 2. Numeric validations - no negative numbers
+		const totalWeight = parseFloat(formData.totalWeight);
+		const packagesCount = parseInt(formData.packagesCount);
+		const valueInEGP = parseFloat(parseFormattedNumber(formData.valueInEGP));
+
+		if (isNaN(totalWeight) || totalWeight <= 0) {
+			toast.error("الوزن الكلي يجب أن يكون رقم موجب أكبر من صفر");
 			return;
 		}
 
-		// First item validation - description, quantity, value, unit are required
-		if (items[0] && !items[0].description.trim()) {
+		if (totalWeight > 1000000) {
+			toast.error("الوزن الكلي يبدو كبيرًا جدًا. الرجاء التحقق من القيمة");
+			return;
+		}
+
+		if (isNaN(packagesCount) || packagesCount <= 0) {
+			toast.error("عدد الطرود يجب أن يكون رقم صحيح موجب");
+			return;
+		}
+
+		if (packagesCount > 10000) {
+			toast.error("عدد الطرود يبدو كبيرًا جدًا. الرجاء التحقق من القيمة");
+			return;
+		}
+
+		if (isNaN(valueInEGP) || valueInEGP <= 0) {
+			toast.error("قيمة الشحنة يجب أن تكون رقم موجب أكبر من صفر");
+			return;
+		}
+
+		if (valueInEGP > 100000000000) {
+			toast.error("قيمة الشحنة تبدو كبيرة جدًا. الرجاء التحقق من القيمة");
+			return;
+		}
+
+		// 3. Invoice date validation - not future date
+		const invoiceDate = new Date(formData.invoiceDate);
+		const today = new Date();
+		today.setHours(23, 59, 59, 999);
+		if (invoiceDate > today) {
+			toast.error("تاريخ الفاتورة لا يمكن أن يكون في المستقبل");
+			return;
+		}
+
+		// 4. Sea shipment specific validations
+		if (formData.shippingMethod === "sea") {
+			if (formData.seaShipmentType === "containers") {
+				const containersCount = parseInt(formData.containersCount);
+				if (!containersCount || containersCount <= 0) {
+					toast.error("الرجاء إدخال عدد الحاويات للشحن البحري");
+					return;
+				}
+				if (containersCount > 500) {
+					toast.error("عدد الحاويات يبدو كبيرًا جدًا. الرجاء التحقق");
+					return;
+				}
+
+				// Validate container weights
+				const validContainers = containerWeights.filter((c) => c.containerNumber.trim());
+				if (validContainers.length > 0) {
+					let totalContainerWeight = 0;
+					for (const container of validContainers) {
+						const cWeight = parseFloat(container.weight);
+						if (cWeight && cWeight < 0) {
+							toast.error(`وزن الحاوية ${container.containerNumber} لا يمكن أن يكون سالبًا`);
+							return;
+						}
+						if (cWeight && cWeight > 50000) {
+							toast.error(`وزن الحاوية ${container.containerNumber} يبدو كبيرًا جدًا`);
+							return;
+						}
+						if (container.unit === "tons") {
+							totalContainerWeight += (cWeight || 0) * 1000;
+						} else {
+							totalContainerWeight += cWeight || 0;
+						}
+					}
+				}
+			}
+		}
+
+		// 5. Items validation
+		if (!items[0] || !items[0].description.trim()) {
 			toast.error("الرجاء إدخال وصف البند الأول على الأقل");
 			return;
 		}
-		if (items[0] && items[0].description.trim()) {
+
+		// Validate first item has required fields
+		if (items[0].description.trim()) {
 			if (!items[0].quantity || !items[0].value || !items[0].unit) {
 				toast.error("الرجاء ملء الكمية والقيمة والوحدة للبند الأول");
 				return;
 			}
 		}
 
-		// First document is required
+		// Validate all items with descriptions
+		let totalItemsWeight = 0;
+		let totalItemsValue = 0;
+		const validItems = items.filter((item) => item.description.trim());
+
+		for (let i = 0; i < validItems.length; i++) {
+			const item = validItems[i];
+			const itemNum = i + 1;
+
+			// Check for negative values
+			const itemQty = parseFloat(item.quantity);
+			const itemWeight = parseFloat(item.weight);
+			const itemValue = parseFloat(item.value);
+
+			if (itemQty && itemQty < 0) {
+				toast.error(`كمية البند ${itemNum} لا يمكن أن تكون سالبة`);
+				return;
+			}
+
+			if (itemWeight && itemWeight < 0) {
+				toast.error(`وزن البند ${itemNum} لا يمكن أن يكون سالبًا`);
+				return;
+			}
+
+			if (itemValue && itemValue < 0) {
+				toast.error(`قيمة البند ${itemNum} لا يمكن أن تكون سالبة`);
+				return;
+			}
+
+			// Sum weights and values for cross-validation
+			if (itemWeight) totalItemsWeight += itemWeight;
+			if (itemValue) totalItemsValue += itemValue;
+
+			// HS Code validation (if provided)
+			if (item.hsCode && item.hsCode.trim()) {
+				const hsCodePattern = /^[0-9]{4,10}$/;
+				if (!hsCodePattern.test(item.hsCode.replace(/\./g, ""))) {
+					toast.error(`البند الجمركي للبند ${itemNum} يجب أن يكون من 4 إلى 10 أرقام`);
+					return;
+				}
+			}
+		}
+
+		// 6. Cross-validation: Items weight vs total weight
+		if (totalItemsWeight > 0 && totalItemsWeight > totalWeight * 1.1) {
+			toast.error(`مجموع أوزان البنود (${totalItemsWeight} كجم) أكبر من الوزن الكلي (${totalWeight} كجم). الرجاء التحقق من القيم`);
+			return;
+		}
+
+		// 7. Cross-validation: Items value vs total value (allow 20% margin for fees etc)
+		if (totalItemsValue > 0 && totalItemsValue > valueInEGP * 1.2) {
+			toast.error(`مجموع قيم البنود (${totalItemsValue.toLocaleString()} ج.م) أكبر بكثير من القيمة الإجمالية (${valueInEGP.toLocaleString()} ج.م). الرجاء التحقق`);
+			return;
+		}
+
+		// 8. Document validation
 		if (uploadedDocuments.length === 0) {
 			toast.error("الرجاء رفع المستند الأول على الأقل");
 			return;
@@ -1092,10 +1282,47 @@ const UCRRequestPage = () => {
 						</div>
 
 						{/* Step 6: Documents Upload */}
-						<div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+						<div 
+							id="documents-section"
+							className={`bg-gray-50 p-4 rounded-lg border ${
+								documentsNeedingRevision.length > 0 
+									? "border-orange-400 ring-2 ring-orange-300 animate-pulse" 
+									: "border-gray-200"
+							}`}
+						>
 							<h3 className="text-lg font-bold text-gray-800 mb-2">
 								6. رفع المستندات
 							</h3>
+							
+							{/* Revision needed banner */}
+							{documentsNeedingRevision.length > 0 && (
+								<div className="mb-4 p-4 bg-orange-100 border-2 border-orange-400 rounded-lg">
+									<h4 className="font-bold text-orange-800 mb-2">⚠️ المستندات التالية تحتاج تعديل:</h4>
+									<div className="space-y-2">
+										{documentsNeedingRevision.map((ds, idx) => {
+											// Find matching upload
+											const upload = uploadedDocuments.find(u => 
+												u.id === ds.uploadId || u.id === ds.uploadId?.toString()
+											);
+											const docName = upload?.type 
+												? DOCUMENT_LABELS[upload.type] || upload.type 
+												: "مستند";
+											return (
+												<div key={idx} className="bg-white rounded p-2 border border-orange-300">
+													<p className="font-medium text-orange-700">📄 {docName}</p>
+													{ds.employeeNotes && (
+														<p className="text-orange-600 text-sm mr-4">💬 {ds.employeeNotes}</p>
+													)}
+												</div>
+											);
+										})}
+									</div>
+									<p className="text-sm text-orange-700 mt-3">
+										يرجى حذف المستند القديم ورفع مستند جديد صحيح
+									</p>
+								</div>
+							)}
+							
 							<p className="text-sm text-gray-600 mb-4">
 								📎 المستند الأول مطلوب - المستندات الإضافية اختيارية ويمكن للموظف إضافتها لاحقاً
 							</p>
@@ -1127,35 +1354,62 @@ const UCRRequestPage = () => {
 									const isUploaded = !!uploadedDoc;
 									const isRequired = index === 0; // Only first document is required
 									
+									// Check if this specific document needs revision
+									const docStatus = documentStatuses.find(ds => 
+										uploadedDoc && (ds.uploadId === uploadedDoc.id || ds.uploadId?.toString() === uploadedDoc.id)
+									);
+									const needsRevision = docStatus?.status === "needs_revision";
+									const revisionNotes = docStatus?.employeeNotes;
+									
 									return (
 										<div
 											key={docType}
 											className={`relative border-2 rounded-xl p-4 transition-all ${
-												isUploaded
-													? "border-green-500 bg-green-50"
-													: isRequired
-														? "border-dashed border-red-300 bg-red-50 hover:border-red-400"
-														: "border-dashed border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50"
+												needsRevision
+													? "border-orange-500 bg-orange-50 ring-2 ring-orange-400"
+													: isUploaded
+														? "border-green-500 bg-green-50"
+														: isRequired
+															? "border-dashed border-red-300 bg-red-50 hover:border-red-400"
+															: "border-dashed border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50"
 											}`}
 										>
+											{/* Needs Revision Badge */}
+											{needsRevision && (
+												<div className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-bold animate-pulse">
+													⚠️ يحتاج تعديل
+												</div>
+											)}
+											
 											{/* Document Type Header */}
 											<div className="text-center mb-3">
 												<div className="flex justify-center gap-2 mb-2">
 													<span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-bold ${
-														isUploaded ? "bg-green-500" : isRequired ? "bg-red-600" : "bg-gray-400"
+														needsRevision ? "bg-orange-500" : isUploaded ? "bg-green-500" : isRequired ? "bg-red-600" : "bg-gray-400"
 													}`}>
-														{isUploaded ? "✓" : index + 1}
+														{needsRevision ? "!" : isUploaded ? "✓" : index + 1}
 													</span>
-													{isRequired && !isUploaded && (
+													{needsRevision && (
+														<span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded self-center">يحتاج تعديل</span>
+													)}
+													{!needsRevision && isRequired && !isUploaded && (
 														<span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded self-center">مطلوب</span>
 													)}
-													{!isRequired && !isUploaded && (
+													{!needsRevision && !isRequired && !isUploaded && (
 														<span className="text-xs bg-gray-400 text-white px-2 py-0.5 rounded self-center">اختياري</span>
 													)}
 												</div>
-												<h4 className="font-medium text-gray-800 text-sm">
+												<h4 className={`font-medium text-sm ${needsRevision ? "text-orange-800" : "text-gray-800"}`}>
 													{getDocumentLabel(docType)}
 												</h4>
+												
+												{/* Revision Notes */}
+												{needsRevision && revisionNotes && (
+													<div className="mt-2 p-2 bg-orange-100 rounded text-xs text-orange-700 text-right">
+														💬 {revisionNotes}
+													</div>
+												)}
+												
 												<p className="text-xs text-gray-500 mt-1">
 													{docType === "bank_waiver" && "إعفاء بنكي من الجهة المصرفية"}
 													{docType === "export_invoice" && "فاتورة التصدير التجارية"}
