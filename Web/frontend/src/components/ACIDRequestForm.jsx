@@ -18,6 +18,7 @@ const ACIDRequestForm = ({
 }) => {
 	const [formData, setFormData] = React.useState({
 		preliminaryInvoice: "",
+		shipmentType: "بحري", // Default to sea shipment
 		goods: {
 			weight: "",
 			customsItem: "",
@@ -92,6 +93,39 @@ const ACIDRequestForm = ({
 					label="فاتورة مبدئية"
 					required={true}
 				/>
+
+				<Spacer size="md" />
+
+				{/* Shipment Type Selection */}
+				<div className="mb-6">
+					<label className="block text-gray-700 text-sm font-bold mb-3">
+						نوع الشحنة <span className="text-red-500">*</span>
+					</label>
+					<div className="flex gap-4">
+						<label className="flex items-center cursor-pointer">
+							<input
+								type="radio"
+								name="shipmentType"
+								value="بحري"
+								checked={formData.shipmentType === "بحري"}
+								onChange={handleInputChange("shipmentType")}
+								className="mr-2 w-4 h-4 text-[#1BA3B6] focus:ring-[#1BA3B6]"
+							/>
+							<span className="text-gray-700 text-base">🚢 بحري</span>
+						</label>
+						<label className="flex items-center cursor-pointer">
+							<input
+								type="radio"
+								name="shipmentType"
+								value="جوي"
+								checked={formData.shipmentType === "جوي"}
+								onChange={handleInputChange("shipmentType")}
+								className="mr-2 w-4 h-4 text-[#1BA3B6] focus:ring-[#1BA3B6]"
+							/>
+							<span className="text-gray-700 text-base">✈️ جوي</span>
+						</label>
+					</div>
+				</div>
 
 				{/* Goods Information Section */}
 				<GoodsFormSection

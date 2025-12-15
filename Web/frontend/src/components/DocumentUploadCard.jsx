@@ -14,13 +14,19 @@ const DocumentUploadCard = ({
 	onView,
 	onDelete,
 }) => {
+	// Determine border and background based on approval status
+	const getBorderStyle = () => {
+		if (!isUploaded) return "border-gray-300 bg-white hover:border-blue-400";
+
+		const status = isUploaded.approvalStatus;
+		if (status === "approved") return "border-green-500 bg-green-50";
+		if (status === "rejected") return "border-red-500 bg-red-50";
+		return "border-yellow-500 bg-yellow-50"; // pending
+	};
+
 	return (
 		<div
-			className={`border-2 rounded-lg p-4 transition-all ${
-				isUploaded
-					? "border-green-500 bg-green-50"
-					: "border-gray-300 bg-white hover:border-blue-400"
-			}`}
+			className={`border-2 rounded-lg p-4 transition-all ${getBorderStyle()}`}
 		>
 			<div className="flex items-center justify-between mb-2">
 				<div className="flex items-center gap-3">
@@ -89,6 +95,34 @@ const DocumentUploadCard = ({
 						تم الرفع:{" "}
 						{new Date(isUploaded.uploadedAt).toLocaleDateString("ar-EG")}
 					</p>
+					{/* Approval Status Badge */}
+					{isUploaded.approvalStatus && (
+						<div className="mt-2 flex items-center gap-2">
+							<span
+								className={`px-2 py-1 rounded text-xs font-medium ${
+									isUploaded.approvalStatus === "approved"
+										? "bg-green-100 text-green-700"
+										: isUploaded.approvalStatus === "rejected"
+										? "bg-red-100 text-red-700"
+										: "bg-yellow-100 text-yellow-700"
+								}`}
+							>
+								{isUploaded.approvalStatus === "approved"
+									? "✅ تمت الموافقة"
+									: isUploaded.approvalStatus === "rejected"
+									? "❌ مرفوض"
+									: "⏳ قيد المراجعة"}
+							</span>
+						</div>
+					)}
+					{/* Rejection Reason */}
+					{isUploaded.approvalStatus === "rejected" &&
+						isUploaded.rejectionReason && (
+							<div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+								<p className="text-red-700 font-medium">سبب الرفض:</p>
+								<p className="text-red-600">{isUploaded.rejectionReason}</p>
+							</div>
+						)}
 				</div>
 			)}
 		</div>

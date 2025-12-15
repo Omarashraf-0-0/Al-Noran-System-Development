@@ -29,19 +29,28 @@ const AcidRequestHeader = ({ requestData, illustration }) => {
 				)}
 			</div>
 
-			{/* Request Date */}
-			<div className="text-center mb-8">
-				<p className="text-gray-500 text-sm">تاريخ الطلب</p>
-				<p className="text-gray-700 font-semibold">
-					{new Date(
-						requestData.requestDate || requestData.createdAt
-					).toLocaleDateString("ar-EG", {
-						weekday: "long",
-						day: "numeric",
-						month: "long",
-						year: "numeric",
-					})}
-				</p>
+			{/* Request Date and Shipment Type */}
+			<div className="flex justify-center items-center gap-8 mb-8 flex-wrap">
+				<div className="text-center">
+					<p className="text-gray-500 text-sm">تاريخ الطلب</p>
+					<p className="text-gray-700 font-semibold">
+						{new Date(
+							requestData.requestDate || requestData.createdAt
+						).toLocaleDateString("ar-EG", {
+							weekday: "long",
+							day: "numeric",
+							month: "long",
+							year: "numeric",
+						})}
+					</p>
+				</div>
+				
+				<div className="text-center">
+					<p className="text-gray-500 text-sm">نوع الشحنة</p>
+					<p className="text-gray-700 font-semibold text-lg">
+						{requestData.shipmentType === "جوي" ? "✈️ جوي" : "🚢 بحري"}
+					</p>
+				</div>
 			</div>
 		</>
 	);

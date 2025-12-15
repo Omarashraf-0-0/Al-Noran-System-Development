@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const AcidRequestsTable = ({
 	requests,
@@ -7,8 +8,13 @@ const AcidRequestsTable = ({
 	onIssueAcid,
 	onReject,
 	onCreateShipment,
+	onShowShipmentDetails,
 	getStatusBadgeClass,
 }) => {
+	const user = JSON.parse(localStorage.getItem("user") || "{}");
+	const currentUserId = user.id || user._id;
+	const navigate = useNavigate();
+
 	return (
 		<div className="requests-table-container">
 			<table className="requests-table">
@@ -18,6 +24,7 @@ const AcidRequestsTable = ({
 						<th>Client</th>
 						<th>Supplier</th>
 						<th>Goods</th>
+						<th>نوع الشحنة</th>
 						<th>Request Date</th>
 						<th>Status</th>
 						<th>ACID Code</th>
@@ -27,7 +34,7 @@ const AcidRequestsTable = ({
 				<tbody>
 					{requests.length === 0 ? (
 						<tr>
-							<td colSpan="8" className="no-data">
+							<td colSpan="9" className="no-data">
 								لا توجد نتائج مطابقة للبحث
 							</td>
 						</tr>
@@ -55,6 +62,14 @@ const AcidRequestsTable = ({
 										<br />
 										<small>Weight: {request.goods?.weight}kg</small>
 									</div>
+								</td>
+								<td>
+									<span className="shipment-type-badge">
+										{request.shipmentType === "جوي" ||
+										request.shipmentType === "air"
+											? "✈️ جوي"
+											: "🚢 بحري"}
+									</span>
 								</td>
 								<td>{new Date(request.requestDate).toLocaleDateString()}</td>
 								<td>
@@ -145,6 +160,53 @@ const AcidRequestsTable = ({
 															request.shipmentCreatedAt
 														).toLocaleDateString()}
 													</small>
+													<div
+														style={{
+															display: "flex",
+															gap: "4px",
+															flexDirection: "column",
+															marginTop: "5px",
+														}}
+													>
+														{request.shipmentId && (
+															<button
+																className="btn-view-shipment-status"
+																onClick={() => {
+																	const shipmentId =
+																		request.shipmentId?._id ||
+																		request.shipmentId;
+																	if (shipmentId) {
+																		// Employees go to employee-shipment management page
+																		const userType =
+																			user?.type || user?.userType;
+																		if (userType === "employee") {
+																			navigate(
+																				`/employee-shipment/${shipmentId}`
+																			);
+																		} else {
+																			navigate(`/shipmentstatus/${shipmentId}`);
+																		}
+																	} else {
+																		navigate(
+																			`/shipmentstatus/${request.acidCode}`
+																		);
+																	}
+																}}
+																style={{
+																	padding: "4px 8px",
+																	fontSize: "0.75rem",
+																	backgroundColor: "#059669",
+																	color: "white",
+																	border: "none",
+																	borderRadius: "4px",
+																	cursor: "pointer",
+																	width: "100%",
+																}}
+															>
+																🔍 Manage Shipment
+															</button>
+														)}
+													</div>
 												</div>
 											)}
 										{request.status === "Rejected" && (

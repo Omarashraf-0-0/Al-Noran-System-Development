@@ -13,6 +13,8 @@ const {
 	getUserProfile,
 	updateUserProfile,
 	changePasswordProfile,
+	suspendEmployee,
+	unsuspendEmployee,
 } = require("../controllers/userController");
 const { protect } = require("../middleware/auth");
 const { phoneNumberValidation } = require("../middleware/validation");
@@ -40,6 +42,10 @@ router
 
 // Password management
 router.route("/:id/change-password").put(changePassword);
+
+// Employee suspension management (admin only)
+router.route("/:id/suspend").patch(protect, suspendEmployee);
+router.route("/:id/unsuspend").patch(protect, unsuspendEmployee);
 
 router.route("/notifications/sendNotification").post(sendNotification);
 router.route("/notifications/getAllNotifications").get(getNotifications);

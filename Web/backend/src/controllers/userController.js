@@ -647,6 +647,88 @@ const changePasswordProfile = asyncHandler(async (req, res) => {
 	}
 });
 
+// @desc    Suspend employee
+// @route   PATCH /api/users/:id/suspend
+// @access  Admin only
+const suspendEmployee = asyncHandler(async (req, res) => {
+	const { id } = req.params;
+	const { reason } = req.body;
+
+	const user = await User.findById(id);
+
+	if (!user) {
+		return res.status(404).json({
+			success: false,
+			message: "المستخدم غير موجود",
+		});
+	}
+
+	if (user.type !== "employee") {
+		return res.status(400).json({
+			success: false,
+			message: "هذا المستخدم ليس موظفاً",
+		});
+	}
+
+	user.employeeDetails.suspended = true;
+	user.employeeDetails.suspensionReason = reason || "تم إيقافك عن العمل";
+	user.employeeDetails.suspendedAt = new Date();
+
+	await user.save();
+
+	res.json({
+		success: true,
+		message: "تم إيقاف الموظف عن العمل بنجاح",
+		user: {
+			id: user._id,
+			fullname: user.fullname,
+			email: user.email,
+			suspended: user.employeeDetails.suspended,
+			suspensionReason: user.employeeDetails.suspensionReason,
+		},
+	});
+});
+
+// @desc    Unsuspend employee (reactivate)
+// @route   PATCH /api/users/:id/unsuspend
+// @access  Admin only
+const unsuspendEmployee = asyncHandler(async (req, res) => {
+	const { id } = req.params;
+
+	const user = await User.findById(id);
+
+	if (!user) {
+		return res.status(404).json({
+			success: false,
+			message: "المستخدم غير موجود",
+		});
+	}
+
+	if (user.type !== "employee") {
+		return res.status(400).json({
+			success: false,
+			message: "هذا المستخدم ليس موظفاً",
+		});
+	}
+
+	user.employeeDetails.suspended = false;
+	user.employeeDetails.suspensionReason = null;
+	user.employeeDetails.suspendedAt = null;
+
+	await user.save();
+
+	res.json({
+		success: true,
+		message: "تم إعادة تفعيل الموظف بنجاح",
+		user: {
+			id: user._id,
+			fullname: user.fullname,
+			email: user.email,
+			suspended: user.employeeDetails.suspended,
+		},
+	});
+});
+
 module.exports = {
 	getAllUsers,
 	createUser,
@@ -660,4 +742,6 @@ module.exports = {
 	getUserProfile,
 	updateUserProfile,
 	changePasswordProfile,
+	suspendEmployee,
+	unsuspendEmployee,
 };

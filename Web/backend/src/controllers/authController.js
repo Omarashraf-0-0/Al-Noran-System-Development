@@ -36,6 +36,16 @@ const login = asyncHandler(async (req, res) => {
 		throw new Error("تم إيقاف حسابك. تواصل مع الإدارة");
 	}
 
+	// Check if employee is suspended
+	if (user.type === "employee" && user.employeeDetails?.suspended) {
+		res.status(403);
+		throw new Error(
+			user.employeeDetails.suspensionReason
+				? `تم إيقافك عن العمل. السبب: ${user.employeeDetails.suspensionReason}`
+				: "تم إيقافك عن العمل. تواصل مع الإدارة"
+		);
+	}
+
 	// Create token
 	const token = user.getSignedJwtToken();
 
@@ -204,21 +214,22 @@ const checkAvailability = asyncHandler(async (req, res) => {
 
 		console.log("❌ Data NOT available - Field:", field);
 
-    return res.status(200).json({
-      success: true,
-      available: false,
-      field,
-      message: field === 'username' ? 'Username already taken' : 'Email already taken'
-    });
-  }
-  
-  console.log('✅ Data IS available - user can proceed');
+		return res.status(200).json({
+			success: true,
+			available: false,
+			field,
+			message:
+				field === "username" ? "Username already taken" : "Email already taken",
+		});
+	}
 
-  res.status(200).json({
-    success: true,
-    available: true,
-    message: 'Data is available'
-  });
+	console.log("✅ Data IS available - user can proceed");
+
+	res.status(200).json({
+		success: true,
+		available: true,
+		message: "Data is available",
+	});
 });
 // @desc    Get current user info
 // @route   GET /api/auth/me

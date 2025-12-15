@@ -3,7 +3,7 @@ const AcidRequest = require("../models/acid");
 // ✅ إنشاء طلب ACID جديد
 const createAcidRequest = async (req, res) => {
 	try {
-		const { supplier, goods, uploads } = req.body;
+		const { supplier, goods, uploads, shipmentType } = req.body;
 
 		// Get userId from authenticated user (from protect middleware)
 		const userId = req.user ? req.user._id : null;
@@ -36,6 +36,7 @@ const createAcidRequest = async (req, res) => {
 			supplier,
 			goods,
 			uploads: uploads || [], // Array of Upload document IDs
+			shipmentType: shipmentType || "بحري", // Default to sea shipment
 		});
 
 		await newRequest.save();
@@ -131,6 +132,7 @@ const updateAcidStatus = async (req, res) => {
 			hasShipment,
 			shipmentId,
 			shipmentCreatedAt,
+			shipmentType,
 		} = req.body;
 
 		const request = await AcidRequest.findById(id);
@@ -180,6 +182,7 @@ const updateAcidStatus = async (req, res) => {
 			if (supplier) request.supplier = supplier;
 			if (goods) request.goods = goods;
 			if (uploads) request.uploads = uploads;
+			if (shipmentType) request.shipmentType = shipmentType;
 		}
 
 		await request.save();
@@ -209,11 +212,27 @@ const getAllRequestsForEmployee = async (req, res) => {
 			});
 		}
 
+		const { myLocked, hasShipment, issuedByMe } = req.query;
+		const query = {};
+
+		if (myLocked === "true") {
+			query.reviewingBy = req.user._id;
+		}
+
+		if (hasShipment === "true") {
+			query.hasShipment = true;
+		}
+
+		if (issuedByMe === "true") {
+			query.issuedBy = req.user._id;
+		}
+
 		// Get all requests without filtering by userId
-		const requests = await AcidRequest.find()
+		const requests = await AcidRequest.find(query)
 			.populate("userId", "username email")
 			.populate("uploads")
 			.populate("reviewingBy", "username email")
+			.populate("issuedBy", "username email")
 			.populate("shipmentId")
 			.sort({ requestDate: -1 });
 
@@ -493,6 +512,7 @@ const issueAcidWithConfirmation = async (req, res) => {
 		request.acidCode = acidCode;
 		request.isLocked = false;
 		request.reviewingBy = null;
+		request.issuedBy = employeeId;
 
 		await request.save();
 

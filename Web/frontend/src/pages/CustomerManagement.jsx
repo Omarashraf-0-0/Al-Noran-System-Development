@@ -8,6 +8,7 @@ import CustomerDetailsModal from "../components/CustomerDetailsModal";
 import CustomersTable from "../components/CustomersTable";
 import CustomerStatistics from "../components/CustomerStatistics";
 import ConfirmDialog from "../components/ConfirmDialog";
+import DocumentApprovalSection from "../components/DocumentApprovalSection";
 import bannerPic from "../assets/images/Untitled design (8) 2.png";
 import searchIcon from "../assets/images/search.svg";
 
@@ -163,6 +164,11 @@ export default function CustomerUI() {
 					alt="admin illustration"
 					className="w-[350px] md:w-[450px] lg:w-[550px] object-contain"
 				/>
+			</div>
+
+			{/* Document Approval Section */}
+			<div className="px-16 mb-10">
+				<DocumentApprovalSection />
 			</div>
 
 			{/* Section Title */}

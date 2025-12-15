@@ -8,6 +8,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import FilterStatusCards from "../components/FilterStatusCards";
 import AcidRequestsTable from "../components/AcidRequestsTable";
 import ShipmentModal from "../components/ShipmentModal";
+import ShipmentDetailsModal from "../components/ShipmentDetailsModal";
 import AcidConfirmationModal from "../components/AcidConfirmationModal";
 import filterListIcon from "../assets/images/filter_list.png";
 import filterAltIcon from "../assets/images/filter_alt.png";
@@ -18,8 +19,11 @@ const EmployeeAcidRequestsPage = () => {
 	const [requests, setRequests] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [showShipmentModal, setShowShipmentModal] = useState(false);
+	const [showShipmentDetailsModal, setShowShipmentDetailsModal] =
+		useState(false);
 	const [selectedRequest, setSelectedRequest] = useState(null);
 	const [statusFilter, setStatusFilter] = useState("All");
+	const [issuedByMe, setIssuedByMe] = useState(false);
 	const [showConfirmModal, setShowConfirmModal] = useState(false);
 	const [confirmData, setConfirmData] = useState(null);
 	const [acidCodeInput, setAcidCodeInput] = useState("");
@@ -47,18 +51,19 @@ const EmployeeAcidRequestsPage = () => {
 
 	useEffect(() => {
 		fetchAllRequests();
-	}, []);
+	}, [issuedByMe]);
 
 	const fetchAllRequests = async () => {
 		try {
 			setLoading(true);
 			const token = localStorage.getItem("token");
-			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/acid/employee/all`,
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
-			);
+			let url = `${import.meta.env.VITE_API_URL}/api/acid/employee/all`;
+			if (issuedByMe) {
+				url += `?issuedByMe=true`;
+			}
+			const response = await axios.get(url, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
 
 			if (response.data.success) {
 				setRequests(response.data.requests);
@@ -208,6 +213,11 @@ const EmployeeAcidRequestsPage = () => {
 		}
 	};
 
+	const handleShowShipmentDetails = (request) => {
+		setSelectedRequest(request);
+		setShowShipmentDetailsModal(true);
+	};
+
 	const openShipmentModal = (request) => {
 		if (!request.acidCode) {
 			toast.error("ACID Code must be issued before creating shipment");
@@ -245,26 +255,55 @@ const EmployeeAcidRequestsPage = () => {
 
 		if (!selectedRequest) return;
 
+		// Validate required fields
+		if (
+			!shipmentData.portName ||
+			!shipmentData.country ||
+			!shipmentData.arrivalDate
+		) {
+			toast.error("Please fill in all required fields");
+			return;
+		}
+
 		try {
 			const token = localStorage.getItem("token");
 
 			// Create shipment payload
 			const user = JSON.parse(localStorage.getItem("user"));
+
+			// Extract upload IDs if uploads is an array of objects
+			let uploadIds = [];
+			if (selectedRequest.uploads && Array.isArray(selectedRequest.uploads)) {
+				uploadIds = selectedRequest.uploads
+					.map((upload) => {
+						// If upload is an object with _id, extract it
+						if (typeof upload === "object" && upload._id) {
+							return upload._id;
+						}
+						// Otherwise, assume it's already an ID
+						return upload;
+					})
+					.filter((id) => id); // Remove nulls/undefined
+			}
+
 			const payload = {
-				user_id: selectedRequest.userId._id,
-				employee_id: user.id, // Assign current employee to shipment
+				user_id: selectedRequest.userId._id || selectedRequest.userId,
+				employee_id: user.id || user._id, // Assign current employee to shipment
 				acid: selectedRequest.acidCode,
-				port_name: shipmentData.portName,
-				country: shipmentData.country,
-				num_of_containers: shipmentData.numContainers,
-				type_of_containers: shipmentData.containerTypes,
-				status: shipmentData.status,
-				policy: shipmentData.policy,
-				arrival_date: shipmentData.arrivalDate,
+				shipment_type: selectedRequest.shipmentType || "بحري", // نقل نوع الشحنة من ACID request
+				port_name: shipmentData.portName.trim(),
+				country: shipmentData.country.trim(),
+				num_of_containers: parseInt(shipmentData.numContainers) || 1,
+				type_of_containers: shipmentData.containerTypes.filter((t) => t), // Remove empty values
+				status: shipmentData.status || "Pending",
+				policy: shipmentData.policy || "",
+				arrivalDate: shipmentData.arrivalDate, // Keep as arrivalDate for backend
 				acid_request_id: selectedRequest._id, // Link to ACID request
-				uploads: selectedRequest.uploads || [], // Include uploads from ACID request
+				uploads: uploadIds, // Send only IDs
 				token: token, // Some endpoints might need this
 			};
+
+			console.log("📦 Submitting shipment payload:", payload);
 
 			// Create shipment via shipment endpoint
 			const response = await axios.post(
@@ -314,8 +353,16 @@ const EmployeeAcidRequestsPage = () => {
 				}
 			}
 		} catch (error) {
-			console.error("Error creating shipment:", error);
-			toast.error(error.response?.data?.message || "Failed to create shipment");
+			console.error("❌ Error creating shipment:", error);
+			console.error("Error response:", error.response?.data);
+
+			const errorMessage =
+				error.response?.data?.message ||
+				error.response?.data?.error ||
+				error.message ||
+				"Failed to create shipment";
+
+			toast.error(errorMessage);
 		}
 	};
 
@@ -384,6 +431,14 @@ const EmployeeAcidRequestsPage = () => {
 		// Status filter
 		const matchesStatus = statusFilter === "All" || req.status === statusFilter;
 
+		// Filter by issued by me (only show ACID requests I issued)
+		const user = JSON.parse(localStorage.getItem("user"));
+		const currentUserId = user.id || user._id;
+		const matchesIssuedByMe =
+			!issuedByMe ||
+			req.issuedBy?._id === currentUserId ||
+			req.issuedBy === currentUserId;
+
 		// Search filter (ACID code, client name, supplier name)
 		const searchLower = searchTerm.toLowerCase();
 		const matchesSearch =
@@ -393,7 +448,7 @@ const EmployeeAcidRequestsPage = () => {
 			req.userId?.email?.toLowerCase().includes(searchLower) ||
 			req.supplier?.name?.toLowerCase().includes(searchLower);
 
-		return matchesStatus && matchesSearch;
+		return matchesStatus && matchesSearch && matchesIssuedByMe;
 	});
 
 	// Sort requests
@@ -516,6 +571,21 @@ const EmployeeAcidRequestsPage = () => {
 									<option value="ACID Issued">تم الإصدار</option>
 									<option value="Rejected">مرفوض</option>
 								</select>
+
+								<div className="mb-3 border-t pt-3">
+									<label className="flex items-center gap-2 cursor-pointer justify-end">
+										<span className="text-gray-700 text-sm">
+											طلبات قمت بإصدارها
+										</span>
+										<input
+											type="checkbox"
+											checked={issuedByMe}
+											onChange={(e) => setIssuedByMe(e.target.checked)}
+											className="form-checkbox h-4 w-4 text-red-800"
+										/>
+									</label>
+								</div>
+
 								<button
 									onClick={handleFilterApply}
 									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
@@ -562,6 +632,7 @@ const EmployeeAcidRequestsPage = () => {
 								handleStatusChange(requestId, "Rejected")
 							}
 							onCreateShipment={openShipmentModal}
+							onShowShipmentDetails={handleShowShipmentDetails}
 							getStatusBadgeClass={getStatusBadgeClass}
 						/>
 					)}
@@ -581,6 +652,17 @@ const EmployeeAcidRequestsPage = () => {
 				onAddContainer={addContainer}
 				onRemoveContainer={removeContainer}
 			/>
+
+			{/* Shipment Details Modal */}
+			{showShipmentDetailsModal && (
+				<ShipmentDetailsModal
+					shipmentId={selectedRequest?.shipmentId?._id}
+					onClose={() => {
+						setShowShipmentDetailsModal(false);
+						setSelectedRequest(null);
+					}}
+				/>
+			)}
 
 			{/* Confirmation Modal for ACID Issuance */}
 			{/* TODO: RBAC - Check permission for ACID issuance */}

@@ -95,11 +95,15 @@ const ACIDRequestPage = () => {
 			);
 
 			// Check for AWS permission error
-			if (response.data.upload?.permissionError || response.data.warning || response.data.error) {
+			if (
+				response.data.upload?.permissionError ||
+				response.data.warning ||
+				response.data.error
+			) {
 				console.error("AWS Permission Error:", response.data.error);
 				toast.error(
-					response.data.warning || 
-					"⚠️ لا يمكن عرض الملف حالياً \nيرجى الاتصال بالمسؤول",
+					response.data.warning ||
+						"⚠️ لا يمكن عرض الملف حالياً \nيرجى الاتصال بالمسؤول",
 					{ duration: 5000 }
 				);
 				return;
@@ -112,17 +116,16 @@ const ACIDRequestPage = () => {
 			}
 		} catch (error) {
 			console.error("❌ Error fetching document URL:", error);
-			
+
 			// Handle AWS permission errors
 			if (
 				error.response?.data?.message?.includes("AWS") ||
 				error.response?.data?.message?.includes("permission") ||
 				error.response?.data?.message?.includes("AccessDenied")
 			) {
-				toast.error(
-					"⚠️ مشكلة في عرض الملف\nيرجى الاتصال بالمسؤول",
-					{ duration: 5000 }
-				);
+				toast.error("⚠️ مشكلة في عرض الملف\nيرجى الاتصال بالمسؤول", {
+					duration: 5000,
+				});
 			} else {
 				toast.error(error.response?.data?.message || "فشل في عرض الملف");
 			}
@@ -190,6 +193,7 @@ const ACIDRequestPage = () => {
 			supplier: formData.supplier,
 			goods: formData.goods,
 			uploads: [uploadId],
+			shipmentType: formData.shipmentType || "بحري", // إضافة نوع الشحنة
 		};
 
 		console.log("Sending request data:", requestData);

@@ -12,14 +12,27 @@ const createShipment = async (req, res) => {
 		const decoded = jwt.verify(token, process.env.JWT_SECRET);
 		const shipmentData = req.body;
 
+		console.log("🔐 Decoded token:", decoded);
+		console.log("👤 User type check:", decoded.type, decoded.userType);
+		console.log("📦 Shipment data employee_id:", shipmentData.employee_id);
+
+		// Check if this is an employee creating the shipment
+		const isEmployee =
+			decoded.type === "employee" ||
+			decoded.userType === "employee" ||
+			shipmentData.employee_id; // If employee_id is provided, it's an employee creating it
+
 		// Handle invoice file
 		if (req.file) {
 			// New file uploaded
 			shipmentData.invoiceUrl = `/uploads/shipments/${req.file.filename}`;
-		} else if (decoded.type === "employee" || decoded.userType === "employee") {
+		} else if (isEmployee) {
 			// Employee creating shipment - invoice comes from ACID request uploads
+			console.log("👨‍💼 Employee creating shipment, checking uploads...");
+
 			// Find invoice from uploads array if provided
 			if (shipmentData.uploads && Array.isArray(shipmentData.uploads)) {
+				console.log("📎 Uploads array:", shipmentData.uploads);
 				const invoiceUpload = shipmentData.uploads.find(
 					(upload) =>
 						upload.category === "invoice" ||
@@ -27,14 +40,19 @@ const createShipment = async (req, res) => {
 				);
 				if (invoiceUpload && invoiceUpload.s3Url) {
 					shipmentData.invoiceUrl = invoiceUpload.s3Url;
+					console.log("✅ Invoice URL found:", shipmentData.invoiceUrl);
 				}
 			}
 			// If no invoice found in uploads, it can be added later
 			if (!shipmentData.invoiceUrl) {
+				console.log(
+					"⚠️ No invoice found, setting to null (can be added later)"
+				);
 				shipmentData.invoiceUrl = null;
 			}
 		} else {
 			// Client must provide invoice file
+			console.log("❌ Client creating shipment without file");
 			return res.status(400).json({ message: "Invoice file is required" });
 		}
 
@@ -144,7 +162,7 @@ const getAllShipments = async (req, res) => {
 	try {
 		// Get userId from authenticated user (from protect middleware)
 		const userId = req.user ? req.user._id : null;
-		let userType = req.user ? (req.user.type || req.user.userType) : null;
+		let userType = req.user ? req.user.type || req.user.userType : null;
 
 		if (!userId) {
 			return res.status(401).json({
@@ -424,11 +442,10 @@ const updateShipmentStatusById = async (req, res) => {
 		}
 
 		// Find and update shipment
-		const shipment = await Shipment.findByIdAndUpdate(
-			shipmentId,
-			updateData,
-			{ new: true, runValidators: true }
-		);
+		const shipment = await Shipment.findByIdAndUpdate(shipmentId, updateData, {
+			new: true,
+			runValidators: true,
+		});
 
 		if (!shipment) {
 			return res.status(404).json({ message: "Shipment not found" });

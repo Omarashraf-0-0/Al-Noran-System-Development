@@ -1,126 +1,149 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
-const UserSchema = new mongoose.Schema({
-  fullname: {
-    type: String,
-    required: [true, 'Please provide your full name'],
-  },
-  username: {
-    type: String,
-    required: [true, 'Please provide a username'],
-    unique: true,
-    trim: true,
-  },
-  phone: {
-    type: String,
-    required: [true, 'Please provide a phone number'],
-    unique: true,
-  },
-  email: {
-    type: String,
-    required: [true, 'Please provide an email'],
-    unique: true,
-    match: [
-      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-      'Please provide a valid email address',
-    ],
+const UserSchema = new mongoose.Schema(
+	{
+		fullname: {
+			type: String,
+			required: [true, "Please provide your full name"],
+		},
+		username: {
+			type: String,
+			required: [true, "Please provide a username"],
+			unique: true,
+			trim: true,
+		},
+		phone: {
+			type: String,
+			required: [true, "Please provide a phone number"],
+			unique: true,
+		},
+		email: {
+			type: String,
+			required: [true, "Please provide an email"],
+			unique: true,
+			match: [
+				/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+				"Please provide a valid email address",
+			],
+		},
+		resetOTP: { type: String },
+		otpExpires: { type: Date },
+		password: {
+			type: String,
+			required: [true, "Please provide a password"],
+			minlength: 6,
+		},
+		type: {
+			type: String,
+			required: true,
+			enum: ["client", "employee", "admin"],
+		},
+		active: {
+			type: Boolean,
+			default: true,
+		},
+		profilePhoto: {
+			type: String,
+			required: false,
+			default: null,
+		},
+		taxNumber: {
+			type: String,
+			required: false,
+			trim: true,
+		},
+		rank: {
+			type: String,
+			enum: ["1", "2", "3", null],
+			required: false,
+			default: null,
+		},
+		clientDetails: {
+			clientType: {
+				type: String,
+				enum: ["commercial", "factory", "personal", null],
+				default: null,
+			},
+			ssn: {
+				type: String,
+				default: "",
+			},
+			// Export Certification Type (for export services)
+			// 'noran' = على بطاقة الشركة (Green circle) - Noran handles docs, 10% fee
+			// 'client' = على بطاقة العميل (Yellow circle) - Client provides docs, no auto fee
+			exportCertificationType: {
+				type: String,
+				enum: ["noran", "client"],
+				default: "noran",
+			},
+		},
+		employeeDetails: {
+			employeeType: {
+				type: String,
+				enum: [
+					"Regular Employee",
+					"Certified Employee",
+					"Department Manager",
+					"System Admin",
+					null,
+				],
+				default: null,
+			},
+			verified: {
+				type: Boolean,
+				default: false,
+			},
+			suspended: {
+				type: Boolean,
+				default: false,
+			},
+			suspensionReason: {
+				type: String,
+				default: null,
+			},
+			suspendedAt: {
+				type: Date,
+				default: null,
+			},
+			isOnline: {
+				type: Boolean,
+				default: false,
+			},
+			socketId: {
+				type: String,
+				default: null,
+			},
+		},
+	},
+	{
+		timestamps: true,
+	}
+);
 
-  },
-  resetOTP: { type: String },
-  otpExpires: { type: Date },
-  password: {
-    type: String,
-    required: [true, 'Please provide a password'],
-    minlength: 6,
-  },
-  type: {
-    type: String,
-    required: true,
-    enum: ['client', 'employee', 'admin'],
-  },
-  active: {
-    type: Boolean,
-    default: true,
-  },
-  profilePhoto: {
-    type: String,
-    required: false,
-    default: null,
-  },
-  taxNumber: {
-    type: String,
-    required: false,
-    trim: true,
-  },
-  rank: {
-    type: String,
-    enum: ['1', '2', '3', null],
-    required: false,
-    default: null,
-  },
-  clientDetails: {
-    clientType: {
-      type: String,
-      enum: ['commercial', 'factory', 'personal', null],
-      default: null,
-    },
-    ssn: {
-      type: String, 
-      default: "",
-    },
-    // Export Certification Type (for export services)
-    // 'noran' = على بطاقة الشركة (Green circle) - Noran handles docs, 10% fee
-    // 'client' = على بطاقة العميل (Yellow circle) - Client provides docs, no auto fee
-    exportCertificationType: {
-      type: String,
-      enum: ['noran', 'client'],
-      default: 'noran',
-    },
-  },
-  employeeDetails: {
-    employeeType: {
-      type: String,
-      enum: ['Regular Employee', 'Certified Employee', 'Department Manager', 'System Admin', null],
-      default: null,
-    },
-    verified: {
-      type: Boolean,
-      default: false,
-    },
-    isOnline: {
-      type: Boolean,
-      default: false,
-    },
-    socketId: {
-      type: String,
-      default: null,
-    },
-  },
-}, {
-  timestamps: true 
-});
-
-UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
+UserSchema.pre("save", async function (next) {
+	if (!this.isModified("password")) {
+		return next();
+	}
+	const salt = await bcrypt.genSalt(10);
+	this.password = await bcrypt.hash(this.password, salt);
+	next();
 });
 
 UserSchema.methods.getSignedJwtToken = function () {
-  return jwt.sign({ id: this._id, username: this.username, email:this.email}, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE,
-  });
+	return jwt.sign(
+		{ id: this._id, username: this.username, email: this.email },
+		process.env.JWT_SECRET,
+		{
+			expiresIn: process.env.JWT_EXPIRE,
+		}
+	);
 };
 
 // Method to compare password
 UserSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+	return await bcrypt.compare(enteredPassword, this.password);
 };
 
-module.exports = mongoose.model('User', UserSchema);
-
+module.exports = mongoose.model("User", UserSchema);

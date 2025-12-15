@@ -204,6 +204,24 @@ const getUploadById = async (req, res) => {
 			return res.status(404).json({ message: "Upload not found" });
 		}
 
+		// Generate presigned URL for S3 files
+		if (upload.s3Key) {
+			try {
+				const { getPresignedUrl } = require("../utils/s3Helpers");
+				const presignedUrl = await getPresignedUrl(upload.s3Key, 3600); // 1 hour expiry
+				
+				// Return upload data with presigned URL
+				return res.json({
+					...upload.toObject(),
+					presignedUrl,
+				});
+			} catch (s3Error) {
+				console.error("Error generating presigned URL:", s3Error);
+				// If presigned URL generation fails, return upload data with regular URL
+				return res.json(upload);
+			}
+		}
+
 		res.json(upload);
 	} catch (error) {
 		res.status(500).json({ message: error.message });
@@ -333,6 +351,110 @@ const getUploadStats = async (req, res) => {
 	}
 };
 
+// ✅ Get all pending documents for admin approval
+const getPendingDocuments = async (req, res) => {
+	try {
+		const { category, userType, clientType } = req.query;
+
+		const query = {
+			approvalStatus: "pending",
+			category: "registration", // Only registration documents need approval
+		};
+
+		if (userType) query.userType = userType;
+		if (clientType) query.clientType = clientType;
+
+		const pendingDocs = await Upload.find(query)
+			.populate("userId", "fullname username email clientDetails")
+			.sort({ uploadedAt: -1 });
+
+		res.json({
+			success: true,
+			count: pendingDocs.length,
+			documents: pendingDocs,
+		});
+	} catch (error) {
+		console.error("Error fetching pending documents:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error fetching pending documents",
+		});
+	}
+};
+
+// ✅ Approve document
+const approveDocument = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const adminId = req.user?._id;
+
+		const document = await Upload.findById(id);
+
+		if (!document) {
+			return res.status(404).json({
+				success: false,
+				message: "Document not found",
+			});
+		}
+
+		document.approvalStatus = "approved";
+		document.approvedBy = adminId;
+		document.approvedAt = new Date();
+		document.rejectionReason = null;
+
+		await document.save();
+
+		res.json({
+			success: true,
+			message: "Document approved successfully",
+			document,
+		});
+	} catch (error) {
+		console.error("Error approving document:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error approving document",
+		});
+	}
+};
+
+// ✅ Reject document
+const rejectDocument = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { reason } = req.body;
+		const adminId = req.user?._id;
+
+		const document = await Upload.findById(id);
+
+		if (!document) {
+			return res.status(404).json({
+				success: false,
+				message: "Document not found",
+			});
+		}
+
+		document.approvalStatus = "rejected";
+		document.approvedBy = adminId;
+		document.approvedAt = new Date();
+		document.rejectionReason = reason || "No reason provided";
+
+		await document.save();
+
+		res.json({
+			success: true,
+			message: "Document rejected successfully",
+			document,
+		});
+	} catch (error) {
+		console.error("Error rejecting document:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error rejecting document",
+		});
+	}
+};
+
 module.exports = {
 	uploadSingleFile,
 	uploadMultipleFiles,
@@ -343,4 +465,7 @@ module.exports = {
 	softDeleteUpload,
 	permanentDeleteUpload,
 	getUploadStats,
+	getPendingDocuments,
+	approveDocument,
+	rejectDocument,
 };

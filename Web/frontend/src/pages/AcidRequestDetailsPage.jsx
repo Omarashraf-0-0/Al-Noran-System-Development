@@ -63,6 +63,7 @@ const AcidRequestDetailsPage = () => {
 
 						const uploadResponses = await Promise.all(uploadPromises);
 						const formattedFiles = uploadResponses.map((res) => {
+							// Handle both nested (res.data.upload) and flat (res.data) response structures
 							const upload = res.data.upload || res.data;
 							return {
 								name: upload.filename || upload.originalname || "ملف",
@@ -73,7 +74,8 @@ const AcidRequestDetailsPage = () => {
 									day: "numeric",
 									month: "long",
 								}),
-								url: upload.presignedUrl || upload.s3Url || upload.url,
+								// Try presignedUrl first (new structure), then fallback to other URLs
+								url: upload.presignedUrl || upload.url || upload.s3Url,
 							};
 						});
 						setFileItems(formattedFiles);

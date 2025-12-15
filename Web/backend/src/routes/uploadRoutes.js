@@ -6,8 +6,7 @@ const fs = require("fs");
 const uploadController = require("../controllers/uploadController");
 const mailSender = require("../services/mailer");
 const jwt = require("jsonwebtoken");
-
-
+const { protect } = require("../middleware/auth");
 
 // Set up storage engine for multer
 const storage = multer.diskStorage({
@@ -78,12 +77,12 @@ router.get("/", uploadController.getAllUploads);
 router.get("/stats/summary", uploadController.getUploadStats);
 
 // @route   GET /api/upload/:id
-// @desc    Get upload by ID
-router.get("/:id", uploadController.getUploadById);
+// @desc    Get upload by ID (protected route)
+router.get("/:id", protect, uploadController.getUploadById);
 
 // @route   GET /api/upload/related/:model/:id
-// @desc    Get uploads by related entity
-router.get("/related/:model/:id", uploadController.getUploadsByRelatedEntity);
+// @desc    Get uploads by related entity (protected route)
+router.get("/related/:model/:id", protect, uploadController.getUploadsByRelatedEntity);
 
 // @route   PATCH /api/upload/:id
 // @desc    Update upload metadata
@@ -96,6 +95,18 @@ router.delete("/:id", uploadController.softDeleteUpload);
 // @route   DELETE /api/upload/permanent/:filename
 // @desc    Permanently delete upload (remove file and database record)
 router.delete("/permanent/:filename", uploadController.permanentDeleteUpload);
+
+// @route   GET /api/upload/pending/all
+// @desc    Get all pending documents for admin approval
+router.get("/pending/all", uploadController.getPendingDocuments);
+
+// @route   PATCH /api/upload/:id/approve
+// @desc    Approve document
+router.patch("/:id/approve", uploadController.approveDocument);
+
+// @route   PATCH /api/upload/:id/reject
+// @desc    Reject document
+router.patch("/:id/reject", uploadController.rejectDocument);
 
 // Error handling middleware for multer
 router.use((error, req, res, next) => {

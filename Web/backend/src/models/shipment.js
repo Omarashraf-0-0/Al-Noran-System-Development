@@ -22,6 +22,11 @@ const shipmentSchema = new mongoose.Schema(
 			unique: true,
 			trim: true,
 		},
+		shipment_type: {
+			type: String,
+			enum: ["بحري", "جوي", "sea", "air"],
+			default: "بحري",
+		},
 		port_name: {
 			type: String,
 			required: true,

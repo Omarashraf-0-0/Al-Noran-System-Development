@@ -229,7 +229,7 @@ const App = () => {
 							<ShipmentStatus />
 						</ClientRoute>
 					}
-				/>
+				/> 
 				<Route
 					path="/employee-shipment/:shipmentId"
 					element={

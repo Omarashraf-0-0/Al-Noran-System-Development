@@ -42,6 +42,7 @@ const EditAcidRequestPage = () => {
 			weight: "",
 		},
 		uploads: [],
+		shipmentType: "بحري", // Default to sea shipment
 	});
 
 	const token = localStorage.getItem("token");
@@ -106,6 +107,7 @@ const EditAcidRequestPage = () => {
 						weight: "",
 					},
 					uploads: response.data.uploads || [],
+					shipmentType: response.data.shipmentType || "بحري",
 				});
 
 				// Set uploaded invoice if exists
@@ -268,6 +270,7 @@ const EditAcidRequestPage = () => {
 					weight: parseFloat(formData.goods.weight),
 				},
 				uploads: uploadIds,
+				shipmentType: formData.shipmentType || "بحري",
 			};
 
 			const response = await axios.patch(
@@ -358,6 +361,37 @@ const EditAcidRequestPage = () => {
 								title="الفاتورة المبدئية"
 								required={true}
 							/>
+
+							{/* Shipment Type Selection */}
+							<div className="mb-6">
+								<label className="block text-gray-700 text-lg font-bold mb-3">
+									نوع الشحنة <span className="text-red-500">*</span>
+								</label>
+								<div className="flex gap-6">
+									<label className="flex items-center cursor-pointer">
+										<input
+											type="radio"
+											name="shipmentType"
+											value="بحري"
+											checked={formData.shipmentType === "بحري"}
+											onChange={(e) => handleInputChange("shipmentType", e.target.value)}
+											className="ml-2 w-5 h-5 text-red-900 focus:ring-red-900"
+										/>
+										<span className="text-gray-700 text-lg">🚢 بحري</span>
+									</label>
+									<label className="flex items-center cursor-pointer">
+										<input
+											type="radio"
+											name="shipmentType"
+											value="جوي"
+											checked={formData.shipmentType === "جوي"}
+											onChange={(e) => handleInputChange("shipmentType", e.target.value)}
+											className="ml-2 w-5 h-5 text-red-900 focus:ring-red-900"
+										/>
+										<span className="text-gray-700 text-lg">✈️ جوي</span>
+									</label>
+								</div>
+							</div>
 
 							{/* Supplier Information Section */}
 							{/* TODO: RBAC - Only show supplier form if user has permission */}

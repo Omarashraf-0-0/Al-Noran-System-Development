@@ -21,6 +21,9 @@ export default function EmployeeManagement() {
 	const [showDetailsModal, setShowDetailsModal] = useState(false);
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 	const [employeeToDelete, setEmployeeToDelete] = useState(null);
+	const [suspendModalOpen, setSuspendModalOpen] = useState(false);
+	const [employeeToSuspend, setEmployeeToSuspend] = useState(null);
+	const [suspensionReason, setSuspensionReason] = useState("");
 
 	// TODO: RBAC - Get user permissions from context/store
 	// Example: const { user, hasPermission } = useAuth();
@@ -56,6 +59,8 @@ export default function EmployeeManagement() {
 					phone: emp.phone,
 					status: emp.active ? "نشط" : "غير نشط",
 					employeeType: emp.employeeDetails?.employeeType || "Regular Employee",
+					suspended: emp.employeeDetails?.suspended || false,
+					suspensionReason: emp.employeeDetails?.suspensionReason,
 					createdAt: emp.createdAt,
 				}));
 
@@ -104,6 +109,60 @@ export default function EmployeeManagement() {
 	const handleDeleteEmployee = (employeeId) => {
 		setEmployeeToDelete(employeeId);
 		setDeleteModalOpen(true);
+	};
+
+	const handleSuspendEmployee = (employee) => {
+		setEmployeeToSuspend(employee);
+		setSuspensionReason("");
+		setSuspendModalOpen(true);
+	};
+
+	const confirmSuspend = async () => {
+		if (!employeeToSuspend) return;
+
+		try {
+			if (employeeToSuspend.suspended) {
+				// Unsuspend employee
+				await axios.patch(
+					`${import.meta.env.VITE_API_URL}/api/users/${
+						employeeToSuspend.id
+					}/unsuspend`,
+					{},
+					{
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					}
+				);
+				toast.success("تم إعادة تفعيل الموظف بنجاح");
+			} else {
+				// Suspend employee
+				if (!suspensionReason.trim()) {
+					toast.error("الرجاء إدخال سبب الإيقاف");
+					return;
+				}
+				await axios.patch(
+					`${import.meta.env.VITE_API_URL}/api/users/${
+						employeeToSuspend.id
+					}/suspend`,
+					{ reason: suspensionReason },
+					{
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					}
+				);
+				toast.success("تم إيقاف الموظف عن العمل بنجاح");
+			}
+			fetchEmployees();
+		} catch (error) {
+			console.error("Error updating employee suspension:", error);
+			toast.error(error.response?.data?.message || "فشل تحديث حالة الإيقاف");
+		} finally {
+			setSuspendModalOpen(false);
+			setEmployeeToSuspend(null);
+			setSuspensionReason("");
+		}
 	};
 
 	const confirmDelete = async () => {
@@ -193,6 +252,7 @@ export default function EmployeeManagement() {
 					}}
 					onToggleStatus={handleToggleStatus}
 					onDelete={handleDeleteEmployee}
+					onSuspend={handleSuspendEmployee}
 					getEmployeeTypeLabel={getEmployeeTypeLabel}
 					emptyMessage={
 						search ? "لا يوجد موظفون مطابقون لبحثك" : "لا يوجد موظفون"
@@ -225,6 +285,58 @@ export default function EmployeeManagement() {
 					}}
 					onUpdate={fetchEmployees}
 				/>
+			)}
+			{/* Suspension Modal */}
+			{suspendModalOpen && employeeToSuspend && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+						<h3 className="text-xl font-bold text-gray-900 mb-4">
+							{employeeToSuspend.suspended
+								? "إعادة تفعيل الموظف"
+								: "إيقاف الموظف عن العمل"}
+						</h3>
+						<p className="text-gray-700 mb-4">
+							الموظف: <strong>{employeeToSuspend.name}</strong>
+						</p>
+						{employeeToSuspend.suspended ? (
+							<p className="text-gray-600 mb-4">
+								هل أنت متأكد من إعادة تفعيل هذا الموظف؟
+							</p>
+						) : (
+							<>
+								<p className="text-gray-600 mb-4">الرجاء إدخال سبب الإيقاف:</p>
+								<textarea
+									value={suspensionReason}
+									onChange={(e) => setSuspensionReason(e.target.value)}
+									className="w-full border border-gray-300 rounded-lg p-3 mb-4 min-h-[100px]"
+									placeholder="اكتب السبب هنا..."
+								/>
+							</>
+						)}
+						<div className="flex gap-3 justify-end">
+							<button
+								onClick={() => {
+									setSuspendModalOpen(false);
+									setEmployeeToSuspend(null);
+									setSuspensionReason("");
+								}}
+								className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+							>
+								إلغاء
+							</button>
+							<button
+								onClick={confirmSuspend}
+								className={`px-4 py-2 text-white rounded-lg ${
+									employeeToSuspend.suspended
+										? "bg-blue-600 hover:bg-blue-700"
+										: "bg-orange-600 hover:bg-orange-700"
+								}`}
+							>
+								{employeeToSuspend.suspended ? "إعادة تفعيل" : "تأكيد الإيقاف"}
+							</button>
+						</div>
+					</div>
+				</div>
 			)}
 			<ConfirmDialog
 				isOpen={deleteModalOpen}

@@ -1,5 +1,6 @@
 import React from "react";
 import { toast } from "react-hot-toast";
+import axios from "axios";
 
 const AcidConfirmationModal = ({
 	show,
@@ -10,6 +11,50 @@ const AcidConfirmationModal = ({
 	onAcidCodeChange,
 }) => {
 	if (!show || !confirmData) return null;
+
+	const handleViewDocument = async (uploadId) => {
+		try {
+			toast.loading("جاري تحميل المستند...");
+			const token = localStorage.getItem("token");
+			
+			console.log("📥 Fetching upload with ID:", uploadId);
+			
+			const response = await axios.get(
+				`${import.meta.env.VITE_API_URL}/api/uploads/${uploadId}`,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
+
+			console.log("✅ Upload response:", response.data);
+			
+			toast.dismiss();
+			
+			// Get presigned URL from response - check all possible locations
+			const fileUrl = response.data?.presignedUrl || 
+			                response.data?.upload?.presignedUrl ||
+			                response.data?.url || 
+			                response.data?.upload?.url ||
+			                response.data?.s3Url ||
+			                response.data?.upload?.s3Url;
+			
+			console.log("🔗 File URL:", fileUrl);
+			
+			if (fileUrl) {
+				window.open(fileUrl, "_blank");
+			} else {
+				console.error("❌ No URL found in response:", response.data);
+				toast.error("لم يتم العثور على رابط الملف");
+			}
+		} catch (error) {
+			console.error("❌ Error downloading document:", error);
+			console.error("Error details:", error.response?.data);
+			toast.dismiss();
+			toast.error(error.response?.data?.message || "فشل تحميل المستند");
+		}
+	};
 
 	return (
 		<div className="modal-overlay" onClick={onClose}>
@@ -125,27 +170,17 @@ const AcidConfirmationModal = ({
 								<h4>📄 المستندات المرفقة</h4>
 								<div className="documents-list">
 									{confirmData.uploads.map((upload, index) => {
-										const documentUrl =
-											upload.url || upload.s3Url || upload.presignedUrl;
+										const uploadId = upload._id || upload;
 										return (
-											<div key={upload._id || index} className="document-item">
+											<div key={uploadId || index} className="document-item">
 												<span className="document-name">
 													{upload.documentType || "مستند"} -{" "}
-													{upload.originalname || upload.filename}
+													{upload.originalname || upload.filename || "ملف"}
 												</span>
 												<button
 													type="button"
 													className="btn-view-doc"
-													onClick={() => {
-														console.log("Upload object:", upload);
-														console.log("Document URL:", documentUrl);
-														if (documentUrl) {
-															window.open(documentUrl, "_blank");
-														} else {
-															toast.error("رابط المستند غير متوفر");
-														}
-													}}
-													disabled={!documentUrl}
+													onClick={() => handleViewDocument(uploadId)}
 												>
 													👁️ عرض
 												</button>

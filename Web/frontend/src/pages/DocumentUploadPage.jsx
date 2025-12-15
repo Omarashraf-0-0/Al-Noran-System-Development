@@ -119,6 +119,8 @@ const DocumentUploadPage = () => {
 						filename: upload.filename,
 						url: upload.url,
 						uploadedAt: upload.uploadedAt,
+						approvalStatus: upload.approvalStatus || "pending",
+						rejectionReason: upload.rejectionReason,
 					};
 				}
 			});

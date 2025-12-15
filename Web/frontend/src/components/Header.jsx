@@ -133,9 +133,18 @@ const Header = () => {
 		if (user.type === "client") {
 			return [
 				{ label: "الرئيسية", path: "/home", icon: "🏠" },
-				{ label: "شحناتي", path: "/client-shipments", icon: "📦" },
-				{ label: "طلبات ACID", path: "/acidrequests", icon: "📋" },
-				{ label: "طلب رقم acid", path: "/acidrequest", icon: "🔢" },
+				// Import Section
+				{ 
+					label: "الاستيراد", 
+					path: "/import", 
+					icon: "📥",
+					isDropdown: true,
+					dropdownItems: [
+						{ label: "طلب رقم ACID", path: "/acidrequest", icon: "🔢" },
+						{ label: "طلبات ACID", path: "/acidrequests", icon: "📋" },
+						{ label: "شحنات الاستيراد", path: "/client-shipments", icon: "🚢" },
+					]
+				},
 				// Export Section
 				{ 
 					label: "التصدير", 
@@ -159,7 +168,17 @@ const Header = () => {
 			const baseItems = [
 				{ label: "لوحة التحكم", path: "/employeedashboard", icon: "📊" },
 				{ label: "الشحنات", path: "/employee-shipments", icon: "📦" },
-				{ label: "طلبات ACID", path: "/employee/acid-requests", icon: "📋" },
+				// Import Section for Employees
+				{ 
+					label: "الاستيراد", 
+					path: "/import", 
+					icon: "📥",
+					isDropdown: true,
+					dropdownItems: [
+						{ label: "طلبات ACID", path: "/employee/acid-requests", icon: "📋" },
+						{ label: "شحنات الاستيراد", path: "/employee-shipments", icon: "🚢" },
+					]
+				},
 				// Export Section for Employees
 				{ 
 					label: "التصدير", 
