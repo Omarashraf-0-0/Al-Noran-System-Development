@@ -88,7 +88,7 @@ const DocumentUploadPage = () => {
 			);
 			setUserInfo(response.data.user);
 			setClientType(response.data.user.clientDetails?.clientType || "personal");
-			
+
 			// Update localStorage with fresh user info to reflect verification status immediately
 			localStorage.setItem("user", JSON.stringify(response.data.user));
 		} catch (error) {
@@ -105,7 +105,7 @@ const DocumentUploadPage = () => {
 	const fetchExistingUploads = async (token) => {
 		try {
 			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/uploads?category=registration`,
+				`${import.meta.env.VITE_API_URL}/api/uploads?category=client_registration_docs`,
 				{
 					headers: { Authorization: `Bearer ${token}` },
 				}
@@ -163,7 +163,7 @@ const DocumentUploadPage = () => {
 
 		const formData = new FormData();
 		formData.append("file", file);
-		formData.append("category", "registration");
+		formData.append("category", "client_registration_docs");
 		formData.append("userType", "client");
 		formData.append("clientType", clientType);
 		formData.append("documentType", documentType);
@@ -264,10 +264,10 @@ const DocumentUploadPage = () => {
 				// Show detailed bilingual error message
 				toast.error(
 					response.data.warning ||
-						"⚠️ لا يمكن عرض الملف حالياً بسبب قيود AWS\n" +
-							"File cannot be viewed due to AWS permission restrictions\n\n" +
-							"الملف محفوظ بأمان - يرجى الاتصال بالمسؤول\n" +
-							"File is safely stored - Please contact administrator",
+					"⚠️ لا يمكن عرض الملف حالياً بسبب قيود AWS\n" +
+					"File cannot be viewed due to AWS permission restrictions\n\n" +
+					"الملف محفوظ بأمان - يرجى الاتصال بالمسؤول\n" +
+					"File is safely stored - Please contact administrator",
 					{
 						duration: 7000,
 						style: {
@@ -310,8 +310,8 @@ const DocumentUploadPage = () => {
 			) {
 				toast.error(
 					"⚠️ مشكلة مؤقتة في عرض الملفات - يرجى الاتصال بالمسؤول\n" +
-						"Temporary issue viewing files - Please contact administrator\n\n" +
-						"الملفات محفوظة بأمان\nFiles are safely stored",
+					"Temporary issue viewing files - Please contact administrator\n\n" +
+					"الملفات محفوظة بأمان\nFiles are safely stored",
 					{
 						duration: 7000,
 						style: {
@@ -324,7 +324,7 @@ const DocumentUploadPage = () => {
 			} else {
 				toast.error(
 					error.response?.data?.message ||
-						"فشل في عرض الملف / Failed to view file"
+					"فشل في عرض الملف / Failed to view file"
 				);
 			}
 		}
@@ -377,7 +377,7 @@ const DocumentUploadPage = () => {
 							<h1 className="text-3xl font-bold text-gray-800 mb-2">
 								📄 رفع المستندات المطلوبة
 							</h1>
-							
+
 							{/* Verification Status Warning */}
 							{!userInfo?.clientDetails?.documentsVerified && (
 								<div className="bg-orange-50 border-r-4 border-orange-500 p-4 mb-6 rounded shadow-sm text-right mx-auto max-w-2xl">
@@ -403,8 +403,8 @@ const DocumentUploadPage = () => {
 									{clientType === "factory"
 										? "مصنع"
 										: clientType === "commercial"
-										? "تجاري"
-										: "فردي"}
+											? "تجاري"
+											: "فردي"}
 								</span>
 							</p>
 						</div>
