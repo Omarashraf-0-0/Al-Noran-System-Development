@@ -73,6 +73,21 @@ const AVAILABLE_STATUSES = [
 	},
 ];
 
+// Sub-statuses for "جاري الكشف والتثمين" phase
+const AVAILABLE_SUB_STATUSES = [
+	{ value: "انتظار الرسوم الجمركية من المصلحة", label: "انتظار الرسوم الجمركية من المصلحة" },
+	{ value: "ادخال رقم المطالبة و صورة المطالبة", label: "ادخال رقم المطالبة و صورة المطالبة" },
+	{ value: "اختيار جهة الدفع", label: "اختيار جهة الدفع" },
+	{ value: "في انتظار استلام الافراج الجمركى", label: "في انتظار استلام الافراج الجمركى" },
+	{ value: "مرحلة الترانزيت", label: "مرحلة الترانزيت" },
+];
+
+// Payment parties
+const PAYMENT_PARTIES = [
+	{ value: "العميل", label: "العميل" },
+	{ value: "الشركة", label: "الشركة (النوران)" },
+];
+
 const EmployeeShipmentManagement = () => {
 	const { shipmentId } = useParams();
 	const navigate = useNavigate();
@@ -87,6 +102,8 @@ const EmployeeShipmentManagement = () => {
 	const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 	const [selectedStatus, setSelectedStatus] = useState("");
 	const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+	// Sub-status state for "جاري الكشف والتثمين" phase
+	const [showSubStatusDropdown, setShowSubStatusDropdown] = useState(false);
 
 	// Required documents state
 	const [showDocumentModal, setShowDocumentModal] = useState(false);
@@ -186,6 +203,55 @@ const EmployeeShipmentManagement = () => {
 			console.error("Error updating shipment status:", error);
 			toast.dismiss();
 			toast.error(error.response?.data?.message || "فشل تحديث حالة الشحنة");
+		}
+	};
+
+	// Sub-status update handler
+	const handleSubStatusChange = async (newSubStatus) => {
+		try {
+			toast.loading("جاري تحديث الحالة الفرعية...");
+			await axios.put(
+				`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
+				{ subStatus: newSubStatus },
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
+				}
+			);
+			setShipment((prev) => ({ ...prev, subStatus: newSubStatus }));
+			setShowSubStatusDropdown(false);
+			toast.dismiss();
+			toast.success("تم تحديث الحالة الفرعية بنجاح");
+		} catch (error) {
+			console.error("Error updating sub-status:", error);
+			toast.dismiss();
+			toast.error(error.response?.data?.message || "فشل تحديث الحالة الفرعية");
+		}
+	};
+
+	// Payment party update handler
+	const handlePaymentPartyChange = async (newPaymentParty) => {
+		try {
+			toast.loading("جاري تحديث جهة الدفع...");
+			await axios.put(
+				`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
+				{ paymentParty: newPaymentParty },
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
+				}
+			);
+			setShipment((prev) => ({ ...prev, paymentParty: newPaymentParty }));
+			toast.dismiss();
+			toast.success("تم تحديث جهة الدفع بنجاح");
+		} catch (error) {
+			console.error("Error updating payment party:", error);
+			toast.dismiss();
+			toast.error(error.response?.data?.message || "فشل تحديث جهة الدفع");
 		}
 	};
 
@@ -445,8 +511,102 @@ const EmployeeShipmentManagement = () => {
 								getStatusColor={getStatusColor}
 							/>
 
+							{/* Sub-Status Control Section - Only show when status is "جاري الكشف والتثمين" */}
+							{shipment.status === "جاري الكشف والتثمين" && (
+								<div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-200 rounded-xl p-6 mb-8">
+									<h3 className="text-lg font-bold text-pink-900 mb-4 flex items-center gap-2">
+										<span>📋</span>
+										<span>الحالة الفرعية لمرحلة الكشف والتثمين</span>
+									</h3>
+
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										{/* Sub-Status Dropdown */}
+										<div className="relative">
+											<label className="block text-sm font-medium text-gray-700 mb-2">
+												الحالة الفرعية الحالية
+											</label>
+											<div className="relative">
+												<button
+													onClick={() => setShowSubStatusDropdown(!showSubStatusDropdown)}
+													className="w-full flex items-center justify-between px-4 py-3 bg-white border-2 border-pink-300 rounded-lg text-right font-medium hover:border-pink-500 transition"
+												>
+													<span className="text-gray-700">
+														{shipment.subStatus || "اختر الحالة الفرعية"}
+													</span>
+													<svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+														<path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+													</svg>
+												</button>
+
+												{showSubStatusDropdown && (
+													<div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+														{AVAILABLE_SUB_STATUSES.map((subStatus) => (
+															<button
+																key={subStatus.value}
+																onClick={() => handleSubStatusChange(subStatus.value)}
+																className={`w-full px-4 py-3 text-right hover:bg-pink-50 transition ${shipment.subStatus === subStatus.value
+																		? "bg-pink-100 text-pink-900 font-bold"
+																		: "text-gray-700"
+																	}`}
+															>
+																{subStatus.label}
+															</button>
+														))}
+													</div>
+												)}
+											</div>
+										</div>
+
+										{/* Payment Party Selection - Only show when sub-status is "اختيار جهة الدفع" */}
+										{shipment.subStatus === "اختيار جهة الدفع" && (
+											<div>
+												<label className="block text-sm font-medium text-gray-700 mb-2">
+													جهة الدفع
+												</label>
+												<div className="flex gap-3">
+													{PAYMENT_PARTIES.map((party) => (
+														<button
+															key={party.value}
+															onClick={() => handlePaymentPartyChange(party.value)}
+															className={`flex-1 px-4 py-3 rounded-lg font-medium transition ${shipment.paymentParty === party.value
+																	? "bg-pink-600 text-white shadow-md"
+																	: "bg-white border-2 border-pink-300 text-gray-700 hover:border-pink-500"
+																}`}
+														>
+															{party.label}
+														</button>
+													))}
+												</div>
+												{shipment.paymentParty && (
+													<p className="mt-2 text-sm text-pink-700">
+														✅ تم اختيار: <strong>{shipment.paymentParty === "العميل" ? "العميل" : "الشركة (النوران)"}</strong>
+													</p>
+												)}
+											</div>
+										)}
+									</div>
+
+									{/* Current Sub-Status Display */}
+									{shipment.subStatus && (
+										<div className="mt-4 bg-white rounded-lg p-4 border border-pink-200">
+											<p className="text-sm text-gray-600">
+												الحالة الفرعية الحالية:
+											</p>
+											<p className="text-lg font-bold text-pink-800">
+												{shipment.subStatus}
+												{shipment.subStatus === "اختيار جهة الدفع" && shipment.paymentParty && (
+													<span className="text-sm font-normal text-gray-600 mr-2">
+														({shipment.paymentParty === "العميل" ? "العميل" : "الشركة"})
+													</span>
+												)}
+											</p>
+										</div>
+									)}
+								</div>
+							)}
+
 							{/* Stepper */}
-							<Stepper currentStatus={shipment.status} />
+							<Stepper currentStatus={shipment.status} subStatus={shipment.subStatus} />
 
 							{/* Shipment Details */}
 							{/* TODO: RBAC - Only show if hasPermission('shipment:view') */}

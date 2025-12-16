@@ -475,7 +475,7 @@ const addShipments = async (req, res) => {
 const updateShipmentStatusById = async (req, res) => {
 	try {
 		const { shipmentId } = req.params;
-		const { status, number46 } = req.body;
+		const { status, number46, subStatus, paymentParty } = req.body;
 
 		// Build update object
 		const updateData = {};
@@ -503,6 +503,45 @@ const updateShipmentStatusById = async (req, res) => {
 				});
 			}
 			updateData.status = status;
+
+			// Clear subStatus and paymentParty if status is NOT "جاري الكشف والتثمين"
+			if (status !== "جاري الكشف والتثمين") {
+				updateData.subStatus = null;
+				updateData.paymentParty = null;
+			}
+		}
+
+		// Handle subStatus update
+		if (subStatus !== undefined) {
+			const validSubStatuses = [
+				null,
+				"انتظار الرسوم الجمركية من المصلحة",
+				"ادخال رقم المطالبة و صورة المطالبة",
+				"اختيار جهة الدفع",
+				"في انتظار استلام الافراج الجمركى",
+				"مرحلة الترانزيت",
+			];
+
+			if (subStatus !== null && !validSubStatuses.includes(subStatus)) {
+				return res.status(400).json({
+					message: "Invalid subStatus value",
+					validSubStatuses,
+				});
+			}
+			updateData.subStatus = subStatus;
+		}
+
+		// Handle paymentParty update
+		if (paymentParty !== undefined) {
+			const validPaymentParties = [null, "العميل", "الشركة"];
+
+			if (paymentParty !== null && !validPaymentParties.includes(paymentParty)) {
+				return res.status(400).json({
+					message: "Invalid paymentParty value",
+					validPaymentParties,
+				});
+			}
+			updateData.paymentParty = paymentParty;
 		}
 
 		// Add number46 if provided
@@ -531,10 +570,12 @@ const updateShipmentStatusById = async (req, res) => {
 				shipmentId: shipment._id,
 				acid: shipment.acid,
 				status: shipment.status,
+				subStatus: shipment.subStatus,
+				paymentParty: shipment.paymentParty,
 				updatedAt: new Date(),
 			});
 			console.log(
-				`Socket event emitted for shipment ID: ${shipmentId} with status: ${status}`
+				`Socket event emitted for shipment ID: ${shipmentId} with status: ${status}, subStatus: ${subStatus}`
 			);
 		}
 
