@@ -1,402 +1,158 @@
 import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import WelcomeBanner from "./WelcomeBanner";
-import quickReorderIcon from "../assets/images/quick_reorder.png";
-import filterListIcon from "../assets/images/filter_list.png";
-import filterAltIcon from "../assets/images/filter_alt.png";
-import searchIcon from "../assets/images/Search.svg";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 
+// Extracted Components
+import ShipmentHero from "../components/client-shipments/ShipmentHero";
+import ShipmentStats from "../components/client-shipments/ShipmentStats";
+import ShipmentFilters from "../components/client-shipments/ShipmentFilters";
+import ShipmentCard, { SkeletonCard, EmptyState } from "../components/client-shipments/ShipmentCard";
+
+// Helpers & Translations
+import { t } from "../constants/shipmentTranslations";
+import { getStatusCategory } from "../utils/shipmentHelpers";
+
 export default function ShipmentsList() {
-	const [searchTerm, setSearchTerm] = useState("");
-	const [isFilterOpen, setIsFilterOpen] = useState(false);
-	const [isSortOpen, setIsSortOpen] = useState(false);
-	const [shipments, setShipments] = useState([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState(null);
-	const [selectedStatus, setSelectedStatus] = useState("الكل");
-	const [sortOption, setSortOption] = useState("newest");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("All");
+  const [sortOption, setSortOption] = useState("newest");
+  const [shipments, setShipments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-	const user = JSON.parse(localStorage.getItem("user"));
-	const userID = user?.id || user?._id;
-	const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user"));
+  const rawName = user?.fullname || user?.username || t.labels.client;
+  const displayName = rawName.split(' ').slice(0, 2).join(' ');
+  const userID = user?.id || user?._id;
+  const token = localStorage.getItem("token");
 
-	// Available shipment statuses (matching Stepper component)
-	const shipmentStatuses = [
-		{ value: "الكل", label: "الكل" },
-		{ value: "في انتظار الشحن", label: "في انتظار الشحن" },
-		{ value: "في الطريق", label: "في الطريق" },
-		{ value: "تم وصول البضاعة", label: "تم وصول البضاعة" },
-		{ value: "في انتظار وصول الإذن", label: "في انتظار وصول الإذن" },
-		{ value: "تم وصول الإذن", label: "تم وصول الإذن" },
-		{ value: "التخليص الجمركي", label: "التخليص الجمركي" },
-		{ value: "جارى ادراج الشحنة واستكمال الاجراءات", label: "جارى ادراج الشحنة واستكمال الاجراءات" },
-		{ value: "جاري الكشف والتثمين", label: "جاري الكشف والتثمين" },
-		{ value: "مكتملة", label: "مكتملة" },
-		{ value: "تمت بنجاح", label: "تمت بنجاح" },
-	];
+  // Fetch Logic
+  useEffect(() => {
+    const fetchShipments = async () => {
+      try {
+        setLoading(true);
+        if (!userID) return;
 
-	useEffect(() => {
-		const fetchShipments = async () => {
-			try {
-				setLoading(true);
-				setError(null);
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/shipments/user/${userID}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-				if (!userID) {
-					setError("User ID not found. Please login again.");
-					toast.error("User ID not found. Please login again.");
-					return;
-				}
+        const formatted = (response.data || []).map((s) => ({
+          id: s._id,
+          code: s.shipmentCode || s.acid || t.labels.na,
+          acid: s.acid,
+          bl: s.number46 || s.shipmentNumber || t.labels.na,
+          status: s.status || "pending", // Keep internal status raw for logic, map on display
+          client: s.employerName || t.labels.client,
+          date: new Date(s.createdAt), 
+          updatedAt: new Date(s.updatedAt || s.createdAt),
+          dateStr: new Date(s.createdAt).toLocaleDateString("ar-EG", {
+            day: "numeric", month: "long", year: "numeric"
+          }),
+          port: s.port_name || t.labels.na,
+          type: s.shipmentType || "sea"
+        }));
 
-				const response = await axios.get(
-					`${import.meta.env.VITE_API_URL}/api/shipments/user/${userID}`,
-					{
-						headers: {
-							Authorization: `Bearer ${token}`,
-						},
-					}
-				);
+        setShipments(formatted);
+      } catch (err) {
+        console.error(err);
+        toast.error(t.errorGeneric);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchShipments();
+  }, [userID, token]);
 
-				console.log("Fetched shipments:", response.data);
+  // Filter & Sort Logic
+  let filtered = shipments.filter(s => {
+    const matchesSearch = s.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          s.bl.toLowerCase().includes(searchTerm.toLowerCase());
+    if (selectedStatus === "All") return matchesSearch;
+    return matchesSearch && getStatusCategory(s.status) === selectedStatus;
+  });
 
-				const formattedShipments = (response.data || []).map((shipment) => ({
-					id: shipment._id,
-					clientName: shipment.employerName || "Unknown Client",
-					shipmentNo: shipment.number46 || shipment.shipmentNumber || "N/A",
-					status: shipment.status || "pending",
-					acid: shipment.acid,
-					createdAt: shipment.createdAt, // Keep raw date for sorting
-					date: new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
-						day: "numeric",
-						month: "long",
-						year: "numeric",
-					}),
-				}));
+  filtered.sort((a, b) => {
+    if (sortOption === "newest") return b.date - a.date;
+    if (sortOption === "oldest") return a.date - b.date;
+    if (sortOption === "last_updated") return b.updatedAt - a.updatedAt;
+    if (sortOption === "status") return a.status.localeCompare(b.status);
+    return 0;
+  });
 
-				setShipments(formattedShipments);
+  // Stats
+  const stats = {
+    total: shipments.length,
+    active: shipments.filter(s => getStatusCategory(s.status) === "Active").length,
+    completed: shipments.filter(s => getStatusCategory(s.status) === "Completed").length,
+    pending: shipments.filter(s => getStatusCategory(s.status) === "Pending").length,
+  };
 
-				if (formattedShipments.length === 0) {
-					toast("لا توجد شحنات");
-				}
-			} catch (error) {
-				console.error("Error fetching shipments:", error);
-				const errorMessage =
-					error.response?.data?.message ||
-					error.message ||
-					"Failed to fetch shipments";
-				setError(errorMessage);
-				toast.error(errorMessage);
-			} finally {
-				setLoading(false);
-			}
-		};
+  return (
+    <div className="flex flex-col min-h-screen bg-[#F8FAFC] font-sans selection:bg-[#690000] selection:text-white relative" dir="rtl">
+      
+      {/* 🌍 Global Background (Fixed) */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+          {/* Base Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-50 to-[#eef2f6]"></div>
 
-		fetchShipments();
-	}, [userID, token]);
+          {/* World Map Watermark */}
+          <div className="absolute top-[10%] left-0 w-full h-full opacity-[0.03] bg-[url('https://upload.wikimedia.org/wikipedia/commons/8/80/World_map_-_low_resolution.svg')] bg-no-repeat bg-center bg-contain mix-blend-multiply filter contrast-125"></div>
 
-	const toggleFilter = () => {
-		setIsFilterOpen(!isFilterOpen);
-		setIsSortOpen(false);
-	};
-	const toggleSort = () => {
-		setIsSortOpen(!isSortOpen);
-		setIsFilterOpen(false);
-	};
+          {/* Soft Ambient Orbs */}
+          <div className="absolute top-[-20%] right-[-10%] w-[900px] h-[900px] bg-[#690000]/5 rounded-full blur-[120px] animate-pulse"></div>
+          <div className="absolute bottom-[-10%] left-[-10%] w-[800px] h-[800px] bg-[#1BA3B6]/5 rounded-full blur-[120px] animate-pulse delay-1000"></div>
+      </div>
 
-	const handleFilterApply = () => {
-		setIsFilterOpen(false);
-	};
+      <div className="relative z-10 flex-grow flex flex-col">
+        <Header />
 
-	const handleSortApply = () => {
-		setIsSortOpen(false);
-	};
+        <div className="w-full max-w-6xl mx-auto px-6 pt-12 pb-20 flex-grow">
+          
+          {/* 🏆 Central Dashboard Card (Wrapper) */}
+          <ShipmentHero displayName={displayName}>
 
-	// Get display label for status (Arabic)
-	const getStatusLabel = (status) => {
-		const statusMap = {
-			"Pending": "في انتظار الشحن",
-			"قيد الانتظار": "في انتظار الشحن",
-			"في انتظار الشحن": "في انتظار الشحن",
-			"In Transit": "في الطريق",
-			"في الطريق": "في الطريق",
-			"Arrived": "تم وصول البضاعة",
-			"تم وصول البضاعة": "تم وصول البضاعة",
-			"في انتظار وصول الإذن": "في انتظار وصول الإذن",
-			"تم وصول الإذن": "تم وصول الإذن",
-			"Customs Clearance": "التخليص الجمركي",
-			"التخليص الجمركي": "التخليص الجمركي",
-			"جارى ادراج الشحنة واستكمال الاجراءات": "جارى ادراج الشحنة واستكمال الاجراءات",
-			"جاري الكشف والتثمين": "جاري الكشف والتثمين",
-			"Completed": "مكتملة",
-			"مكتملة": "مكتملة",
-			"تمت بنجاح": "تمت بنجاح",
-		};
-		return statusMap[status] || status;
-	};
+             <ShipmentStats 
+                stats={stats} 
+                loading={loading} 
+                setSelectedStatus={setSelectedStatus} 
+             />
+          </ShipmentHero>
 
-	// Normalize status for comparison (all Arabic)
-	const normalizeStatus = (status) => {
-		const statusNormalization = {
-			"Pending": "في انتظار الشحن",
-			"قيد الانتظار": "في انتظار الشحن",
-			"في انتظار الشحن": "في انتظار الشحن",
-			"In Transit": "في الطريق",
-			"في الطريق": "في الطريق",
-			"Arrived": "تم وصول البضاعة",
-			"تم وصول البضاعة": "تم وصول البضاعة",
-			"في انتظار وصول الإذن": "في انتظار وصول الإذن",
-			"تم وصول الإذن": "تم وصول الإذن",
-			"Customs Clearance": "التخليص الجمركي",
-			"التخليص الجمركي": "التخليص الجمركي",
-			"جارى ادراج الشحنة واستكمال الاجراءات": "جارى ادراج الشحنة واستكمال الاجراءات",
-			"جاري الكشف والتثمين": "جاري الكشف والتثمين",
-			"Completed": "مكتملة",
-			"مكتملة": "مكتملة",
-			"تمت بنجاح": "تمت بنجاح",
-		};
-		return statusNormalization[status] || status;
-	};
+          {/* 🎛️ Control Bar */}
+          <ShipmentFilters 
+            selectedStatus={selectedStatus} 
+            setSelectedStatus={setSelectedStatus} 
+            searchTerm={searchTerm} 
+            setSearchTerm={setSearchTerm} 
+            sortOption={sortOption} 
+            setSortOption={setSortOption} 
+          />
 
-	// Filter and sort shipments
-	let filteredShipments = shipments.filter((shipment) => {
-		// Filter by search term
-		const matchesSearch = shipment.shipmentNo
-			.toLowerCase()
-			.includes(searchTerm.toLowerCase());
+          {/* 📦 List Content */}
+          <div>
+            {loading ? (
+               <div className="grid gap-5">
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+               </div>
+            ) : filtered.length === 0 ? (
+               <EmptyState />
+            ) : (
+               <div className="grid gap-5">
+                   {filtered.map(shipment => (
+                       <ShipmentCard key={shipment.id} shipment={shipment} />
+                   ))}
+               </div>
+            )}
+          </div>
 
-		// Filter by status - normalize both the filter and shipment status for comparison
-		const matchesStatus =
-			selectedStatus === "الكل" ||
-			normalizeStatus(shipment.status) === normalizeStatus(selectedStatus);
-
-		return matchesSearch && matchesStatus;
-	});
-
-	// Sort shipments
-	filteredShipments = [...filteredShipments].sort((a, b) => {
-		switch (sortOption) {
-			case "newest":
-				return new Date(b.createdAt) - new Date(a.createdAt);
-			case "oldest":
-				return new Date(a.createdAt) - new Date(b.createdAt);
-			case "clientAZ":
-				return a.clientName.localeCompare(b.clientName, "ar");
-			case "clientZA":
-				return b.clientName.localeCompare(a.clientName, "ar");
-			default:
-				return 0;
-		}
-	});
-
-	return (
-		<div className="flex flex-col min-h-screen bg-gray-50 font-sans relative">
-			<Header />
-			<WelcomeBanner />
-
-			<section className="flex-grow w-full bg-white py-12 px-8 shadow-inner relative">
-				<div className="max-w-6xl mx-auto">
-					<h1 className="text-3xl font-bold text-right text-red-800 mb-8">
-						شحناتي
-					</h1>
-
-					{/* 🔍 Search + Filter + Sort */}
-					<div className="flex items-center justify-center mb-8 gap-4 relative">
-						{/* Left side — Filter + Sort */}
-						<div className="flex items-center gap-3">
-							{/* Filter Button */}
-							<button
-								onClick={toggleFilter}
-								className={`flex items-center gap-2 font-medium transition-colors ${
-									isFilterOpen
-										? "bg-red-800 text-white px-3 py-1 rounded-md"
-										: "text-red-800"
-								}`}
-							>
-								<img
-									src={filterAltIcon}
-									alt="Filter"
-									className="w-5 h-5 object-contain"
-								/>
-								تصفية
-							</button>
-
-							{/* Sort Button */}
-							<button
-								onClick={toggleSort}
-								className={`flex items-center gap-2 font-medium transition-colors ${
-									isSortOpen
-										? "bg-red-800 text-white px-3 py-1 rounded-md"
-										: "text-red-800"
-								}`}
-							>
-								<img
-									src={filterListIcon}
-									alt="Sort"
-									className="w-5 h-5 object-contain"
-								/>
-								ترتيب
-							</button>
-						</div>
-
-						{/* Search Bar */}
-						<div className="relative w-1/2">
-							<input
-								type="text"
-								placeholder="ابحث برقم الشحنة"
-								value={searchTerm}
-								onChange={(e) => setSearchTerm(e.target.value)}
-								className="w-full bg-white shadow-md rounded-full py-2 px-4 pr-10 text-right focus:outline-none focus:ring-2 focus:ring-red-500 placeholder-gray-400 text-black"
-							/>
-							<img
-								src={searchIcon}
-								alt="Search"
-								className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-							/>
-						</div>
-
-						{/* 🧩 Filter Dropdown */}
-						{isFilterOpen && (
-							<div className="absolute top-14 left-40 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">
-									تصفية حسب الحالة:
-								</h4>
-								<select
-									value={selectedStatus}
-									onChange={(e) => setSelectedStatus(e.target.value)}
-									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
-								>
-									{shipmentStatuses.map((status) => (
-										<option key={status.value} value={status.value}>
-											{status.label}
-										</option>
-									))}
-								</select>
-								<button
-									onClick={handleFilterApply}
-									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
-								>
-									تطبيق
-								</button>
-							</div>
-						)}
-
-						{/* 🧩 Sort Dropdown */}
-						{isSortOpen && (
-							<div className="absolute top-14 left-20 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">ترتيب حسب:</h4>
-								<select
-									value={sortOption}
-									onChange={(e) => setSortOption(e.target.value)}
-									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
-								>
-									<option value="newest">الأحدث أولاً</option>
-									<option value="oldest">الأقدم أولاً</option>
-									<option value="clientAZ">العميل (أ-ي)</option>
-									<option value="clientZA">العميل (ي-أ)</option>
-								</select>
-								<button
-									onClick={handleSortApply}
-									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
-								>
-									تطبيق
-								</button>
-							</div>
-						)}
-					</div>
-
-					{/* 📦 Shipments Table */}
-					{loading ? (
-						<div className="flex justify-center items-center py-12 gap-4">
-							<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
-							<span className="text-gray-600 text-lg">
-								جاري تحميل الشحنات...
-							</span>
-						</div>
-					) : error ? (
-						<div className="bg-red-50 border border-red-300 rounded-lg p-4 text-right">
-							<p className="text-red-800 font-medium mb-3">
-								❌ حدث خطأ: {error}
-							</p>
-							<button
-								onClick={() => window.location.reload()}
-								className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-							>
-								إعادة محاولة
-							</button>
-						</div>
-					) : filteredShipments.length === 0 ? (
-						<div className="text-center py-12">
-							<p className="text-gray-500 text-lg">لا توجد شحنات</p>
-						</div>
-					) : (
-						<div className="overflow-x-auto">
-							<table className="w-full text-right border-separate border-spacing-y-3">
-								<tbody>
-									{filteredShipments.map((shipment) => (
-										<tr
-											key={shipment.id}
-											className="bg-gray-100 hover:bg-gray-200 rounded-xl transition text-right"
-										>
-											<td className="py-3 px-4 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="text-gray-700 text-base font-semibold">
-														{shipment.clientName}
-													</span>
-													<span className="text-gray-500 text-xs">
-														{shipment.date}
-													</span>
-												</div>
-											</td>
-
-											{/* <td className="py-3 px-4 align-top">
-                        <div className="flex flex-col text-sm">
-                          <span className="text-gray-700 text-base font-semibold mb-1">
-                            رقم البوليصة
-                          </span>
-                        </div>
-                      </td> */}
-
-											<td className="py-3 px-4 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="font-semibold text-gray-800">
-														{shipment.shipmentNo}
-													</span>
-												</div>
-											</td>
-
-											<td className="py-3 px-4 align-top">
-												<span
-													className="bg-blue-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit"
-													style={{ color: "#690000" }}
-												>
-													<img
-														src={quickReorderIcon}
-														alt="status icon"
-														className="w-4 h-4"
-													/>
-													{getStatusLabel(shipment.status)}
-												</span>
-											</td>
-
-											<td className="py-3 px-4 align-top">
-												<a href={`/shipmentstatus/${shipment.acid}`}>
-													<span className="text-blue-600 text-sm font-medium underline cursor-pointer">
-														عرض كل التفاصيل
-													</span>
-												</a>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					)}
-				</div>
-			</section>
-
-			<Footer />
-		</div>
-	);
+        </div>
+        <Footer />
+      </div>
+    </div>
+  );
 }
