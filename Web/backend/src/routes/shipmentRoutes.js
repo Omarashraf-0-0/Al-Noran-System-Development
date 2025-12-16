@@ -22,6 +22,7 @@ const {
 	getDashboardStats,
 	getRevenueComparison,
 	searchShipments,
+	getDistinctDocumentNames,
 } = require("../controllers/shipmentController");
 
 const router = express.Router();
@@ -38,6 +39,7 @@ router.get("/get-dashboard-stats", protect, getDashboardStats);
 router.get("/revenue-comparison", protect, getRevenueComparison);
 router.get("/most-active-clients", protect, mostActiveClients);
 router.get("/search", protect, searchShipments);
+router.get("/document-names", protect, getDistinctDocumentNames);
 router.get("/getAll", protect, getAllShipments);
 router.get("/employee/:employeeId", protect, getShipmentrelatedToEmployee);
 router.get("/employee/:employeeId/stats", protect, getEmployeeShipmentStats);

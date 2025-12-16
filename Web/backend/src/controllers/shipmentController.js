@@ -1211,6 +1211,54 @@ const searchShipments = async (req, res) => {
 	}
 };
 
+// ✅ Get distinct document names for autocomplete suggestions
+const getDistinctDocumentNames = async (req, res) => {
+	try {
+		// Aggregate to get all distinct document names from requiredDocuments array
+		const result = await Shipment.aggregate([
+			{ $unwind: "$requiredDocuments" },
+			{ $group: { _id: "$requiredDocuments.name" } },
+			{ $match: { _id: { $ne: null } } },
+			{ $sort: { _id: 1 } },
+		]);
+
+		const documentNames = result.map((item) => item._id);
+
+		// Add some common predefined document names if not already present
+		const predefinedNames = [
+			"صورة البطاقة",
+			"صورة السجل التجاري",
+			"صورة البطاقة الضريبية",
+			"شهادة المنشأ",
+			"بوليصة الشحن",
+			"صورة الفاتورة",
+			"صورة العقد",
+			"كشف العبوة",
+			"إذن الإفراج",
+			"صورة التوكيل",
+			"شهادة الجودة",
+			"شهادة المطابقة",
+			"صورة بطاقة الاستيراد",
+			"صورة رخصة الاستيراد",
+			"صورة الموافقة الجمركية",
+		];
+
+		// Merge predefined with database results (unique values only)
+		const allNames = [...new Set([...documentNames, ...predefinedNames])].sort();
+
+		res.json({
+			success: true,
+			documentNames: allNames,
+		});
+	} catch (error) {
+		console.error("Error getting distinct document names:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error while fetching document names",
+		});
+	}
+};
+
 module.exports = {
 	createShipment,
 	getAllShipments,
@@ -1233,4 +1281,5 @@ module.exports = {
 	getDashboardStats,
 	getRevenueComparison,
 	searchShipments,
+	getDistinctDocumentNames,
 };
