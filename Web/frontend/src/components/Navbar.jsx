@@ -35,7 +35,7 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 			}`}
 		>
 			<div className="container mx-auto px-4 flex items-center justify-between">
-				
+
 				{/* Right Section - Logo and Nav */}
 				<div className="flex items-center gap-12">
 					<Link to="/" className="flex items-center gap-2">
@@ -82,7 +82,7 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 								</Link>
 							)
 						))}
-					</nav>
+</nav>
 				</div>
 
 				{/* Left Section - Actions */}

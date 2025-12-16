@@ -1,5 +1,25 @@
 const mongoose = require("mongoose");
 
+const invoiceItemSchema = new mongoose.Schema(
+  {
+    item: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    itemPrice: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    currencyType: {
+      type: String,
+      enum: ["USD", "EGP"],
+      required: true,
+    },
+  }
+);
+
 const invoiceSchema = new mongoose.Schema(
   {
     invoiceNumber: {
@@ -8,39 +28,47 @@ const invoiceSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
-    unsupportedItemName: {
-      type: String,
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
-      trim: true,
-    },
-    unsupportedItemPrice: {
-      type: Number,
-      required: true,
-      min: 0,
     },
     shipmentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Shipment",
       required: true,
     },
-    feeName: {
+    employeeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Employee",
+      required: true,
+    },
+    username: {
       type: String,
       required: true,
       trim: true,
     },
-    feePrice: {
-      type: Number,
+    invoiceItems: {
+      type: [invoiceItemSchema],
       required: true,
-      min: 0,
+      validate: [
+        (v) => v.length > 0,
+        "Invoice must contain at least one item",
+      ],
     },
-    currencyType : {
+    status: {
       type: String,
-      enum: ["pound","dollar"],
-      required: true,
-    }
+      enum: [
+        "في انتظار الموافقة",
+        "تمت الموافقة",
+        "مرفوض",
+        "تم الدفع"
+      ],
+      default: "في انتظار الموافقة",
+    },
   },
   {
-    timestamps: { createdAt: true, updatedAt: false },
+    timestamps: true,
   }
 );
 

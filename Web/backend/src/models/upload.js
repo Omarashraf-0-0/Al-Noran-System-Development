@@ -34,6 +34,7 @@ const uploadSchema = new mongoose.Schema(
 				"export_shipment", // شحنة تصدير
 				"certificate_origin", // شهادة المنشأ
 				"form_46", // نموذج 46
+				"payment"
 			],
 			required: true,
 		},

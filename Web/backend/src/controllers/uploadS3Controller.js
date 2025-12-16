@@ -93,6 +93,7 @@ const uploadFile = async (req, res) => {
 			"invoice",
 			"archive",
 			"ucr_request",
+			"payment",
 		];
 		if (!validCategories.includes(category)) {
 			console.log("❌ Invalid category:", category);
@@ -286,6 +287,9 @@ const uploadMultipleFiles = async (req, res) => {
 		const uploadedFiles = [];
 		const errors = [];
 
+		console.log(`[MultiUpload] Received ${req.files.length} files`);
+		console.log(`[MultiUpload] Category: ${category}, User Type: ${userType}`);
+
 		// Process each file
 		for (let i = 0; i < req.files.length; i++) {
 			const file = req.files[i];
@@ -366,6 +370,7 @@ const uploadMultipleFiles = async (req, res) => {
 					mimetype: uploadRecord.mimetype,
 				});
 			} catch (error) {
+				console.error(`[MultiUpload] Error processing file ${file.originalname}:`, error);
 				errors.push({
 					filename: file.originalname,
 					error: error.message,
@@ -615,7 +620,7 @@ const updateUpload = async (req, res) => {
 			success: false,
 			message: "Server error updating upload",
 		});
-}
+	}
 };
 
 /**
@@ -721,11 +726,11 @@ const checkRequiredDocuments = async (req, res) => {
 const getPresignedUrlForKey = async (req, res) => {
 	try {
 		const s3Key = decodeURIComponent(req.params.s3Key);
-		
+
 		console.log("🔗 Generating presigned URL for key:", s3Key);
-		
+
 		const presignedUrl = await getPresignedUrl(s3Key, 3600); // 1 hour
-		
+
 		res.status(200).json({
 			success: true,
 			url: presignedUrl,

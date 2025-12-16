@@ -18,7 +18,7 @@ const UserSchema = new mongoose.Schema(
 		clientId: {
 			type: Number,
 			unique: true,
-			sparse: true, 
+			sparse: true,
 			index: true,
 		},
 		phone: {
@@ -50,15 +50,19 @@ const UserSchema = new mongoose.Schema(
 		active: {
 			type: Boolean,
 			default: true,
-		},		profilePhoto: {
+		}, profilePhoto: {
 			type: String,
 			required: false,
 			default: null,
 		},
-		taxNumber: {
-			type: String,
+		clientDetails: {
+			type: mongoose.Schema.Types.Mixed,
 			required: false,
 			trim: true,
+		},
+		wallet: {
+			type: Number,
+			default: 0
 		},
 		rank: {
 			type: String,

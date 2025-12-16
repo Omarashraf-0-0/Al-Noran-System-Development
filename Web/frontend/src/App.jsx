@@ -34,6 +34,8 @@ import ShipmentChatPage from "./pages/ShipmentChatPage";
 import ClientProfilePage from "./pages/ClientProfilePage";
 import EmployeeProfilePage from "./pages/EmployeeProfilePage";
 import AdminProfilePage from "./pages/AdminProfilePage";
+import PaymentsManagementPage from "./pages/PaymentsManagementPage";
+import ClientPaymentsPage from "./pages/ClientPaymentsPage";
 
 // Export System Pages
 import UCRRequestPage from "./pages/UCRRequestPage";
@@ -43,6 +45,7 @@ import ExportShipmentsPage from "./pages/ExportShipmentsPage";
 import ExportShipmentDetailsPage from "./pages/ExportShipmentDetailsPage";
 import EmployeeUCRRequestsPage from "./pages/EmployeeUCRRequestsPage";
 import EmployeeExportShipmentsPage from "./pages/EmployeeExportShipmentsPage";
+
 
 // Admin Route Protection Component
 const AdminRoute = ({ children }) => {
@@ -113,12 +116,12 @@ const ClientRoute = ({ children }) => {
 	}
 
 	// NEW: Check if client documents are verified
-	const isVerified = user?.clientDetails?.documentsVerified; 
+	const isVerified = user?.clientDetails?.documentsVerified;
 	const location = useLocation();
 
 	// List of paths that REQUIRE verification
 	const blockedPaths = ["/acidrequest", "/ucr-request"];
-	
+
 	// Check if current path starts with any of the blocked paths
 	const isBlockedPath = blockedPaths.some(path => location.pathname.startsWith(path));
 
@@ -126,7 +129,7 @@ const ClientRoute = ({ children }) => {
 	if (!isVerified && isBlockedPath) {
 		return <Navigate to="/upload-documents" replace />;
 	}
-	
+
 	return children;
 };
 
@@ -244,7 +247,7 @@ const App = () => {
 							<ShipmentStatus />
 						</ClientRoute>
 					}
-				/> 
+				/>
 				<Route
 					path="/employee-shipment/:shipmentId"
 					element={
@@ -459,6 +462,22 @@ const App = () => {
 				/>
 
 				{/* NEW */}
+				<Route
+					path="/client-payments"
+					element={
+						<ClientRoute>
+							<ClientPaymentsPage />
+						</ClientRoute>
+					}
+				/>
+				<Route
+					path="/payments-management"
+					element={
+						<AdminRoute>
+							<PaymentsManagementPage />
+						</AdminRoute>
+					}
+				/>
 				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
 				<Route path="*" element={<NotFound404 />} />
 			</Routes>

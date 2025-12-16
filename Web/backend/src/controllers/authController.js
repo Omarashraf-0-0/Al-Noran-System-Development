@@ -256,6 +256,7 @@ const getMe = asyncHandler(async (req, res) => {
 			employeeDetails: user.employeeDetails,
 			taxNumber: user.taxNumber,
 			rank: user.rank,
+			wallet: user.wallet,
 			createdAt: user.createdAt,
 		},
 	});

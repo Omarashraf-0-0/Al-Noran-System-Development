@@ -79,6 +79,9 @@ const generateS3Key = ({
 		case "archive":
 			fullPath = `${basePath}/archive/${uniqueFilename}`;
 			break;
+		case "payment":
+			fullPath = `${basePath}/payments/${uniqueFilename}`;
+			break;
 		default:
 			throw new Error(`Invalid category: ${category}`);
 	}
@@ -108,9 +111,8 @@ const uploadToS3 = async ({ fileBuffer, s3Key, mimetype }) => {
 		await s3Client.send(command);
 
 		// Generate public URL (won't work for private ACL, use presigned URL instead)
-		const url = `https://${BUCKET_NAME}.s3.${
-			process.env.AWS_REGION || "me-south-1"
-		}.amazonaws.com/${s3Key}`;
+		const url = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || "me-south-1"
+			}.amazonaws.com/${s3Key}`;
 
 		return {
 			success: true,
@@ -136,7 +138,7 @@ const uploadToS3 = async ({ fileBuffer, s3Key, mimetype }) => {
 const getPresignedUrl = async (s3Key, expiresIn = 3600) => {
 	try {
 		console.log(`🔗 Generating presigned URL for: ${s3Key}`);
-		
+
 		const command = new GetObjectCommand({
 			Bucket: BUCKET_NAME,
 			Key: s3Key,
@@ -145,14 +147,14 @@ const getPresignedUrl = async (s3Key, expiresIn = 3600) => {
 		const presignedUrl = await getSignedUrl(s3Client, command, {
 			expiresIn,
 		});
-		
+
 		console.log(`✅ Presigned URL generated successfully`);
 		return presignedUrl;
 	} catch (error) {
 		console.error("❌ Presigned URL Error:", error.message);
 		console.error("   S3 Key:", s3Key);
 		console.error("   Bucket:", BUCKET_NAME);
-		
+
 		// Check if it's a permission error
 		if (error.message && (error.message.includes("not authorized") || error.message.includes("AccessDenied"))) {
 			console.error(

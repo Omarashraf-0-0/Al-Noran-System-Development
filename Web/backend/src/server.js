@@ -87,6 +87,7 @@ app.use("/api/upload/users", require("./routes/uploadRoutes"));
 app.use("/api/upload/shipments", require("./routes/uploadRoutes"));
 app.use("/api/uploads", require("./routes/uploadS3Routes")); // S3 Upload Routes
 app.use("/api/chat", require("./routes/chatRoutes")); // Chat Routes
+app.use("/api/payments", require("./routes/paymentRoutes")); // Payment Routes
 
 // =====================================================
 // EXPORT SYSTEM ROUTES (NEW)

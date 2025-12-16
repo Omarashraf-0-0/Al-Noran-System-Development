@@ -102,6 +102,7 @@ const Header = () => {
 		{ label: "إدارة العملاء", path: "/customermanagement", icon: "👥" },
 		{ label: "إدارة الشهادات", path: "/certificatesmanagement", icon: "📜" },
 		{ label: "إدارة الشحنات", path: "/shipmentsmanagement", icon: "🚢" },
+		{ label: "إدارة المدفوعات", path: "/payments-management", icon: "💳" },
 	];
 
 	const getUserDisplayName = () => {
@@ -139,11 +140,10 @@ const Header = () => {
 									<a
 										key={item.path}
 										href={item.path}
-										className={`px-3 py-2 rounded-md text-sm font-bold transition-colors ${
-											isActivePath(item.path)
+										className={`px-3 py-2 rounded-md text-sm font-bold transition-colors ${isActivePath(item.path)
 												? "bg-red-800 text-white"
 												: "text-red-800 hover:bg-red-50"
-										}`}
+											}`}
 									>
 										{item.icon && <span className="mr-1">{item.icon}</span>}
 										{item.label}
@@ -310,11 +310,10 @@ const Header = () => {
 								<a
 									key={item.path}
 									href={item.path}
-									className={`block px-3 py-2 rounded-md text-sm font-bold transition-colors ${
-										isActivePath(item.path)
+									className={`block px-3 py-2 rounded-md text-sm font-bold transition-colors ${isActivePath(item.path)
 											? "bg-red-800 text-white"
 											: "text-red-800 hover:bg-red-50"
-									}`}
+										}`}
 									onClick={() => setShowMobileMenu(false)}
 								>
 									{item.icon && <span className="mr-2">{item.icon}</span>}
