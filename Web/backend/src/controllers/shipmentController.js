@@ -115,21 +115,18 @@ const createShipment = async (req, res) => {
 				</tr>
 				<tr>
 					<td style="padding:10px; border:1px solid #ddd; background:#f9fafb;"><strong>Importer Name</strong></td>
-					<td style="padding:10px; border:1px solid #ddd;">${
-						shipmentData.importerName
-					}</td>
+					<td style="padding:10px; border:1px solid #ddd;">${shipmentData.importerName
+			}</td>
 				</tr>
 				<tr>
 					<td style="padding:10px; border:1px solid #ddd; background:#f9fafb;"><strong>Employer Name</strong></td>
-					<td style="padding:10px; border:1px solid #ddd;">${
-						shipmentData.employerName
-					}</td>
+					<td style="padding:10px; border:1px solid #ddd;">${shipmentData.employerName
+			}</td>
 				</tr>
 				<tr>
 					<td style="padding:10px; border:1px solid #ddd; background:#f9fafb;"><strong>Description</strong></td>
-					<td style="padding:10px; border:1px solid #ddd;">${
-						shipmentData.shipmentDescription
-					}</td>
+					<td style="padding:10px; border:1px solid #ddd;">${shipmentData.shipmentDescription
+			}</td>
 				</tr>
 				<tr>
 					<td style="padding:10px; border:1px solid #ddd; background:#f9fafb;"><strong>Status</strong></td>
@@ -138,15 +135,14 @@ const createShipment = async (req, res) => {
 				<tr>
 					<td style="padding:10px; border:1px solid #ddd; background:#f9fafb;"><strong>Expected Arrival</strong></td>
 					<td style="padding:10px; border:1px solid #ddd;">${new Date(
-						shipmentData.arrivalDate
-					).toLocaleDateString()}</td>
+				shipmentData.arrivalDate
+			).toLocaleDateString()}</td>
 				</tr>
 				<tr>
 					<td style="padding:10px; border:1px solid #ddd; background:#f9fafb;"><strong>Invoice File</strong></td>
 					<td style="padding:10px; border:1px solid #ddd;">
-					<a href="${process.env.BASE_URL}${
-			shipmentData.invoiceUrl
-		}" target="_blank" style="color:#0b74de; text-decoration:none;">View Invoice</a>
+					<a href="${process.env.BASE_URL}${shipmentData.invoiceUrl
+			}" target="_blank" style="color:#0b74de; text-decoration:none;">View Invoice</a>
 					</td>
 				</tr>
 				<tr>
@@ -490,6 +486,8 @@ const updateShipmentStatusById = async (req, res) => {
 				"In Transit",
 				"في انتظار الشحن",
 				"في انتظار وصول الإذن",
+				"تم وصول الإذن",
+				"جارى ادراج الشحنة واستكمال الاجراءات",
 				"جاري الكشف والتثمين",
 				"تمت بنجاح",
 				"Pending",
@@ -606,19 +604,17 @@ const requestRequiredDocuments = async (req, res) => {
 			<body style="font-family:Arial, sans-serif; background:#f5f7fa; padding:20px;">
 			<div style="max-width:600px; margin:auto; background:#ffffff; padding:25px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.1);">
 				<h2 style="color:#dc2626; text-align:center;">📄 مستندات مطلوبة لشحنتك</h2>
-				<p>مرحباً <strong>${
-					shipment.user_id?.username ||
-					shipment.user_id?.fullname ||
-					"عزيزي العميل"
-				}</strong>,</p>
+				<p>مرحباً <strong>${shipment.user_id?.username ||
+			shipment.user_id?.fullname ||
+			"عزيزي العميل"
+			}</strong>,</p>
 				<p>نود إعلامك بأننا نحتاج إلى المستندات التالية لاستكمال معالجة شحنتك:</p>
 
 				<div style="background:#fef2f2; border-right:4px solid #dc2626; padding:15px; margin:20px 0; border-radius:5px;">
 					<h3 style="color:#dc2626; margin-top:0;">تفاصيل الشحنة:</h3>
 					<p style="margin:5px 0;"><strong>رقم ACID:</strong> ${shipment.acid}</p>
-					<p style="margin:5px 0;"><strong>رقم البوليصة:</strong> ${
-						shipment.number46 || "غير محدد"
-					}</p>
+					<p style="margin:5px 0;"><strong>رقم البوليصة:</strong> ${shipment.number46 || "غير محدد"
+			}</p>
 					<p style="margin:5px 0;"><strong>الحالة الحالية:</strong> ${shipment.status}</p>
 				</div>
 
@@ -632,10 +628,9 @@ const requestRequiredDocuments = async (req, res) => {
 				</div>
 
 				<div style="text-align:center; margin-top:30px;">
-					<a href="${
-						process.env.FRONTEND_URL ||
-						"http://section-assignment-bucket.s3-website-us-east-1.amazonaws.com"
-					}/shipmentstatus/${shipment.acid}" 
+					<a href="${process.env.FRONTEND_URL ||
+			"http://section-assignment-bucket.s3-website-us-east-1.amazonaws.com"
+			}/shipmentstatus/${shipment.acid}" 
 					   style="display:inline-block; background:#dc2626; color:#ffffff; padding:12px 30px; text-decoration:none; border-radius:8px; font-weight:bold;">
 						رفع المستندات الآن
 					</a>

@@ -26,11 +26,6 @@ import mainIllustration from "../assets/images/Untitled design (7) 1.png";
 // Available statuses for shipments
 const AVAILABLE_STATUSES = [
 	{
-		value: "Pending",
-		label: "قيد الانتظار",
-		color: "bg-yellow-100 text-yellow-800",
-	},
-	{
 		value: "في انتظار الشحن",
 		label: "في انتظار الشحن",
 		color: "bg-orange-100 text-orange-800",
@@ -51,9 +46,19 @@ const AVAILABLE_STATUSES = [
 		color: "bg-purple-100 text-purple-800",
 	},
 	{
+		value: "تم وصول الإذن",
+		label: "تم وصول الإذن",
+		color: "bg-cyan-100 text-cyan-800",
+	},
+	{
 		value: "Customs Clearance",
 		label: "التخليص الجمركي",
 		color: "bg-indigo-100 text-indigo-800",
+	},
+	{
+		value: "جارى ادراج الشحنة واستكمال الاجراءات",
+		label: "جارى ادراج الشحنة واستكمال الاجراءات",
+		color: "bg-amber-100 text-amber-800",
 	},
 	{
 		value: "جاري الكشف والتثمين",
@@ -187,7 +192,7 @@ const EmployeeShipmentManagement = () => {
 	// Number46 update handler
 	const handleNumber46Update = async (newNumber46) => {
 		try {
-			toast.loading("جاري تحديث رقم البوليصة...");
+			toast.loading("جاري تحديث رقم 46...");
 			await axios.put(
 				`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
 				{ number46: newNumber46 },
@@ -200,11 +205,11 @@ const EmployeeShipmentManagement = () => {
 			);
 			setShipment((prev) => ({ ...prev, number46: newNumber46 }));
 			toast.dismiss();
-			toast.success("تم تحديث رقم البوليصة بنجاح");
+			toast.success("تم تحديث رقم 46 بنجاح");
 		} catch (error) {
 			console.error("Error updating number46:", error);
 			toast.dismiss();
-			toast.error(error.response?.data?.message || "فشل تحديث رقم البوليصة");
+			toast.error(error.response?.data?.message || "فشل تحديث رقم 46");
 		}
 	};
 
@@ -231,8 +236,7 @@ const EmployeeShipmentManagement = () => {
 			setUploadingDoc(true);
 			toast.loading("جاري إرسال طلب المستندات...");
 			await axios.post(
-				`${
-					import.meta.env.VITE_API_URL
+				`${import.meta.env.VITE_API_URL
 				}/api/shipments/id/${shipmentId}/required-documents`,
 				{ documents: requiredDocuments },
 				{
@@ -551,8 +555,8 @@ const EmployeeShipmentManagement = () => {
 																	<p className="text-sm text-gray-500">
 																		{upload.createdAt
 																			? new Date(
-																					upload.createdAt
-																			  ).toLocaleDateString("ar-EG")
+																				upload.createdAt
+																			).toLocaleDateString("ar-EG")
 																			: ""}
 																	</p>
 																</div>

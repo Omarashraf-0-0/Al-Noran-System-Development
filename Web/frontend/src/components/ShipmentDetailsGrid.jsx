@@ -73,9 +73,9 @@ const ShipmentDetailsGrid = ({
 			value: shipment.type_of_containers?.join(", ") || "غير محدد",
 		},
 		{
-			label: "رقم البوليصة",
+			label: "رقم 46",
 			value: shipment.number46 || "غير محدد",
-			editable: isEmployee,
+			editable: isEmployee && shipment.status === "جارى ادراج الشحنة واستكمال الاجراءات",
 			fieldKey: "number46",
 		},
 		{
@@ -107,7 +107,7 @@ const ShipmentDetailsGrid = ({
 										value={number46Value}
 										onChange={(e) => setNumber46Value(e.target.value)}
 										className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-right focus:outline-none focus:ring-2 focus:ring-red-500"
-										placeholder="أدخل رقم البوليصة"
+										placeholder="أدخل رقم 46"
 										dir="rtl"
 									/>
 									<button
@@ -130,7 +130,7 @@ const ShipmentDetailsGrid = ({
 									<button
 										onClick={() => setIsEditingNumber46(true)}
 										className="p-1.5 text-gray-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-										title="تعديل رقم البوليصة"
+										title="تعديل رقم 46"
 									>
 										<Pencil size={16} />
 									</button>

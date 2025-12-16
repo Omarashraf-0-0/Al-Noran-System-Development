@@ -77,10 +77,12 @@ const shipmentSchema = new mongoose.Schema(
 				"في انتظار الشحن",
 				"في الطريق",
 				"في انتظار وصول الإذن",
+				"تم وصول الإذن",
+				"جارى ادراج الشحنة واستكمال الاجراءات",
 				"جاري الكشف والتثمين",
 				"تمت بنجاح",
 			],
-			default: "Pending",
+			default: "في انتظار الشحن",
 		},
 		policy: {
 			type: String,
@@ -205,16 +207,16 @@ shipmentSchema.pre("save", async function (next) {
 		if (typeLower.includes("air") || typeLower.includes("جوي")) {
 			prefix = "AIR";
 		}
-		
+
 		// Client ID: 4 digits (e.g., 0010)
 		const clientIdStr = (user.clientId || 0).toString().padStart(4, "0");
-		
+
 		// Sequence: 4 digits (e.g., 0001)
 		const seqStr = counter.seq.toString().padStart(4, "0");
 
 		// Set the code
 		this.shipmentCode = `${prefix}-${clientIdStr}-${seqStr}`;
-		
+
 		next();
 	} catch (error) {
 		next(error);
