@@ -244,7 +244,7 @@ uploadSchema.statics.checkRequiredUploads = async function (
 	const required = this.getRequiredDocuments(clientType);
 	const uploaded = await this.find({
 		userId,
-		category: "registration",
+		category: { $in: ["registration", "client_registration_docs"] },
 		isActive: true,
 		approvalStatus: "approved",
 	}).distinct("documentType");

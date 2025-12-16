@@ -729,6 +729,131 @@ const unsuspendEmployee = asyncHandler(async (req, res) => {
 	});
 });
 
+// @desc    Check and update user verification status
+// @route   GET /api/users/check-verification
+// @access  Private
+const checkVerificationStatus = asyncHandler(async (req, res) => {
+	const userId = req.user?.id || req.user?._id;
+
+	if (!userId) {
+		return res.status(401).json({ message: "Unauthorized" });
+	}
+
+	const user = await User.findById(userId);
+	if (!user) {
+		return res.status(404).json({ message: "User not found" });
+	}
+
+	if (user.type !== "client") {
+		return res.json({ verified: true, message: "User is not a client" });
+	}
+
+	const Upload = require("../models/upload");
+	const status = await Upload.checkRequiredUploads(
+		userId,
+		user.clientDetails.clientType
+	);
+
+	if (status.completed && !user.clientDetails.documentsVerified) {
+		user.clientDetails.documentsVerified = true;
+		await user.save();
+		console.log(`User ${userId} auto-verified via check endpoint`);
+	}
+
+	res.json({
+		verified: user.clientDetails.documentsVerified,
+		details: status,
+		user: {
+			...user.toObject(),
+			clientDetails: user.clientDetails,
+		},
+	});
+});
+
+// @desc    Get client profile with all shipments and requests
+// @route   GET /api/users/:clientId/profile?employeeId=xxx (optional filter)
+// @access  Admin/Employee
+const getClientProfile = asyncHandler(async (req, res) => {
+	const { clientId } = req.params;
+	const { employeeId } = req.query; // Optional filter for employee-specific data
+
+	// Get client info
+	const client = await User.findById(clientId).select("-password").lean();
+	if (!client) {
+		return res.status(404).json({ message: "Client not found" });
+	}
+
+	// Build query filters
+	const importFilter = { user_id: clientId };
+	const exportFilter = { userId: clientId };
+	const acidFilter = { userId: clientId };
+	const ucrFilter = { userId: clientId };
+
+	// If employeeId is provided, filter by assigned employee
+	if (employeeId) {
+		importFilter.employee_id = employeeId;
+		exportFilter.assignedEmployee = employeeId;
+		acidFilter.assignedEmployee = employeeId;
+		ucrFilter.assignedEmployee = employeeId;
+	}
+
+	// Get Shipments (Import)
+	const Shipment = require("../models/shipment");
+	const importShipments = await Shipment.find(importFilter)
+		.sort({ createdAt: -1 })
+		.lean();
+
+	// Get Export Shipments
+	let exportShipments = [];
+	try {
+		const ExportShipment = require("../models/exportShipment");
+		exportShipments = await ExportShipment.find(exportFilter)
+			.populate("ucrRequestId", "requestNumber")
+			.sort({ createdAt: -1 })
+			.lean();
+	} catch (e) {
+		console.log("ExportShipment model not found or error:", e.message);
+	}
+
+	// Get ACID Requests
+	let acidRequests = [];
+	try {
+		const AcidRequest = require("../models/acidRequest");
+		acidRequests = await AcidRequest.find(acidFilter)
+			.sort({ createdAt: -1 })
+			.lean();
+	} catch (e) {
+		console.log("AcidRequest model not found or error:", e.message);
+	}
+
+	// Get UCR Requests
+	let ucrRequests = [];
+	try {
+		const UcrRequest = require("../models/ucrRequest");
+		ucrRequests = await UcrRequest.find(ucrFilter)
+			.sort({ createdAt: -1 })
+			.lean();
+	} catch (e) {
+		console.log("UcrRequest model not found or error:", e.message);
+	}
+
+	res.json({
+		success: true,
+		client,
+		importShipments,
+		exportShipments,
+		acidRequests,
+		ucrRequests,
+		filteredByEmployee: !!employeeId,
+		stats: {
+			totalImport: importShipments.length,
+			totalExport: exportShipments.length,
+			totalAcidRequests: acidRequests.length,
+			totalUcrRequests: ucrRequests.length,
+		},
+	});
+});
+
 module.exports = {
 	getAllUsers,
 	createUser,
@@ -744,4 +869,6 @@ module.exports = {
 	changePasswordProfile,
 	suspendEmployee,
 	unsuspendEmployee,
+	checkVerificationStatus,
+	getClientProfile,
 };

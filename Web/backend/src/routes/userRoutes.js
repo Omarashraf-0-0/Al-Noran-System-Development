@@ -15,6 +15,8 @@ const {
 	changePasswordProfile,
 	suspendEmployee,
 	unsuspendEmployee,
+	checkVerificationStatus,
+	getClientProfile,
 } = require("../controllers/userController");
 const { protect } = require("../middleware/auth");
 const { phoneNumberValidation } = require("../middleware/validation");
@@ -25,6 +27,9 @@ router
 	.get(protect, getUserProfile)
 	.put(protect, updateUserProfile);
 
+// Check verification status
+router.route("/check-verification").get(protect, checkVerificationStatus);
+
 router.route("/change-password").put(protect, changePasswordProfile);
 
 // User management routes
@@ -32,6 +37,9 @@ router.route("/").get(getAllUsers).post(createUser);
 
 // Batch user creation
 router.route("/addUsers").post(addUsers);
+
+// Client profile (for admin/employee to view client details)
+router.route("/:clientId/profile").get(protect, getClientProfile);
 
 // User-specific operations
 router

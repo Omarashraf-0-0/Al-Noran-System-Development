@@ -62,6 +62,7 @@ export default function EmployeeShipments() {
 
 				const formattedShipments = (response.data || []).map((shipment) => ({
 					id: shipment._id,
+					userId: shipment.user_id, // For client profile link
 					clientName: shipment.employerName || "Unknown Client",
 					shipmentNo: shipment.number46 || shipment.shipmentNumber || "N/A",
 					acid: shipment.acid || "N/A",
@@ -323,7 +324,14 @@ export default function EmployeeShipments() {
 											<td className="py-3 px-4 align-top">
 												<div className="flex flex-col text-sm">
 													<span className="text-gray-700 text-base font-semibold">
-														{shipment.clientName}
+														{shipment.userId ? (
+												<a 
+													href={`/client/${shipment.userId}`}
+													className="hover:text-[#1BA3B6] hover:underline"
+												>
+													{shipment.clientName}
+												</a>
+											) : shipment.clientName}
 													</span>
 													<span className="text-gray-500 text-xs">
 														{shipment.date}

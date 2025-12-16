@@ -8,15 +8,15 @@ const CurrentShipments = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 
-	const user = JSON.parse(localStorage.getItem("user"));
-	const userID = user?.id;
-	const token = localStorage.getItem("token");
-
 	useEffect(() => {
 		const fetchAllShipments = async () => {
 			try {
 				setLoading(true);
 				setError(null);
+
+				const user = JSON.parse(localStorage.getItem("user"));
+				const userID = user?.id || user?._id;
+				const token = localStorage.getItem("token");
 
 				if (!userID) {
 					setError("User ID not found. Please login again.");
@@ -85,12 +85,8 @@ const CurrentShipments = () => {
 			}
 		};
 
-		if (userID) {
-			fetchAllShipments();
-		} else {
-			setLoading(false);
-		}
-	}, [userID, token]);
+		fetchAllShipments();
+	}, []);
 
 	return (
 		<div className="container mx-auto px-4 pb-16" dir="rtl">
@@ -132,9 +128,10 @@ const CurrentShipments = () => {
 			) : (
 				<div className="space-y-4">
 					{shipments.map((shipment) => (
-						<div
+						<a
 							key={`${shipment.type}-${shipment.id}`}
-							className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-[#1BA3B6]/30 transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group"
+							href={shipment.link}
+							className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-[#1BA3B6]/30 transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group cursor-pointer block"
 						>
 							{/* Info Section */}
 							<div className="flex-1 flex items-start gap-4">
@@ -177,14 +174,13 @@ const CurrentShipments = () => {
 									{shipment.status}
 								</span>
 
-								<a 
-									href={shipment.link}
-									className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#690000] hover:border-[#690000] hover:bg-red-50 transition-all"
+								<span 
+									className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 group-hover:text-[#690000] group-hover:border-[#690000] group-hover:bg-red-50 transition-all"
 								>
 									<ArrowRight size={20} />
-								</a>
+								</span>
 							</div>
-						</div>
+						</a>
 					))}
 				</div>
 			)}

@@ -91,6 +91,21 @@ const DocumentUploadPage = () => {
 
 			// Update localStorage with fresh user info to reflect verification status immediately
 			localStorage.setItem("user", JSON.stringify(response.data.user));
+
+			// Check verification status from backend (auto-verify if consistent)
+			try {
+				const checkRes = await axios.get(
+					`${import.meta.env.VITE_API_URL}/api/users/check-verification`,
+					{ headers: { Authorization: `Bearer ${token}` } }
+				);
+				if (checkRes.data && checkRes.data.user) {
+					console.log("Verified status checked:", checkRes.data.verified);
+					setUserInfo(checkRes.data.user);
+					localStorage.setItem("user", JSON.stringify(checkRes.data.user));
+				}
+			} catch (err) {
+				console.error("Verification check failed:", err);
+			}
 		} catch (error) {
 			console.error("Error fetching user info:", error);
 			// If token invalid, redirect to login
@@ -105,7 +120,7 @@ const DocumentUploadPage = () => {
 	const fetchExistingUploads = async (token) => {
 		try {
 			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/uploads?category=client_registration_docs`,
+				`${import.meta.env.VITE_API_URL}/api/uploads?category=registration`,
 				{
 					headers: { Authorization: `Bearer ${token}` },
 				}
@@ -163,7 +178,7 @@ const DocumentUploadPage = () => {
 
 		const formData = new FormData();
 		formData.append("file", file);
-		formData.append("category", "client_registration_docs");
+		formData.append("category", "registration");
 		formData.append("userType", "client");
 		formData.append("clientType", clientType);
 		formData.append("documentType", documentType);

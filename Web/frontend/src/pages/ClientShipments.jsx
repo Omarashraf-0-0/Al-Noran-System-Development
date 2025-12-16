@@ -20,7 +20,7 @@ export default function ShipmentsList() {
 	const [sortOption, setSortOption] = useState("newest");
 
 	const user = JSON.parse(localStorage.getItem("user"));
-	const userID = user?.id;
+	const userID = user?.id || user?._id;
 	const token = localStorage.getItem("token");
 
 	// Available shipment statuses (matching Stepper component)

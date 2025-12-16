@@ -73,6 +73,13 @@ const CustomersTable = ({
 										>
 											👁️ عرض
 										</button>
+										<a
+											href={`/client/${cust.id}`}
+											className="bg-[#690000] text-white px-3 py-1 rounded text-xs font-semibold hover:bg-[#8B0000]"
+											title="ملف العميل"
+										>
+											📊 ملف العميل
+										</a>
 										<button
 											onClick={() => onToggleStatus(cust.id, cust.status)}
 											className={`px-3 py-1 rounded text-xs font-semibold ${

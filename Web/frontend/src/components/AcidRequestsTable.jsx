@@ -221,7 +221,7 @@ const AcidRequestsTable = ({
 													request.reviewingBy?.username || "Employee"
 												}`}
 											>
-												🔒 Locked
+												🔒 مقفول ({request.reviewingBy?._id === currentUserId ? 'بواسطتي' : request.reviewingBy?.username || 'موظف'})
 											</div>
 										)}
 									</div>

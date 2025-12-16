@@ -24,6 +24,7 @@ const EmployeeAcidRequestsPage = () => {
 	const [selectedRequest, setSelectedRequest] = useState(null);
 	const [statusFilter, setStatusFilter] = useState("All");
 	const [issuedByMe, setIssuedByMe] = useState(false);
+	const [lockedByMe, setLockedByMe] = useState(false);
 	const [showConfirmModal, setShowConfirmModal] = useState(false);
 	const [confirmData, setConfirmData] = useState(null);
 	const [acidCodeInput, setAcidCodeInput] = useState("");
@@ -51,7 +52,7 @@ const EmployeeAcidRequestsPage = () => {
 
 	useEffect(() => {
 		fetchAllRequests();
-	}, [issuedByMe]);
+	}, [issuedByMe, lockedByMe]);
 
 	const fetchAllRequests = async () => {
 		try {
@@ -447,6 +448,11 @@ const EmployeeAcidRequestsPage = () => {
 			req.issuedBy?._id === currentUserId ||
 			req.issuedBy === currentUserId;
 
+		// Filter by locked by me (only show requests I locked for review)
+		const matchesLockedByMe =
+			!lockedByMe ||
+			(req.isLocked && (req.reviewingBy?._id === currentUserId || req.reviewingBy === currentUserId));
+
 		// Search filter (ACID code, client name, supplier name)
 		const searchLower = searchTerm.toLowerCase();
 		const matchesSearch =
@@ -456,7 +462,7 @@ const EmployeeAcidRequestsPage = () => {
 			req.userId?.email?.toLowerCase().includes(searchLower) ||
 			req.supplier?.name?.toLowerCase().includes(searchLower);
 
-		return matchesStatus && matchesSearch && matchesIssuedByMe;
+		return matchesStatus && matchesSearch && matchesIssuedByMe && matchesLockedByMe;
 	});
 
 	// Sort requests
@@ -506,6 +512,8 @@ const EmployeeAcidRequestsPage = () => {
 						requests={requests}
 						statusFilter={statusFilter}
 						onFilterChange={setStatusFilter}
+						lockedByMe={lockedByMe}
+						onLockedByMeChange={setLockedByMe}
 					/>
 					{/* Search + Filter + Sort Controls */}
 					<div className="flex items-center justify-center mb-8 gap-4 relative">
@@ -591,7 +599,18 @@ const EmployeeAcidRequestsPage = () => {
 											onChange={(e) => setIssuedByMe(e.target.checked)}
 											className="form-checkbox h-4 w-4 text-red-800"
 										/>
-									</label>
+										</label>
+								<label className="flex items-center gap-2 cursor-pointer justify-end mt-2">
+									<span className="text-gray-700 text-sm">
+										🔒 طلباتي المقفولة
+									</span>
+									<input
+										type="checkbox"
+										checked={lockedByMe}
+										onChange={(e) => setLockedByMe(e.target.checked)}
+										className="form-checkbox h-4 w-4 text-red-800"
+									/>
+								</label>
 								</div>
 
 								<button

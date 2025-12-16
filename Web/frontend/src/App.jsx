@@ -376,6 +376,15 @@ const App = () => {
 						</AdminRoute>
 					}
 				/>
+				{/* Client Profile (for admin/employee to view) */}
+				<Route
+					path="/client/:clientId"
+					element={
+						<EmployeeRoute>
+							<ClientProfilePage />
+						</EmployeeRoute>
+					}
+				/>
 
 				{/* ===== Export System Routes (UCR) ===== */}
 				{/* Client Export Routes */}

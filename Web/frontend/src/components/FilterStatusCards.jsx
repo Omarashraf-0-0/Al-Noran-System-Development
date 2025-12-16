@@ -1,6 +1,21 @@
 import React from "react";
 
-const FilterStatusCards = ({ requests, statusFilter, onFilterChange }) => {
+const FilterStatusCards = ({ 
+	requests, 
+	statusFilter, 
+	onFilterChange,
+	lockedByMe,
+	onLockedByMeChange,
+}) => {
+	// Get current user ID for counting locked requests
+	const user = JSON.parse(localStorage.getItem("user") || "{}");
+	const currentUserId = user.id || user._id;
+	
+	// Count requests locked by current user
+	const myLockedCount = requests.filter(
+		(r) => r.isLocked && (r.reviewingBy?._id === currentUserId || r.reviewingBy === currentUserId)
+	).length;
+
 	return (
 		<div className="filter-section-enhanced">
 			<div className="filter-header">
@@ -9,8 +24,8 @@ const FilterStatusCards = ({ requests, statusFilter, onFilterChange }) => {
 			</div>
 			<div className="filter-cards">
 				<button
-					className={`filter-card ${statusFilter === "All" ? "active" : ""}`}
-					onClick={() => onFilterChange("All")}
+					className={`filter-card ${statusFilter === "All" && !lockedByMe ? "active" : ""}`}
+					onClick={() => { onFilterChange("All"); onLockedByMeChange?.(false); }}
 				>
 					<div className="filter-icon">📋</div>
 					<div className="filter-content">
@@ -18,11 +33,28 @@ const FilterStatusCards = ({ requests, statusFilter, onFilterChange }) => {
 						<span className="filter-label">All Requests</span>
 					</div>
 				</button>
+				{/* My Locked Requests Card */}
+				{onLockedByMeChange && (
+					<button
+						className={`filter-card ${lockedByMe ? "active" : ""}`}
+						onClick={() => { onLockedByMeChange(!lockedByMe); onFilterChange("All"); }}
+						style={{ 
+							borderColor: lockedByMe ? '#059669' : undefined,
+							background: lockedByMe ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : undefined,
+						}}
+					>
+						<div className="filter-icon">🔒</div>
+						<div className="filter-content">
+							<span className="filter-count">{myLockedCount}</span>
+							<span className="filter-label">طلباتي المقفولة</span>
+						</div>
+					</button>
+				)}
 				<button
 					className={`filter-card ${
 						statusFilter === "Pending" ? "active" : ""
 					}`}
-					onClick={() => onFilterChange("Pending")}
+					onClick={() => { onFilterChange("Pending"); onLockedByMeChange?.(false); }}
 				>
 					<div className="filter-icon">⏳</div>
 					<div className="filter-content">
@@ -36,7 +68,7 @@ const FilterStatusCards = ({ requests, statusFilter, onFilterChange }) => {
 					className={`filter-card ${
 						statusFilter === "Under Review" ? "active" : ""
 					}`}
-					onClick={() => onFilterChange("Under Review")}
+					onClick={() => { onFilterChange("Under Review"); onLockedByMeChange?.(false); }}
 				>
 					<div className="filter-icon">🔍</div>
 					<div className="filter-content">
@@ -50,7 +82,7 @@ const FilterStatusCards = ({ requests, statusFilter, onFilterChange }) => {
 					className={`filter-card ${
 						statusFilter === "ACID Issued" ? "active" : ""
 					}`}
-					onClick={() => onFilterChange("ACID Issued")}
+					onClick={() => { onFilterChange("ACID Issued"); onLockedByMeChange?.(false); }}
 				>
 					<div className="filter-icon">✅</div>
 					<div className="filter-content">
@@ -64,7 +96,7 @@ const FilterStatusCards = ({ requests, statusFilter, onFilterChange }) => {
 					className={`filter-card ${
 						statusFilter === "Rejected" ? "active" : ""
 					}`}
-					onClick={() => onFilterChange("Rejected")}
+					onClick={() => { onFilterChange("Rejected"); onLockedByMeChange?.(false); }}
 				>
 					<div className="filter-icon">❌</div>
 					<div className="filter-content">
@@ -80,3 +112,4 @@ const FilterStatusCards = ({ requests, statusFilter, onFilterChange }) => {
 };
 
 export default FilterStatusCards;
+
