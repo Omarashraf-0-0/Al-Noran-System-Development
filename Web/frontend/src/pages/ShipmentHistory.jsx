@@ -78,20 +78,22 @@ const ShipmentHistory = () => {
 
 	const getStatusColor = (status) => {
 		switch (status) {
-			case "Completed":
+			case "مكتملة":
 			case "تمت بنجاح":
 				return "bg-green-100 text-green-800 border-green-300";
-			case "In Transit":
 			case "في الطريق":
 				return "bg-blue-100 text-blue-800 border-blue-300";
-			case "Arrived":
-			case "Customs Clearance":
+			case "تم وصول البضاعة":
+				return "bg-cyan-100 text-cyan-800 border-cyan-300";
+			case "التخليص الجمركي":
 			case "جاري الكشف والتثمين":
+			case "جارى ادراج الشحنة واستكمال الاجراءات":
+				return "bg-indigo-100 text-indigo-800 border-indigo-300";
 			case "في انتظار وصول الإذن":
-				return "bg-yellow-100 text-yellow-800 border-yellow-300";
-			case "Pending":
+			case "تم وصول الإذن":
+				return "bg-purple-100 text-purple-800 border-purple-300";
 			case "في انتظار الشحن":
-				return "bg-gray-100 text-gray-800 border-gray-300";
+				return "bg-orange-100 text-orange-800 border-orange-300";
 			default:
 				return "bg-gray-100 text-gray-800 border-gray-300";
 		}
@@ -99,20 +101,20 @@ const ShipmentHistory = () => {
 
 	const getStatusIcon = (status) => {
 		switch (status) {
-			case "Completed":
+			case "مكتملة":
 			case "تمت بنجاح":
 				return "✅";
-			case "In Transit":
 			case "في الطريق":
 				return "🚢";
-			case "Arrived":
+			case "تم وصول البضاعة":
 				return "📦";
-			case "Customs Clearance":
+			case "التخليص الجمركي":
 			case "جاري الكشف والتثمين":
+			case "جارى ادراج الشحنة واستكمال الاجراءات":
 				return "🔍";
 			case "في انتظار وصول الإذن":
+			case "تم وصول الإذن":
 				return "⏳";
-			case "Pending":
 			case "في انتظار الشحن":
 				return "⏸️";
 			default:

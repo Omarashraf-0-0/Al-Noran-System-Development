@@ -36,33 +36,36 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
   bool _isTrackingExpanded = false;
   bool _isDocumentsExpanded = false;
 
-  // Status mapping - 9 حالات للشحنة
+  // Status mapping - 10 حالات للشحنة (عربي فقط)
   final Map<String, int> _statusIndexMap = <String, int>{
-    'قيد الانتظار': 0,
-    'Pending': 0,
-    'في انتظار الشحن': 1,
-    'في الطريق': 2,
-    'تم وصول البضاعة': 3,
-    'Arrived': 3,
-    'في انتظار وصول الاذن': 4,
-    'في انتظار وصول الإذن': 4,
+    'في انتظار الشحن': 0,
+    'في الطريق': 1,
+    'تم وصول البضاعة': 2,
+    'في انتظار وصول الإذن': 3,
+    'في انتظار وصول الاذن': 3,
+    'تم وصول الإذن': 4,
+    'التخليص الجمركي': 5,
     'التخليص الجمركى': 5,
-    'Customs Clearance': 5,
-    'جارى الكشف و التثمين': 6,
-    'جاري الكشف والتثمين': 6,
-    'مكتملة': 7,
-    'Completed': 7,
-    'تمت بنجاح': 8,
+    'جارى ادراج الشحنة واستكمال الاجراءات': 6,
+    'جاري ادراج الشحنة واستكمال الاجراءات': 6,
+    'جاري الكشف والتثمين': 7,
+    'جارى الكشف والتثمين': 7,
+    'مكتملة': 8,
+    'تمت بنجاح': 9,
   };
 
   final List<Map<String, dynamic>> _trackingSteps = [
-    {'title': 'قيد الانتظار', 'status': 'قيد الانتظار'},
     {'title': 'في انتظار الشحن', 'status': 'في انتظار الشحن'},
     {'title': 'في الطريق', 'status': 'في الطريق'},
     {'title': 'تم وصول البضاعة', 'status': 'تم وصول البضاعة'},
-    {'title': 'في انتظار وصول الاذن', 'status': 'في انتظار وصول الاذن'},
-    {'title': 'التخليص الجمركى', 'status': 'التخليص الجمركى'},
-    {'title': 'جارى الكشف و التثمين', 'status': 'جارى الكشف و التثمين'},
+    {'title': 'في انتظار وصول الإذن', 'status': 'في انتظار وصول الإذن'},
+    {'title': 'تم وصول الإذن', 'status': 'تم وصول الإذن'},
+    {'title': 'التخليص الجمركي', 'status': 'التخليص الجمركي'},
+    {
+      'title': 'جارى ادراج الشحنة واستكمال الاجراءات',
+      'status': 'جارى ادراج الشحنة واستكمال الاجراءات',
+    },
+    {'title': 'جاري الكشف والتثمين', 'status': 'جاري الكشف والتثمين'},
     {'title': 'مكتملة', 'status': 'مكتملة'},
     {'title': 'تمت بنجاح', 'status': 'تمت بنجاح'},
   ];
@@ -186,7 +189,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
 
   int get _currentStatusIndex {
     if (_shipmentData == null) return 0;
-    final status = _shipmentData!['status'] ?? 'Pending';
+    final status = _shipmentData!['status'] ?? 'في انتظار الشحن';
     return _statusIndexMap[status] ?? 0;
   }
 
@@ -587,6 +590,16 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
   Widget _buildHeader() {
     final status = _shipmentData?['status'] ?? 'غير محدد';
     final statusColor = _getStatusColor(status);
+    final shipmentCode = _shipmentData?['shipmentCode']?.toString() ?? '';
+
+    // Determine shipment type for icon
+    final shipmentType =
+        _shipmentData?['shipment_type']?.toString().toLowerCase() ?? '';
+    final isSea = shipmentType.contains('بحري') || shipmentType.contains('sea');
+    final typeIcon =
+        isSea ? Icons.directions_boat_rounded : Icons.flight_takeoff_rounded;
+    final typeText = isSea ? 'بحري' : 'جوي';
+    final typeColor = isSea ? const Color(0xFF1ba3b6) : Colors.orange;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -609,6 +622,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Row with Icon and Shipment Info
           Row(
             children: [
               Container(
@@ -617,22 +631,73 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.local_shipping,
-                  color: Colors.white,
-                  size: 28,
-                ),
+                child: Icon(typeIcon, color: Colors.white, size: 28),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Shipment Code (if available)
+                    if (shipmentCode.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              shipmentCode,
+                              style: TextStyle(
+                                color: primaryDark,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: typeColor.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(typeIcon, size: 12, color: Colors.white),
+                                const SizedBox(width: 4),
+                                Text(
+                                  typeText,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                    // ACID Number
                     const Text(
-                      'رقم الشحنة',
+                      'رقم ACID',
                       style: TextStyle(
                         color: Colors.white70,
-                        fontSize: 13,
+                        fontSize: 12,
                         fontFamily: 'Cairo',
                       ),
                     ),
@@ -641,7 +706,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
                       widget.shipmentId,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Cairo',
                       ),
@@ -652,6 +717,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
             ],
           ),
           const SizedBox(height: 12),
+          // Status Badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -690,14 +756,22 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
 
   Color _getStatusColor(String status) {
     switch (status) {
+      case 'مكتملة':
       case 'تمت بنجاح':
-      case 'Completed':
         return Colors.green;
-      case 'قيد الانتظار':
-      case 'Pending':
+      case 'في انتظار الشحن':
         return Colors.orange;
       case 'في الطريق':
         return Colors.blue;
+      case 'تم وصول البضاعة':
+        return Colors.cyan;
+      case 'في انتظار وصول الإذن':
+      case 'تم وصول الإذن':
+        return Colors.purple;
+      case 'التخليص الجمركي':
+      case 'جارى ادراج الشحنة واستكمال الاجراءات':
+      case 'جاري الكشف والتثمين':
+        return Colors.indigo;
       default:
         return accent;
     }

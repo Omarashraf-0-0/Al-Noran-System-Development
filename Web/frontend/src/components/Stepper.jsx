@@ -15,18 +15,18 @@ const Stepper = ({ currentStatus, subStatus }) => {
         'تمت بنجاح',
     ];
 
-    // Define status progression order (from earliest to latest)
+    // Define status progression order (all Arabic - from earliest to latest)
     const statusProgression = [
-        'في انتظار الشحن',             // في انتظار الشحن
-        'In Transit',                   // في الطريق
-        'Arrived',                      // تم وصول البضاعة
-        'في انتظار وصول الإذن',        // في انتظار وصول الإذن
-        'تم وصول الإذن',              // تم وصول الإذن
-        'Customs Clearance',            // التخليص الجمركي
-        'جارى ادراج الشحنة واستكمال الاجراءات', // جارى ادراج الشحنة واستكمال الاجراءات
-        'جاري الكشف والتثمين',         // جاري الكشف والتثمين
-        'Completed',                    // مكتملة
-        'تمت بنجاح',                   // تمت بنجاح
+        'في انتظار الشحن',
+        'في الطريق',
+        'تم وصول البضاعة',
+        'في انتظار وصول الإذن',
+        'تم وصول الإذن',
+        'التخليص الجمركي',
+        'جارى ادراج الشحنة واستكمال الاجراءات',
+        'جاري الكشف والتثمين',
+        'مكتملة',
+        'تمت بنجاح',
     ];
 
     // Get the index of current status in the progression

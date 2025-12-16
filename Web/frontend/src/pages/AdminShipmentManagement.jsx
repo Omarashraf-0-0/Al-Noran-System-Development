@@ -43,27 +43,22 @@ const AdminShipmentManagement = () => {
 
 	const token = localStorage.getItem("token");
 
-	// Available statuses
+	// Available statuses (Arabic only)
 	const availableStatuses = [
-		{
-			value: "Pending",
-			label: "قيد الانتظار",
-			color: "bg-yellow-100 text-yellow-800",
-		},
 		{
 			value: "في انتظار الشحن",
 			label: "في انتظار الشحن",
 			color: "bg-orange-100 text-orange-800",
 		},
 		{
-			value: "In Transit",
+			value: "في الطريق",
 			label: "في الطريق",
 			color: "bg-blue-100 text-blue-800",
 		},
 		{
-			value: "Arrived",
+			value: "تم وصول البضاعة",
 			label: "تم وصول البضاعة",
-			color: "bg-green-100 text-green-800",
+			color: "bg-cyan-100 text-cyan-800",
 		},
 		{
 			value: "في انتظار وصول الإذن",
@@ -71,9 +66,19 @@ const AdminShipmentManagement = () => {
 			color: "bg-purple-100 text-purple-800",
 		},
 		{
-			value: "Customs Clearance",
+			value: "تم وصول الإذن",
+			label: "تم وصول الإذن",
+			color: "bg-teal-100 text-teal-800",
+		},
+		{
+			value: "التخليص الجمركي",
 			label: "التخليص الجمركي",
 			color: "bg-indigo-100 text-indigo-800",
+		},
+		{
+			value: "جارى ادراج الشحنة واستكمال الاجراءات",
+			label: "جارى ادراج الشحنة واستكمال الاجراءات",
+			color: "bg-amber-100 text-amber-800",
 		},
 		{
 			value: "جاري الكشف والتثمين",
@@ -81,14 +86,14 @@ const AdminShipmentManagement = () => {
 			color: "bg-pink-100 text-pink-800",
 		},
 		{
-			value: "Completed",
+			value: "مكتملة",
 			label: "مكتملة",
 			color: "bg-green-100 text-green-800",
 		},
 		{
 			value: "تمت بنجاح",
 			label: "تمت بنجاح",
-			color: "bg-teal-100 text-teal-800",
+			color: "bg-emerald-100 text-emerald-800",
 		},
 	];
 
@@ -135,7 +140,7 @@ const AdminShipmentManagement = () => {
 							acid: "ACID-2024-12345",
 							importerName: "شركة الاستيراد المثالية",
 							employerName: "محمد أحمد",
-							status: "In Transit",
+							status: "في الطريق",
 							shipmentDescription: "شحنة أجهزة إلكترونية",
 							country: "الصين",
 							number46: "BL-2024-5678",
@@ -158,7 +163,7 @@ const AdminShipmentManagement = () => {
 								},
 							],
 						});
-						setSelectedStatus("In Transit");
+						setSelectedStatus("في الطريق");
 						setFileItems([
 							{
 								name: "invoice.pdf",

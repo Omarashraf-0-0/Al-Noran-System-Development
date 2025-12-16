@@ -163,9 +163,9 @@ const MyCustomers = () => {
 															</span>
 															<span
 																className={`text-xs px-2 py-1 rounded-full ${
-																	shipment.status === "Completed"
+																	shipment.status === "مكتملة" || shipment.status === "تمت بنجاح"
 																		? "bg-green-100 text-green-800"
-																		: shipment.status === "In Transit"
+																		: shipment.status === "في الطريق"
 																		? "bg-blue-100 text-blue-800"
 																		: "bg-yellow-100 text-yellow-800"
 																}`}
@@ -191,13 +191,13 @@ const MyCustomers = () => {
 										<div className="grid grid-cols-3 gap-4 text-center">
 											<div>
 												<p className="text-2xl font-bold text-red-900">
-													{customer.shipments.filter((s) => s.status === "Completed").length}
+													{customer.shipments.filter((s) => s.status === "مكتملة" || s.status === "تمت بنجاح").length}
 												</p>
 												<p className="text-xs text-gray-600">مكتملة</p>
 											</div>
 											<div>
 												<p className="text-2xl font-bold text-blue-900">
-													{customer.shipments.filter((s) => s.status === "In Transit").length}
+													{customer.shipments.filter((s) => s.status === "في الطريق").length}
 												</p>
 												<p className="text-xs text-gray-600">في الطريق</p>
 											</div>
@@ -205,7 +205,7 @@ const MyCustomers = () => {
 												<p className="text-2xl font-bold text-yellow-900">
 													{
 														customer.shipments.filter(
-															(s) => s.status !== "Completed" && s.status !== "In Transit"
+															(s) => s.status !== "مكتملة" && s.status !== "تمت بنجاح" && s.status !== "في الطريق"
 														).length
 													}
 												</p>

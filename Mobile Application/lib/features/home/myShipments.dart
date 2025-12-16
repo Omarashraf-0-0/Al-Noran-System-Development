@@ -151,8 +151,19 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
   }
 
   String _getShipmentTypeFilter(Map<String, dynamic> shipment) {
-    final type = shipment['type']?.toString() ?? '';
-    return type;
+    // Use shipment_type field from backend
+    final shipmentType =
+        shipment['shipment_type']?.toString().toLowerCase() ?? '';
+
+    // Check if it's sea/بحري or air/جوي
+    if (shipmentType.contains('بحري') || shipmentType.contains('sea')) {
+      return 'بحري';
+    } else if (shipmentType.contains('جوي') || shipmentType.contains('air')) {
+      return 'جوي';
+    }
+
+    // Fallback to type field derived from ACID prefix
+    return shipment['type']?.toString() ?? 'بحري';
   }
 
   void _applySorting() {
@@ -250,9 +261,12 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
       for (var shipment in shipments) {
         final mappedShipment = {
           'id': shipment['acid'] ?? 'N/A',
+          'shipmentCode': shipment['shipmentCode'] ?? '',
           'type': _getShipmentType(shipment['acid']),
-          'polNumber': shipment['number46'] ?? 'غير محدد',
-          'date': _formatDate(shipment['arrivalDate'] ?? shipment['createdAt']),
+          'shipment_type': shipment['shipment_type'] ?? 'بحري',
+          'number46': shipment['number46'] ?? '',
+          'polNumber': shipment['policy'] ?? 'غير محدد',
+          'date': _formatDate(shipment['updatedAt'] ?? shipment['createdAt']),
           'status': shipment['status'] ?? 'غير محدد',
           'isUrgent': _isUrgent(shipment['status']),
           'hasDocuments': shipment['invoiceUrl'] != null,
@@ -760,6 +774,21 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
   }
 
   Widget _buildShipmentCard(Map<String, dynamic> shipment) {
+    // Get shipment type from shipment_type field or derive from acid prefix
+    final shipmentType =
+        shipment['shipment_type']?.toString().toLowerCase() ?? '';
+    final isSea =
+        shipmentType.contains('بحري') ||
+        shipmentType.contains('sea') ||
+        shipment['type'] == 'بحري';
+    final typeText = isSea ? 'بحري' : 'جوي';
+    final typeIcon =
+        isSea ? Icons.directions_boat_rounded : Icons.flight_takeoff_rounded;
+    final typeColor = isSea ? const Color(0xFF1ba3b6) : Colors.orange[700]!;
+
+    // Get status color
+    final statusColor = _getStatusColor(shipment['status']);
+
     return InkWell(
       onTap: () {
         // Navigate to shipment details page
@@ -784,104 +813,100 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header Row - Shipment Code and Type Badge
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF690000).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        shipment['id'],
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
-                          color: Color(0xFF690000),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color:
-                            shipment['type'] == 'بحري'
-                                ? const Color(0xFF1ba3b6).withOpacity(0.1)
-                                : Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            shipment['type'] == 'بحري'
-                                ? Icons.directions_boat_rounded
-                                : Icons.flight_takeoff_rounded,
-                            size: 14,
-                            color:
-                                shipment['type'] == 'بحري'
-                                    ? const Color(0xFF1ba3b6)
-                                    : Colors.orange[700],
+                Expanded(
+                  child: Row(
+                    children: [
+                      // Shipment Code Badge (if available)
+                      if (shipment['shipmentCode']?.toString().isNotEmpty ==
+                          true) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            shipment['type'],
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontFamily: 'Cairo',
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF690000),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            shipment['shipmentCode'],
+                            style: const TextStyle(
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color:
-                                  shipment['type'] == 'بحري'
-                                      ? const Color(0xFF1ba3b6)
-                                      : Colors.orange[700],
+                              fontFamily: 'Cairo',
+                              color: Colors.white,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    if (shipment['isUrgent']) ...[
-                      const SizedBox(width: 8),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      // Type Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: 10,
+                          vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: typeColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
-                          children: const [
-                            Icon(
-                              Icons.priority_high,
-                              size: 14,
-                              color: Colors.red,
-                            ),
-                            SizedBox(width: 2),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(typeIcon, size: 14, color: typeColor),
+                            const SizedBox(width: 4),
                             Text(
-                              'عاجل',
+                              typeText,
                               style: TextStyle(
                                 fontSize: 11,
-                                fontWeight: FontWeight.bold,
                                 fontFamily: 'Cairo',
-                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                                color: typeColor,
                               ),
                             ),
                           ],
                         ),
                       ),
+                      // Urgent Badge
+                      if (shipment['isUrgent']) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(
+                                Icons.priority_high,
+                                size: 14,
+                                color: Colors.red,
+                              ),
+                              SizedBox(width: 2),
+                              Text(
+                                'عاجل',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
                 Icon(
                   Icons.arrow_forward_ios,
@@ -890,20 +915,23 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                 ),
               ],
             ),
+
             const SizedBox(height: 14),
+
+            // ACID Number Row
             Row(
               children: [
                 Icon(
-                  Icons.description_outlined,
+                  Icons.qr_code_2_rounded,
                   size: 18,
-                  color: Colors.grey[600],
+                  color: const Color(0xFF690000),
                 ),
                 const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'رقم البوليصة',
+                      'رقم ACID',
                       style: TextStyle(
                         fontSize: 11,
                         fontFamily: 'Cairo',
@@ -912,7 +940,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      shipment['polNumber'],
+                      shipment['id'],
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -924,25 +952,67 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                 ),
               ],
             ),
+
+            // Number 46 Row (if available)
+            if (shipment['number46']?.toString().isNotEmpty == true) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(
+                    Icons.description_outlined,
+                    size: 18,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'رقم 46',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'Cairo',
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        shipment['number46'],
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Cairo',
+                          color: Color(0xFF424242),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+
             const SizedBox(height: 12),
             const Divider(height: 1, thickness: 1),
             const SizedBox(height: 12),
+
+            // Status and Date Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Status
                 Expanded(
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: statusColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Icon(
-                          Icons.access_time,
+                          Icons.info_outline,
                           size: 14,
-                          color: Colors.orange[700],
+                          color: statusColor,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -953,7 +1023,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                             fontSize: 12,
                             fontFamily: 'Cairo',
                             fontWeight: FontWeight.w600,
-                            color: Colors.orange[700],
+                            color: statusColor,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -962,13 +1032,10 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                   ),
                 ),
                 const SizedBox(width: 12),
+                // Last Update Date
                 Row(
                   children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      size: 13,
-                      color: Colors.grey[500],
-                    ),
+                    Icon(Icons.update, size: 13, color: Colors.grey[500]),
                     const SizedBox(width: 6),
                     Text(
                       shipment['date'],
@@ -1243,14 +1310,37 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
 
   Color _getStatusColor(String status) {
     switch (status) {
+      // Shipment statuses - 10 حالات
+      case 'في انتظار الشحن':
+        return Colors.orange;
+      case 'في الطريق':
+        return Colors.blue;
+      case 'تم وصول البضاعة':
+        return Colors.cyan;
+      case 'في انتظار وصول الإذن':
+      case 'في انتظار وصول الاذن':
+        return Colors.amber;
+      case 'تم وصول الإذن':
+        return Colors.teal;
+      case 'التخليص الجمركي':
+      case 'التخليص الجمركى':
+        return Colors.deepOrange;
+      case 'جارى ادراج الشحنة واستكمال الاجراءات':
+      case 'جاري ادراج الشحنة واستكمال الاجراءات':
+        return Colors.indigo;
+      case 'جاري الكشف والتثمين':
+      case 'جارى الكشف والتثمين':
+        return Colors.purple;
+      case 'مكتملة':
+        return Colors.lightGreen;
+      case 'تمت بنجاح':
+        return Colors.green;
+      // ACID Request statuses
       case 'قيد المراجعة':
-      case 'Pending':
         return Colors.orange;
       case 'تم إصدار ACID':
-      case 'ACID Issued':
         return Colors.green;
       case 'مرفوض':
-      case 'Rejected':
         return Colors.red;
       default:
         return Colors.grey;

@@ -503,17 +503,16 @@ const updateShipmentStatusById = async (req, res) => {
 		// Validate and add status if provided
 		if (status) {
 			const validStatuses = [
-				"In Transit",
 				"في انتظار الشحن",
+				"في الطريق",
+				"تم وصول البضاعة",
 				"في انتظار وصول الإذن",
 				"تم وصول الإذن",
+				"التخليص الجمركي",
 				"جارى ادراج الشحنة واستكمال الاجراءات",
 				"جاري الكشف والتثمين",
+				"مكتملة",
 				"تمت بنجاح",
-				"Pending",
-				"Arrived",
-				"Customs Clearance",
-				"Completed",
 			];
 
 			if (!validStatuses.includes(status)) {
@@ -575,6 +574,10 @@ const updateShipmentStatusById = async (req, res) => {
 		}
 
 		// Find and update shipment
+		// First, get the old status before updating
+		const existingShipment = await Shipment.findById(shipmentId);
+		const oldStatus = existingShipment?.status;
+		
 		const shipment = await Shipment.findByIdAndUpdate(shipmentId, updateData, {
 			new: true,
 			runValidators: true,
@@ -600,9 +603,8 @@ const updateShipmentStatusById = async (req, res) => {
 		}
 
 		// 📬 Send notification to client about status change
-		if (shipment.user_id && status) {
+		if (shipment.user_id && status && oldStatus !== status) {
 			try {
-				const oldStatus = shipment.status; // previous status before update
 				await notificationService.notifyShipmentStatusChange(
 					shipment.user_id,
 					shipment._id,
@@ -610,7 +612,7 @@ const updateShipmentStatusById = async (req, res) => {
 					oldStatus,
 					status
 				);
-				console.log(`📬 Notification sent for shipment status change`);
+				console.log(`📬 Notification sent for shipment status change: ${oldStatus} → ${status}`);
 			} catch (notifError) {
 				console.error("Failed to send status change notification:", notifError.message);
 			}
@@ -734,12 +736,11 @@ const requestRequiredDocuments = async (req, res) => {
 
 		// 📬 Send push notification for document request
 		try {
-			const docList = documents.map(d => d.name || d).join(", ");
 			await notificationService.notifyShipmentDocumentsRequested(
 				shipment.user_id._id || shipment.user_id,
 				shipment._id,
 				shipment.acid,
-				docList
+				documents  // Pass the array directly, not the string
 			);
 			console.log(`📬 Document request notification sent to user: ${shipment.user_id._id || shipment.user_id}`);
 		} catch (notifError) {

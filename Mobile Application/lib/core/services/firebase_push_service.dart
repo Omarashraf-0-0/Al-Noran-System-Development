@@ -11,6 +11,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../network/api_service.dart';
 import 'notification_service.dart';
+import 'shipments_cache_service.dart';
 
 /// Background message handler (must be top-level function)
 @pragma('vm:entry-point')
@@ -250,6 +251,18 @@ class FirebasePushService {
 
     // Refresh notification list
     _notificationService.refresh();
+
+    // If it's a shipment status change, refresh the shipments cache
+    if (data['type'] == 'shipment_status_changed' && data['acid'] != null) {
+      print(
+        '🔔 [FCM] Shipment status changed - refreshing cache for: ${data['acid']}',
+      );
+      ShipmentsCacheService().refreshShipment(data['acid']);
+    } else if (data['type']?.toString().startsWith('shipment_') == true) {
+      // For any shipment-related notification, refresh all shipments
+      print('🔔 [FCM] Shipment notification - refreshing all shipments');
+      ShipmentsCacheService().getAllShipments(forceRefresh: true);
+    }
   }
 
   /// Show local notification

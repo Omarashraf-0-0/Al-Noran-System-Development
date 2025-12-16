@@ -202,20 +202,22 @@ export default function ShipmentDetailsModal({
 
 	const getStatusBadgeColor = (status) => {
 		switch (status) {
-			case "Completed":
-			case "تمت العملية":
+			case "مكتملة":
+			case "تمت بنجاح":
 				return "bg-green-100 text-green-800";
-			case "In Transit":
 			case "في الطريق":
 				return "bg-blue-100 text-blue-800";
-			case "Arrived":
-			case "Customs Clearance":
-			case "جاري التخليص الجمركي":
+			case "تم وصول البضاعة":
+				return "bg-cyan-100 text-cyan-800";
+			case "التخليص الجمركي":
+			case "جاري الكشف والتثمين":
+			case "جارى ادراج الشحنة واستكمال الاجراءات":
+				return "bg-indigo-100 text-indigo-800";
 			case "في انتظار وصول الإذن":
-				return "bg-yellow-100 text-yellow-800";
-			case "Pending":
-			case "في انتظار المراجعة":
-				return "bg-gray-100 text-gray-800";
+			case "تم وصول الإذن":
+				return "bg-purple-100 text-purple-800";
+			case "في انتظار الشحن":
+				return "bg-orange-100 text-orange-800";
 			default:
 				return "bg-gray-100 text-gray-800";
 		}

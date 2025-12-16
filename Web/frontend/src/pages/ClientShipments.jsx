@@ -26,14 +26,15 @@ export default function ShipmentsList() {
 	// Available shipment statuses (matching Stepper component)
 	const shipmentStatuses = [
 		{ value: "الكل", label: "الكل" },
-		{ value: "Pending", label: "قيد الانتظار" },
 		{ value: "في انتظار الشحن", label: "في انتظار الشحن" },
-		{ value: "In Transit", label: "في الطريق" },
-		{ value: "Arrived", label: "تم وصول البضاعة" },
+		{ value: "في الطريق", label: "في الطريق" },
+		{ value: "تم وصول البضاعة", label: "تم وصول البضاعة" },
 		{ value: "في انتظار وصول الإذن", label: "في انتظار وصول الإذن" },
-		{ value: "Customs Clearance", label: "التخليص الجمركي" },
+		{ value: "تم وصول الإذن", label: "تم وصول الإذن" },
+		{ value: "التخليص الجمركي", label: "التخليص الجمركي" },
+		{ value: "جارى ادراج الشحنة واستكمال الاجراءات", label: "جارى ادراج الشحنة واستكمال الاجراءات" },
 		{ value: "جاري الكشف والتثمين", label: "جاري الكشف والتثمين" },
-		{ value: "Completed", label: "مكتملة" },
+		{ value: "مكتملة", label: "مكتملة" },
 		{ value: "تمت بنجاح", label: "تمت بنجاح" },
 	];
 
@@ -112,43 +113,47 @@ export default function ShipmentsList() {
 		setIsSortOpen(false);
 	};
 
-	// Get display label for status (matching Stepper labels)
+	// Get display label for status (Arabic)
 	const getStatusLabel = (status) => {
 		const statusMap = {
-			Pending: "قيد الانتظار",
+			"Pending": "في انتظار الشحن",
+			"قيد الانتظار": "في انتظار الشحن",
 			"في انتظار الشحن": "في انتظار الشحن",
 			"In Transit": "في الطريق",
 			"في الطريق": "في الطريق",
-			Arrived: "تم وصول البضاعة",
-			"في انتظار وصول الإذن": "في انتظار وصول الإذن",
-			"Customs Clearance": "التخليص الجمركي",
-			"جاري الكشف والتثمين": "جاري الكشف والتثمين",
-			Completed: "مكتملة",
-			مكتملة: "مكتملة",
-			"تمت بنجاح": "تمت بنجاح",
-			"قيد الانتظار": "قيد الانتظار",
+			"Arrived": "تم وصول البضاعة",
 			"تم وصول البضاعة": "تم وصول البضاعة",
+			"في انتظار وصول الإذن": "في انتظار وصول الإذن",
+			"تم وصول الإذن": "تم وصول الإذن",
+			"Customs Clearance": "التخليص الجمركي",
 			"التخليص الجمركي": "التخليص الجمركي",
+			"جارى ادراج الشحنة واستكمال الاجراءات": "جارى ادراج الشحنة واستكمال الاجراءات",
+			"جاري الكشف والتثمين": "جاري الكشف والتثمين",
+			"Completed": "مكتملة",
+			"مكتملة": "مكتملة",
+			"تمت بنجاح": "تمت بنجاح",
 		};
 		return statusMap[status] || status;
 	};
 
-	// Normalize status for comparison (handles both English and Arabic)
+	// Normalize status for comparison (all Arabic)
 	const normalizeStatus = (status) => {
 		const statusNormalization = {
-			Pending: "Pending",
-			"قيد الانتظار": "Pending",
+			"Pending": "في انتظار الشحن",
+			"قيد الانتظار": "في انتظار الشحن",
 			"في انتظار الشحن": "في انتظار الشحن",
-			"In Transit": "In Transit",
-			"في الطريق": "In Transit",
-			Arrived: "Arrived",
-			"تم وصول البضاعة": "Arrived",
+			"In Transit": "في الطريق",
+			"في الطريق": "في الطريق",
+			"Arrived": "تم وصول البضاعة",
+			"تم وصول البضاعة": "تم وصول البضاعة",
 			"في انتظار وصول الإذن": "في انتظار وصول الإذن",
-			"Customs Clearance": "Customs Clearance",
-			"التخليص الجمركي": "Customs Clearance",
+			"تم وصول الإذن": "تم وصول الإذن",
+			"Customs Clearance": "التخليص الجمركي",
+			"التخليص الجمركي": "التخليص الجمركي",
+			"جارى ادراج الشحنة واستكمال الاجراءات": "جارى ادراج الشحنة واستكمال الاجراءات",
 			"جاري الكشف والتثمين": "جاري الكشف والتثمين",
-			Completed: "Completed",
-			مكتملة: "Completed",
+			"Completed": "مكتملة",
+			"مكتملة": "مكتملة",
 			"تمت بنجاح": "تمت بنجاح",
 		};
 		return statusNormalization[status] || status;

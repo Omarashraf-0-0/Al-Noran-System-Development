@@ -23,7 +23,7 @@ import mainIllustration from "../assets/images/Untitled design (7) 1.png";
 // const canUploadDocuments = hasPermission('shipment:upload');
 // const canRequestDocuments = hasPermission('shipment:requestDocs');
 
-// Available statuses for shipments
+// Available statuses for shipments (Arabic only)
 const AVAILABLE_STATUSES = [
 	{
 		value: "في انتظار الشحن",
@@ -31,14 +31,14 @@ const AVAILABLE_STATUSES = [
 		color: "bg-orange-100 text-orange-800",
 	},
 	{
-		value: "In Transit",
+		value: "في الطريق",
 		label: "في الطريق",
 		color: "bg-blue-100 text-blue-800",
 	},
 	{
-		value: "Arrived",
+		value: "تم وصول البضاعة",
 		label: "تم وصول البضاعة",
-		color: "bg-green-100 text-green-800",
+		color: "bg-cyan-100 text-cyan-800",
 	},
 	{
 		value: "في انتظار وصول الإذن",
@@ -48,10 +48,10 @@ const AVAILABLE_STATUSES = [
 	{
 		value: "تم وصول الإذن",
 		label: "تم وصول الإذن",
-		color: "bg-cyan-100 text-cyan-800",
+		color: "bg-teal-100 text-teal-800",
 	},
 	{
-		value: "Customs Clearance",
+		value: "التخليص الجمركي",
 		label: "التخليص الجمركي",
 		color: "bg-indigo-100 text-indigo-800",
 	},
@@ -65,11 +65,15 @@ const AVAILABLE_STATUSES = [
 		label: "جاري الكشف والتثمين",
 		color: "bg-pink-100 text-pink-800",
 	},
-	{ value: "Completed", label: "مكتملة", color: "bg-green-100 text-green-800" },
+	{
+		value: "مكتملة",
+		label: "مكتملة",
+		color: "bg-green-100 text-green-800",
+	},
 	{
 		value: "تمت بنجاح",
 		label: "تمت بنجاح",
-		color: "bg-teal-100 text-teal-800",
+		color: "bg-emerald-100 text-emerald-800",
 	},
 ];
 

@@ -159,7 +159,9 @@ const signup = asyncHandler(async (req, res) => {
 
 		// 📬 Send welcome notification to new user
 		try {
-			await notificationService.notifyRegistration(user._id, user.email, user.fullname);
+			const clientTypeForNotif = user.clientDetails?.clientType || type;
+			await notificationService.notifyRegistration(user._id, clientTypeForNotif);
+			console.log(`📬 Registration notification sent to user: ${user._id}`);
 		} catch (notifError) {
 			console.error("Failed to send registration notification:", notifError.message);
 		}

@@ -182,6 +182,38 @@ class ShipmentsCacheService {
     print('📦 [ShipmentsCache] Invalidated shipment cache for: $acid');
   }
 
+  /// Update a specific shipment's status in cache (called when notification is received)
+  void updateShipmentStatus(String acid, String newStatus) {
+    // Update in all shipments list
+    for (var i = 0; i < _allShipments.length; i++) {
+      if (_allShipments[i]['acid'] == acid) {
+        _allShipments[i]['status'] = newStatus;
+        _allShipments[i]['updatedAt'] = DateTime.now().toIso8601String();
+        print('📦 [ShipmentsCache] Updated status for $acid to: $newStatus');
+        break;
+      }
+    }
+
+    // Update in details cache
+    if (_shipmentDetailsCache.containsKey(acid)) {
+      _shipmentDetailsCache[acid]!['status'] = newStatus;
+      _shipmentDetailsCache[acid]!['updatedAt'] =
+          DateTime.now().toIso8601String();
+    }
+
+    // Notify listeners
+    _shipmentsController.add(_allShipments);
+  }
+
+  /// Force refresh a specific shipment by ACID
+  Future<void> refreshShipment(String acid) async {
+    print('📦 [ShipmentsCache] Force refreshing shipment: $acid');
+    _shipmentDetailsCache.remove(acid);
+    await getShipmentByAcid(acid, forceRefresh: true);
+    // Also refresh the main list
+    await getAllShipments(forceRefresh: true);
+  }
+
   /// Refresh all caches
   Future<void> refresh() async {
     print('📦 [ShipmentsCache] Refreshing all caches...');
