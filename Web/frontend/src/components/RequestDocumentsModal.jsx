@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
 
 /**
  * RequestDocumentsModal - Modal for requesting documents from client
@@ -17,13 +18,94 @@ const RequestDocumentsModal = ({
 	onSave,
 	uploading,
 }) => {
-	if (!isOpen) return null;
+	const [suggestions, setSuggestions] = useState([]);
+	const [filteredSuggestions, setFilteredSuggestions] = useState([]);
+	const [showSuggestions, setShowSuggestions] = useState(false);
+	const [loading, setLoading] = useState(false);
+	const inputRef = useRef(null);
+	const dropdownRef = useRef(null);
+
+	// Fetch document name suggestions on mount
+	useEffect(() => {
+		if (isOpen) {
+			fetchDocumentNames();
+		}
+	}, [isOpen]);
+
+	// Filter suggestions when input changes
+	useEffect(() => {
+		if (newDocument.trim()) {
+			const filtered = suggestions.filter((name) =>
+				name.toLowerCase().includes(newDocument.toLowerCase())
+			);
+			setFilteredSuggestions(filtered);
+			setShowSuggestions(filtered.length > 0);
+		} else {
+			setFilteredSuggestions(suggestions);
+			setShowSuggestions(false);
+		}
+	}, [newDocument, suggestions]);
+
+	// Close dropdown when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (event) => {
+			if (
+				dropdownRef.current &&
+				!dropdownRef.current.contains(event.target) &&
+				inputRef.current &&
+				!inputRef.current.contains(event.target)
+			) {
+				setShowSuggestions(false);
+			}
+		};
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
+
+	const fetchDocumentNames = async () => {
+		try {
+			setLoading(true);
+			const token = localStorage.getItem("token");
+			const response = await axios.get(
+				`${import.meta.env.VITE_API_URL}/api/shipments/document-names`,
+				{ headers: { Authorization: `Bearer ${token}` } }
+			);
+			if (response.data.success) {
+				setSuggestions(response.data.documentNames);
+			}
+		} catch (error) {
+			console.error("Error fetching document names:", error);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleSelectSuggestion = (name) => {
+		onNewDocumentChange(name);
+		setShowSuggestions(false);
+	};
+
+	const handleInputFocus = () => {
+		if (newDocument.trim()) {
+			setFilteredSuggestions(
+				suggestions.filter((name) =>
+					name.toLowerCase().includes(newDocument.toLowerCase())
+				)
+			);
+		} else {
+			setFilteredSuggestions(suggestions);
+		}
+		setShowSuggestions(true);
+	};
 
 	const handleKeyPress = (e) => {
 		if (e.key === "Enter") {
+			setShowSuggestions(false);
 			onAddDocument();
 		}
 	};
+
+	if (!isOpen) return null;
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -51,18 +133,53 @@ const RequestDocumentsModal = ({
 					يجب رفعها.
 				</p>
 
-				{/* Add Document Input */}
+				{/* Add Document Input with Autocomplete */}
 				<div className="flex gap-2 mb-4">
-					<input
-						type="text"
-						value={newDocument}
-						onChange={(e) => onNewDocumentChange(e.target.value)}
-						onKeyPress={handleKeyPress}
-						placeholder="اسم المستند المطلوب (مثال: شهادة منشأ)"
-						className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-gray-900 bg-white"
-					/>
+					<div className="relative flex-1">
+						<input
+							ref={inputRef}
+							type="text"
+							value={newDocument}
+							onChange={(e) => onNewDocumentChange(e.target.value)}
+							onFocus={handleInputFocus}
+							onKeyPress={handleKeyPress}
+							placeholder="اسم المستند المطلوب (مثال: شهادة منشأ)"
+							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-gray-900 bg-white"
+						/>
+						{/* Autocomplete Dropdown */}
+						{showSuggestions && (
+							<div
+								ref={dropdownRef}
+								className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+							>
+								{loading ? (
+									<div className="px-4 py-3 text-gray-500 text-center">
+										جاري التحميل...
+									</div>
+								) : filteredSuggestions.length > 0 ? (
+									filteredSuggestions.map((name, index) => (
+										<button
+											key={index}
+											type="button"
+											onClick={() => handleSelectSuggestion(name)}
+											className="w-full px-4 py-2 text-right hover:bg-red-50 text-gray-700 border-b border-gray-100 last:border-b-0 transition"
+										>
+											{name}
+										</button>
+									))
+								) : (
+									<div className="px-4 py-3 text-gray-500 text-center">
+										لا توجد اقتراحات
+									</div>
+								)}
+							</div>
+						)}
+					</div>
 					<button
-						onClick={onAddDocument}
+						onClick={() => {
+							setShowSuggestions(false);
+							onAddDocument();
+						}}
 						className="px-6 py-2 bg-red-800 text-white rounded-lg font-medium hover:bg-red-900 transition"
 					>
 						إضافة
@@ -128,3 +245,4 @@ const RequestDocumentsModal = ({
 };
 
 export default RequestDocumentsModal;
+

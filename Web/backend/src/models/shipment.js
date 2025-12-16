@@ -84,6 +84,25 @@ const shipmentSchema = new mongoose.Schema(
 			],
 			default: "في انتظار الشحن",
 		},
+		// Sub-status for "جاري الكشف والتثمين" phase
+		subStatus: {
+			type: String,
+			enum: [
+				null,
+				"انتظار الرسوم الجمركية من المصلحة",
+				"ادخال رقم المطالبة و صورة المطالبة",
+				"اختيار جهة الدفع",
+				"في انتظار استلام الافراج الجمركى",
+				"مرحلة الترانزيت",
+			],
+			default: null,
+		},
+		// Payment party selection
+		paymentParty: {
+			type: String,
+			enum: [null, "العميل", "الشركة"],
+			default: null,
+		},
 		policy: {
 			type: String,
 			trim: true,

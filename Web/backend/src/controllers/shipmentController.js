@@ -475,7 +475,7 @@ const addShipments = async (req, res) => {
 const updateShipmentStatusById = async (req, res) => {
 	try {
 		const { shipmentId } = req.params;
-		const { status, number46 } = req.body;
+		const { status, number46, subStatus, paymentParty } = req.body;
 
 		// Build update object
 		const updateData = {};
@@ -503,6 +503,45 @@ const updateShipmentStatusById = async (req, res) => {
 				});
 			}
 			updateData.status = status;
+
+			// Clear subStatus and paymentParty if status is NOT "جاري الكشف والتثمين"
+			if (status !== "جاري الكشف والتثمين") {
+				updateData.subStatus = null;
+				updateData.paymentParty = null;
+			}
+		}
+
+		// Handle subStatus update
+		if (subStatus !== undefined) {
+			const validSubStatuses = [
+				null,
+				"انتظار الرسوم الجمركية من المصلحة",
+				"ادخال رقم المطالبة و صورة المطالبة",
+				"اختيار جهة الدفع",
+				"في انتظار استلام الافراج الجمركى",
+				"مرحلة الترانزيت",
+			];
+
+			if (subStatus !== null && !validSubStatuses.includes(subStatus)) {
+				return res.status(400).json({
+					message: "Invalid subStatus value",
+					validSubStatuses,
+				});
+			}
+			updateData.subStatus = subStatus;
+		}
+
+		// Handle paymentParty update
+		if (paymentParty !== undefined) {
+			const validPaymentParties = [null, "العميل", "الشركة"];
+
+			if (paymentParty !== null && !validPaymentParties.includes(paymentParty)) {
+				return res.status(400).json({
+					message: "Invalid paymentParty value",
+					validPaymentParties,
+				});
+			}
+			updateData.paymentParty = paymentParty;
 		}
 
 		// Add number46 if provided
@@ -531,10 +570,12 @@ const updateShipmentStatusById = async (req, res) => {
 				shipmentId: shipment._id,
 				acid: shipment.acid,
 				status: shipment.status,
+				subStatus: shipment.subStatus,
+				paymentParty: shipment.paymentParty,
 				updatedAt: new Date(),
 			});
 			console.log(
-				`Socket event emitted for shipment ID: ${shipmentId} with status: ${status}`
+				`Socket event emitted for shipment ID: ${shipmentId} with status: ${status}, subStatus: ${subStatus}`
 			);
 		}
 
@@ -1170,6 +1211,54 @@ const searchShipments = async (req, res) => {
 	}
 };
 
+// ✅ Get distinct document names for autocomplete suggestions
+const getDistinctDocumentNames = async (req, res) => {
+	try {
+		// Aggregate to get all distinct document names from requiredDocuments array
+		const result = await Shipment.aggregate([
+			{ $unwind: "$requiredDocuments" },
+			{ $group: { _id: "$requiredDocuments.name" } },
+			{ $match: { _id: { $ne: null } } },
+			{ $sort: { _id: 1 } },
+		]);
+
+		const documentNames = result.map((item) => item._id);
+
+		// Add some common predefined document names if not already present
+		const predefinedNames = [
+			"صورة البطاقة",
+			"صورة السجل التجاري",
+			"صورة البطاقة الضريبية",
+			"شهادة المنشأ",
+			"بوليصة الشحن",
+			"صورة الفاتورة",
+			"صورة العقد",
+			"كشف العبوة",
+			"إذن الإفراج",
+			"صورة التوكيل",
+			"شهادة الجودة",
+			"شهادة المطابقة",
+			"صورة بطاقة الاستيراد",
+			"صورة رخصة الاستيراد",
+			"صورة الموافقة الجمركية",
+		];
+
+		// Merge predefined with database results (unique values only)
+		const allNames = [...new Set([...documentNames, ...predefinedNames])].sort();
+
+		res.json({
+			success: true,
+			documentNames: allNames,
+		});
+	} catch (error) {
+		console.error("Error getting distinct document names:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error while fetching document names",
+		});
+	}
+};
+
 module.exports = {
 	createShipment,
 	getAllShipments,
@@ -1192,4 +1281,5 @@ module.exports = {
 	getDashboardStats,
 	getRevenueComparison,
 	searchShipments,
+	getDistinctDocumentNames,
 };
