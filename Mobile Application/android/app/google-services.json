@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "91905603876",
+    "project_id": "alnoran",
+    "storage_bucket": "alnoran.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:91905603876:android:ca76ca731ecc465ddfdbb1",
+        "android_client_info": {
+          "package_name": "com.example.alnoran_mobile_application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlVNH2lrC3Ar2TL9zLMRp8WkrTGETVaC4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

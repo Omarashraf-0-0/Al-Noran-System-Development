@@ -20,7 +20,7 @@ class ApiService {
       // return 'http://10.0.2.2:3500';
 
       // لو موبايل حقيقي، استخدم IP اللابتوب:
-      return 'http://10.129.171.105:3500';
+      return 'http://192.168.1.16:3500';
     }
 
     // لو iOS Simulator أو جهاز حقيقي
@@ -1024,8 +1024,9 @@ class ApiService {
         return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
       }
 
+      // Use the profile change-password endpoint (without userId in URL)
       final response = await http.put(
-        Uri.parse('$baseUrl/api/users/$userId/change-password'),
+        Uri.parse('$baseUrl/api/users/change-password'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -2405,6 +2406,444 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في جلب طلبات UCR',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // =====================================================
+  // 🔔 NOTIFICATIONS API
+  // =====================================================
+
+  /// Get user notifications with pagination
+  static Future<Map<String, dynamic>> getNotifications({
+    int page = 1,
+    int limit = 20,
+    String? type,
+    bool? isRead,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [getNotifications] Fetching notifications... page: $page');
+
+      String url = '$baseUrl/api/notifications?page=$page&limit=$limit';
+      if (type != null) url += '&type=$type';
+      if (isRead != null) url += '&isRead=$isRead';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [getNotifications] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'notifications': data['notifications'] ?? [],
+          'pagination': data['pagination'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب الإشعارات',
+        };
+      }
+    } catch (e) {
+      print('❌ [getNotifications] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب الإشعارات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get unread notifications count
+  static Future<Map<String, dynamic>> getUnreadNotificationsCount() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [getUnreadCount] Fetching unread count...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/notifications/unread-count'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [getUnreadCount] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('🔔 [getUnreadCount] Response: $data');
+        // Backend returns 'unreadCount' not 'count'
+        final count = data['unreadCount'] ?? data['count'] ?? 0;
+        return {'success': true, 'count': count};
+      } else {
+        return {'success': false, 'count': 0};
+      }
+    } catch (e) {
+      print('❌ [getUnreadCount] Error: $e');
+      return {'success': false, 'count': 0};
+    }
+  }
+
+  /// Mark notification as read
+  static Future<Map<String, dynamic>> markNotificationAsRead(
+    String notificationId,
+  ) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [markAsRead] Marking notification $notificationId as read...');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/notifications/$notificationId/read'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [markAsRead] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'تم تحديد الإشعار كمقروء'};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث الإشعار',
+        };
+      }
+    } catch (e) {
+      print('❌ [markAsRead] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث الإشعار',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Mark all notifications as read
+  static Future<Map<String, dynamic>> markAllNotificationsAsRead() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [markAllAsRead] Marking all notifications as read...');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/notifications/read-all'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [markAllAsRead] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم تحديد جميع الإشعارات كمقروءة',
+          'modifiedCount': data['modifiedCount'] ?? 0,
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث الإشعارات',
+        };
+      }
+    } catch (e) {
+      print('❌ [markAllAsRead] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث الإشعارات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Delete a notification
+  static Future<Map<String, dynamic>> deleteNotification(
+    String notificationId,
+  ) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [deleteNotification] Deleting notification $notificationId...');
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/notifications/$notificationId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [deleteNotification] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'تم حذف الإشعار بنجاح'};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل حذف الإشعار',
+        };
+      }
+    } catch (e) {
+      print('❌ [deleteNotification] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في حذف الإشعار',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Clear all read notifications
+  static Future<Map<String, dynamic>> clearReadNotifications() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [clearReadNotifications] Clearing read notifications...');
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/notifications/clear-read'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [clearReadNotifications] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم حذف الإشعارات المقروءة بنجاح',
+          'deletedCount': data['deletedCount'] ?? 0,
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل حذف الإشعارات المقروءة',
+        };
+      }
+    } catch (e) {
+      print('❌ [clearReadNotifications] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في حذف الإشعارات المقروءة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update FCM token for push notifications
+  static Future<Map<String, dynamic>> updateFCMToken(String fcmToken) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [updateFCMToken] Updating FCM token...');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/notifications/fcm-token'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'fcmToken': fcmToken}),
+      );
+
+      print('🔔 [updateFCMToken] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'تم تحديث الـ FCM Token بنجاح'};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث الـ FCM Token',
+        };
+      }
+    } catch (e) {
+      print('❌ [updateFCMToken] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث الـ FCM Token',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get notification settings
+  static Future<Map<String, dynamic>> getNotificationSettings() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [getNotificationSettings] Fetching settings...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/notifications/settings'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [getNotificationSettings] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'settings': data['settings']};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب إعدادات الإشعارات',
+        };
+      }
+    } catch (e) {
+      print('❌ [getNotificationSettings] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب إعدادات الإشعارات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update notification settings
+  static Future<Map<String, dynamic>> updateNotificationSettings({
+    bool? pushEnabled,
+    bool? emailEnabled,
+    bool? soundEnabled,
+    Map<String, bool>? categories,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [updateNotificationSettings] Updating settings...');
+
+      final Map<String, dynamic> body = {};
+      if (pushEnabled != null) body['pushEnabled'] = pushEnabled;
+      if (emailEnabled != null) body['emailEnabled'] = emailEnabled;
+      if (soundEnabled != null) body['soundEnabled'] = soundEnabled;
+      if (categories != null) body['categories'] = categories;
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/notifications/settings'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      print('🔔 [updateNotificationSettings] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم تحديث إعدادات الإشعارات بنجاح',
+          'settings': data['settings'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث إعدادات الإشعارات',
+        };
+      }
+    } catch (e) {
+      print('❌ [updateNotificationSettings] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث إعدادات الإشعارات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update FCM Token for push notifications
+  static Future<Map<String, dynamic>> updateFcmToken(String fcmToken) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [updateFcmToken] Sending FCM token to server...');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/notifications/fcm-token'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'fcmToken': fcmToken}),
+      );
+
+      print('🔔 [updateFcmToken] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'تم حفظ FCM Token بنجاح'};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل حفظ FCM Token',
+        };
+      }
+    } catch (e) {
+      print('❌ [updateFcmToken] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في حفظ FCM Token',
         'error': e.toString(),
       };
     }

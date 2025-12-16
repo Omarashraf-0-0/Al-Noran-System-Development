@@ -1,6 +1,7 @@
 const Upload = require("../models/upload");
 const fs = require("fs");
 const path = require("path");
+const notificationService = require("../services/notificationService");
 
 // ✅ Create upload record in database
 const createUploadRecord = async (
@@ -65,6 +66,26 @@ const uploadSingleFile = async (req, res) => {
 			uploadType,
 			additionalData
 		);
+
+		// 📬 Send notification if it's a user document upload (registration docs)
+		if (uploadType === "users" && additionalData.uploadedBy) {
+			try {
+				await notificationService.createNotification({
+					userId: additionalData.uploadedBy,
+					type: "document_uploaded",
+					message: "تم رفع المستند بنجاح وجاري مراجعته",
+					data: {
+						uploadId: uploadRecord._id,
+						documentType: req.body.documentType || "document",
+					},
+					sendPush: true,
+					priority: "low",
+				});
+				console.log(`📬 Document upload notification sent to user: ${additionalData.uploadedBy}`);
+			} catch (notifError) {
+				console.error("Failed to send upload notification:", notifError.message);
+			}
+		}
 
 		res.status(200).json({
 			message: "File uploaded successfully",
@@ -448,6 +469,20 @@ const approveDocument = async (req, res) => {
 			}
 		}
 
+		// 📬 Send notification to user about document approval
+		if (document.userId) {
+			try {
+				await notificationService.notifyDocumentStatus(
+					document.userId,
+					document.documentType || document.uploadType || "Document",
+					"approved"
+				);
+				console.log(`📬 Document approval notification sent to ${document.userId}`);
+			} catch (notifError) {
+				console.error("Failed to send document approval notification:", notifError.message);
+			}
+		}
+
 		res.json({
 			success: true,
 			message: "Document approved successfully",
@@ -484,6 +519,21 @@ const rejectDocument = async (req, res) => {
 		document.rejectionReason = reason || "No reason provided";
 
 		await document.save();
+
+		// 📬 Send notification to user about document rejection
+		if (document.userId) {
+			try {
+				await notificationService.notifyDocumentStatus(
+					document.userId,
+					document.documentType || document.uploadType || "Document",
+					"rejected",
+					reason || "No reason provided"
+				);
+				console.log(`📬 Document rejection notification sent to ${document.userId}`);
+			} catch (notifError) {
+				console.error("Failed to send document rejection notification:", notifError.message);
+			}
+		}
 
 		res.json({
 			success: true,

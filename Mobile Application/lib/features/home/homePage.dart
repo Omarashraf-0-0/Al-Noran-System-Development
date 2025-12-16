@@ -5,6 +5,8 @@ import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
 import '../../core/services/user_cache_service.dart';
 import '../../core/services/shipments_cache_service.dart';
+import '../../core/services/notification_service.dart';
+import '../../core/services/firebase_push_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
 
 class HomePage extends StatefulWidget {
@@ -41,6 +43,9 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
 
+    // Initialize Firebase Push Service (in case not initialized during login)
+    _initializeFirebaseAndNotifications();
+
     // Initialize user cache (for logout operations and other usage)
     _initializeUserData();
     _loadRecentShipments();
@@ -51,6 +56,25 @@ class _HomePageState extends State<HomePage> {
         _updateShipmentsFromCache();
       }
     });
+  }
+
+  /// Initialize Firebase Push and Notification services
+  Future<void> _initializeFirebaseAndNotifications() async {
+    try {
+      // Initialize Firebase Push Service if not already initialized
+      if (!FirebasePushService().isInitialized) {
+        print('🏠 [HomePage] Initializing Firebase Push Service...');
+        await FirebasePushService().initialize();
+      }
+
+      // Initialize Notification Service if not already initialized
+      if (!NotificationService().isInitialized) {
+        print('🏠 [HomePage] Initializing Notification Service...');
+        await NotificationService().initialize();
+      }
+    } catch (e) {
+      print('❌ [HomePage] Error initializing services: $e');
+    }
   }
 
   @override

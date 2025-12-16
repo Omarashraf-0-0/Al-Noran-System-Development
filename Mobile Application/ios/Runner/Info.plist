@@ -51,5 +51,12 @@
 	<string>نحتاج إلى الوصول للمعرض لاختيار صور المستندات</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>نحتاج إلى الوصول للميكروفون لتسجيل الفيديو</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
 </dict>
 </plist>

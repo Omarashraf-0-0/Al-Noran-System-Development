@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/user_cache_service.dart';
+import '../services/notification_service.dart';
 
 /// Unified TopBar widget for consistent UI across the app
 /// This widget handles user data, profile photo, and navigation
@@ -64,17 +65,21 @@ class _UnifiedTopBarState extends State<UnifiedTopBar> {
   static const Color accentColor = Color(0xFF1ba3b6);
 
   final UserCacheService _userCache = UserCacheService();
+  final NotificationService _notificationService = NotificationService();
   StreamSubscription? _userDataSubscription;
+  StreamSubscription? _unreadCountSubscription;
 
   String _userName = '';
   String _userEmail = '';
   String? _profilePhotoUrl;
   bool _isLoadingPhoto = true;
+  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadUnreadCount();
 
     // Listen to user data updates
     _userDataSubscription = _userCache.userDataStream.listen((_) {
@@ -82,12 +87,39 @@ class _UnifiedTopBarState extends State<UnifiedTopBar> {
         _updateFromCache();
       }
     });
+
+    // Listen to unread count updates
+    _unreadCountSubscription = _notificationService.unreadCountStream.listen((
+      count,
+    ) {
+      if (mounted) {
+        setState(() {
+          _unreadCount = count;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _userDataSubscription?.cancel();
+    _unreadCountSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    if (_notificationService.isInitialized) {
+      setState(() {
+        _unreadCount = _notificationService.unreadCount;
+      });
+    } else {
+      final count = await _notificationService.fetchUnreadCount();
+      if (mounted) {
+        setState(() {
+          _unreadCount = count;
+        });
+      }
+    }
   }
 
   void _updateFromCache() {
@@ -273,22 +305,39 @@ class _UnifiedTopBarState extends State<UnifiedTopBar> {
               color: Colors.white,
               size: 24,
             ),
-            onPressed: widget.onNotificationPressed ?? () {},
+            onPressed:
+                widget.onNotificationPressed ??
+                () {
+                  context.push('/notifications');
+                },
           ),
         ),
-        Positioned(
-          right: 8,
-          top: 8,
-          child: Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: accentColor,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
+        if (_unreadCount > 0)
+          Positioned(
+            right: 4,
+            top: 4,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: _unreadCount > 9 ? 4 : 0,
+              ),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              decoration: BoxDecoration(
+                color: accentColor,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: Center(
+                child: Text(
+                  _unreadCount > 99 ? '99+' : _unreadCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
       ],
     );
   }

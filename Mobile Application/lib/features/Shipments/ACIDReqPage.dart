@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 import '../../core/services/document_verification_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/file_picker_helper.dart';
@@ -71,13 +72,6 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
         _verificationMessage = result['message'] ?? '';
         _isCheckingDocuments = false;
       });
-
-      // Show popup immediately if documents are not approved
-      if (!_canSubmitRequests) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _showDocumentRequiredDialog(result);
-        });
-      }
     }
   }
 
@@ -95,12 +89,6 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
   }
 
   Future<void> _pickAndUploadInvoice() async {
-    // Check if user can submit first
-    if (!_canSubmitRequests) {
-      _showDocumentRequiredDialog();
-      return;
-    }
-
     try {
       final result = await FilePickerHelper.pickFile(context);
 
@@ -239,6 +227,13 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
             context: context,
             message: 'تم إرسال الطلب بنجاح',
           );
+
+          // Refresh notifications to update badge count
+          print(
+            '🔔 [ACIDReq] Refreshing notifications after successful request...',
+          );
+          await NotificationService().refresh();
+          print('🔔 [ACIDReq] Notifications refreshed!');
 
           // Clear form
           _clearForm();

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
 import '../../core/storage/secure_storage.dart';
+import '../../core/services/notification_service.dart';
 import '../../util/file_picker_helper.dart';
 
 class DocumentsSettingsPage extends StatefulWidget {
@@ -878,6 +879,8 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
             context: context,
             message: 'تم رفع $documentName بنجاح\nفي انتظار مراجعة الإدارة',
           );
+          // Refresh notifications
+          NotificationService().refresh();
           _loadDocuments();
         } else {
           throw Exception(response['message'] ?? 'فشل رفع المستند');

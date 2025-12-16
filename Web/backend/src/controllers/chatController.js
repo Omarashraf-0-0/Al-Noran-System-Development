@@ -1,6 +1,7 @@
 const { Chat, Message } = require("../models/chat");
 const User = require("../models/user");
 const Shipment = require("../models/shipment");
+const notificationService = require("../services/notificationService");
 
 // Get all chats for a user (client sees their chats, employee sees chats for their assigned shipments)
 const getChats = async (req, res) => {
@@ -392,6 +393,25 @@ const sendMessage = async (req, res) => {
 			"fullname username type"
 		);
 		console.log("Sender populated successfully:", populatedMessage.senderId?.fullname);
+
+		// 📬 Send notification to the other party in the chat
+		try {
+			const senderName = populatedMessage.senderId?.fullname || "Someone";
+			// Determine recipient - if sender is client, notify employee and vice versa
+			let recipientId = null;
+			if (userType === "client" && chat.employeeId) {
+				recipientId = chat.employeeId;
+			} else if (userType === "employee") {
+				recipientId = chat.clientId;
+			}
+			
+			if (recipientId) {
+				await notificationService.notifyChatMessage(recipientId, chatId, senderName);
+				console.log(`📬 Chat notification sent to ${recipientId}`);
+			}
+		} catch (notifError) {
+			console.error("Failed to send chat notification:", notifError.message);
+		}
 
 		res.status(201).json({
 			success: true,

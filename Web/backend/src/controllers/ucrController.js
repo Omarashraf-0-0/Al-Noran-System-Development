@@ -2,6 +2,7 @@ const UCRRequest = require("../models/ucrRequest");
 const ExportShipment = require("../models/exportShipment");
 const Upload = require("../models/upload");
 const { getPresignedUrl } = require("../utils/s3Helpers");
+const notificationService = require("../services/notificationService");
 
 // =====================================================
 // CLIENT ENDPOINTS
@@ -112,6 +113,19 @@ const createUCRRequest = async (req, res) => {
 
 		// Populate uploads
 		await ucrRequest.populate("uploads");
+
+		// 📬 Send notification for UCR request creation
+		try {
+			await notificationService.notifyUCRStatus(
+				userId,
+				ucrRequest._id,
+				ucrRequest.requestNumber,
+				"created"
+			);
+			console.log(`📬 UCR creation notification sent to user: ${userId}`);
+		} catch (notifError) {
+			console.error("Failed to send UCR creation notification:", notifError.message);
+		}
 
 		res.status(201).json({
 			success: true,
@@ -487,6 +501,19 @@ const lockUCRRequest = async (req, res) => {
 
 		await request.save();
 
+		// 📬 Send notification that review has started
+		try {
+			await notificationService.notifyUCRStatus(
+				request.userId,
+				request._id,
+				request.requestNumber,
+				"reviewing"
+			);
+			console.log(`📬 UCR review notification sent to user: ${request.userId}`);
+		} catch (notifError) {
+			console.error("Failed to send UCR review notification:", notifError.message);
+		}
+
 		res.json({
 			success: true,
 			message: "تم قفل الطلب للمراجعة",
@@ -641,6 +668,19 @@ const issueUCRNumber = async (req, res) => {
 			request,
 			shipment: exportShipment,
 		});
+
+		// 📬 Send notification for UCR issuance (after response)
+		try {
+			await notificationService.notifyUCRStatus(
+				request.userId,
+				request._id,
+				request.requestNumber,
+				"approved"  // UCR issued = approved
+			);
+			console.log(`📬 UCR issued notification sent to user: ${request.userId}`);
+		} catch (notifError) {
+			console.error("Failed to send UCR issued notification:", notifError.message);
+		}
 	} catch (error) {
 		console.error("Error issuing UCR number:", error);
 		res.status(500).json({
@@ -713,6 +753,33 @@ const updateUCRStatusByEmployee = async (req, res) => {
 
 		await request.save();
 
+		// 📬 Send notification for UCR status updates
+		if (status) {
+			try {
+				const statusMapping = {
+					"under_review": "reviewing",
+					"approved": "approved",
+					"rejected": "rejected",
+					"needs_revision": "rejected",  // needs_revision is similar to rejected
+					"completed": "approved",
+				};
+
+				const notifStatus = statusMapping[status];
+				if (notifStatus) {
+					await notificationService.notifyUCRStatus(
+						request.userId,
+						request._id,
+						request.requestNumber || request.ucrNumber,
+						notifStatus,
+						status === "rejected" || status === "needs_revision" ? rejectionReason : null
+					);
+					console.log(`📬 UCR status notification (${notifStatus}) sent to user: ${request.userId}`);
+				}
+			} catch (notifError) {
+				console.error("Failed to send UCR status notification:", notifError.message);
+			}
+		}
+
 		res.json({
 			success: true,
 			message: "تم تحديث حالة الطلب بنجاح",
@@ -763,6 +830,25 @@ const uploadCertificateOfOrigin = async (req, res) => {
 		request.reviewingBy = null;
 
 		await request.save();
+
+		// 📬 Send notification for certificate of origin upload
+		try {
+			await notificationService.createNotification({
+				userId: request.userId,
+				type: "ucr_certificate_issued",
+				message: `تم رفع شهادة المنشأ لطلب UCR رقم ${request.requestNumber}`,
+				data: {
+					ucrRequestId: request._id,
+					requestNumber: request.requestNumber,
+					ucrNumber: request.ucrNumber,
+				},
+				sendEmail: true,
+				sendPush: true,
+				priority: "high",
+			});
+		} catch (notifError) {
+			console.error("Failed to send certificate notification:", notifError.message);
+		}
 
 		res.json({
 			success: true,
@@ -968,6 +1054,22 @@ const updateDocumentStatus = async (req, res) => {
 
 		await request.save();
 		await request.populate("documentStatuses.reviewedBy", "fullname");
+
+		// 📬 Send notification for document status update
+		try {
+			const upload = await Upload.findById(uploadId);
+			const docName = upload?.documentName || upload?.originalname || "المستند";
+			
+			await notificationService.notifyDocumentStatus(
+				request.userId,
+				docName,
+				status === "approved" ? "approved" : "rejected",
+				status === "rejected" || status === "needs_revision" ? employeeNotes : null
+			);
+			console.log(`📬 Document status notification (${status}) sent to user: ${request.userId}`);
+		} catch (notifError) {
+			console.error("Failed to send document notification:", notifError.message);
+		}
 
 		res.json({
 			success: true,

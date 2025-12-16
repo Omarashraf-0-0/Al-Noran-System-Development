@@ -4,6 +4,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_service.dart';
 import '../../core/services/document_verification_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/file_picker_helper.dart';
@@ -222,13 +223,6 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
         _verificationMessage = result['message'] ?? '';
         _isCheckingDocuments = false;
       });
-
-      // Show popup immediately if documents are not approved
-      if (!_canSubmitRequests) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _showDocumentRequiredDialog(result);
-        });
-      }
     }
   }
 
@@ -2767,6 +2761,9 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
 
       if (mounted) {
         if (result['success'] == true) {
+          // Refresh notifications to update badge count
+          NotificationService().refresh();
+
           await AlNoranPopups.showSuccess(
             context: context,
             title: 'تم بنجاح',

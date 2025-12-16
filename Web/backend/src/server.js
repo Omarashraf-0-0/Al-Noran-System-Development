@@ -95,6 +95,11 @@ app.use("/api/payments", require("./routes/paymentRoutes")); // Payment Routes
 app.use("/api/ucr", require("./routes/ucrRoutes")); // UCR (Export License) Routes
 app.use("/api/export-shipments", require("./routes/exportShipmentRoutes")); // Export Shipment Routes
 
+// =====================================================
+// NOTIFICATIONS ROUTES
+// =====================================================
+app.use("/api/notifications", require("./routes/notificationRoutes")); // Notifications Routes
+
 app.use((req, res) => {
 	res.status(404);
 	if (req.accepts("html")) {

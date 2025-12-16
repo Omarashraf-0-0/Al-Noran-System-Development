@@ -2,6 +2,7 @@ const Shipment = require("../models/shipment");
 const Invoice = require("../models/invoice");
 const mailSender = require("../services/mailer");
 const jwt = require("jsonwebtoken");
+const notificationService = require("../services/notificationService");
 
 // ✅ إنشاء شحنة جديدة
 const createShipment = async (req, res) => {
@@ -168,6 +169,25 @@ const createShipment = async (req, res) => {
 			`Shipment Confirmation – ${ACID_ID}`,
 			htmlContent
 		);
+
+		// 📬 Send notification to user
+		if (shipmentData.user_id) {
+			try {
+				await notificationService.createNotification({
+					userId: shipmentData.user_id,
+					type: "shipment_created",
+					message: `تم إنشاء شحنة جديدة برقم ${shipment.acid}`,
+					data: {
+						shipmentId: shipment._id,
+						shipmentAcid: shipment.acid,
+					},
+					sendPush: true,
+					priority: "medium",
+				});
+			} catch (notifError) {
+				console.error("Failed to send notification:", notifError.message);
+			}
+		}
 
 		// ✅ Respond to client
 		res.status(201).json({
@@ -579,8 +599,22 @@ const updateShipmentStatusById = async (req, res) => {
 			);
 		}
 
-		// TODO: Send email/notification to client about status change
-		// You can add email notification here using mailSender service
+		// 📬 Send notification to client about status change
+		if (shipment.user_id && status) {
+			try {
+				const oldStatus = shipment.status; // previous status before update
+				await notificationService.notifyShipmentStatusChange(
+					shipment.user_id,
+					shipment._id,
+					shipment.acid,
+					oldStatus,
+					status
+				);
+				console.log(`📬 Notification sent for shipment status change`);
+			} catch (notifError) {
+				console.error("Failed to send status change notification:", notifError.message);
+			}
+		}
 
 		res.json({
 			success: true,
@@ -696,6 +730,20 @@ const requestRequiredDocuments = async (req, res) => {
 				`مستندات مطلوبة - شحنة ${shipment.acid}`,
 				htmlContent
 			);
+		}
+
+		// 📬 Send push notification for document request
+		try {
+			const docList = documents.map(d => d.name || d).join(", ");
+			await notificationService.notifyShipmentDocumentsRequested(
+				shipment.user_id._id || shipment.user_id,
+				shipment._id,
+				shipment.acid,
+				docList
+			);
+			console.log(`📬 Document request notification sent to user: ${shipment.user_id._id || shipment.user_id}`);
+		} catch (notifError) {
+			console.error("Failed to send document request notification:", notifError.message);
 		}
 
 		// Emit socket event for real-time notification

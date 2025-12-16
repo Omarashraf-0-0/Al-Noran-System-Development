@@ -9,3 +9,8 @@ Web/backend/package-lock.json
 ./Web/backend/package-lock.json
 
 Web/frontend/.env
+
+# Firebase Service Account (SENSITIVE - Never push to GitHub!)
+**/firebase-service-account.json
+**/firebase-adminsdk*.json
+Web/backend/src/config/firebase-service-account.json

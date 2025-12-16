@@ -1,6 +1,7 @@
 const User = require("../models/user");
 const { validationResult } = require("express-validator");
 const asyncHandler = require("express-async-handler");
+const notificationService = require("../services/notificationService");
 
 // @desc    Login user
 // @route   POST /api/auth/login
@@ -155,6 +156,14 @@ const signup = asyncHandler(async (req, res) => {
 
 	if (user) {
 		const token = user.getSignedJwtToken();
+
+		// 📬 Send welcome notification to new user
+		try {
+			await notificationService.notifyRegistration(user._id, user.email, user.fullname);
+		} catch (notifError) {
+			console.error("Failed to send registration notification:", notifError.message);
+		}
+
 		res.status(201).json({
 			success: true,
 			message: "تم إنشاء الحساب بنجاح",

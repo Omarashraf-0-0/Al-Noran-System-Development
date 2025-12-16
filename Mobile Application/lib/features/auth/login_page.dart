@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 import '../../core/services/user_cache_service.dart';
+import '../../core/services/firebase_push_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/widgets/al_noran_loading.dart';
 import '../../util/validators.dart';
@@ -406,6 +408,22 @@ class _LoginPageState extends State<LoginPage> {
             // Initialize user cache after login
             await UserCacheService().initialize(forceRefresh: true);
             print('✅ [Login] User cache initialized');
+
+            // Initialize Firebase Push Notifications (after login)
+            try {
+              await FirebasePushService().initialize();
+              print('✅ [Login] Firebase Push Service initialized');
+            } catch (e) {
+              print('⚠️ [Login] Firebase init error: $e');
+            }
+
+            // Initialize Notification Service to get unread count
+            try {
+              await NotificationService().initialize(forceRefresh: true);
+              print('✅ [Login] Notification Service initialized');
+            } catch (e) {
+              print('⚠️ [Login] Notification Service error: $e');
+            }
           }
 
           // الحصول على اسم المستخدم والبريد الإلكتروني من البيانات

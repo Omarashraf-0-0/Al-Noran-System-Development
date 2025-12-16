@@ -7,6 +7,7 @@ const phoneNumberValidation = require("../middleware/validation");
 const { send_mail } = require("../services/mailer");
 const ContactUs = require("../models/contactus");
 const path = require("path");
+const notificationService = require("../services/notificationService");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
 // @desc    Get all users
@@ -153,6 +154,11 @@ const updateUser = asyncHandler(async (req, res) => {
 	if (phone) user.phone = phone;
 	if (email) user.email = email;
 	if (password) user.password = password; // Will be hashed by the pre-save hook
+	
+	// Track if user is being activated
+	const wasInactive = !user.active;
+	const isBeingActivated = typeof active !== "undefined" && active === true && wasInactive;
+	
 	if (typeof active !== "undefined") user.active = active;
 	if (type) user.type = type;
 	if (taxNumber !== undefined) user.taxNumber = taxNumber;
@@ -181,6 +187,15 @@ const updateUser = asyncHandler(async (req, res) => {
 	}
 
 	const updatedUser = await user.save();
+
+	// 📬 Send notification if user was activated
+	if (isBeingActivated) {
+		try {
+			await notificationService.notifyAccountActivated(updatedUser._id);
+		} catch (notifError) {
+			console.error("Failed to send account activation notification:", notifError.message);
+		}
+	}
 
 	res.json({
 		message: `User ${updatedUser.username} updated`,
@@ -264,6 +279,21 @@ const changePassword = asyncHandler(async (req, res) => {
 	await user.save();
 
 	console.log("✅ [changePassword] Password changed successfully");
+
+	// 📬 Send notification for password change
+	try {
+		await notificationService.createNotification({
+			userId: user._id,
+			type: "password_changed",
+			message: "تم تغيير كلمة المرور الخاصة بك بنجاح. إذا لم تقم بهذا التغيير، يرجى التواصل معنا فوراً.",
+			sendEmail: true,
+			sendPush: true,
+			priority: "high",
+		});
+		console.log(`📬 Password change notification sent to user: ${user._id}`);
+	} catch (notifError) {
+		console.error("Failed to send password change notification:", notifError.message);
+	}
 
 	res.json({
 		success: true,
@@ -584,6 +614,11 @@ const changePasswordProfile = asyncHandler(async (req, res) => {
 		const userId = req.user?.id || req.user?._id;
 		const { currentPassword, newPassword } = req.body;
 
+		console.log("🔐 [Change Password] Request received");
+		console.log("🔐 [Change Password] User ID:", userId);
+		console.log("🔐 [Change Password] Current password provided:", currentPassword ? "YES" : "NO");
+		console.log("🔐 [Change Password] New password provided:", newPassword ? "YES" : "NO");
+
 		if (!userId) {
 			return res.status(401).json({
 				success: false,
@@ -610,6 +645,9 @@ const changePasswordProfile = asyncHandler(async (req, res) => {
 		// Find user with password
 		const user = await User.findById(userId).select("+password");
 
+		console.log("🔐 [Change Password] User found:", user ? user.username : "NOT FOUND");
+		console.log("🔐 [Change Password] User has password:", user?.password ? "YES" : "NO");
+
 		if (!user) {
 			return res.status(404).json({
 				success: false,
@@ -618,7 +656,9 @@ const changePasswordProfile = asyncHandler(async (req, res) => {
 		}
 
 		// Verify current password
+		console.log("🔐 [Change Password] Comparing passwords...");
 		const isPasswordMatch = await user.matchPassword(currentPassword);
+		console.log("🔐 [Change Password] Password match result:", isPasswordMatch);
 
 		if (!isPasswordMatch) {
 			return res.status(401).json({

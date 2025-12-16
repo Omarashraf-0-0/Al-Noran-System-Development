@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
 import '../../core/services/user_cache_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/file_picker_helper.dart';
 
@@ -330,6 +331,8 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
             message: 'تم رفع المستند بنجاح',
           );
         }
+        // Refresh notifications
+        NotificationService().refresh();
         _loadRequiredDocuments(); // Reload documents
       } else {
         context.pop(); // Close loading
@@ -1575,6 +1578,8 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
             message: 'تم استبدال المستند بنجاح',
           );
         }
+        // Refresh notifications
+        NotificationService().refresh();
         _loadRequiredDocuments(); // Reload documents
       } else {
         context.pop(); // Close loading

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import '../../../core/network/api_service.dart';
 import '../../../core/storage/secure_storage.dart';
+import '../../../core/services/notification_service.dart';
 import '../models/message_model.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
@@ -192,6 +193,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (result['success']) {
         // Reload messages to get the new one
         await _loadMessages();
+        // Refresh notifications
+        NotificationService().refresh();
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

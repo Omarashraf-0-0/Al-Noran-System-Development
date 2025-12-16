@@ -17,6 +17,8 @@ import '../features/profile/profile_page.dart';
 import '../features/profile/profile_settings_page.dart';
 import '../features/profile/settings_menu_page.dart';
 import '../features/profile/documents_settings_page.dart';
+import '../features/notifications/notifications_page.dart';
+import '../features/notifications/notification_settings_page.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -186,6 +188,20 @@ class AppRouter {
         path: '/documents',
         name: 'documents',
         builder: (context, state) => const DocumentsSettingsPage(),
+      ),
+
+      // Notifications
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        builder: (context, state) => const NotificationsPage(),
+      ),
+
+      // Notification Settings
+      GoRoute(
+        path: '/notification-settings',
+        name: 'notification-settings',
+        builder: (context, state) => const NotificationSettingsPage(),
       ),
     ],
 

@@ -7,6 +7,7 @@ const {
 	deleteFromS3,
 	validateFile,
 } = require("../utils/s3Helpers");
+const notificationService = require("../services/notificationService");
 
 /**
  * @route   POST /api/uploads
