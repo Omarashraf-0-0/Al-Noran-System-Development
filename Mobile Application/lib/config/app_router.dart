@@ -10,6 +10,8 @@ import '../features/home/homePage.dart';
 import '../features/home/myShipments.dart';
 import '../features/home/myExports.dart';
 import '../features/Shipments/ShipmentsDetailsPage.dart';
+import '../features/Shipments/UCRDetailsPage.dart';
+import '../features/Shipments/ExportShipmentDetailsPage.dart';
 import '../features/Shipments/ChatPage.dart';
 import '../features/Shipments/ACIDReqPage.dart';
 import '../features/Shipments/UCRReqPage.dart';
@@ -119,6 +121,26 @@ class AppRouter {
         builder: (context, state) {
           final shipmentId = state.pathParameters['shipmentId'] ?? '';
           return ShipmentDetailsPage(shipmentId: shipmentId);
+        },
+      ),
+
+      // UCR Details (Export Request Details)
+      GoRoute(
+        path: '/ucr-details/:ucrId',
+        name: 'ucr-details',
+        builder: (context, state) {
+          final ucrId = state.pathParameters['ucrId'] ?? '';
+          return UcrDetailsPage(ucrRequestId: ucrId);
+        },
+      ),
+
+      // Export Shipment Details (after UCR is issued)
+      GoRoute(
+        path: '/export-shipment-details/:shipmentId',
+        name: 'export-shipment-details',
+        builder: (context, state) {
+          final shipmentId = state.pathParameters['shipmentId'] ?? '';
+          return ExportShipmentDetailsPage(shipmentId: shipmentId);
         },
       ),
 

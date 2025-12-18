@@ -20,7 +20,7 @@ class ApiService {
       // return 'http://10.0.2.2:3500';
 
       // لو موبايل حقيقي، استخدم IP اللابتوب:
-      return 'http://192.168.1.16:3500';
+      return 'http://192.168.137.139:3500';
     }
 
     // لو iOS Simulator أو جهاز حقيقي
@@ -2406,6 +2406,142 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في جلب طلبات UCR',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get My Export Shipments
+  /// Gets all export shipments for the current user
+  static Future<Map<String, dynamic>> getMyExportShipments() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📦 [getMyExportShipments] Fetching export shipments...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/export-shipments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📦 [getMyExportShipments] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('📦 [getMyExportShipments] Response keys: ${data.keys}');
+
+        // Backend returns 'shipments' not 'data'
+        final shipments = data['shipments'] ?? data['data'] ?? [];
+        print('📦 [getMyExportShipments] Got ${shipments.length} shipments');
+
+        return {'success': true, 'data': shipments};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب شحنات التصدير',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMyExportShipments] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب شحنات التصدير',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get Export Shipment by ID
+  /// Gets a single export shipment by its ID
+  static Future<Map<String, dynamic>> getExportShipmentById({
+    required String id,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🚢 [getExportShipmentById] Fetching export shipment: $id');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/export-shipments/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🚢 [getExportShipmentById] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': data['shipment'] ?? data['data'] ?? data,
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب تفاصيل الشحنة',
+        };
+      }
+    } catch (e) {
+      print('❌ [getExportShipmentById] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب تفاصيل الشحنة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get UCR Request by ID
+  /// Gets a single UCR request by its ID
+  static Future<Map<String, dynamic>> getUcrRequestById({
+    required String id,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📋 [getUcrRequestById] Fetching UCR request: $id');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/ucr/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📋 [getUcrRequestById] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'data': data['data'] ?? data};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب تفاصيل الطلب',
+        };
+      }
+    } catch (e) {
+      print('❌ [getUcrRequestById] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب تفاصيل الطلب',
         'error': e.toString(),
       };
     }
