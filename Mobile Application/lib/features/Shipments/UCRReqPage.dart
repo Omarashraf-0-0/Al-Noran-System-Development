@@ -3155,7 +3155,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
                 foregroundColor: primaryDark, // Button text color
               ),
             ),
-            dialogTheme: DialogTheme(
+            dialogTheme: DialogThemeData(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
