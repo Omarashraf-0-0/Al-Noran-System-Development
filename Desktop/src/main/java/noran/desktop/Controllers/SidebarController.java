@@ -24,6 +24,8 @@ public class SidebarController {
     @FXML
     private Button shipmentsBtn;
     @FXML
+    private Button exportShipmentsBtn;
+    @FXML
     private Button addInvoicesBtn;
     @FXML
     private Button invoiceCompletionBtn;
@@ -58,6 +60,9 @@ public class SidebarController {
             case "shipments":
                 shipmentsBtn.setStyle(ACTIVE_STYLE);
                 break;
+            case "exports":
+                exportShipmentsBtn.setStyle(ACTIVE_STYLE);
+                break;
             case "new invoice":
                 addInvoicesBtn.setStyle(ACTIVE_STYLE);
                 break;
@@ -78,6 +83,8 @@ public class SidebarController {
             employeesBtn.setStyle(INACTIVE_STYLE);
         if (shipmentsBtn != null)
             shipmentsBtn.setStyle(INACTIVE_STYLE);
+        if (exportShipmentsBtn != null)
+            exportShipmentsBtn.setStyle(INACTIVE_STYLE);
         if (addInvoicesBtn != null)
             addInvoicesBtn.setStyle(INACTIVE_STYLE);
         if (invoiceCompletionBtn != null)
@@ -114,6 +121,11 @@ public class SidebarController {
     @FXML
     public void shipments_management(ActionEvent event) throws IOException {
         loadPage(event, "/noran/desktop/shipments-management.fxml");
+    }
+
+    @FXML
+    public void navigateToExportShipments(ActionEvent event) throws IOException {
+        loadPage(event, "/noran/desktop/exports-management.fxml");
     }
 
     @FXML

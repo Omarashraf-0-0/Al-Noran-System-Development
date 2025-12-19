@@ -25,9 +25,18 @@
     <!-- CENTER CONTENT -->
     <center>
         <VBox alignment="TOP_CENTER" spacing="24" style="-fx-padding: 32 24;">
-            <!-- Header with refresh button and illustration -->
-            <HBox alignment="CENTER_LEFT" spacing="300">
-                <Button onAction="#refresh" style="-fx-background-color: transparent; -fx-cursor: hand;">
+            <!-- Header with centered illustration and refresh button (bottom right) -->
+            <AnchorPane prefHeight="200.0">
+                <!-- Centered illustration using StackPane -->
+                <StackPane alignment="CENTER" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0">
+                    <ImageView fitHeight="200.0" fitWidth="350.0" preserveRatio="true">
+                        <image>
+                            <Image url="@images/Untitled%20design%20(10).png" />
+                        </image>
+                    </ImageView>
+                </StackPane>
+                <!-- Refresh button anchored to bottom right (leftAnchor in RTL = visual right) -->
+                <Button onAction="#refresh" style="-fx-background-color: transparent; -fx-cursor: hand;" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0">
                     <graphic>
                         <ImageView fitHeight="47.0" fitWidth="61.0" pickOnBounds="true" preserveRatio="true">
                             <image>
@@ -36,13 +45,7 @@
                         </ImageView>
                     </graphic>
                 </Button>
-                <!--                <Region prefHeight="166.0" prefWidth="10.0" HBox.hgrow="ALWAYS" />-->
-                <ImageView fitHeight="200.0" fitWidth="350.0" preserveRatio="true">
-                    <image>
-                        <Image url="@images/Untitled%20design%20(10).png" />
-                    </image>
-                </ImageView>
-            </HBox>
+            </AnchorPane>
 
             <!-- Table container -->
             <StackPane style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 12;">

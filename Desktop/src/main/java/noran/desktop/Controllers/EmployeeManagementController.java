@@ -167,6 +167,8 @@ public class EmployeeManagementController {
 
             Stage stage = new Stage();
             stage.initModality(Modality.APPLICATION_MODAL);
+            stage.getIcons().add(
+                    new javafx.scene.image.Image(getClass().getResourceAsStream("/noran/desktop/images/Logo.png")));
             stage.setScene(new Scene(root));
             stage.setTitle(employee.getId().isBlank() ? "Add Employee" : "Edit Employee");
             stage.showAndWait();

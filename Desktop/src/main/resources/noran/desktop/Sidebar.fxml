@@ -39,7 +39,11 @@
 
         <Button fx:id="shipmentsBtn" maxWidth="Infinity" onAction="#shipments_management"
                 style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
-                text="إدارة الشحنات" />
+                text="إدارة شحنات الاستيراد" />
+
+        <Button fx:id="exportShipmentsBtn" maxWidth="Infinity" onAction="#navigateToExportShipments"
+                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
+                text="إدارة شحنات التصدير" />
 
 
 <!--        <Button fx:id="archiveBtn" maxWidth="Infinity"-->

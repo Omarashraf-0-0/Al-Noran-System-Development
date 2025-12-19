@@ -16,9 +16,18 @@
 
     <center>
         <VBox spacing="20" style="-fx-padding: 20;">
-            <!-- Header with refresh button and illustration -->
-            <HBox alignment="CENTER_LEFT" spacing="200">
-                <Button onAction="#refresh" style="-fx-background-color: transparent; -fx-cursor: hand;">
+            <!-- Header with centered illustration and refresh button (bottom right) -->
+            <AnchorPane prefHeight="200.0">
+                <!-- Centered illustration using StackPane -->
+                <StackPane alignment="CENTER" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0">
+                    <ImageView fitHeight="200.0" fitWidth="350.0" preserveRatio="true">
+                        <image>
+                            <Image url="@images/invoice-illustration.png" />
+                        </image>
+                    </ImageView>
+                </StackPane>
+                <!-- Refresh button anchored to bottom right (leftAnchor in RTL = visual right) -->
+                <Button onAction="#refresh" style="-fx-background-color: transparent; -fx-cursor: hand;" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0">
                     <graphic>
                         <ImageView fitHeight="47.0" fitWidth="61.0" pickOnBounds="true" preserveRatio="true">
                             <image>
@@ -27,13 +36,7 @@
                         </ImageView>
                     </graphic>
                 </Button>
-<!--                <Region prefHeight="166.0" prefWidth="10.0" HBox.hgrow="ALWAYS" />-->
-                <ImageView fitHeight="200.0" fitWidth="350.0" preserveRatio="true">
-                    <image>
-                        <Image url="@images/invoice-illustration.png" />
-                    </image>
-                </ImageView>
-            </HBox>
+            </AnchorPane>
 
             <!-- Table Container -->
             <StackPane style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 12;" VBox.vgrow="ALWAYS">

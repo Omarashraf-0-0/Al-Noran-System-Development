@@ -220,23 +220,65 @@ public class ShipmentsManagementController {
 
     private void openShipmentPopup(Shipment shipment) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/shipments-popup.fxml"));
+            // Load full document from MongoDB for this shipment
+            Document fullDoc = getFullShipmentDocument(shipment.getId());
+
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/import-shipment-popup.fxml"));
             Parent root = loader.load();
 
-            ShipmentPopupController popupController = loader.getController();
-            popupController.loadShipment(shipment);
+            ImportShipmentPopupController popupController = loader.getController();
+            popupController.loadShipment(shipment, fullDoc);
+            popupController.setSaveHandler(this::saveImportShipmentToMongo);
 
             Stage stage = new Stage();
             stage.initModality(Modality.APPLICATION_MODAL);
-            stage.setScene(new Scene(root));
+            stage.getIcons().add(
+                    new javafx.scene.image.Image(getClass().getResourceAsStream("/noran/desktop/images/Logo.png")));
+            stage.setScene(new Scene(root, 420, 700));
+            stage.setTitle("تعديل شحنة الاستيراد");
             stage.showAndWait();
 
             if (popupController.isSaved()) {
-                saveShipmentToMongo(shipment);
                 loadShipmentsFromMongo(); // Refresh Table
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private Document getFullShipmentDocument(String shipmentId) {
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            MongoCollection<Document> collection = db.getCollection("shipments");
+            return collection.find(new Document("_id", new ObjectId(shipmentId))).first();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private boolean saveImportShipmentToMongo(Document doc) {
+        try {
+            MongoDatabase db = MongoConnection.getDatabase();
+            MongoCollection<Document> collection = db.getCollection("shipments");
+
+            String id = doc.getString("_id");
+            doc.remove("_id");
+            doc.remove("user_id");
+            doc.remove("employee_id");
+
+            if (id != null && !id.isEmpty()) {
+                collection.updateOne(
+                        new Document("_id", new ObjectId(id)),
+                        new Document("$set", doc));
+                System.out.println("✔ تم تحديث شحنة الاستيراد: " + id);
+            }
+            return true;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("خطأ في حفظ البيانات: " + e.getMessage());
+            return false;
         }
     }
 

@@ -43,7 +43,7 @@ public class TopBarController implements Initializable {
 
     // Sidebar reference and state
     private VBox sidebar;
-    private boolean sidebarVisible = true;
+    private boolean sidebarVisible = false; // Default: sidebar is CLOSED
     private static final double SIDEBAR_WIDTH = 260;
 
     @Override
@@ -61,10 +61,16 @@ public class TopBarController implements Initializable {
     }
 
     /**
-     * Set the sidebar reference so it can be toggled from the menu icon
+     * Set the sidebar reference so it can be toggled from the menu icon.
+     * Sidebar starts hidden by default.
      */
     public void setSidebar(VBox sidebar) {
         this.sidebar = sidebar;
+        // Hide sidebar immediately on startup
+        if (sidebar != null) {
+            sidebar.setTranslateX(-SIDEBAR_WIDTH);
+            sidebar.setManaged(false);
+        }
     }
 
     @FXML
