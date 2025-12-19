@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.collections.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<ScrollPane fitToWidth="true" style="-fx-background-color: transparent;" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.ImportShipmentPopupController">
+    <VBox alignment="CENTER" spacing="10" style="-fx-padding: 20; -fx-background-color: #f7f7f7; -fx-background-radius: 20; -fx-border-radius: 20;">
+
+        <!-- Logo -->
+        <ImageView fitHeight="80.0" fitWidth="120.0" pickOnBounds="true" preserveRatio="true">
+            <image><Image url="@images/Logo.png" /></image>
+        </ImageView>
+
+        <Label style="-fx-font-size: 18; -fx-font-weight: bold;" text="تعديل شحنة الاستيراد" />
+
+        <!-- Basic Info Section -->
+        <Label style="-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #690000;" text="معلومات الشحنة الأساسية" />
+
+        <HBox spacing="15" alignment="CENTER">
+            <VBox spacing="4" alignment="CENTER_RIGHT">
+                <Label text="رقم ACID" style="-fx-font-size: 12; -fx-text-fill: #555;" />
+                <TextField fx:id="acidField" alignment="CENTER_RIGHT" style="-fx-pref-width: 170; -fx-background-radius: 10;" />
+            </VBox>
+            <VBox spacing="4" alignment="CENTER_RIGHT">
+                <Label text="رقم البوليصة" style="-fx-font-size: 12; -fx-text-fill: #555;" />
+                <TextField fx:id="policyField" alignment="CENTER_RIGHT" style="-fx-pref-width: 170; -fx-background-radius: 10;" />
+            </VBox>
+        </HBox>
+
+        <HBox spacing="15" alignment="CENTER">
+            <VBox spacing="4" alignment="CENTER_RIGHT">
+                <Label text="رقم 46" style="-fx-font-size: 12; -fx-text-fill: #555;" />
+                <TextField fx:id="number46Field" alignment="CENTER_RIGHT" style="-fx-pref-width: 170; -fx-background-radius: 10;" />
+            </VBox>
+            <VBox spacing="4" alignment="CENTER_RIGHT">
+                <Label text="عدد الحاويات" style="-fx-font-size: 12; -fx-text-fill: #555;" />
+                <TextField fx:id="containersField" alignment="CENTER_RIGHT" style="-fx-pref-width: 170; -fx-background-radius: 10;" />
+            </VBox>
+        </HBox>
+
+        <!-- Location Section -->
+        <Label style="-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #690000;" text="بيانات الموقع" />
+
+        <HBox spacing="15" alignment="CENTER">
+            <VBox spacing="4" alignment="CENTER_RIGHT">
+                <Label text="اسم الميناء" style="-fx-font-size: 12; -fx-text-fill: #555;" />
+                <TextField fx:id="portField" alignment="CENTER_RIGHT" style="-fx-pref-width: 170; -fx-background-radius: 10;" />
+            </VBox>
+            <VBox spacing="4" alignment="CENTER_RIGHT">
+                <Label text="الدولة" style="-fx-font-size: 12; -fx-text-fill: #555;" />
+                <TextField fx:id="countryField" alignment="CENTER_RIGHT" style="-fx-pref-width: 170; -fx-background-radius: 10;" />
+            </VBox>
+        </HBox>
+
+        <!-- Parties Section -->
+        <Label style="-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #690000;" text="بيانات الأطراف" />
+
+        <VBox spacing="4" alignment="CENTER_RIGHT">
+            <Label text="اسم المستورد" style="-fx-font-size: 12; -fx-text-fill: #555;" />
+            <TextField fx:id="importerNameField" alignment="CENTER_RIGHT" style="-fx-pref-width: 355; -fx-background-radius: 10;" />
+        </VBox>
+
+        <VBox spacing="4" alignment="CENTER_RIGHT">
+            <Label text="اسم صاحب العمل" style="-fx-font-size: 12; -fx-text-fill: #555;" />
+            <TextField fx:id="employerNameField" alignment="CENTER_RIGHT" style="-fx-pref-width: 355; -fx-background-radius: 10;" />
+        </VBox>
+
+        <VBox spacing="4" alignment="CENTER_RIGHT">
+            <Label text="وصف الشحنة" style="-fx-font-size: 12; -fx-text-fill: #555;" />
+            <TextField fx:id="shipmentDescriptionField" alignment="CENTER_RIGHT" style="-fx-pref-width: 355; -fx-background-radius: 10;" />
+        </VBox>
+
+        <!-- Fees Section -->
+        <Label style="-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #690000;" text="الرسوم والمصاريف" />
+
+        <HBox spacing="10" alignment="CENTER">
+            <VBox spacing="4" alignment="CENTER_RIGHT">
+                <Label text="رسوم التخليص" style="-fx-font-size: 11; -fx-text-fill: #555;" />
+                <TextField fx:id="clearanceFeesField" alignment="CENTER_RIGHT" style="-fx-pref-width: 110; -fx-background-radius: 10;" />
+            </VBox>
+            <VBox spacing="4" alignment="CENTER_RIGHT">
+                <Label text="مصاريف وإكراميات" style="-fx-font-size: 11; -fx-text-fill: #555;" />
+                <TextField fx:id="expensesField" alignment="CENTER_RIGHT" style="-fx-pref-width: 110; -fx-background-radius: 10;" />
+            </VBox>
+            <VBox spacing="4" alignment="CENTER_RIGHT">
+                <Label text="نثريات" style="-fx-font-size: 11; -fx-text-fill: #555;" />
+                <TextField fx:id="sundriesField" alignment="CENTER_RIGHT" style="-fx-pref-width: 110; -fx-background-radius: 10;" />
+            </VBox>
+        </HBox>
+
+        <!-- Status Section -->
+        <Label style="-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #690000;" text="حالة الشحنة" />
+
+        <VBox spacing="4" alignment="CENTER_RIGHT">
+            <Label text="الحالة الحالية" style="-fx-font-size: 12; -fx-text-fill: #555;" />
+            <ComboBox fx:id="statusCombo" nodeOrientation="RIGHT_TO_LEFT" style="-fx-pref-width: 355; -fx-background-radius: 10;">
+                <items>
+                    <FXCollections fx:factory="observableArrayList">
+                        <String fx:value="في انتظار الشحن" />
+                        <String fx:value="في الطريق" />
+                        <String fx:value="وصلت" />
+                        <String fx:value="التخليص الجمركي" />
+                        <String fx:value="تمت بنجاح" />
+                    </FXCollections>
+                </items>
+            </ComboBox>
+        </VBox>
+
+        <HBox spacing="15" alignment="CENTER">
+            <CheckBox fx:id="dragtCheckbox" text="ادرجت" style="-fx-font-size: 13;" />
+            <CheckBox fx:id="isInvoicedCheckbox" text="تم إصدار فاتورة" style="-fx-font-size: 13;" />
+        </HBox>
+
+        <!-- Buttons -->
+        <HBox alignment="CENTER" spacing="15" style="-fx-padding: 15 0 0 0;">
+            <Button onAction="#cancel" style="-fx-pref-width: 120; -fx-background-color: #aaa; -fx-text-fill: white; -fx-background-radius: 15; -fx-font-weight: bold;" text="إلغاء" />
+            <Button onAction="#save" style="-fx-pref-width: 120; -fx-background-color: #690000; -fx-text-fill: white; -fx-background-radius: 15; -fx-font-weight: bold;" text="حفظ التعديلات" />
+        </HBox>
+
+    </VBox>
+</ScrollPane>
