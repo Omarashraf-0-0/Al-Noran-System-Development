@@ -50,6 +50,9 @@ const ShipmentStatus = () => {
 	const [error, setError] = useState(null);
 	const [requiredDocuments, setRequiredDocuments] = useState([]);
 	const [showRequiredDocsModal, setShowRequiredDocsModal] = useState(false);
+	// State for pending files (selected but not yet uploaded)
+	const [pendingFiles, setPendingFiles] = useState({});
+	const [uploadingDoc, setUploadingDoc] = useState(null);
 
 	const token = localStorage.getItem("token");
 
@@ -783,208 +786,204 @@ const ShipmentStatus = () => {
 						<div className="space-y-4">
 							{requiredDocuments
 								.filter((doc) => !doc.uploaded)
-								.map((doc, index) => (
-									<div
-										key={doc._id || index}
-										className="border-2 border-orange-200 rounded-lg p-4"
-									>
-										<div className="flex items-center justify-between mb-3">
-											<h4 className="font-bold text-gray-800">{doc.name}</h4>
-											<span className="text-xs text-gray-500">
-												مطلوب منذ{" "}
-												{new Date(doc.requestedAt).toLocaleDateString("ar-EG")}
-											</span>
+								.map((doc, index) => {
+									const pendingFile = pendingFiles[doc._id];
+									const isUploading = uploadingDoc === doc._id;
+									
+									// Handler for file selection (just saves to state, doesn't upload)
+									const handleFileSelect = (e) => {
+										const file = e.target.files[0];
+										if (!file) return;
+										setPendingFiles(prev => ({
+											...prev,
+											[doc._id]: file
+										}));
+									};
+									
+									// Handler to cancel/delete selected file
+									const handleCancelFile = () => {
+										setPendingFiles(prev => {
+											const updated = { ...prev };
+											delete updated[doc._id];
+											return updated;
+										});
+										// Reset file input
+										const fileInput = document.getElementById(`file-${doc._id}`);
+										if (fileInput) fileInput.value = '';
+									};
+									
+									// Handler to save/upload the file
+									const handleSaveFile = async () => {
+										if (!pendingFile) return;
+										
+										try {
+											setUploadingDoc(doc._id);
+											toast.loading("جاري رفع المستند...");
+
+											// Step 1: Upload file to S3
+											const formData = new FormData();
+											formData.append("file", pendingFile);
+											formData.append("category", "shipment");
+											formData.append("relatedId", shipment._id);
+											formData.append("documentType", "other");
+											formData.append("description", `Required document: ${doc.name}`);
+
+											const uploadResponse = await axios.post(
+												`${import.meta.env.VITE_API_URL}/api/uploads`,
+												formData,
+												{
+													headers: {
+														Authorization: `Bearer ${token}`,
+														"Content-Type": "multipart/form-data",
+													},
+												}
+											);
+
+											const uploadedFileId =
+												uploadResponse.data?.upload?.id ||
+												uploadResponse.data?.upload?._id ||
+												uploadResponse.data?.id ||
+												uploadResponse.data?._id;
+
+											if (!uploadedFileId) {
+												throw new Error("No file ID returned from upload");
+											}
+
+											// Step 2: Mark document as uploaded in shipment
+											await axios.patch(
+												`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipment._id}/required-documents/${doc._id}`,
+												{ fileId: uploadedFileId },
+												{
+													headers: { Authorization: `Bearer ${token}` },
+												}
+											);
+
+											toast.dismiss();
+											toast.success("تم رفع المستند بنجاح");
+
+											// Clear pending file
+											handleCancelFile();
+
+											// Refresh required documents
+											const updatedReqDocsResponse = await axios.get(
+												`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipment._id}/required-documents`,
+												{ headers: { Authorization: `Bearer ${token}` } }
+											);
+											const updatedDocs = updatedReqDocsResponse.data?.data?.requiredDocuments || [];
+											setRequiredDocuments(updatedDocs);
+
+											// Refresh shipment state
+											const shipmentRefresh = await axios.get(
+												`${import.meta.env.VITE_API_URL}/api/shipments/${shipmentId}`,
+												{ headers: { Authorization: `Bearer ${token}` } }
+											);
+											setShipment(shipmentRefresh.data);
+
+											// Refresh files list
+											const filesResponse = await axios.get(
+												`${import.meta.env.VITE_API_URL}/api/uploads?category=shipment&relatedId=${shipment._id}`,
+												{ headers: { Authorization: `Bearer ${token}` } }
+											);
+											const uploads = filesResponse.data?.uploads || filesResponse.data || [];
+											const shipmentFiles = uploads.map((file) => ({
+												name: file.filename || file.originalname || "ملف",
+												date: new Date(file.uploadedAt || file.createdAt).toLocaleDateString("ar-EG", {
+													day: "numeric", month: "long", year: "numeric",
+												}),
+												url: file.presignedUrl || file.url,
+												id: file._id,
+												documentType: file.documentType,
+												description: file.description,
+											}));
+											setFileItems(shipmentFiles);
+
+											// Close modal if all docs uploaded
+											const remaining = updatedDocs.filter(d => !d.uploaded);
+											if (remaining.length === 0) {
+												setShowRequiredDocsModal(false);
+											}
+										} catch (error) {
+											toast.dismiss();
+											toast.error("فشل رفع المستند: " + (error.response?.data?.message || error.message));
+											console.error("Upload error:", error);
+										} finally {
+											setUploadingDoc(null);
+										}
+									};
+									
+									return (
+										<div
+											key={doc._id || index}
+											className="border-2 border-orange-200 rounded-lg p-4"
+										>
+											<div className="flex items-center justify-between mb-3">
+												<h4 className="font-bold text-gray-800">{doc.name}</h4>
+												<span className="text-xs text-gray-500">
+													مطلوب منذ{" "}
+													{new Date(doc.requestedAt).toLocaleDateString("ar-EG")}
+												</span>
+											</div>
+
+											{pendingFile ? (
+												// Show selected file with save/delete buttons
+												<div className="space-y-3">
+													<div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+														<span className="text-xl">📄</span>
+														<div className="flex-1 min-w-0">
+															<p className="font-medium text-gray-800 truncate">{pendingFile.name}</p>
+															<p className="text-xs text-gray-500">
+																{(pendingFile.size / 1024).toFixed(1)} KB
+															</p>
+														</div>
+													</div>
+													<div className="flex gap-2">
+														<button
+															onClick={handleSaveFile}
+															disabled={isUploading}
+															className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition disabled:bg-green-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+														>
+															{isUploading ? (
+																<>
+																	<span className="animate-spin">⏳</span>
+																	جاري الحفظ...
+																</>
+															) : (
+																<>
+																	<span>✓</span>
+																	حفظ
+																</>
+															)}
+														</button>
+														<button
+															onClick={handleCancelFile}
+															disabled={isUploading}
+															className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+														>
+															<span>✕</span>
+															حذف
+														</button>
+													</div>
+												</div>
+											) : (
+												// Show file selection button
+												<div className="flex gap-2">
+													<input
+														type="file"
+														id={`file-${doc._id}`}
+														className="hidden"
+														onChange={handleFileSelect}
+													/>
+													<label
+														htmlFor={`file-${doc._id}`}
+														className="flex-1 cursor-pointer bg-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-700 transition text-center"
+													>
+														اختر ملف
+													</label>
+												</div>
+											)}
 										</div>
-
-										<div className="flex gap-2">
-											<input
-												type="file"
-												id={`file-${doc._id}`}
-												className="hidden"
-												onChange={async (e) => {
-													const file = e.target.files[0];
-													if (!file) return;
-
-													try {
-														toast.loading("جاري رفع المستند...");
-
-														// Step 1: Upload file to S3
-														const formData = new FormData();
-														formData.append("file", file);
-														formData.append("category", "shipment");
-														formData.append("relatedId", shipment._id);
-														formData.append("documentType", "other"); // Use 'other' as document type
-														formData.append(
-															"description",
-															`Required document: ${doc.name}`
-														);
-
-														const uploadResponse = await axios.post(
-															`${import.meta.env.VITE_API_URL}/api/uploads`,
-															formData,
-															{
-																headers: {
-																	Authorization: `Bearer ${token}`,
-																	"Content-Type": "multipart/form-data",
-																},
-															}
-														);
-
-														console.log(
-															"Upload response:",
-															uploadResponse.data
-														);
-
-														const uploadedFileId =
-															uploadResponse.data?.upload?.id ||
-															uploadResponse.data?.upload?._id ||
-															uploadResponse.data?.id ||
-															uploadResponse.data?._id;
-
-														if (!uploadedFileId) {
-															console.error(
-																"Failed to extract file ID from response:",
-																uploadResponse.data
-															);
-															throw new Error(
-																"No file ID returned from upload"
-															);
-														}
-
-														// Step 2: Mark document as uploaded in shipment
-														await axios.patch(
-															`${
-																import.meta.env.VITE_API_URL
-															}/api/shipments/id/${
-																shipment._id
-															}/required-documents/${doc._id}`,
-															{ fileId: uploadedFileId },
-															{
-																headers: {
-																	Authorization: `Bearer ${token}`,
-																},
-															}
-														);
-
-														toast.dismiss();
-														toast.success("تم رفع المستند بنجاح");
-
-														console.log("✅ Document uploaded successfully!");
-														console.log("Uploaded file ID:", uploadedFileId);
-														console.log("Document ID:", doc._id);
-
-														// Refresh required documents from backend to get updated data
-														const updatedReqDocsResponse = await axios.get(
-															`${
-																import.meta.env.VITE_API_URL
-															}/api/shipments/id/${
-																shipment._id
-															}/required-documents`,
-															{
-																headers: {
-																	Authorization: `Bearer ${token}`,
-																},
-															}
-														);
-
-														console.log(
-															"Backend response:",
-															updatedReqDocsResponse.data
-														);
-
-														const updatedDocs =
-															updatedReqDocsResponse.data?.data
-																?.requiredDocuments || [];
-
-														console.log(
-															"Updated required documents:",
-															updatedDocs
-														);
-
-														// Verify the specific document was updated
-														const updatedDoc = updatedDocs.find(
-															(d) => d._id === doc._id
-														);
-														console.log(
-															`Document "${doc.name}" after update:`,
-															{
-																uploaded: updatedDoc?.uploaded,
-																fileId: updatedDoc?.fileId,
-																uploadedAt: updatedDoc?.uploadedAt,
-															}
-														);
-
-														setRequiredDocuments(updatedDocs);
-
-														// Also update the shipment state to trigger re-render
-														const shipmentRefresh = await axios.get(
-															`${
-																import.meta.env.VITE_API_URL
-															}/api/shipments/${shipmentId}`,
-															{
-																headers: {
-																	Authorization: `Bearer ${token}`,
-																},
-															}
-														);
-														setShipment(shipmentRefresh.data);
-
-														// Refresh files list
-														const filesResponse = await axios.get(
-															`${
-																import.meta.env.VITE_API_URL
-															}/api/uploads?category=shipment&relatedId=${
-																shipment._id
-															}`,
-															{
-																headers: {
-																	Authorization: `Bearer ${token}`,
-																},
-															}
-														);
-
-														const uploads =
-															filesResponse.data?.uploads ||
-															filesResponse.data ||
-															[];
-														const shipmentFiles = uploads.map((file) => ({
-															name: file.filename || file.originalname || "ملف",
-															date: new Date(
-																file.uploadedAt || file.createdAt
-															).toLocaleDateString("ar-EG", {
-																day: "numeric",
-																month: "long",
-																year: "numeric",
-															}),
-															url: file.presignedUrl || file.url,
-															id: file._id,
-															documentType: file.documentType,
-															description: file.description,
-														}));
-
-														setFileItems(shipmentFiles);
-
-														// Close the modal after successful upload
-														setShowRequiredDocsModal(false);
-													} catch (error) {
-														toast.dismiss();
-														toast.error(
-															"فشل رفع المستند: " +
-																(error.response?.data?.message || error.message)
-														);
-														console.error("Upload error:", error);
-													}
-												}}
-											/>
-											<label
-												htmlFor={`file-${doc._id}`}
-												className="flex-1 cursor-pointer bg-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-700 transition text-center"
-											>
-												اختر ملف
-											</label>
-										</div>
-									</div>
-								))}
+									);
+								})}
 
 							{requiredDocuments.filter((doc) => !doc.uploaded).length ===
 								0 && (

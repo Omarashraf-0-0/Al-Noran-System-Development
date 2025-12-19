@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Datafield from "../components/DataField";
+import RequestDocumentsModal from "../components/RequestDocumentsModal";
 import contractIcon from "../assets/images/contract.png";
 import mainIllustration from "../assets/images/Untitled design (7) 1.png";
 
@@ -157,6 +158,19 @@ const ExportShipmentDetailsPage = () => {
 	const [shipment, setShipment] = useState(null);
 	const [userType, setUserType] = useState("client");
 
+	// Document request modal state (for employee) - Same workflow as EmployeeShipmentManagement
+	const [showDocumentRequestModal, setShowDocumentRequestModal] = useState(false);
+	const [documentName, setDocumentName] = useState("");
+	const [requiredDocuments, setRequiredDocuments] = useState([]); // Local array before saving
+	const [savingDocuments, setSavingDocuments] = useState(false);
+
+	// File upload state (for client)
+	const [pendingFiles, setPendingFiles] = useState({});
+	const [uploadingDoc, setUploadingDoc] = useState(null);
+	const [deletingDoc, setDeletingDoc] = useState(null);
+
+	const token = localStorage.getItem("token");
+
 	// Check user type
 	useEffect(() => {
 		const storedUser = localStorage.getItem("user");
@@ -224,6 +238,200 @@ const ExportShipmentDetailsPage = () => {
 			style: "currency",
 			currency: "EGP",
 		}).format(value);
+	};
+
+	// =====================
+	// Document Request Handlers (for Employee) - Same workflow as EmployeeShipmentManagement
+	// =====================
+	
+	// Add document to local array (not saved yet)
+	const handleAddDocumentRequest = () => {
+		if (!documentName.trim()) {
+			toast.error("يرجى إدخال اسم المستند");
+			return;
+		}
+		
+		// Check if document already exists in local array
+		if (requiredDocuments.some(doc => doc.name.toLowerCase() === documentName.trim().toLowerCase())) {
+			toast.error("هذا المستند مضاف بالفعل");
+			return;
+		}
+		
+		setRequiredDocuments([
+			...requiredDocuments,
+			{ name: documentName.trim(), uploaded: false },
+		]);
+		setDocumentName("");
+		toast.success("تم إضافة المستند للقائمة");
+	};
+	
+	// Remove document from local array (not saved yet)
+	const handleRemoveDocumentRequest = (index) => {
+		const updated = requiredDocuments.filter((_, i) => i !== index);
+		setRequiredDocuments(updated);
+		toast.success("تم حذف المستند من القائمة");
+	};
+	
+	// Save all documents to backend
+	const handleSaveDocumentRequests = async () => {
+		if (requiredDocuments.length === 0) {
+			toast.error("يرجى إضافة مستند واحد على الأقل");
+			return;
+		}
+
+		setSavingDocuments(true);
+		try {
+			toast.loading("جاري إرسال طلب المستندات...");
+			
+			// Send each document request to the backend
+			for (const doc of requiredDocuments) {
+				await axios.post(
+					`${import.meta.env.VITE_API_URL}/api/export-shipments/employee/${actualId}/request-document`,
+					{ documentName: doc.name },
+					{
+						headers: { Authorization: `Bearer ${token}` },
+					}
+				);
+			}
+			
+			toast.dismiss();
+			toast.success("تم حفظ المستندات المطلوبة وإرسال إشعار للعميل");
+			setShowDocumentRequestModal(false);
+			setRequiredDocuments([]);
+			fetchShipmentDetails();
+		} catch (error) {
+			toast.dismiss();
+			const errorMsg = error.response?.data?.message || "فشل في حفظ المستندات المطلوبة";
+			toast.error(errorMsg);
+		} finally {
+			setSavingDocuments(false);
+		}
+	};
+
+	// Delete a saved document request (with confirmation)
+	const handleDeleteSavedDocument = async (doc) => {
+		if (!window.confirm(`هل أنت متأكد من حذف طلب المستند "${doc.name}"؟`)) {
+			return;
+		}
+
+		setDeletingDoc(doc._id);
+		try {
+			toast.loading("جاري حذف طلب المستند...");
+			await axios.delete(
+				`${import.meta.env.VITE_API_URL}/api/export-shipments/employee/${actualId}/required-documents/${doc._id}`,
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				}
+			);
+			toast.dismiss();
+			toast.success("تم حذف طلب المستند بنجاح");
+			fetchShipmentDetails();
+		} catch (error) {
+			toast.dismiss();
+			const errorMsg = error.response?.data?.message || "فشل في حذف طلب المستند";
+			toast.error(errorMsg);
+		} finally {
+			setDeletingDoc(null);
+		}
+	};
+
+	const handleViewDocument = async (doc) => {
+		if (!doc.fileId || doc.fileId === "temp-file-id") {
+			toast.error("معرف الملف غير صالح");
+			return;
+		}
+
+		try {
+			toast.loading("جاري تحميل الملف...");
+			const fileResponse = await axios.get(
+				`${import.meta.env.VITE_API_URL}/api/uploads/${doc.fileId}`,
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				}
+			);
+			toast.dismiss();
+
+			const fileUrl = fileResponse.data?.upload?.presignedUrl || fileResponse.data?.presignedUrl;
+			if (fileUrl) {
+				window.open(fileUrl, "_blank");
+			} else {
+				toast.error("لم يتم العثور على رابط الملف");
+			}
+		} catch (error) {
+			toast.dismiss();
+			toast.error("فشل تحميل الملف");
+		}
+	};
+
+	// =====================
+	// File Upload Handlers (for Client)
+	// =====================
+	const handleFileSelect = (docName, file) => {
+		setPendingFiles((prev) => ({
+			...prev,
+			[docName]: file,
+		}));
+	};
+
+	const handleDeletePendingFile = (docName) => {
+		setPendingFiles((prev) => {
+			const newFiles = { ...prev };
+			delete newFiles[docName];
+			return newFiles;
+		});
+	};
+
+	const handleSaveFile = async (docName) => {
+		const file = pendingFiles[docName];
+		if (!file) return;
+
+		setUploadingDoc(docName);
+		try {
+			toast.loading(`جاري رفع ${docName}...`);
+
+			// Step 1: Upload file to S3
+			const formData = new FormData();
+			formData.append("file", file);
+			formData.append("category", "export_shipment");
+			formData.append("relatedId", actualId);
+			// Don't send documentType - it's not needed for export shipments
+			// The document name is stored in the requiredDocuments array
+
+			const uploadResponse = await axios.post(
+				`${import.meta.env.VITE_API_URL}/api/uploads`,
+				formData,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "multipart/form-data",
+					},
+				}
+			);
+
+			const uploadId = uploadResponse.data.upload?._id || uploadResponse.data.upload?.id || uploadResponse.data.uploadId;
+
+			// Step 2: Link upload to export shipment required document
+			await axios.post(
+				`${import.meta.env.VITE_API_URL}/api/export-shipments/${actualId}/upload-required/${encodeURIComponent(docName)}`,
+				{ uploadId },
+				{
+					headers: { Authorization: `Bearer ${token}` },
+				}
+			);
+
+			toast.dismiss();
+			toast.success(`تم رفع ${docName} بنجاح`);
+
+			// Clear pending file
+			handleDeletePendingFile(docName);
+			fetchShipmentDetails();
+		} catch (error) {
+			toast.dismiss();
+			const errorMsg = error.response?.data?.message || "فشل في رفع الملف";
+			toast.error(errorMsg);
+		} finally {
+			setUploadingDoc(null);
+		}
 	};
 
 	if (loading) {
@@ -582,6 +790,185 @@ const ExportShipmentDetailsPage = () => {
 						</div>
 					)}
 
+					{/* Required Documents Section - Employee can request, Client can upload */}
+					{(shipment.requiredDocuments?.length > 0 || userType === "employee") && (
+						<div className="bg-orange-50 rounded-xl p-6 mb-6 border-2 border-orange-200">
+							<div className="flex justify-between items-center mb-4">
+								<h3 className="font-bold text-orange-800">
+									📋 المستندات المطلوبة
+									{shipment.requiredDocuments?.length > 0 && (
+										<span className="text-sm font-normal mr-2">
+											({shipment.requiredDocuments.filter(d => d.uploaded).length}/{shipment.requiredDocuments.length} مكتمل)
+										</span>
+									)}
+								</h3>
+								{userType === "employee" && (
+									<button
+										onClick={() => setShowDocumentRequestModal(true)}
+										className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition flex items-center gap-2 text-sm font-medium"
+									>
+										<span>+</span>
+										<span>طلب مستندات</span>
+									</button>
+								)}
+							</div>
+
+							{shipment.requiredDocuments?.length > 0 ? (
+								<div className="space-y-3">
+									{shipment.requiredDocuments.map((doc) => (
+										<div
+											key={doc._id}
+											className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border-2 ${
+												doc.uploaded
+													? "bg-green-50 border-green-200"
+													: "bg-yellow-50 border-yellow-200"
+											}`}
+										>
+											<div className="flex items-center gap-3 mb-2 sm:mb-0">
+												<span className={`text-2xl ${doc.uploaded ? "text-green-600" : "text-yellow-600"}`}>
+													{doc.uploaded ? "✅" : "⏳"}
+												</span>
+												<div>
+													<p className="font-bold text-gray-800">{doc.name}</p>
+													<p className="text-sm text-gray-500">
+														{doc.uploaded
+															? `تم الرفع: ${formatDate(doc.uploadedAt)}`
+															: `تم الطلب: ${formatDate(doc.requestedAt)}`}
+													</p>
+												</div>
+											</div>
+
+											{/* Employee View: View/Delete buttons for uploaded documents */}
+											{userType === "employee" && doc.uploaded && doc.fileId && (
+												<div className="flex gap-2">
+													<button
+														onClick={() => handleViewDocument(doc)}
+														className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-1"
+													>
+														<span>عرض المستند</span>
+														<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+															<path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+															<path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+														</svg>
+													</button>
+													<button
+														onClick={() => handleDeleteSavedDocument(doc)}
+														disabled={deletingDoc === doc._id}
+														className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-1 disabled:opacity-50"
+													>
+														<span>{deletingDoc === doc._id ? "جاري الحذف..." : "حذف"}</span>
+														<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+															<path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+														</svg>
+													</button>
+												</div>
+											)}
+
+											{/* Employee View: Delete button for pending (not uploaded) documents */}
+											{userType === "employee" && !doc.uploaded && (
+												<button
+													onClick={() => handleDeleteSavedDocument(doc)}
+													disabled={deletingDoc === doc._id}
+													className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-1 disabled:opacity-50"
+												>
+													<span>{deletingDoc === doc._id ? "جاري الحذف..." : "حذف الطلب"}</span>
+													<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+														<path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+													</svg>
+												</button>
+											)}
+
+											{/* Client View: Upload section */}
+											{userType !== "employee" && !doc.uploaded && (
+												<div className="w-full sm:w-auto mt-3 sm:mt-0">
+													{pendingFiles[doc.name] ? (
+														<div className="flex items-center gap-2 flex-wrap">
+															<span className="text-sm text-gray-600 max-w-[150px] truncate">
+																📎 {pendingFiles[doc.name].name}
+															</span>
+															<button
+																onClick={() => {
+																	const file = pendingFiles[doc.name];
+																	const fileUrl = URL.createObjectURL(file);
+																	window.open(fileUrl, "_blank");
+																}}
+																className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition text-sm"
+															>
+																عرض
+															</button>
+															<button
+																onClick={() => handleSaveFile(doc.name)}
+																disabled={uploadingDoc === doc.name}
+																className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition text-sm disabled:opacity-50"
+															>
+																{uploadingDoc === doc.name ? "جاري الرفع..." : "حفظ"}
+															</button>
+															<button
+																onClick={() => handleDeletePendingFile(doc.name)}
+																disabled={uploadingDoc === doc.name}
+																className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm disabled:opacity-50"
+															>
+																حذف
+															</button>
+														</div>
+													) : (
+														<label className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition cursor-pointer flex items-center gap-2">
+															<span>📤 اختر ملف</span>
+															<input
+																type="file"
+																accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+																className="hidden"
+																onChange={(e) => {
+																	const file = e.target.files?.[0];
+																	if (file) {
+																		handleFileSelect(doc.name, file);
+																	}
+																}}
+															/>
+														</label>
+													)}
+												</div>
+											)}
+
+											{/* Client View: Already uploaded - show view/download buttons */}
+											{userType !== "employee" && doc.uploaded && doc.fileId && (
+												<div className="flex gap-2">
+													<button
+														onClick={() => handleViewDocument(doc)}
+														className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-1"
+													>
+														<span>عرض</span>
+														<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+															<path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+															<path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+														</svg>
+													</button>
+													<span className="text-green-600 font-medium flex items-center gap-1 px-2">
+														✅ تم الرفع
+													</span>
+												</div>
+											)}
+											
+											{/* Client View: Already uploaded but no fileId */}
+											{userType !== "employee" && doc.uploaded && !doc.fileId && (
+												<span className="text-green-600 font-medium flex items-center gap-1">
+													✅ تم الرفع
+												</span>
+											)}
+										</div>
+									))}
+								</div>
+							) : (
+								<p className="text-gray-500 text-center py-4">
+									{userType === "employee" 
+										? "لم يتم طلب أي مستندات بعد. انقر على 'طلب مستندات' لطلب مستندات من العميل."
+										: "لا توجد مستندات مطلوبة حالياً."
+									}
+								</p>
+							)}
+						</div>
+					)}
+
 					{/* Action Buttons */}
 					<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-8 pt-6 border-t-2">
 						{/* Back to list */}
@@ -613,6 +1000,27 @@ const ExportShipmentDetailsPage = () => {
 							</button>
 						)}
 
+						{/* Shipment History Button (for employees) */}
+						{userType === "employee" && (
+							<button
+								onClick={() => navigate(`/export-shipment-history/${actualId}`)}
+								className="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+							>
+								<svg
+									className="w-5 h-5"
+									fill="currentColor"
+									viewBox="0 0 20 20"
+								>
+									<path
+										fillRule="evenodd"
+										d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+										clipRule="evenodd"
+									/>
+								</svg>
+								<span>تاريخ الشحنة</span>
+							</button>
+						)}
+
 						{/* Completed message */}
 						{shipment.currentStatus === "completed" && (
 							<span className="w-full sm:w-auto px-6 py-3 bg-green-100 text-green-800 font-bold rounded-lg flex items-center justify-center gap-2">
@@ -623,6 +1031,23 @@ const ExportShipmentDetailsPage = () => {
 					</div>
 				</div>
 			</main>
+
+			{/* Request Documents Modal (for Employee) */}
+			<RequestDocumentsModal
+				isOpen={showDocumentRequestModal}
+				onClose={() => {
+					setShowDocumentRequestModal(false);
+					setDocumentName("");
+					setRequiredDocuments([]);
+				}}
+				newDocument={documentName}
+				onNewDocumentChange={setDocumentName}
+				requiredDocuments={requiredDocuments}
+				onAddDocument={handleAddDocumentRequest}
+				onRemoveDocument={handleRemoveDocumentRequest}
+				onSave={handleSaveDocumentRequests}
+				uploading={savingDocuments}
+			/>
 
 			<Footer />
 		</div>

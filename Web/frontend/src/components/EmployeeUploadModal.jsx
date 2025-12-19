@@ -59,7 +59,7 @@ const EmployeeUploadModal = ({
 								value={documentName}
 								onChange={(e) => onDocumentNameChange(e.target.value)}
 								placeholder="مثال: فاتورة، شهادة منشأ، بوليصة شحن"
-								className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-right focus:ring-2 focus:ring-red-800 focus:border-red-800 transition"
+								className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-right text-gray-700 focus:ring-2 focus:ring-red-800 focus:border-red-800 transition"
 								dir="rtl"
 							/>
 						</div>

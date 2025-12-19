@@ -13,6 +13,16 @@ const RequestsTable = ({
 	return (
 		<div className="overflow-x-auto">
 			<table className="w-full text-right border-separate border-spacing-y-3">
+				<thead>
+					<tr className="bg-red-800 text-white">
+						<th className="py-3 px-4 text-right rounded-tr-lg">المورد / التاريخ</th>
+						<th className="py-3 px-4 text-right">رقم ACID</th>
+						<th className="py-3 px-4 text-right">البند الجمركي</th>
+						<th className="py-3 px-4 text-right">الوزن</th>
+						<th className="py-3 px-4 text-right">الحالة</th>
+						<th className="py-3 px-4 text-right rounded-tl-lg">الإجراءات</th>
+					</tr>
+				</thead>
 				<tbody>
 					{requests.map((request) => (
 						<tr

@@ -909,6 +909,63 @@ const markDocumentAsUploaded = async (req, res) => {
 	}
 };
 
+// ✅ Reset/Delete uploaded document (allows client to re-upload)
+const resetUploadedDocument = async (req, res) => {
+	try {
+		const { shipmentId, documentId } = req.params;
+
+		console.log("🗑️ Resetting uploaded document:", {
+			shipmentId,
+			documentId,
+		});
+
+		const shipment = await Shipment.findById(shipmentId);
+
+		if (!shipment) {
+			return res.status(404).json({ message: "Shipment not found" });
+		}
+
+		const document = shipment.requiredDocuments.id(documentId);
+
+		if (!document) {
+			return res.status(404).json({ message: "Document not found" });
+		}
+
+		// Reset document to pending state
+		document.uploaded = false;
+		document.uploadedAt = null;
+		document.fileId = null;
+
+		await shipment.save();
+
+		console.log("✅ Document reset successfully:", document.name);
+
+		// Emit socket event
+		if (req.io) {
+			req.io.to(shipment.acid).emit("documentReset", {
+				shipmentId: shipment._id,
+				acid: shipment.acid,
+				documentId: documentId,
+				documentName: document.name,
+			});
+		}
+
+		res.json({
+			success: true,
+			message: "تم حذف المستند بنجاح. يمكن للعميل إعادة رفعه.",
+			data: {
+				_id: document._id,
+				name: document.name,
+				uploaded: document.uploaded,
+				requestedAt: document.requestedAt,
+			},
+		});
+	} catch (error) {
+		console.error("Error resetting document:", error);
+		res.status(500).json({ message: error.message });
+	}
+};
+
 // ✅ Get shipment statistics for employee
 const getEmployeeShipmentStats = async (req, res) => {
 	try {
@@ -1269,20 +1326,12 @@ const searchShipments = async (req, res) => {
 	}
 };
 
-// ✅ Get distinct document names for autocomplete suggestions
+// ✅ Get predefined document names for autocomplete suggestions
+// Only returns predefined document types - does NOT save custom entries
 const getDistinctDocumentNames = async (req, res) => {
 	try {
-		// Aggregate to get all distinct document names from requiredDocuments array
-		const result = await Shipment.aggregate([
-			{ $unwind: "$requiredDocuments" },
-			{ $group: { _id: "$requiredDocuments.name" } },
-			{ $match: { _id: { $ne: null } } },
-			{ $sort: { _id: 1 } },
-		]);
-
-		const documentNames = result.map((item) => item._id);
-
-		// Add some common predefined document names if not already present
+		// Only return predefined document names - no database queries
+		// Custom entries typed by employee will NOT be saved for future use
 		const predefinedNames = [
 			"صورة البطاقة",
 			"صورة السجل التجاري",
@@ -1299,17 +1348,19 @@ const getDistinctDocumentNames = async (req, res) => {
 			"صورة بطاقة الاستيراد",
 			"صورة رخصة الاستيراد",
 			"صورة الموافقة الجمركية",
+			"الفاتورة التجارية",
+			"شهادة الصحة",
+			"شهادة التأمين",
+			"إذن الاستيراد",
+			"تصريح الجمارك",
 		];
-
-		// Merge predefined with database results (unique values only)
-		const allNames = [...new Set([...documentNames, ...predefinedNames])].sort();
 
 		res.json({
 			success: true,
-			documentNames: allNames,
+			documentNames: predefinedNames,
 		});
 	} catch (error) {
-		console.error("Error getting distinct document names:", error);
+		console.error("Error getting document names:", error);
 		res.status(500).json({
 			success: false,
 			message: "Server error while fetching document names",
@@ -1332,6 +1383,7 @@ module.exports = {
 	requestRequiredDocuments,
 	getRequiredDocuments,
 	markDocumentAsUploaded,
+	resetUploadedDocument,
 	getEmployeeShipmentStats,
 	getClientShipmentStats,
 	addShipments,

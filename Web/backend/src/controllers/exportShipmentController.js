@@ -701,6 +701,90 @@ const getShipmentStatusHistory = async (req, res) => {
 	}
 };
 
+/**
+ * Reset uploaded document (Employee can delete a document so client can re-upload)
+ * @route DELETE /api/export-shipments/employee/:id/required-documents/:documentId
+ * @access Private (Employee)
+ */
+const resetUploadedDocument = async (req, res) => {
+	try {
+		const { id, documentId } = req.params;
+
+		const shipment = await ExportShipment.findById(id);
+
+		if (!shipment) {
+			return res.status(404).json({
+				success: false,
+				message: "شحنة التصدير غير موجودة",
+			});
+		}
+
+		const document = shipment.requiredDocuments.id(documentId);
+
+		if (!document) {
+			return res.status(404).json({
+				success: false,
+				message: "المستند غير موجود",
+			});
+		}
+
+		// Remove the document request entirely
+		shipment.requiredDocuments.pull(documentId);
+
+		await shipment.save();
+
+		res.json({
+			success: true,
+			message: "تم حذف طلب المستند بنجاح",
+			shipment,
+		});
+	} catch (error) {
+		console.error("Error resetting uploaded document:", error);
+		res.status(500).json({
+			success: false,
+			message: "خطأ في حذف المستند",
+		});
+	}
+};
+
+/**
+ * Get distinct document names for export shipments (predefined list)
+ * @route GET /api/export-shipments/document-names
+ * @access Private (Employee)
+ */
+const getDistinctDocumentNames = async (req, res) => {
+	try {
+		// Return predefined list of common export document names
+		const predefinedDocumentNames = [
+			"شهادة المنشأ",
+			"فاتورة تصدير",
+			"قائمة التعبئة",
+			"إعفاء بنكي",
+			"تصريح الشحن",
+			"شهادة الجودة",
+			"شهادة الصحة",
+			"شهادة المطابقة",
+			"رخصة التصدير",
+			"بوليصة الشحن",
+			"شهادة التفتيش",
+			"بيان جمركي",
+			"شهادة الوزن",
+			"شهادة التحليل",
+		];
+
+		res.json({
+			success: true,
+			documentNames: predefinedDocumentNames,
+		});
+	} catch (error) {
+		console.error("Error getting document names:", error);
+		res.status(500).json({
+			success: false,
+			message: "خطأ في جلب أسماء المستندات",
+		});
+	}
+};
+
 module.exports = {
 	// Client
 	getMyExportShipments,
@@ -713,6 +797,8 @@ module.exports = {
 	assignEmployeeToShipment,
 	addEmployeeNotes,
 	requestDocumentFromClient,
+	resetUploadedDocument,
+	getDistinctDocumentNames,
 	markPaymentCleared,
 	uploadForm46,
 	uploadCertificateOfOrigin,
