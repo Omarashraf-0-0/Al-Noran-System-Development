@@ -35,7 +35,7 @@ const RequestDocumentsModal = ({
 	// Filter suggestions when input changes
 	useEffect(() => {
 		const docValue = newDocument || "";
-		if (docValue.trim()) {
+		if (docValue && docValue.trim()) {
 			const filtered = suggestions.filter((name) =>
 				name.toLowerCase().includes(docValue.toLowerCase())
 			);

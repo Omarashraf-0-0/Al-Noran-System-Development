@@ -394,7 +394,8 @@ const ExportShipmentDetailsPage = () => {
 			formData.append("file", file);
 			formData.append("category", "export_shipment");
 			formData.append("relatedId", actualId);
-			formData.append("documentType", docName);
+			// Don't send documentType - it's not needed for export shipments
+			// The document name is stored in the requiredDocuments array
 
 			const uploadResponse = await axios.post(
 				`${import.meta.env.VITE_API_URL}/api/uploads`,
