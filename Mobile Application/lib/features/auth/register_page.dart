@@ -3,6 +3,10 @@ import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/validators.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/google_sign_in_service.dart';
+import '../../core/services/user_cache_service.dart';
+import '../../core/services/firebase_push_service.dart';
+import '../../core/services/notification_service.dart';
 import 'personalRegistration.dart';
 import 'commercialRegistration.dart';
 import 'factoryRegistration.dart';
@@ -222,6 +226,63 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // Divider with text
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.grey[300])),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'أو التسجيل باستخدام',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF757575),
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: Colors.grey[300])),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Google Sign Up Button
+                InkWell(
+                  onTap: _handleGoogleSignUp,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: double.infinity,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE0E0E0)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/img/googleIcon.png',
+                          width: 24,
+                          height: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'التسجيل بحساب جوجل',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
 
                 const SizedBox(height: 40),
@@ -644,5 +705,107 @@ class _RegisterPageState extends State<RegisterPage> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  /// Handle Google Sign Up
+  Future<void> _handleGoogleSignUp() async {
+    try {
+      // Show loading
+      AlNoranPopups.showLoading(context: context, message: 'جاري التسجيل...');
+
+      // Sign in with Google
+      final googleUser = await GoogleSignInService.signIn();
+
+      if (googleUser == null) {
+        // User cancelled
+        if (mounted) {
+          AlNoranPopups.hideLoading(context);
+        }
+        return;
+      }
+
+      // Call API to check if user exists
+      final result = await ApiService.googleSignIn(
+        email: googleUser['email'] ?? '',
+        displayName: googleUser['displayName'] ?? '',
+        googleId: googleUser['id'] ?? '',
+        idToken: googleUser['idToken'],
+        accessToken: googleUser['accessToken'],
+      );
+
+      // Hide loading
+      if (mounted) {
+        AlNoranPopups.hideLoading(context);
+      }
+
+      if (result['success'] == true) {
+        if (result['isNewUser'] == true) {
+          // New user - pre-fill the registration form with Google data
+          final googleData = result['data']['googleData'];
+          if (mounted) {
+            setState(() {
+              _nameController.text = googleData['displayName'] ?? '';
+              _emailController.text = googleData['email'] ?? '';
+            });
+
+            AlNoranPopups.showSuccess(
+              context: context,
+              message: 'تم جلب بياناتك من جوجل. أكمل بقية البيانات للتسجيل',
+            );
+          }
+        } else {
+          // Existing user - login successful
+          if (mounted) {
+            AlNoranPopups.showSuccess(
+              context: context,
+              message: 'لديك حساب بالفعل! تم تسجيل الدخول بنجاح',
+            );
+          }
+
+          // Initialize services
+          await UserCacheService().initialize(forceRefresh: true);
+          try {
+            await FirebasePushService().initialize();
+          } catch (e) {
+            print('⚠️ [GoogleSignUp] Firebase init error: $e');
+          }
+          try {
+            await NotificationService().initialize(forceRefresh: true);
+          } catch (e) {
+            print('⚠️ [GoogleSignUp] Notification Service error: $e');
+          }
+
+          // Get user info
+          final userData = result['data']?['user'];
+          String userName =
+              userData?['fullname'] ?? userData?['username'] ?? 'مستخدم';
+          String userEmail = userData?['email'] ?? '';
+
+          // Navigate to home
+          if (mounted) {
+            context.go(
+              '/home',
+              extra: {'userName': userName, 'userEmail': userEmail},
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: result['message'] ?? 'فشل التسجيل بجوجل',
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ [GoogleSignUp] Error: $e');
+      if (mounted) {
+        AlNoranPopups.hideLoading(context);
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ أثناء التسجيل بجوجل',
+        );
+      }
+    }
   }
 }

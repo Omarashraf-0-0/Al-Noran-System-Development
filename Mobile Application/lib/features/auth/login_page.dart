@@ -201,7 +201,9 @@ class _LoginPageState extends State<LoginPage> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFE0E0E0)),
+                              border: Border.all(
+                                color: const Color(0xFFE0E0E0),
+                              ),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -479,7 +481,10 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _handleGoogleSignIn() async {
     try {
       // Show loading
-      AlNoranPopups.showLoading(context: context, message: 'جاري تسجيل الدخول...');
+      AlNoranPopups.showLoading(
+        context: context,
+        message: 'جاري تسجيل الدخول...',
+      );
 
       // Sign in with Google
       final googleUser = await GoogleSignInService.signIn();
@@ -510,9 +515,10 @@ class _LoginPageState extends State<LoginPage> {
         if (result['isNewUser'] == true) {
           // New user - redirect to registration with pre-filled data
           if (mounted) {
-            context.push('/register', extra: {
-              'googleData': result['data']['googleData'],
-            });
+            context.push(
+              '/register',
+              extra: {'googleData': result['data']['googleData']},
+            );
           }
         } else {
           // Existing user - login successful
@@ -538,7 +544,8 @@ class _LoginPageState extends State<LoginPage> {
 
           // Get user info
           final userData = result['data']?['user'];
-          String userName = userData?['fullname'] ?? userData?['username'] ?? 'مستخدم';
+          String userName =
+              userData?['fullname'] ?? userData?['username'] ?? 'مستخدم';
           String userEmail = userData?['email'] ?? '';
 
           // Navigate to home
