@@ -710,21 +710,33 @@ class _RegisterPageState extends State<RegisterPage> {
   /// Handle Google Sign Up
   Future<void> _handleGoogleSignUp() async {
     try {
+      print('📝 [Register] Starting Google Sign Up...');
+
       // Show loading
       AlNoranPopups.showLoading(context: context, message: 'جاري التسجيل...');
 
       // Sign in with Google
+      print('📝 [Register] Calling GoogleSignInService.signIn()...');
       final googleUser = await GoogleSignInService.signIn();
+      print('📝 [Register] GoogleSignInService returned: $googleUser');
 
       if (googleUser == null) {
         // User cancelled
+        print('📝 [Register] User cancelled Google Sign In');
         if (mounted) {
           AlNoranPopups.hideLoading(context);
         }
         return;
       }
 
+      print('📝 [Register] Google user data received successfully');
+
       // Call API to check if user exists
+      print('📝 [Register] Calling API googleSignIn...');
+      print('📝 [Register] Email: ${googleUser['email']}');
+      print('📝 [Register] Display Name: ${googleUser['displayName']}');
+      print('📝 [Register] Google ID: ${googleUser['id']}');
+
       final result = await ApiService.googleSignIn(
         email: googleUser['email'] ?? '',
         displayName: googleUser['displayName'] ?? '',
@@ -733,20 +745,32 @@ class _RegisterPageState extends State<RegisterPage> {
         accessToken: googleUser['accessToken'],
       );
 
+      print('📝 [Register] API response: $result');
+
       // Hide loading
       if (mounted) {
         AlNoranPopups.hideLoading(context);
       }
 
       if (result['success'] == true) {
+        print('📝 [Register] API call successful');
+        print('📝 [Register] Is new user: ${result['isNewUser']}');
+
         if (result['isNewUser'] == true) {
           // New user - pre-fill the registration form with Google data
+          print('📝 [Register] New user - pre-filling form');
           final googleData = result['data']['googleData'];
+          print('📝 [Register] Google data: $googleData');
+
           if (mounted) {
             setState(() {
               _nameController.text = googleData['displayName'] ?? '';
               _emailController.text = googleData['email'] ?? '';
             });
+
+            print('📝 [Register] Form fields updated:');
+            print('📝 [Register] Name: ${_nameController.text}');
+            print('📝 [Register] Email: ${_emailController.text}');
 
             AlNoranPopups.showSuccess(
               context: context,
@@ -755,6 +779,7 @@ class _RegisterPageState extends State<RegisterPage> {
           }
         } else {
           // Existing user - login successful
+          print('📝 [Register] Existing user - logging in');
           if (mounted) {
             AlNoranPopups.showSuccess(
               context: context,
@@ -790,6 +815,7 @@ class _RegisterPageState extends State<RegisterPage> {
           }
         }
       } else {
+        print('📝 [Register] API call failed: ${result['message']}');
         if (mounted) {
           AlNoranPopups.showError(
             context: context,
@@ -797,13 +823,14 @@ class _RegisterPageState extends State<RegisterPage> {
           );
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ [GoogleSignUp] Error: $e');
+      print('❌ [GoogleSignUp] Stack trace: $stackTrace');
       if (mounted) {
         AlNoranPopups.hideLoading(context);
         AlNoranPopups.showError(
           context: context,
-          message: 'حدث خطأ أثناء التسجيل بجوجل',
+          message: 'حدث خطأ أثناء التسجيل بجوجل: $e',
         );
       }
     }

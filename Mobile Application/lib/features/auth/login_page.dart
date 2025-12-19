@@ -480,6 +480,8 @@ class _LoginPageState extends State<LoginPage> {
   /// Handle Google Sign In
   Future<void> _handleGoogleSignIn() async {
     try {
+      print('🔐 [Login] Starting Google Sign In...');
+
       // Show loading
       AlNoranPopups.showLoading(
         context: context,
@@ -487,17 +489,27 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       // Sign in with Google
+      print('🔐 [Login] Calling GoogleSignInService.signIn()...');
       final googleUser = await GoogleSignInService.signIn();
+      print('🔐 [Login] GoogleSignInService returned: $googleUser');
 
       if (googleUser == null) {
         // User cancelled
+        print('🔐 [Login] User cancelled Google Sign In');
         if (mounted) {
           AlNoranPopups.hideLoading(context);
         }
         return;
       }
 
+      print('🔐 [Login] Google user data received successfully');
+
       // Call API to verify/register
+      print('🔐 [Login] Calling API googleSignIn...');
+      print('🔐 [Login] Email: ${googleUser['email']}');
+      print('🔐 [Login] Display Name: ${googleUser['displayName']}');
+      print('🔐 [Login] Google ID: ${googleUser['id']}');
+
       final result = await ApiService.googleSignIn(
         email: googleUser['email'] ?? '',
         displayName: googleUser['displayName'] ?? '',
@@ -506,14 +518,20 @@ class _LoginPageState extends State<LoginPage> {
         accessToken: googleUser['accessToken'],
       );
 
+      print('🔐 [Login] API response: $result');
+
       // Hide loading
       if (mounted) {
         AlNoranPopups.hideLoading(context);
       }
 
       if (result['success'] == true) {
+        print('🔐 [Login] API call successful');
+        print('🔐 [Login] Is new user: ${result['isNewUser']}');
+
         if (result['isNewUser'] == true) {
           // New user - redirect to registration with pre-filled data
+          print('🔐 [Login] New user - redirecting to registration');
           if (mounted) {
             context.push(
               '/register',
@@ -522,6 +540,7 @@ class _LoginPageState extends State<LoginPage> {
           }
         } else {
           // Existing user - login successful
+          print('🔐 [Login] Existing user - logging in');
           if (mounted) {
             AlNoranPopups.showSuccess(
               context: context,
@@ -557,6 +576,7 @@ class _LoginPageState extends State<LoginPage> {
           }
         }
       } else {
+        print('🔐 [Login] API call failed: ${result['message']}');
         if (mounted) {
           AlNoranPopups.showError(
             context: context,
@@ -564,13 +584,14 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       }
-    } catch (e) {
-      print('❌ [GoogleSignIn] Error: $e');
+    } catch (e, stackTrace) {
+      print('❌ [Login GoogleSignIn] Error: $e');
+      print('❌ [Login GoogleSignIn] Stack trace: $stackTrace');
       if (mounted) {
         AlNoranPopups.hideLoading(context);
         AlNoranPopups.showError(
           context: context,
-          message: 'حدث خطأ أثناء تسجيل الدخول بجوجل',
+          message: 'حدث خطأ أثناء تسجيل الدخول بجوجل: $e',
         );
       }
     }
