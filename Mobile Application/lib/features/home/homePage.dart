@@ -7,6 +7,7 @@ import '../../core/services/user_cache_service.dart';
 import '../../core/services/shipments_cache_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/firebase_push_service.dart';
+import '../../core/services/recent_shipments_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
 
 class HomePage extends StatefulWidget {
@@ -93,9 +94,10 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _updateShipmentsFromCache() {
-    final shipments = _shipmentsCache.allShipments;
-    _processShipments(shipments);
+  void _updateShipmentsFromCache() async {
+    final allShipments = _shipmentsCache.allShipments;
+    final recentShipments = await RecentShipmentsService.getRecentShipments();
+    _processShipments(recentShipments, allShipments);
   }
 
   Future<void> _loadRecentShipments() async {
@@ -103,11 +105,21 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       setState(() => _isLoadingShipments = true);
 
-      print('🏠 [HomePage] Loading recent shipments from cache...');
+      print('🏠 [HomePage] Loading recently opened shipments...');
 
-      // Use the cache service instead of direct API call
-      final shipments = await _shipmentsCache.getAllShipments();
-      _processShipments(shipments);
+      // Get last 3 opened shipments from RecentShipmentsService
+      var recentShipments = await RecentShipmentsService.getRecentShipments();
+
+      // Also load all shipments for statistics
+      final allShipments = await _shipmentsCache.getAllShipments();
+
+      // Fallback: If no recent shipments opened, show latest 3 shipments
+      if (recentShipments.isEmpty && allShipments.isNotEmpty) {
+        print('🏠 [HomePage] No recent shipments, using latest 3 from cache');
+        recentShipments = allShipments.take(3).toList();
+      }
+
+      _processShipments(recentShipments, allShipments);
     } catch (e) {
       print('❌ [HomePage] Error loading shipments: $e');
       if (!mounted) return;
@@ -115,14 +127,19 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _processShipments(List<Map<String, dynamic>> shipments) {
+  void _processShipments(
+    List<Map<String, dynamic>> recentShipments,
+    List<Map<String, dynamic>> allShipments,
+  ) {
     if (!mounted) return;
 
-    print('🏠 [HomePage] Processing ${shipments.length} shipments');
+    print(
+      '🏠 [HomePage] Processing ${recentShipments.length} recent shipments',
+    );
 
-    // أخذ آخر 3 شحنات فقط
+    // Format recent shipments for display
     final recent =
-        shipments.take(3).map((shipment) {
+        recentShipments.map((shipment) {
           // Determine shipment type from shipment_type field
           final shipmentType =
               shipment['shipment_type']?.toString().toLowerCase() ?? '';
@@ -130,13 +147,18 @@ class _HomePageState extends State<HomePage> {
               shipmentType.contains('بحري') || shipmentType.contains('sea');
 
           return {
-            'id': shipment['acid'] ?? 'N/A',
+            'id': shipment['acid'] ?? shipment['id'] ?? 'N/A',
             'shipmentCode': shipment['shipmentCode'] ?? '',
-            'name': shipment['shipmentDescription'] ?? 'شحنة',
+            'name':
+                shipment['shipmentDescription'] ?? shipment['name'] ?? 'شحنة',
             'number46': shipment['number46'] ?? '',
             'shipment_type': shipment['shipment_type'] ?? 'بحري',
             'type': isSea ? 'بحري' : 'جوي',
-            'date': _formatDate(shipment['updatedAt'] ?? shipment['createdAt']),
+            'date': _formatDate(
+              shipment['updatedAt'] ??
+                  shipment['createdAt'] ??
+                  shipment['viewedAt'],
+            ),
             'status': shipment['status'] ?? 'غير محدد',
             'isUrgent': _isUrgent(shipment['status']),
             'rawData': shipment,
@@ -146,17 +168,17 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _recentShipments = recent;
       _isLoadingShipments = false;
-      // تحديث الإحصائيات
+      // تحديث الإحصائيات من كل الشحنات
       _userStats = {
-        'totalShipments': shipments.length,
+        'totalShipments': allShipments.length,
         'activeShipments':
-            shipments.where((s) => s['status'] != 'تمت بنجاح').length,
+            allShipments.where((s) => s['status'] != 'تمت بنجاح').length,
         'completedShipments':
-            shipments.where((s) => s['status'] == 'تمت بنجاح').length,
+            allShipments.where((s) => s['status'] == 'تمت بنجاح').length,
       };
     });
 
-    print('🏠 [HomePage] Recent shipments loaded: ${recent.length}');
+    print('🏠 [HomePage] Recent opened shipments loaded: ${recent.length}');
   }
 
   bool _isUrgent(String? status) {
@@ -1791,11 +1813,11 @@ class _HomePageState extends State<HomePage> {
         );
         break;
       case 3:
-        // الفواتير (don't change selected index)
-        AlNoranPopups.showInfo(
-          context: context,
-          title: 'الفواتير',
-          message: 'قسم الفواتير قيد التطوير',
+        // الفواتير - Navigate to payments page
+        setState(() => _selectedIndex = index);
+        context.go(
+          '/payments',
+          extra: {'userName': widget.userName, 'userEmail': widget.userEmail},
         );
         break;
     }

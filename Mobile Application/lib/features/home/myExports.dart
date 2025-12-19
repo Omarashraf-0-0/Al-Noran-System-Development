@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/recent_shipments_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
 
 class MyExportsPage extends StatefulWidget {
@@ -818,9 +819,13 @@ class _MyExportsPageState extends State<MyExportsPage>
     final requestId = request['id']?.toString() ?? '';
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         if (requestId.isNotEmpty) {
-          context.push('/ucr-details/$requestId');
+          // Save to recent shipments before navigating
+          await RecentShipmentsService.addRecentShipment(request);
+          if (mounted) {
+            context.push('/ucr-details/$requestId');
+          }
         }
       },
       child: Container(
@@ -1079,9 +1084,13 @@ class _MyExportsPageState extends State<MyExportsPage>
     );
 
     return InkWell(
-      onTap: () {
+      onTap: () async {
         final shipmentId = shipment['id'] ?? '';
-        context.push('/export-shipment-details/$shipmentId');
+        // Save to recent shipments before navigating
+        await RecentShipmentsService.addRecentShipment(shipment);
+        if (mounted) {
+          context.push('/export-shipment-details/$shipmentId');
+        }
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -1755,13 +1764,13 @@ class _MyExportsPageState extends State<MyExportsPage>
               setState(() => _selectedIndex = 2);
             }
           } else if (index == 3) {
-            // الفواتير
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('قسم الفواتير قيد التطوير'),
-                backgroundColor: Color(0xFF1ba3b6),
-                duration: Duration(seconds: 2),
-              ),
+            // الفواتير - navigate to payments page
+            context.go(
+              '/payments',
+              extra: {
+                'userName': widget.userName,
+                'userEmail': widget.userEmail,
+              },
             );
           }
         },

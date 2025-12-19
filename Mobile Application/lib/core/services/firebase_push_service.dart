@@ -389,6 +389,39 @@ class FirebasePushService {
     }
   }
 
+  /// Refresh FCM token - used when re-enabling notifications
+  Future<void> refreshToken() async {
+    try {
+      // Get a new token
+      await _getToken();
+      print('🔔 [FCM] Token refreshed and sent to server');
+    } catch (e) {
+      print('❌ [FCM] Error refreshing token: $e');
+    }
+  }
+
+  /// Unsubscribe from notifications - used when user disables notifications
+  Future<void> unsubscribeFromNotifications() async {
+    try {
+      // Delete token from FCM (this stops push notifications)
+      await _messaging.deleteToken();
+      
+      // Clear local token
+      _fcmToken = null;
+      
+      // Notify server to remove the FCM token
+      try {
+        await ApiService.updateFcmToken('');  // Send empty token to clear on server
+      } catch (e) {
+        print('⚠️ [FCM] Could not clear token on server: $e');
+      }
+      
+      print('🔔 [FCM] Unsubscribed from notifications');
+    } catch (e) {
+      print('❌ [FCM] Error unsubscribing: $e');
+    }
+  }
+
   /// Dispose
   void dispose() {
     _onNotificationTap.close();

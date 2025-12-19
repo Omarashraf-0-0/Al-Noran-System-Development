@@ -2984,4 +2984,365 @@ class ApiService {
       };
     }
   }
+
+  // ============================================================================
+  // ======================== PAYMENTS & INVOICES APIs ==========================
+  // ============================================================================
+
+  /// Get My Invoices
+  /// Fetches all invoices for the currently logged-in user
+  static Future<Map<String, dynamic>> getMyInvoices() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💰 [getMyInvoices] Fetching invoices...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/invoices/myInvoices'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💰 [getMyInvoices] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print(
+          '💰 [getMyInvoices] Got ${data['invoices']?.length ?? 0} invoices',
+        );
+        return {
+          'success': true,
+          'invoices': data['invoices'] ?? [],
+          'message': data['message'] ?? 'تم جلب الفواتير بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في جلب الفواتير',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMyInvoices] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب الفواتير',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get My Payments
+  /// Fetches all payments/receipts for the currently logged-in user
+  static Future<Map<String, dynamic>> getMyPayments() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💳 [getMyPayments] Fetching payments...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/payments/my-payments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💳 [getMyPayments] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Backend returns array directly, not wrapped in object
+        final payments = data is List ? data : [];
+        print('💳 [getMyPayments] Got ${payments.length} payments');
+        return {
+          'success': true,
+          'payments': payments,
+          'message': 'تم جلب المدفوعات بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في جلب المدفوعات',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMyPayments] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب المدفوعات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Create Payment (Upload Receipt)
+  /// Creates a new payment with receipt image(s)
+  static Future<Map<String, dynamic>> createPayment({
+    required List<String> imageUrls,
+    String paymentMethod = 'BANK_TRANSFER',
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print(
+        '💳 [createPayment] Creating payment with ${imageUrls.length} receipts...',
+      );
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/payments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'transactions':
+              imageUrls
+                  .map((url) => {'imageUrls': url, 'status': 'PENDING'})
+                  .toList(),
+          'paymentMethod': paymentMethod,
+        }),
+      );
+
+      print('💳 [createPayment] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'payment': data['payment'],
+          'message': data['message'] ?? 'تم رفع الإيصال بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في رفع الإيصال',
+        };
+      }
+    } catch (e) {
+      print('❌ [createPayment] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في رفع الإيصال',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update Payment Receipt
+  /// Updates the receipt image for a pending or rejected payment
+  static Future<Map<String, dynamic>> updatePaymentReceipt({
+    required String paymentId,
+    required String imageUrl,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💳 [updatePaymentReceipt] Updating payment: $paymentId');
+
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/payments/$paymentId/receipt'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'imageUrls': imageUrl,
+        }),
+      );
+
+      print('💳 [updatePaymentReceipt] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'payment': data['payment'],
+          'message': data['message'] ?? 'تم تحديث الإيصال بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في تحديث الإيصال',
+        };
+      }
+    } catch (e) {
+      print('❌ [updatePaymentReceipt] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث الإيصال',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Pay Invoice from Wallet
+  /// Pays an invoice using the user's wallet balance
+  static Future<Map<String, dynamic>> payInvoice(String invoiceId) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💰 [payInvoice] Paying invoice: $invoiceId');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/invoices/$invoiceId/pay'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💰 [payInvoice] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم الدفع بنجاح',
+          'invoice': data['invoice'],
+          'newBalance': data['newBalance'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {'success': false, 'message': data['message'] ?? 'فشل في الدفع'};
+      }
+    } catch (e) {
+      print('❌ [payInvoice] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في عملية الدفع',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get User Wallet Balance
+  /// Gets the current wallet balance from user profile
+  static Future<Map<String, dynamic>> getWalletBalance() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('👛 [getWalletBalance] Fetching wallet balance...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/auth/me'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('👛 [getWalletBalance] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final wallet = data['user']?['wallet'] ?? 0;
+        print('👛 [getWalletBalance] Wallet: $wallet EGP');
+        return {'success': true, 'wallet': wallet, 'user': data['user']};
+      } else {
+        return {'success': false, 'message': 'فشل في جلب رصيد المحفظة'};
+      }
+    } catch (e) {
+      print('❌ [getWalletBalance] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب رصيد المحفظة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Upload Receipt Image to Cloudinary
+  /// Uploads a receipt image and returns the URL
+  static Future<Map<String, dynamic>> uploadReceiptImage(File imageFile) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📤 [uploadReceiptImage] Uploading receipt image...');
+
+      // Create multipart request
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/uploads'),
+      );
+
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add category field (required by backend)
+      request.fields['category'] = 'payment';
+      // documentType is optional for payment category, backend will accept null
+
+      // Add file
+      final fileExtension = imageFile.path.split('.').last.toLowerCase();
+      String mimeType = 'image/jpeg';
+      if (fileExtension == 'png') mimeType = 'image/png';
+      if (fileExtension == 'gif') mimeType = 'image/gif';
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          imageFile.path,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('📤 [uploadReceiptImage] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        // Backend returns: { success: true, upload: { url: "...", publicUrl: "..." } }
+        final uploadData = data['upload'] ?? {};
+        final url = uploadData['url'] ?? uploadData['publicUrl'] ?? '';
+        print('📤 [uploadReceiptImage] URL: $url');
+        return {
+          'success': true,
+          'url': url,
+          'uploadId': uploadData['id'],
+          'message': data['message'] ?? 'تم رفع الصورة بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في رفع الصورة',
+        };
+      }
+    } catch (e) {
+      print('❌ [uploadReceiptImage] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في رفع الصورة',
+        'error': e.toString(),
+      };
+    }
+  }
 }

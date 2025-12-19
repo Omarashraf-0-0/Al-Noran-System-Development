@@ -21,6 +21,7 @@ import '../features/profile/settings_menu_page.dart';
 import '../features/profile/documents_settings_page.dart';
 import '../features/notifications/notifications_page.dart';
 import '../features/notifications/notification_settings_page.dart';
+import '../features/payments/PaymentsPage.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -108,6 +109,19 @@ class AppRouter {
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
           return MyExportsPage(
+            userName: extra?['userName'] ?? 'مستخدم',
+            userEmail: extra?['userEmail'] ?? 'user@alnoran.com',
+          );
+        },
+      ),
+
+      // Payments & Invoices
+      GoRoute(
+        path: '/payments',
+        name: 'payments',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return PaymentsPage(
             userName: extra?['userName'] ?? 'مستخدم',
             userEmail: extra?['userEmail'] ?? 'user@alnoran.com',
           );
