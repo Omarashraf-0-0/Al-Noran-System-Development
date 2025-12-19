@@ -333,6 +333,15 @@ export default function ShipmentsList() {
 					) : (
 						<div className="overflow-x-auto">
 							<table className="w-full text-right border-separate border-spacing-y-3">
+								<thead>
+									<tr className="bg-red-800 text-white">
+										<th className="py-3 px-4 text-right rounded-tr-lg">المستورد / التاريخ</th>
+										<th className="py-3 px-4 text-right">رقم الشحنة</th>
+										<th className="py-3 px-4 text-right">رقم ACID</th>
+										<th className="py-3 px-4 text-right">الحالة</th>
+										<th className="py-3 px-4 text-right rounded-tl-lg">الإجراءات</th>
+									</tr>
+								</thead>
 								<tbody>
 									{filteredShipments.map((shipment) => (
 										<tr
@@ -350,18 +359,18 @@ export default function ShipmentsList() {
 												</div>
 											</td>
 
-											{/* <td className="py-3 px-4 align-top">
-                        <div className="flex flex-col text-sm">
-                          <span className="text-gray-700 text-base font-semibold mb-1">
-                            رقم البوليصة
-                          </span>
-                        </div>
-                      </td> */}
-
 											<td className="py-3 px-4 align-top">
 												<div className="flex flex-col text-sm">
 													<span className="font-semibold text-gray-800">
 														{shipment.shipmentNo}
+													</span>
+												</div>
+											</td>
+
+											<td className="py-3 px-4 align-top">
+												<div className="flex flex-col text-sm">
+													<span className="text-gray-700 text-base">
+														{shipment.acid || "—"}
 													</span>
 												</div>
 											</td>
@@ -382,9 +391,9 @@ export default function ShipmentsList() {
 
 											<td className="py-3 px-4 align-top">
 												<a href={`/shipmentstatus/${shipment.acid}`}>
-													<span className="text-blue-600 text-sm font-medium underline cursor-pointer">
-														عرض كل التفاصيل
-													</span>
+													<button className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition text-sm font-medium">
+														عرض التفاصيل
+													</button>
 												</a>
 											</td>
 										</tr>

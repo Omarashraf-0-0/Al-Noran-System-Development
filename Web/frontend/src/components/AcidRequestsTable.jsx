@@ -20,15 +20,15 @@ const AcidRequestsTable = ({
 			<table className="requests-table">
 				<thead>
 					<tr>
-						<th>Request ID</th>
-						<th>Client</th>
-						<th>Supplier</th>
-						<th>Goods</th>
+						<th>رقم الطلب</th>
+						<th>العميل</th>
+						<th>المورد</th>
+						<th>البضائع</th>
 						<th>نوع الشحنة</th>
-						<th>Request Date</th>
-						<th>Status</th>
-						<th>ACID Code</th>
-						<th>Actions</th>
+						<th>تاريخ الطلب</th>
+						<th>الحالة</th>
+						<th>كود ACID</th>
+						<th>الإجراءات</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -44,7 +44,7 @@ const AcidRequestsTable = ({
 								<td>{request._id.substring(0, 8)}...</td>
 								<td>
 									<div className="client-info">
-										<strong>{request.userId?.username || "N/A"}</strong>
+										<strong>{request.userId?.username || "غير محدد"}</strong>
 										<br />
 										<small>{request.userId?.email || ""}</small>
 										<br />
@@ -55,14 +55,14 @@ const AcidRequestsTable = ({
 									<div className="supplier-info">
 										<strong>{request.supplier?.name}</strong>
 										<br />
-										<small>Tax: {request.supplier?.taxNum}</small>
+										<small>الرقم الضريبي: {request.supplier?.taxNum}</small>
 									</div>
 								</td>
 								<td>
 									<div className="goods-info">
 										<strong>{request.goods?.description}</strong>
 										<br />
-										<small>Weight: {request.goods?.weight}kg</small>
+										<small>الوزن: {request.goods?.weight} كجم</small>
 									</div>
 								</td>
 								<td>
@@ -89,12 +89,12 @@ const AcidRequestsTable = ({
 											<span className="acid-code">{request.acidCode}</span>
 											{request.hasShipment && (
 												<span className="shipment-badge">
-													✅ Shipment Created
+													✅ تم إنشاء الشحنة
 												</span>
 											)}
 										</div>
 									) : (
-										<span className="no-acid">Not Issued</span>
+										<span className="no-acid">لم يصدر بعد</span>
 									)}
 								</td>
 								<td>
@@ -105,15 +105,15 @@ const AcidRequestsTable = ({
 												<button
 													className="btn-lock"
 													onClick={() => onLockRequest(request._id)}
-													title="Lock request to start review"
+													title="قفل الطلب لبدء المراجعة"
 												>
-													🔒 Start Review
+													🔒 بدء المراجعة
 												</button>
 												<button
 													className="btn-reject"
 													onClick={() => onReject(request._id)}
 												>
-													Reject
+													رفض
 												</button>
 											</>
 										)}
@@ -124,20 +124,20 @@ const AcidRequestsTable = ({
 													className="btn-approve"
 													onClick={() => onIssueAcid(request._id)}
 												>
-													Issue ACID
+													إصدار ACID
 												</button>
 												<button
 													className="btn-unlock"
 													onClick={() => onUnlockRequest(request._id)}
-													title="Unlock request"
+													title="إلغاء القفل"
 												>
-													🔓 Unlock
+													🔓 إلغاء القفل
 												</button>
 												<button
 													className="btn-reject"
 													onClick={() => onReject(request._id)}
 												>
-													Reject
+													رفض
 												</button>
 											</>
 										)}
@@ -148,19 +148,19 @@ const AcidRequestsTable = ({
 													className="btn-shipment"
 													onClick={() => onCreateShipment(request)}
 												>
-													Create Shipment
+													إنشاء شحنة
 												</button>
 											)}
 										{request.status === "ACID Issued" &&
 											request.hasShipment && (
 												<div className="shipment-created-info">
 													<span className="shipment-status">
-														🚢 Shipment Created
+														🚢 تم إنشاء الشحنة
 													</span>
 													<small className="shipment-date">
 														{new Date(
 															request.shipmentCreatedAt
-														).toLocaleDateString()}
+														).toLocaleDateString("ar-EG")}
 													</small>
 													<div
 														style={{
@@ -205,20 +205,20 @@ const AcidRequestsTable = ({
 																	width: "100%",
 																}}
 															>
-																🔍 Manage Shipment
+																🔍 إدارة الشحنة
 															</button>
 														)}
 													</div>
 												</div>
 											)}
 										{request.status === "Rejected" && (
-											<span className="rejected-text">Rejected</span>
+											<span className="rejected-text">مرفوض</span>
 										)}
 										{request.isLocked && (
 											<div
 												className="lock-indicator"
-												title={`Reviewing by ${
-													request.reviewingBy?.username || "Employee"
+												title={`قيد المراجعة بواسطة ${
+													request.reviewingBy?.username || "موظف"
 												}`}
 											>
 												🔒 مقفول ({request.reviewingBy?._id === currentUserId ? 'بواسطتي' : request.reviewingBy?.username || 'موظف'})

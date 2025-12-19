@@ -45,6 +45,7 @@ import ExportShipmentsPage from "./pages/ExportShipmentsPage";
 import ExportShipmentDetailsPage from "./pages/ExportShipmentDetailsPage";
 import EmployeeUCRRequestsPage from "./pages/EmployeeUCRRequestsPage";
 import EmployeeExportShipmentsPage from "./pages/EmployeeExportShipmentsPage";
+import ExportShipmentHistory from "./pages/ExportShipmentHistory";
 
 
 // Admin Route Protection Component
@@ -466,6 +467,14 @@ const App = () => {
 					element={
 						<EmployeeRoute>
 							<ExportShipmentDetailsPage />
+						</EmployeeRoute>
+					}
+				/>
+				<Route
+					path="/export-shipment-history/:shipmentId"
+					element={
+						<EmployeeRoute>
+							<ExportShipmentHistory />
 						</EmployeeRoute>
 					}
 				/>

@@ -19,8 +19,8 @@ const FilterStatusCards = ({
 	return (
 		<div className="filter-section-enhanced">
 			<div className="filter-header">
-				<h3 className="filter-title">📊 Filter Requests</h3>
-				<p className="filter-subtitle">Quick access by status</p>
+				<h3 className="filter-title">📊 تصفية الطلبات</h3>
+				<p className="filter-subtitle">وصول سريع حسب الحالة</p>
 			</div>
 			<div className="filter-cards">
 				<button
@@ -30,7 +30,7 @@ const FilterStatusCards = ({
 					<div className="filter-icon">📋</div>
 					<div className="filter-content">
 						<span className="filter-count">{requests.length}</span>
-						<span className="filter-label">All Requests</span>
+						<span className="filter-label">جميع الطلبات</span>
 					</div>
 				</button>
 				{/* My Locked Requests Card */}
@@ -61,7 +61,7 @@ const FilterStatusCards = ({
 						<span className="filter-count">
 							{requests.filter((r) => r.status === "Pending").length}
 						</span>
-						<span className="filter-label">Pending</span>
+						<span className="filter-label">قيد الانتظار</span>
 					</div>
 				</button>
 				<button
@@ -75,7 +75,7 @@ const FilterStatusCards = ({
 						<span className="filter-count">
 							{requests.filter((r) => r.status === "Under Review").length}
 						</span>
-						<span className="filter-label">Under Review</span>
+						<span className="filter-label">قيد المراجعة</span>
 					</div>
 				</button>
 				<button
@@ -89,7 +89,7 @@ const FilterStatusCards = ({
 						<span className="filter-count">
 							{requests.filter((r) => r.status === "ACID Issued").length}
 						</span>
-						<span className="filter-label">ACID Issued</span>
+						<span className="filter-label">تم الإصدار</span>
 					</div>
 				</button>
 				<button
@@ -103,7 +103,7 @@ const FilterStatusCards = ({
 						<span className="filter-count">
 							{requests.filter((r) => r.status === "Rejected").length}
 						</span>
-						<span className="filter-label">Rejected</span>
+						<span className="filter-label">مرفوض</span>
 					</div>
 				</button>
 			</div>

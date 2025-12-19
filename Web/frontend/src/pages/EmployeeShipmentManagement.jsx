@@ -432,6 +432,30 @@ const EmployeeShipmentManagement = () => {
 		}
 	};
 
+	const handleDeleteUploadedDocument = async (docId, docName) => {
+		// Confirmation dialog
+		const confirmed = window.confirm(
+			`هل أنت متأكد من حذف المستند "${docName}"؟\nسيتم إعادة تعيين حالة المستند ليتمكن العميل من رفعه مرة أخرى.`
+		);
+		if (!confirmed) return;
+
+		try {
+			toast.loading("جاري حذف المستند...");
+			await axios.delete(
+				`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}/required-documents/${docId}`,
+				{ headers: { Authorization: `Bearer ${token}` } }
+			);
+			toast.dismiss();
+			toast.success("تم حذف المستند بنجاح");
+			// Refresh shipment data
+			fetchShipment();
+		} catch (error) {
+			console.error("Error deleting document:", error);
+			toast.dismiss();
+			toast.error(error.response?.data?.message || "فشل حذف المستند");
+		}
+	};
+
 	const handleContactClient = () => {
 		if (shipment?._id) {
 			navigate(`/shipment-chat/${shipment._id}`);
@@ -673,7 +697,7 @@ const EmployeeShipmentManagement = () => {
 										{/* Request Document Button */}
 										<button
 											onClick={() => setShowDocumentModal(true)}
-											className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition shadow-md"
+											className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 transition shadow-md"
 										>
 											<svg
 												className="w-5 h-5"
@@ -788,26 +812,45 @@ const EmployeeShipmentManagement = () => {
 																)}
 															</div>
 														</div>
-														<button
-															onClick={() =>
-																handleDownloadDocument(doc.fileId, doc.name)
-															}
-															className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition flex items-center gap-2"
-														>
-															<span>عرض</span>
-															<svg
-																className="w-4 h-4"
-																fill="currentColor"
-																viewBox="0 0 20 20"
+														<div className="flex items-center gap-2">
+															<button
+																onClick={() =>
+																	handleDownloadDocument(doc.fileId, doc.name)
+																}
+																className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
 															>
-																<path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-																<path
-																	fillRule="evenodd"
-																	d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-																	clipRule="evenodd"
-																/>
-															</svg>
-														</button>
+																<span>عرض</span>
+																<svg
+																	className="w-4 h-4"
+																	fill="currentColor"
+																	viewBox="0 0 20 20"
+																>
+																	<path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+																	<path
+																		fillRule="evenodd"
+																		d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+																		clipRule="evenodd"
+																	/>
+																</svg>
+															</button>
+															<button
+																onClick={() => handleDeleteUploadedDocument(doc._id, doc.name)}
+																className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-2"
+															>
+																<span>حذف</span>
+																<svg
+																	className="w-4 h-4"
+																	fill="currentColor"
+																	viewBox="0 0 20 20"
+																>
+																	<path
+																		fillRule="evenodd"
+																		d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+																		clipRule="evenodd"
+																	/>
+																</svg>
+															</button>
+														</div>
 													</div>
 												))}
 										</div>
@@ -856,6 +899,15 @@ const EmployeeShipmentManagement = () => {
 															<span className="px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800">
 																⏳ قيد الانتظار
 															</span>
+															<button
+																onClick={() => handleDeleteUploadedDocument(doc._id, doc.name)}
+																className="bg-red-600 text-white px-3 py-1 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-1 text-sm"
+															>
+																<span>حذف الطلب</span>
+																<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+																	<path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+																</svg>
+															</button>
 														</div>
 														<div className="text-right">
 															<p className="font-bold text-gray-900">
@@ -910,7 +962,7 @@ const EmployeeShipmentManagement = () => {
 
 								<button
 									onClick={() => navigate(`/shipment-history/${shipmentId}`)}
-									className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-purple-600 text-white font-bold rounded-lg shadow-md hover:bg-purple-700 transition-all transform hover:scale-105"
+									className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-all transform hover:scale-105"
 								>
 									<svg
 										className="w-6 h-6"

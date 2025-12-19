@@ -231,7 +231,7 @@ uploadSchema.statics.getRequiredDocuments = function (clientType) {
 			"personal_id_of_representative",
 			"trade_certificates",
 		],
-		personal: ["power_of_attorney", "personal_id", "sample_document"],
+		personal: ["power_of_attorney", "personal_id"],
 	};
 	return requiredDocs[clientType] || [];
 };

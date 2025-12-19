@@ -8,6 +8,7 @@ const {
 	requestRequiredDocuments,
 	getRequiredDocuments,
 	markDocumentAsUploaded,
+	resetUploadedDocument,
 	getEmployeeShipmentStats,
 	getClientShipmentStats,
 	createShipment,
@@ -60,6 +61,11 @@ router.patch(
 	"/id/:shipmentId/required-documents/:documentId",
 	protect,
 	markDocumentAsUploaded
+);
+router.delete(
+	"/id/:shipmentId/required-documents/:documentId",
+	protect,
+	resetUploadedDocument
 );
 router.get("/id/:shipmentId", protect, getShipmentById);
 

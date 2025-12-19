@@ -318,6 +318,15 @@ export default function EmployeeShipments() {
 					) : (
 						<div className="overflow-x-auto">
 							<table className="w-full text-right border-separate border-spacing-y-3">
+								<thead>
+									<tr className="bg-red-800 text-white">
+										<th className="py-3 px-4 text-right rounded-tr-lg">العميل / التاريخ</th>
+										<th className="py-3 px-4 text-right">رقم الشحنة</th>
+										<th className="py-3 px-4 text-right">رقم ACID</th>
+										<th className="py-3 px-4 text-right">الحالة</th>
+										<th className="py-3 px-4 text-right rounded-tl-lg">الإجراءات</th>
+									</tr>
+								</thead>
 								<tbody>
 									{filteredShipments.map((shipment) => (
 										<tr
@@ -374,9 +383,9 @@ export default function EmployeeShipments() {
 
 											<td className="py-3 px-4 align-top">
 												<a href={`/employee-shipment/${shipment.id}`}>
-													<span className="text-blue-600 text-sm font-medium underline cursor-pointer">
+													<button className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition text-sm font-medium">
 														إدارة الشحنة
-													</span>
+													</button>
 												</a>
 											</td>
 										</tr>

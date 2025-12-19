@@ -34,9 +34,10 @@ const RequestDocumentsModal = ({
 
 	// Filter suggestions when input changes
 	useEffect(() => {
-		if (newDocument.trim()) {
+		const docValue = newDocument || "";
+		if (docValue && docValue.trim()) {
 			const filtered = suggestions.filter((name) =>
-				name.toLowerCase().includes(newDocument.toLowerCase())
+				name.toLowerCase().includes(docValue.toLowerCase())
 			);
 			setFilteredSuggestions(filtered);
 			setShowSuggestions(filtered.length > 0);
@@ -81,8 +82,11 @@ const RequestDocumentsModal = ({
 	};
 
 	const handleSelectSuggestion = (name) => {
+		// Directly add the document when selected from dropdown (auto-add)
 		onNewDocumentChange(name);
 		setShowSuggestions(false);
+		// Auto-add the selected document immediately
+		setTimeout(() => onAddDocument(), 0);
 	};
 
 	const handleInputFocus = () => {

@@ -266,10 +266,13 @@ const UCRRequestDetailsPage = () => {
 	// Handle track shipment navigation
 	const handleTrackShipment = () => {
 		if (request.hasExportShipment && request.exportShipmentId) {
+			// Get the actual shipment ID
+			const shipmentId = request.exportShipmentId._id || request.exportShipmentId;
 			if (userType === "employee") {
-				navigate("/employee/export-shipments");
+				// Navigate to specific export shipment details page for employee
+				navigate(`/employee/export-shipment/${shipmentId}`);
 			} else {
-				navigate(`/export-shipment/${request.exportShipmentId}`);
+				navigate(`/export-shipment/${shipmentId}`);
 			}
 		}
 	};
@@ -740,12 +743,12 @@ const UCRRequestDetailsPage = () => {
 														<p className="font-medium text-sm">
 															{DOCUMENT_LABELS[doc.documentType] || doc.documentType}
 														</p>
-														<p className="text-xs text-gray-500">
+														<p className="text-xs text-gray-500 truncate max-w-[200px]">
 															{doc.originalname || doc.filename || "مستند"}
 														</p>
 													</div>
 												</div>
-												<span className="text-sm px-2 py-1 rounded-full bg-white">
+												<span className="text-xs px-2 py-1 rounded-full bg-white whitespace-nowrap flex-shrink-0">
 													{config.icon} {config.label}
 												</span>
 											</div>
@@ -760,16 +763,36 @@ const UCRRequestDetailsPage = () => {
 
 											{/* Action buttons */}
 											<div className="mt-2 flex justify-between items-center gap-2">
-												{/* View button */}
+												{/* View and Download buttons */}
 												{doc.url && (
-													<a
-														href={doc.url}
-														target="_blank"
-														rel="noopener noreferrer"
-														className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition"
-													>
-														عرض ↗
-													</a>
+													<div className="flex gap-2">
+														<a
+															href={doc.url}
+															target="_blank"
+															rel="noopener noreferrer"
+															className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition"
+														>
+															عرض ↗
+														</a>
+														<a
+															href={doc.url}
+															download={doc.originalname || doc.filename || "document"}
+															className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700 transition"
+															onClick={(e) => {
+																e.preventDefault();
+																// Create a temporary link to force download
+																const link = document.createElement('a');
+																link.href = doc.url;
+																link.download = doc.originalname || doc.filename || "document";
+																link.target = "_blank";
+																document.body.appendChild(link);
+																link.click();
+																document.body.removeChild(link);
+															}}
+														>
+															⬇️ تحميل
+														</a>
+													</div>
 												)}
 												
 												{/* Employee review buttons - always visible for employees */}
