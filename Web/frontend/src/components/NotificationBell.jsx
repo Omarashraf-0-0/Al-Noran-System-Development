@@ -161,7 +161,7 @@ const NotificationBell = () => {
 
 			{/* Dropdown */}
 			{showDropdown && (
-				<div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
+				<div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
 					<div className="p-4 border-b border-gray-200 flex justify-between items-center">
 						<h3 className="font-bold text-gray-800">الإشعارات</h3>
 						{notifications.length > 0 && (
