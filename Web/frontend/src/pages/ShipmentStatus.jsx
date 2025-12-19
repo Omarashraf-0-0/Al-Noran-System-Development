@@ -282,9 +282,9 @@ const ShipmentStatus = () => {
 							{/*  Input fields section - Display real shipment data */}
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mt-12 mb-12">
 								<Datafield
-									label="اسم العميل"
+									label="اسم المورد"
 									value={
-										shipment.importerName || shipment.employerName || "غير محدد"
+										shipment.importerName || "غير محدد"
 									}
 									icon={
 										<img src={contractIcon} alt="icon" className="w-5 h-5" />
@@ -356,19 +356,21 @@ const ShipmentStatus = () => {
 									}
 								/>
 								<Datafield
-									label="الاتفاقية رقم"
+									label="البوليصة (اختياري)"
 									value={shipment.policy || "غير محدد"}
 									icon={
 										<img src={contractIcon} alt="icon" className="w-5 h-5" />
 									}
 								/>
 								<Datafield
-									label="تاريخ الوصول المتوقع"
+									label="تاريخ إصدار الـ ACID"
 									value={
-										shipment.arrivalDate
-											? new Date(shipment.arrivalDate).toLocaleDateString(
+										shipment.acid_request_id?.createdAt
+											? new Date(shipment.acid_request_id.createdAt).toLocaleDateString(
 													"ar-EG"
 											  )
+											: shipment.createdAt
+											? new Date(shipment.createdAt).toLocaleDateString("ar-EG")
 											: "غير محدد"
 									}
 									icon={

@@ -136,55 +136,56 @@ const EmployeeShipmentManagement = () => {
 		}
 	}, [navigate]);
 
-	// Fetch shipment data
-	useEffect(() => {
-		const fetchShipmentData = async () => {
-			try {
-				setLoading(true);
-				setError(null);
+// Fetch shipment data function - moved outside useEffect so it can be called from anywhere
+const fetchShipmentData = async () => {
+	try {
+		setLoading(true);
+		setError(null);
 
-				if (!shipmentId) {
-					setError("معرف الشحنة غير موجود");
-					toast.error("معرف الشحنة غير موجود");
-					return;
-				}
-
-				const shipmentResponse = await axios.get(
-					`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
-					{ headers: { Authorization: `Bearer ${token}` } }
-				);
-				setShipment(shipmentResponse.data);
-				setSelectedStatus(shipmentResponse.data.status);
-			} catch (error) {
-				console.error("Error fetching shipment data:", error);
-				const errorMessage =
-					error.response?.data?.message ||
-					error.message ||
-					"فشل تحميل بيانات الشحنة";
-				setError(errorMessage);
-				toast.error(errorMessage);
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		if (token) {
-			fetchShipmentData();
+		if (!shipmentId) {
+			setError("معرف الشحنة غير موجود");
+			toast.error("معرف الشحنة غير موجود");
+			return;
 		}
-	}, [shipmentId, token]);
 
-	// Helper functions
-	const getStatusColor = (status) => {
-		const statusObj = AVAILABLE_STATUSES.find((s) => s.value === status);
-		return statusObj ? statusObj.color : "bg-gray-100 text-gray-800";
-	};
+		const shipmentResponse = await axios.get(
+			`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
+			{ headers: { Authorization: `Bearer ${token}` } }
+		);
+		setShipment(shipmentResponse.data);
+		setSelectedStatus(shipmentResponse.data.status);
+	} catch (error) {
+		console.error("Error fetching shipment data:", error);
+		const errorMessage =
+			error.response?.data?.message ||
+			error.message ||
+			"فشل تحميل بيانات الشحنة";
+		setError(errorMessage);
+		toast.error(errorMessage);
+	} finally {
+		setLoading(false);
+	}
+};
 
-	// Status handlers
-	const handleStatusChange = (newStatus) => {
-		setSelectedStatus(newStatus);
-		setShowStatusDropdown(false);
-		setShowConfirmDialog(true);
-	};
+// Fetch shipment data on mount
+useEffect(() => {
+	if (token) {
+		fetchShipmentData();
+	}
+}, [shipmentId, token]);
+
+// Helper functions
+const getStatusColor = (status) => {
+	const statusObj = AVAILABLE_STATUSES.find((s) => s.value === status);
+	return statusObj ? statusObj.color : "bg-gray-100 text-gray-800";
+};
+
+// Status handlers
+const handleStatusChange = (newStatus) => {
+	setSelectedStatus(newStatus);
+	setShowStatusDropdown(false);
+	setShowConfirmDialog(true);
+};
 
 	const confirmStatusChange = async () => {
 		try {
@@ -320,6 +321,8 @@ const EmployeeShipmentManagement = () => {
 			toast.success("تم حفظ المستندات المطلوبة وإرسال إشعار للعميل");
 			setShowDocumentModal(false);
 			setRequiredDocuments([]);
+			// Refresh shipment data to show new documents
+			fetchShipmentData();
 		} catch (error) {
 			console.error("Error saving required documents:", error);
 			toast.dismiss();
@@ -435,24 +438,33 @@ const EmployeeShipmentManagement = () => {
 	const handleDeleteUploadedDocument = async (docId, docName) => {
 		// Confirmation dialog
 		const confirmed = window.confirm(
-			`هل أنت متأكد من حذف المستند "${docName}"؟\nسيتم إعادة تعيين حالة المستند ليتمكن العميل من رفعه مرة أخرى.`
+			`هل أنت متأكد من حذف طلب المستند "${docName}" بالكامل؟\nسيتم حذف الطلب نهائياً من القائمة.`
 		);
 		if (!confirmed) return;
 
 		try {
+			console.log("Deleting document:", { shipmentId, docId, docName });
 			toast.loading("جاري حذف المستند...");
-			await axios.delete(
+			const response = await axios.delete(
 				`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}/required-documents/${docId}`,
 				{ headers: { Authorization: `Bearer ${token}` } }
 			);
-			toast.dismiss();
-			toast.success("تم حذف المستند بنجاح");
-			// Refresh shipment data
-			fetchShipment();
+			console.log("Delete response:", response.data);
+			
+			// Check if deletion was successful
+			if (response.data.success) {
+				toast.dismiss();
+				toast.success("تم حذف المستند بنجاح");
+				// Refresh shipment data to remove deleted document from UI
+				fetchShipmentData();
+			} else {
+				throw new Error(response.data.message || "فشل حذف المستند");
+			}
 		} catch (error) {
 			console.error("Error deleting document:", error);
+			console.error("Error response:", error.response?.data);
 			toast.dismiss();
-			toast.error(error.response?.data?.message || "فشل حذف المستند");
+			toast.error(error.response?.data?.message || error.message || "فشل حذف المستند");
 		}
 	};
 
@@ -779,171 +791,110 @@ const EmployeeShipmentManagement = () => {
 										</div>
 									)}
 
-								{/* Uploaded Documents Section */}
-								<div className="mb-8">
-									<h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-										<span>✅</span>
-										<span>المستندات المرفوعة</span>
-									</h3>
-									{shipment.requiredDocuments?.filter((doc) => doc.uploaded)
-										.length > 0 ? (
+								{/* Required Documents Section - Unified Design (Matching ExportShipmentDetailsPage) */}
+								{shipment.requiredDocuments?.length > 0 && (
+									<div className="bg-orange-50 rounded-xl p-6 mb-6 border-2 border-orange-200">
+										<div className="flex justify-between items-center mb-4">
+											<h3 className="font-bold text-orange-800 flex items-center gap-2">
+												<span>📋</span>
+												<span>المستندات المطلوبة</span>
+												<span className="text-sm font-normal mr-2">
+													({shipment.requiredDocuments.filter(d => d.uploaded).length}/{shipment.requiredDocuments.length} مكتمل)
+												</span>
+											</h3>
+										</div>
+
 										<div className="space-y-3">
-											{shipment.requiredDocuments
-												.filter((doc) => doc.uploaded)
-												.map((doc, index) => (
-													<div
-														key={index}
-														className="flex items-center justify-between bg-white border border-green-200 rounded-lg p-4 hover:shadow-md transition"
-													>
-														<div className="flex items-center gap-3">
-															<div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-																<span className="text-2xl">📄</span>
-															</div>
-															<div className="text-right">
-																<p className="font-medium text-gray-800">
-																	{doc.name}
-																</p>
-																{doc.uploadedAt && (
-																	<p className="text-sm text-gray-500">
-																		{new Date(
-																			doc.uploadedAt
-																		).toLocaleDateString("ar-EG")}
-																	</p>
-																)}
-															</div>
-														</div>
-														<div className="flex items-center gap-2">
-															<button
-																onClick={() =>
-																	handleDownloadDocument(doc.fileId, doc.name)
-																}
-																className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
-															>
-																<span>عرض</span>
-																<svg
-																	className="w-4 h-4"
-																	fill="currentColor"
-																	viewBox="0 0 20 20"
-																>
-																	<path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-																	<path
-																		fillRule="evenodd"
-																		d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-																		clipRule="evenodd"
-																	/>
-																</svg>
-															</button>
-															<button
-																onClick={() => handleDeleteUploadedDocument(doc._id, doc.name)}
-																className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-2"
-															>
-																<span>حذف</span>
-																<svg
-																	className="w-4 h-4"
-																	fill="currentColor"
-																	viewBox="0 0 20 20"
-																>
-																	<path
-																		fillRule="evenodd"
-																		d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-																		clipRule="evenodd"
-																	/>
-																</svg>
-															</button>
+											{shipment.requiredDocuments.map((doc) => (
+												<div
+													key={doc._id}
+													className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border-2 ${
+														doc.uploaded
+															? "bg-green-50 border-green-200"
+															: "bg-yellow-50 border-yellow-200"
+													}`}
+												>
+													<div className="flex items-center gap-3 mb-2 sm:mb-0">
+														<span className={`text-2xl ${doc.uploaded ? "text-green-600" : "text-yellow-600"}`}>
+															{doc.uploaded ? "✅" : "⏳"}
+														</span>
+														<div className="text-right">
+															<p className="font-bold text-gray-800">{doc.name}</p>
+															<p className="text-sm text-gray-500">
+																{doc.uploaded
+																	? `تم الرفع: ${doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString("ar-EG") : ""}`
+																	: `تم الطلب: ${doc.requestedAt ? new Date(doc.requestedAt).toLocaleDateString("ar-EG") : "في انتظار الرفع من العميل"}`}
+															</p>
 														</div>
 													</div>
-												))}
-										</div>
-									) : (
-										<div className="bg-white rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
-											<svg
-												className="w-16 h-16 mx-auto text-gray-400 mb-4"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-												/>
-											</svg>
-											<p className="text-gray-500 text-lg">
-												لا توجد مستندات مرفوعة بعد
-											</p>
-											<p className="text-gray-400 text-sm mt-2">
-												استخدم زر "رفع مستند" لإضافة مستندات
-											</p>
-										</div>
-									)}
-								</div>
 
-								{/* Required Documents Not Uploaded Yet */}
-								<div>
-									<h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-										<span>⏳</span>
-										<span>المستندات المطلوبة (لم ترفع بعد)</span>
-									</h3>
-									{shipment.requiredDocuments?.filter((doc) => !doc.uploaded)
-										.length > 0 ? (
-										<div className="space-y-3">
-											{shipment.requiredDocuments
-												.filter((doc) => !doc.uploaded)
-												.map((doc, index) => (
-													<div
-														key={index}
-														className="flex items-center justify-between bg-white border border-yellow-200 rounded-lg p-4 hover:shadow-md transition"
-													>
-														<div className="flex items-center gap-3">
-															<span className="px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800">
-																⏳ قيد الانتظار
-															</span>
+													{/* Uploaded Document Actions */}
+													{doc.uploaded && doc.fileId && (
+														<div className="flex gap-2">
+															<button
+																onClick={() => handleDownloadDocument(doc.fileId, doc.name)}
+																className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-1"
+															>
+																<span>عرض المستند</span>
+																<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+																	<path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+																	<path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+																</svg>
+															</button>
 															<button
 																onClick={() => handleDeleteUploadedDocument(doc._id, doc.name)}
-																className="bg-red-600 text-white px-3 py-1 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-1 text-sm"
+																className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-1"
 															>
-																<span>حذف الطلب</span>
+																<span>حذف</span>
 																<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
 																	<path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
 																</svg>
 															</button>
 														</div>
-														<div className="text-right">
-															<p className="font-bold text-gray-900">
-																{doc.name}
-															</p>
-															<p className="text-sm text-gray-500">
-																في انتظار الرفع من العميل
-															</p>
-														</div>
-													</div>
-												))}
+													)}
+
+													{/* Pending Document Actions */}
+													{!doc.uploaded && (
+														<button
+															onClick={() => handleDeleteUploadedDocument(doc._id, doc.name)}
+															className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-1"
+														>
+															<span>حذف الطلب</span>
+															<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+																<path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+															</svg>
+														</button>
+													)}
+												</div>
+											))}
 										</div>
-									) : (
-										<div className="bg-white rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
-											<svg
-												className="w-16 h-16 mx-auto text-gray-400 mb-4"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-												/>
-											</svg>
-											<p className="text-gray-500 text-lg">
-												جميع المستندات المطلوبة تم رفعها
-											</p>
-											<p className="text-gray-400 text-sm mt-2">
-												لا توجد مستندات معلقة حالياً
-											</p>
-										</div>
-									)}
-								</div>
+									</div>
+								)}
+
+								{/* Empty State - No Required Documents */}
+								{(!shipment.requiredDocuments || shipment.requiredDocuments.length === 0) && (
+									<div className="bg-white rounded-lg p-8 text-center border-2 border-dashed border-gray-300">
+										<svg
+											className="w-16 h-16 mx-auto text-gray-400 mb-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+											/>
+										</svg>
+										<p className="text-gray-500 text-lg">
+											لا توجد مستندات مطلوبة بعد
+										</p>
+										<p className="text-gray-400 text-sm mt-2">
+											استخدم زر "طلب مستند" لطلب مستندات من العميل
+										</p>
+									</div>
+								)}
 							</div>
 
 							{/* Action Buttons */}

@@ -432,9 +432,11 @@ const getShipmentrelatedToEmployee = async (req, res) => {
 		const employeeId = req.params.employeeId;
 		console.log("Fetching shipments for employee:", employeeId);
 
-		const shipments = await Shipment.find({ employee_id: employeeId }).sort({
-			createdAt: -1,
-		});
+		const shipments = await Shipment.find({ employee_id: employeeId })
+			.populate('user_id', 'fullname username email phone')
+			.sort({
+				createdAt: -1,
+			});
 
 		console.log(
 			`Found ${shipments.length} shipments for employee ${employeeId}`
@@ -914,7 +916,7 @@ const resetUploadedDocument = async (req, res) => {
 	try {
 		const { shipmentId, documentId } = req.params;
 
-		console.log("🗑️ Resetting uploaded document:", {
+		console.log("🗑️ Deleting document completely:", {
 			shipmentId,
 			documentId,
 		});
@@ -931,38 +933,32 @@ const resetUploadedDocument = async (req, res) => {
 			return res.status(404).json({ message: "Document not found" });
 		}
 
-		// Reset document to pending state
-		document.uploaded = false;
-		document.uploadedAt = null;
-		document.fileId = null;
+		const documentName = document.name;
+
+		// COMPLETELY REMOVE the document from the array
+		shipment.requiredDocuments.pull(documentId);
 
 		await shipment.save();
 
-		console.log("✅ Document reset successfully:", document.name);
+		console.log("✅ Document removed completely:", documentName);
 
 		// Emit socket event
 		if (req.io) {
-			req.io.to(shipment.acid).emit("documentReset", {
+			req.io.to(shipment.acid).emit("documentDeleted", {
 				shipmentId: shipment._id,
 				acid: shipment.acid,
 				documentId: documentId,
-				documentName: document.name,
+				documentName: documentName,
 			});
 		}
 
 		res.json({
 			success: true,
-			message: "تم حذف المستند بنجاح. يمكن للعميل إعادة رفعه.",
-			data: {
-				_id: document._id,
-				name: document.name,
-				uploaded: document.uploaded,
-				requestedAt: document.requestedAt,
-			},
-		});
-	} catch (error) {
-		console.error("Error resetting document:", error);
-		res.status(500).json({ message: error.message });
+			message: "تم حذف المستند بنجاح.",
+	});
+} catch (error) {
+	console.error("Error resetting document:", error);
+	res.status(500).json({ success: false, message: error.message });
 	}
 };
 

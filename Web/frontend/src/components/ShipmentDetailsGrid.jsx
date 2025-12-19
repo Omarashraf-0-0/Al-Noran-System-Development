@@ -38,7 +38,11 @@ const ShipmentDetailsGrid = ({
 	const fields = [
 		{
 			label: "اسم العميل",
-			value: shipment.importerName || shipment.employerName || "غير محدد",
+			value: shipment.user_id?.fullname || shipment.user_id?.username || "غير محدد",
+		},
+		{
+			label: "اسم المورد",
+			value: shipment.importerName || "غير محدد",
 		},
 		{
 			label: "رقم الـ ACID",
