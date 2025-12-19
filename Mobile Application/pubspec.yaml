@@ -26,6 +26,8 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   # Permission handler for Android 13+ notification permission
   permission_handler: ^11.3.1
+  # Google Sign In
+  google_sign_in: ^6.2.1
 
 dev_dependencies:
   flutter_test:

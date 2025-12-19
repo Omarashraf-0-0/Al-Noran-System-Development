@@ -273,9 +273,70 @@ const getMe = asyncHandler(async (req, res) => {
 	});
 });
 
+// @desc    Google Sign In
+// @route   POST /api/auth/google
+// @access  Public
+const googleSignIn = asyncHandler(async (req, res) => {
+	const { email, displayName, googleId, idToken, accessToken } = req.body;
+
+	if (!email || !googleId) {
+		res.status(400);
+		throw new Error("بيانات جوجل غير مكتملة");
+	}
+
+	// Check if user exists with this email
+	let user = await User.findOne({ email });
+
+	if (user) {
+		// User exists - update Google ID if not set
+		if (!user.googleId) {
+			user.googleId = googleId;
+			await user.save();
+		}
+
+		// Check if user is active
+		if (!user.active) {
+			res.status(403);
+			throw new Error("تم إيقاف حسابك. تواصل مع الإدارة");
+		}
+
+		// Create token
+		const token = user.getSignedJwtToken();
+
+		return res.status(200).json({
+			success: true,
+			message: "تم تسجيل الدخول بنجاح",
+			isNewUser: false,
+			token,
+			user: {
+				id: user._id,
+				fullname: user.fullname,
+				username: user.username,
+				email: user.email,
+				type: user.type,
+				phone: user.phone,
+				clientDetails: user.clientDetails,
+			},
+		});
+	}
+
+	// User doesn't exist - return info for registration
+	res.status(200).json({
+		success: true,
+		isNewUser: true,
+		message: "حساب جديد - يرجى إكمال التسجيل",
+		googleData: {
+			email,
+			displayName,
+			googleId,
+		},
+	});
+});
+
 module.exports = {
 	login,
 	signup,
 	checkAvailability,
 	getMe,
+	googleSignIn,
 };

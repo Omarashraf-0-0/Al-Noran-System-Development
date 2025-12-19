@@ -37,6 +37,11 @@ const UserSchema = new mongoose.Schema(
 		},
 		resetOTP: { type: String },
 		otpExpires: { type: Date },
+		googleId: { 
+			type: String,
+			sparse: true,
+			index: true,
+		},
 		password: {
 			type: String,
 			required: [true, "Please provide a password"],

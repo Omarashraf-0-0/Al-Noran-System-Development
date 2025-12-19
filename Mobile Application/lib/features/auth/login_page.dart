@@ -4,6 +4,7 @@ import '../../core/network/api_service.dart';
 import '../../core/services/user_cache_service.dart';
 import '../../core/services/firebase_push_service.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/google_sign_in_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/widgets/al_noran_loading.dart';
 import '../../util/validators.dart';
@@ -191,32 +192,36 @@ class _LoginPageState extends State<LoginPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         // Google Button (على اليمين)
-                        Container(
-                          width: 140,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE0E0E0)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/img/googleIcon.png',
-                                width: 24,
-                                height: 24,
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'جوجل',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontFamily: 'Cairo',
-                                  fontWeight: FontWeight.w600,
+                        InkWell(
+                          onTap: _handleGoogleSignIn,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 140,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFE0E0E0)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  'assets/img/googleIcon.png',
+                                  width: 24,
+                                  height: 24,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'جوجل',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontFamily: 'Cairo',
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
 
@@ -465,6 +470,100 @@ class _LoginPageState extends State<LoginPage> {
           title: 'خطأ في الاتصال',
           message:
               'حدث خطأ غير متوقع. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.',
+        );
+      }
+    }
+  }
+
+  /// Handle Google Sign In
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      // Show loading
+      AlNoranPopups.showLoading(context: context, message: 'جاري تسجيل الدخول...');
+
+      // Sign in with Google
+      final googleUser = await GoogleSignInService.signIn();
+
+      if (googleUser == null) {
+        // User cancelled
+        if (mounted) {
+          AlNoranPopups.hideLoading(context);
+        }
+        return;
+      }
+
+      // Call API to verify/register
+      final result = await ApiService.googleSignIn(
+        email: googleUser['email'] ?? '',
+        displayName: googleUser['displayName'] ?? '',
+        googleId: googleUser['id'] ?? '',
+        idToken: googleUser['idToken'],
+        accessToken: googleUser['accessToken'],
+      );
+
+      // Hide loading
+      if (mounted) {
+        AlNoranPopups.hideLoading(context);
+      }
+
+      if (result['success'] == true) {
+        if (result['isNewUser'] == true) {
+          // New user - redirect to registration with pre-filled data
+          if (mounted) {
+            context.push('/register', extra: {
+              'googleData': result['data']['googleData'],
+            });
+          }
+        } else {
+          // Existing user - login successful
+          if (mounted) {
+            AlNoranPopups.showSuccess(
+              context: context,
+              message: 'تم تسجيل الدخول بنجاح',
+            );
+          }
+
+          // Initialize services
+          await UserCacheService().initialize(forceRefresh: true);
+          try {
+            await FirebasePushService().initialize();
+          } catch (e) {
+            print('⚠️ [GoogleSignIn] Firebase init error: $e');
+          }
+          try {
+            await NotificationService().initialize(forceRefresh: true);
+          } catch (e) {
+            print('⚠️ [GoogleSignIn] Notification Service error: $e');
+          }
+
+          // Get user info
+          final userData = result['data']?['user'];
+          String userName = userData?['fullname'] ?? userData?['username'] ?? 'مستخدم';
+          String userEmail = userData?['email'] ?? '';
+
+          // Navigate to home
+          if (mounted) {
+            context.go(
+              '/home',
+              extra: {'userName': userName, 'userEmail': userEmail},
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: result['message'] ?? 'فشل تسجيل الدخول بجوجل',
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ [GoogleSignIn] Error: $e');
+      if (mounted) {
+        AlNoranPopups.hideLoading(context);
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ أثناء تسجيل الدخول بجوجل',
         );
       }
     }

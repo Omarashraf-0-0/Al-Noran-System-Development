@@ -102,6 +102,79 @@ class ApiService {
     }
   }
 
+  // Google Sign In API
+  static Future<Map<String, dynamic>> googleSignIn({
+    required String email,
+    required String displayName,
+    required String googleId,
+    String? idToken,
+    String? accessToken,
+  }) async {
+    try {
+      print('🔐 [API] Google Sign In request to: $baseUrl/api/auth/google');
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/auth/google'),
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true',
+            },
+            body: jsonEncode({
+              'email': email,
+              'displayName': displayName,
+              'googleId': googleId,
+              'idToken': idToken,
+              'accessToken': accessToken,
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception('انتهت مهلة الاتصال - يرجى المحاولة مرة أخرى');
+            },
+          );
+
+      print('🔐 [API] Google Sign In response status: ${response.statusCode}');
+      print('🔐 [API] Google Sign In response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('🔐 [API] Google Sign In successful!');
+
+        // إذا كان مستخدم موجود، احفظ الـ token
+        if (data['token'] != null) {
+          await saveToken(data['token']);
+          if (data['user'] != null) {
+            await saveUserData(data['user']);
+          }
+        }
+
+        return {
+          'success': true,
+          'isNewUser': data['isNewUser'] ?? false,
+          'message': data['message'] ?? 'تم تسجيل الدخول بنجاح',
+          'data': data,
+        };
+      } else {
+        print('🔐 [API] Google Sign In failed: ${data['message']}');
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تسجيل الدخول بجوجل',
+          'error': data['error'],
+        };
+      }
+    } catch (e) {
+      print('🔐 [API] Google Sign In exception: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في الاتصال بالسيرفر',
+        'error': e.toString(),
+      };
+    }
+  }
+
   // Register API
   static Future<Map<String, dynamic>> register({
     required String name,
