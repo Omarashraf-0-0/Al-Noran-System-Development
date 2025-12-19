@@ -372,8 +372,30 @@ const assignEmployeeToShipment = async (req, res) => {
 			});
 		}
 
-		shipment.assignedEmployee = employeeId || req.user._id;
+		const assignedEmployeeId = employeeId || req.user._id;
+		shipment.assignedEmployee = assignedEmployeeId;
 		await shipment.save();
+
+		// 📬 Notify employee about new customer/shipment assignment
+		try {
+			await notificationService.createNotification({
+				userId: assignedEmployeeId,
+				type: "shipment_created",
+				title: "تم تعيين عميل تصدير جديد لك",
+				message: `تم تعيين شحنة تصدير جديدة لك برقم ${shipment.exportNumber}`,
+				data: {
+					shipmentId: shipment._id,
+					exportNumber: shipment.exportNumber,
+					clientId: shipment.userId,
+					actionUrl: `/employee/export-shipments/${shipment._id}`,
+				},
+				sendPush: true,
+				priority: "high",
+			});
+			console.log(`📬 Employee ${assignedEmployeeId} notified about export shipment assignment`);
+		} catch (notifError) {
+			console.error("Failed to send employee assignment notification:", notifError.message);
+		}
 
 		res.json({
 			success: true,
@@ -537,6 +559,30 @@ const uploadRequiredDocument = async (req, res) => {
 		}
 
 		await shipment.save();
+
+		// 📬 Notify assigned employee about client document upload
+		if (shipment.assignedEmployee && req.user && req.user.type === "client") {
+			try {
+				const document = shipment.requiredDocuments[docIndex];
+				await notificationService.createNotification({
+					userId: shipment.assignedEmployee,
+					type: "document_uploaded",
+					title: "العميل قام برفع مستند تصدير",
+					message: `قام العميل برفع مستند "${document.documentName}" لشحنة التصدير ${shipment.exportNumber}`,
+					data: {
+						shipmentId: shipment._id,
+						exportNumber: shipment.exportNumber,
+						documentName: document.documentName,
+						actionUrl: `/employee/export-shipments/${shipment._id}`,
+					},
+					sendPush: true,
+					priority: "medium",
+				});
+				console.log(`📬 Employee notified about export document upload: ${document.documentName}`);
+			} catch (notifError) {
+				console.error("Failed to send export document upload notification:", notifError.message);
+			}
+		}
 
 		res.json({
 			success: true,

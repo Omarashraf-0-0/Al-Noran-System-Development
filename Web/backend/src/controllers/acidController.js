@@ -528,6 +528,26 @@ const lockAcidRequest = async (req, res) => {
 			});
 			console.log(`✅✅✅ [lockAcidRequest] Notification created:`, result?._id);
 		} catch (notifError) {
+			console.error("Failed to send notification:", notifError.message);
+		}
+
+		// 📬 Notify employee about assigned ACID request
+		try {
+			await notificationService.createNotification({
+				userId: employeeId,
+				type: "acid_created",
+				title: "تم تعيين طلب ACID جديد لك",
+				message: `تم تعيين طلب ACID جديد لك للمراجعة`,
+				data: {
+					acidRequestId: request._id,
+					clientId: request.userId,
+					actionUrl: `/employee/acid-requests/${request._id}`,
+				},
+				sendPush: true,
+				priority: "high",
+			});
+			console.log(`📬 Employee ${employeeId} notified about ACID assignment`);
+		} catch (notifError) {
 			console.error("❌❌❌ [lockAcidRequest] Failed to send review notification:", notifError.message);
 			console.error("❌ Stack:", notifError.stack);
 		}
