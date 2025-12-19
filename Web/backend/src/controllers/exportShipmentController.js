@@ -471,7 +471,25 @@ const requestDocumentFromClient = async (req, res) => {
 
 		await shipment.save();
 
-		// TODO: Send notification to client
+		// Send notification to client
+		try {
+			await notificationService.createNotification({
+				userId: shipment.userId,
+				type: "document_request",
+				title: "طلب مستند جديد",
+				message: `تم طلب مستند "${documentName}" لشحنة التصدير رقم ${shipment.shipmentNumber || shipment.ucrNumber}`,
+				data: {
+					shipmentId: shipment._id.toString(),
+					shipmentType: "export",
+					documentName: documentName,
+				},
+				priority: "high",
+			});
+			console.log(`✅ [ExportShipment] Notification sent to user ${shipment.userId} for document request`);
+		} catch (notifError) {
+			console.error("Error sending document request notification:", notifError);
+			// Don't fail the request if notification fails
+		}
 
 		res.json({
 			success: true,

@@ -17,10 +17,10 @@ class ApiService {
     // لو Android (Emulator أو Physical Device)
     if (Platform.isAndroid) {
       // للـ Emulator - استخدم IP الخاص
-      return 'http://10.0.2.2:3500';
+      // return 'http://10.0.2.2:3500';
 
       // لو موبايل حقيقي، استخدم IP اللابتوب:
-      // return 'http://192.168.1.16:3500';
+      return 'http://172.20.10.3:3500';
     }
 
     // لو iOS Simulator أو جهاز حقيقي
@@ -1410,6 +1410,228 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في تحديث حالة المستند',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Add Document to Shipment
+  /// Adds a new customer-uploaded document to the shipment's documents list
+  static Future<Map<String, dynamic>> addDocumentToShipment({
+    required String shipmentId,
+    required String documentName,
+    required String fileId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📝 [addDocumentToShipment] Adding document: $documentName');
+      print('📝 [addDocumentToShipment] To shipment: $shipmentId');
+      print('📝 [addDocumentToShipment] File ID: $fileId');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/shipments/id/$shipmentId/documents'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'name': documentName,
+          'fileId': fileId,
+          'uploaded': true,
+          'uploadedAt': DateTime.now().toIso8601String(),
+        }),
+      );
+
+      print('📝 [addDocumentToShipment] Status: ${response.statusCode}');
+      print('📝 [addDocumentToShipment] Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم إضافة المستند بنجاح',
+          'data': data['data'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل إضافة المستند',
+        };
+      }
+    } catch (e) {
+      print('❌ [addDocumentToShipment] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في إضافة المستند',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Add Document to Export Shipment
+  /// Adds a new customer-uploaded document to the export shipment's documents list
+  static Future<Map<String, dynamic>> addDocumentToExportShipment({
+    required String shipmentId,
+    required String documentName,
+    required String fileId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📝 [addDocumentToExportShipment] Adding document: $documentName');
+      print('📝 [addDocumentToExportShipment] To export shipment: $shipmentId');
+      print('📝 [addDocumentToExportShipment] File ID: $fileId');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/export-shipments/$shipmentId/documents'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'name': documentName,
+          'fileId': fileId,
+          'uploaded': true,
+          'uploadedAt': DateTime.now().toIso8601String(),
+        }),
+      );
+
+      print('📝 [addDocumentToExportShipment] Status: ${response.statusCode}');
+      print('📝 [addDocumentToExportShipment] Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم إضافة المستند بنجاح',
+          'data': data['data'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل إضافة المستند',
+        };
+      }
+    } catch (e) {
+      print('❌ [addDocumentToExportShipment] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في إضافة المستند',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get Required Documents for Export Shipment
+  /// Retrieves the list of documents requested by employee for specific export shipment
+  static Future<Map<String, dynamic>> getExportRequiredDocuments({
+    required String shipmentId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print(
+        '📋 [getExportRequiredDocuments] Fetching for shipment: $shipmentId',
+      );
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/export-shipments/$shipmentId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📋 [getExportRequiredDocuments] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final shipment = data['data'] ?? data['shipment'] ?? {};
+        final requiredDocs = shipment['requiredDocuments'] ?? [];
+
+        return {
+          'success': true,
+          'requiredDocuments': List<Map<String, dynamic>>.from(
+            requiredDocs.map((doc) => Map<String, dynamic>.from(doc)),
+          ),
+        };
+      } else if (response.statusCode == 404) {
+        return {'success': false, 'message': 'شحنة التصدير غير موجودة'};
+      } else {
+        return {'success': false, 'message': 'فشل تحميل المستندات المطلوبة'};
+      }
+    } catch (e) {
+      print('❌ [getExportRequiredDocuments] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل المستندات المطلوبة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Upload Required Document for Export Shipment
+  /// Client uploads a document that was requested by employee
+  static Future<Map<String, dynamic>> uploadExportRequiredDocument({
+    required String shipmentId,
+    required String documentName,
+    required String uploadId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📤 [uploadExportRequiredDocument] Uploading for: $documentName');
+      print('📤 [uploadExportRequiredDocument] Shipment: $shipmentId');
+      print('📤 [uploadExportRequiredDocument] Upload ID: $uploadId');
+
+      final response = await http.post(
+        Uri.parse(
+          '$baseUrl/api/export-shipments/$shipmentId/upload-required/${Uri.encodeComponent(documentName)}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'uploadId': uploadId}),
+      );
+
+      print('📤 [uploadExportRequiredDocument] Status: ${response.statusCode}');
+      print('📤 [uploadExportRequiredDocument] Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم رفع المستند بنجاح',
+          'shipment': data['shipment'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل رفع المستند',
+        };
+      }
+    } catch (e) {
+      print('❌ [uploadExportRequiredDocument] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في رفع المستند',
         'error': e.toString(),
       };
     }

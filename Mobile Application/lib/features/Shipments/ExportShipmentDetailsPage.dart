@@ -164,20 +164,55 @@ class _ExportShipmentDetailsPageState extends State<ExportShipmentDetailsPage> {
         '📋 [ExportShipmentDetails] Loading required documents for: $shipmentId',
       );
 
-      // Try to get required documents from shipment data
-      final docs = _shipmentData!['documents'] as List<dynamic>? ?? [];
-      final mappedDocs = <Map<String, dynamic>>[];
+      // Get required documents from API (documents requested by employee)
+      final response = await ApiService.getExportRequiredDocuments(
+        shipmentId: shipmentId,
+      );
 
-      for (var doc in docs) {
-        if (doc is Map<String, dynamic>) {
-          mappedDocs.add(doc);
+      final List<Map<String, dynamic>> mappedDocs = [];
+
+      if (response['success'] == true) {
+        final requiredDocs = response['requiredDocuments'] ?? [];
+
+        // Process required documents and fetch file details for uploaded ones
+        for (var doc in requiredDocs) {
+          final docMap = Map<String, dynamic>.from(doc);
+
+          // If document is uploaded, fetch file details
+          if (docMap['uploaded'] == true && docMap['fileId'] != null) {
+            final fileId = docMap['fileId'].toString();
+            print(
+              '📄 [ExportShipmentDetails] Fetching file details for: $fileId',
+            );
+
+            try {
+              final fileResponse = await ApiService.getUploadById(
+                uploadId: fileId,
+              );
+              if (fileResponse['success'] == true &&
+                  fileResponse['upload'] != null) {
+                docMap['uploadData'] = fileResponse['upload'];
+                print(
+                  '✅ [ExportShipmentDetails] Got file data: ${fileResponse['upload']}',
+                );
+              }
+            } catch (e) {
+              print(
+                '❌ [ExportShipmentDetails] Error fetching file $fileId: $e',
+              );
+            }
+          }
+
+          mappedDocs.add(docMap);
         }
       }
 
       if (mounted) {
         setState(() => _requiredDocuments = mappedDocs);
       }
-      print('✅ [ExportShipmentDetails] Loaded ${mappedDocs.length} documents');
+      print(
+        '✅ [ExportShipmentDetails] Loaded ${mappedDocs.length} required documents',
+      );
     } catch (e) {
       print('❌ [ExportShipmentDetails] Error loading documents: $e');
     }
@@ -1105,43 +1140,473 @@ class _ExportShipmentDetailsPageState extends State<ExportShipmentDetailsPage> {
   }
 
   Widget _buildDocumentsSection() {
-    if (_requiredDocuments.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Center(
-          child: Text(
-            'لا توجد مستندات مرفقة',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-              fontFamily: 'Cairo',
-            ),
-          ),
-        ),
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children:
-          _requiredDocuments.map((doc) {
+      children: [
+        // زر رفع مستند جديد
+        _buildAddNewDocumentButton(),
+
+        const SizedBox(height: 16),
+
+        if (_requiredDocuments.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: Text(
+                'لا توجد مستندات مطلوبة حالياً',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ),
+          )
+        else
+          ..._requiredDocuments.map((doc) {
             final docName = doc['name'] ?? doc['documentType'] ?? 'مستند';
-            final isUploaded = doc['uploaded'] == true || doc['url'] != null;
+            final isUploaded = doc['uploaded'] == true;
+            final uploadedAt = doc['uploadedAt'];
+            final uploadData = doc['uploadData'];
 
             return _buildDocumentItem(
               doc: {
                 'title': docName,
                 'status': isUploaded ? 'uploaded' : 'pending',
-                'url': doc['url'],
+                'required': true,
+                'uploadDate':
+                    uploadedAt != null ? _formatDate(uploadedAt) : null,
+                'type': docName,
                 '_id': doc['_id'],
               },
+              uploadData: uploadData,
             );
           }).toList(),
+      ],
     );
   }
 
-  Widget _buildDocumentItem({required Map<String, dynamic> doc}) {
+  /// زر رفع مستند جديد مع اختيار الاسم
+  Widget _buildAddNewDocumentButton() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [accent, accent.withOpacity(0.8)]),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _showNewDocumentDialog,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.add_circle_outline,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'رفع مستند جديد',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// عرض popup لرفع مستند جديد مع اختيار الاسم
+  Future<void> _showNewDocumentDialog() async {
+    final TextEditingController documentNameController =
+        TextEditingController();
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder:
+          (dialogContext) => Directionality(
+            textDirection: TextDirection.rtl,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [accent, accent.withOpacity(0.8)],
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(25),
+                          topRight: Radius.circular(25),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.upload_file,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'رفع مستند جديد',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'أدخل اسم المستند ثم اختر الملف',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 13,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Document name input
+                          const Text(
+                            'اسم المستند',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: documentNameController,
+                            textDirection: TextDirection.rtl,
+                            decoration: InputDecoration(
+                              hintText: 'مثال: فاتورة، شهادة منشأ، بوليصة شحن',
+                              hintStyle: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 14,
+                                color: Colors.grey[400],
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey[50],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[300]!,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[300]!,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: accent,
+                                  width: 2,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.description,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Upload button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                final name = documentNameController.text.trim();
+                                if (name.isEmpty) {
+                                  AlNoranPopups.showError(
+                                    context: dialogContext,
+                                    message: 'يرجى إدخال اسم المستند',
+                                  );
+                                  return;
+                                }
+                                Navigator.pop(dialogContext, name);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: accent,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              icon: const Icon(
+                                Icons.upload_file,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                'اختيار الملف ورفعه',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Cancel button
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(dialogContext, null),
+                          child: Text(
+                            'إلغاء',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+    );
+
+    // If user entered a name, proceed to file upload
+    if (result != null && result.isNotEmpty) {
+      await _uploadNewDocument(result);
+    }
+  }
+
+  /// رفع مستند جديد باسم محدد
+  Future<void> _uploadNewDocument(String documentName) async {
+    try {
+      // Pick file
+      final file = await FilePickerHelper.pickFile(context);
+      if (file == null) return;
+
+      if (!mounted) return;
+      AlNoranPopups.showLoading(
+        context: context,
+        message: 'جاري رفع المستند...',
+      );
+
+      final userData = await ApiService.getUserData();
+      final userId = userData['id'];
+      if (userId == null) {
+        context.pop();
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: 'يجب تسجيل الدخول أولاً',
+          );
+        }
+        return;
+      }
+
+      final shipmentId = _shipmentData?['_id'];
+      if (shipmentId == null) {
+        context.pop();
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: 'معرف الشحنة غير متوفر',
+          );
+        }
+        return;
+      }
+
+      // Map document name to enum
+      final documentType = _mapDocumentTypeToEnum(documentName);
+      print(
+        '📤 [NewUpload] Document name: $documentName -> Type: $documentType',
+      );
+
+      // Upload file
+      final uploadResult = await ApiService.uploadFile(
+        filePath: file.path,
+        category: 'export_shipment',
+        documentType: documentType,
+        relatedId: shipmentId,
+      );
+
+      print('📤 [NewUpload] Result: $uploadResult');
+
+      if (uploadResult['success'] == true) {
+        // Get the uploaded file ID
+        final uploadedFileId =
+            uploadResult['upload']?['id']?.toString() ??
+            uploadResult['upload']?['_id']?.toString();
+
+        print('📤 [NewUpload] Uploaded file ID: $uploadedFileId');
+
+        // Add document to shipment's documents list
+        if (uploadedFileId != null) {
+          await _addDocumentToExportShipment(
+            shipmentId: shipmentId,
+            documentName: documentName,
+            fileId: uploadedFileId,
+          );
+        }
+
+        context.pop(); // Close loading
+
+        if (mounted) {
+          await AlNoranPopups.showSuccess(
+            context: context,
+            title: 'تم الرفع بنجاح',
+            message: 'تم رفع المستند "$documentName" بنجاح',
+          );
+        }
+        // Refresh notifications and documents
+        NotificationService().refresh();
+        _loadRequiredDocuments();
+      } else {
+        context.pop();
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: uploadResult['message'] ?? 'فشل رفع المستند',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        try {
+          context.pop();
+        } catch (_) {}
+      }
+      print('❌ [NewUpload] Error: $e');
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ أثناء رفع المستند',
+        );
+      }
+    }
+  }
+
+  /// إضافة المستند لقائمة مستندات الشحنة
+  Future<void> _addDocumentToExportShipment({
+    required String shipmentId,
+    required String documentName,
+    required String fileId,
+  }) async {
+    try {
+      print(
+        '📝 [AddDocument] Adding "$documentName" to export shipment $shipmentId',
+      );
+
+      // استخدام API لإضافة المستند للشحنة
+      final result = await ApiService.addDocumentToExportShipment(
+        shipmentId: shipmentId,
+        documentName: documentName,
+        fileId: fileId,
+      );
+
+      print('📝 [AddDocument] Result: $result');
+    } catch (e) {
+      print('❌ [AddDocument] Error: $e');
+      // لا نعرض خطأ للمستخدم لأن الملف تم رفعه بنجاح
+    }
+  }
+
+  Widget _buildDocumentItem({
+    required Map<String, dynamic> doc,
+    Map<String, dynamic>? uploadData,
+  }) {
     final isUploaded = doc['status'] == 'uploaded';
+    final isRequired = doc['required'] == true;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1158,75 +1623,418 @@ class _ExportShipmentDetailsPageState extends State<ExportShipmentDetailsPage> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors:
-                    isUploaded
-                        ? [Colors.green.shade400, Colors.green.shade600]
-                        : [primaryLight, primaryDark],
+          Row(
+            children: [
+              // Document icon
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors:
+                        isUploaded
+                            ? [Colors.green.shade400, Colors.green.shade600]
+                            : isRequired
+                            ? [primaryLight, primaryDark]
+                            : [Colors.grey.shade300, Colors.grey.shade400],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    if (isUploaded || isRequired)
+                      BoxShadow(
+                        color: (isUploaded ? Colors.green : primaryDark)
+                            .withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                  ],
+                ),
+                child: Icon(
+                  isUploaded ? Icons.check_circle : Icons.description,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              isUploaded ? Icons.check_circle : Icons.description,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  doc['title'],
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Cairo',
+              const SizedBox(width: 12),
+              // Document info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      doc['title'],
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (doc['uploadDate'] != null)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 12,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'تم الرفع في ${doc['uploadDate']}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                        ],
+                      )
+                    else if (isRequired && !isUploaded)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'مطلوب',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        isUploaded ? 'تم الرفع' : 'اختياري',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isUploaded ? Colors.green : Colors.grey[600],
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Action button
+              if (!isUploaded)
+                Container(
+                  decoration: BoxDecoration(
+                    color: primaryDark.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: IconButton(
+                    onPressed:
+                        () => _handleRequiredDocumentUpload(
+                          doc['title'],
+                          documentId: doc['_id']?.toString(),
+                        ),
+                    icon: const Icon(Icons.upload_file),
+                    color: primaryDark,
+                    tooltip: 'رفع المستند',
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  isUploaded ? 'تم الرفع' : 'مطلوب',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isUploaded ? Colors.green : Colors.orange,
-                    fontFamily: 'Cairo',
-                    fontWeight: FontWeight.w600,
+            ],
+          ),
+
+          // Actions for uploaded documents
+          if (isUploaded && uploadData != null) ...[
+            const SizedBox(height: 12),
+            Divider(height: 1, color: Colors.grey[200]),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildDocumentActionButton(
+                  icon: Icons.visibility,
+                  label: 'عرض',
+                  color: accent,
+                  onPressed: () => _viewUploadedDocument(uploadData),
+                ),
+                Container(width: 1, height: 30, color: Colors.grey[200]),
+                _buildDocumentActionButton(
+                  icon: Icons.edit,
+                  label: 'تعديل',
+                  color: primaryDark,
+                  onPressed:
+                      () => _editUploadedDocument(
+                        uploadData,
+                        doc['title'],
+                        documentId: doc['_id']?.toString(),
+                      ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocumentActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// رفع مستند مطلوب من الموظف
+  Future<void> _handleRequiredDocumentUpload(
+    String documentName, {
+    String? documentId,
+  }) async {
+    try {
+      final file = await FilePickerHelper.pickFile(context);
+      if (file == null) return;
+
+      if (!mounted) return;
+      AlNoranPopups.showLoading(
+        context: context,
+        message: 'جاري رفع المستند...',
+      );
+
+      final shipmentId = _shipmentData?['_id'];
+      if (shipmentId == null) {
+        context.pop();
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: 'معرف الشحنة غير متوفر',
+          );
+        }
+        return;
+      }
+
+      final documentType = _mapDocumentTypeToEnum(documentName);
+      print(
+        '📤 [RequiredUpload] Document name: $documentName -> Type: $documentType',
+      );
+
+      // Upload file first
+      final uploadResult = await ApiService.uploadFile(
+        filePath: file.path,
+        category: 'export_shipment',
+        documentType: documentType,
+        relatedId: shipmentId,
+      );
+
+      if (uploadResult['success'] == true) {
+        final uploadedFileId =
+            uploadResult['upload']?['id']?.toString() ??
+            uploadResult['upload']?['_id']?.toString();
+
+        print('📤 [RequiredUpload] Uploaded file ID: $uploadedFileId');
+
+        // Mark as uploaded using the specific API
+        if (uploadedFileId != null) {
+          final markResult = await ApiService.uploadExportRequiredDocument(
+            shipmentId: shipmentId,
+            documentName: documentName,
+            uploadId: uploadedFileId,
+          );
+          print('📝 [RequiredUpload] Mark result: $markResult');
+        }
+
+        context.pop();
+
+        if (mounted) {
+          await AlNoranPopups.showSuccess(
+            context: context,
+            title: 'تم الرفع بنجاح',
+            message: 'تم رفع المستند "$documentName" بنجاح',
+          );
+        }
+        NotificationService().refresh();
+        _loadRequiredDocuments();
+      } else {
+        context.pop();
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: uploadResult['message'] ?? 'فشل رفع المستند',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        try {
+          context.pop();
+        } catch (_) {}
+      }
+      print('❌ [RequiredUpload] Error: $e');
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ أثناء رفع المستند',
+        );
+      }
+    }
+  }
+
+  /// عرض مستند مرفوع
+  Future<void> _viewUploadedDocument(Map<String, dynamic> uploadData) async {
+    try {
+      final url =
+          uploadData['url']?.toString() ??
+          uploadData['presignedUrl']?.toString();
+      final mimetype = uploadData['mimetype']?.toString() ?? '';
+      final filename = uploadData['filename']?.toString() ?? 'مستند';
+
+      if (url == null || url.isEmpty) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'رابط المستند غير متوفر',
+        );
+        return;
+      }
+
+      print('📄 [ViewDocument] Opening: $url');
+
+      // If it's an image, show in full screen viewer
+      if (mimetype.contains('image')) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => _ImageViewerPage(imageUrl: url, title: filename),
+          ),
+        );
+      } else {
+        // For PDF or other documents, open externally
+        final uri = Uri.parse(url);
+        bool launched = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launched) {
+          launched = await launchUrl(uri);
+        }
+        if (!launched) {
+          throw Exception('Failed to launch URL');
+        }
+      }
+    } catch (e) {
+      print('❌ [ViewDocument] Error: $e');
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ في فتح المستند',
+        );
+      }
+    }
+  }
+
+  /// تعديل مستند مرفوع
+  Future<void> _editUploadedDocument(
+    Map<String, dynamic> uploadData,
+    String docName, {
+    String? documentId,
+  }) async {
+    final filename = uploadData['filename']?.toString() ?? 'مستند';
+
+    final result = await showDialog<String>(
+      context: context,
+      builder:
+          (dialogContext) => Directionality(
+            textDirection: TextDirection.rtl,
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                'تعديل المستند',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'المستند: $filename',
+                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'ماذا تريد أن تفعل؟',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, null),
+                  child: const Text(
+                    'إلغاء',
+                    style: TextStyle(fontFamily: 'Cairo'),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, 'view'),
+                  child: const Text(
+                    'عرض',
+                    style: TextStyle(fontFamily: 'Cairo', color: accent),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(dialogContext, 'replace'),
+                  style: ElevatedButton.styleFrom(backgroundColor: primaryDark),
+                  child: const Text(
+                    'استبدال',
+                    style: TextStyle(fontFamily: 'Cairo', color: Colors.white),
                   ),
                 ),
               ],
             ),
           ),
-          if (isUploaded && doc['url'] != null)
-            IconButton(
-              onPressed: () => _viewDocument(doc['url']),
-              icon: const Icon(Icons.visibility),
-              color: accent,
-              tooltip: 'عرض',
-            )
-          else if (!isUploaded)
-            Container(
-              decoration: BoxDecoration(
-                color: primaryDark.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: IconButton(
-                onPressed: () => _handleDocumentUpload(doc['title']),
-                icon: const Icon(Icons.upload_file),
-                color: primaryDark,
-                tooltip: 'رفع المستند',
-              ),
-            ),
-        ],
-      ),
     );
+
+    if (result == 'replace') {
+      await _handleRequiredDocumentUpload(docName, documentId: documentId);
+    } else if (result == 'view') {
+      await _viewUploadedDocument(uploadData);
+    }
   }
 
   Future<void> _viewDocument(String url) async {
@@ -1269,5 +2077,61 @@ class _ExportShipmentDetailsPageState extends State<ExportShipmentDetailsPage> {
     } catch (e) {
       return 'غير محدد';
     }
+  }
+}
+
+/// Image Viewer Page
+class _ImageViewerPage extends StatelessWidget {
+  final String imageUrl;
+  final String title;
+
+  const _ImageViewerPage({required this.imageUrl, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black87,
+          elevation: 0,
+          title: Text(
+            title,
+            style: const TextStyle(fontFamily: 'Cairo', color: Colors.white),
+          ),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: InteractiveViewer(
+            minScale: 0.5,
+            maxScale: 4.0,
+            child: Image.network(
+              imageUrl,
+              fit: BoxFit.contain,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return const Center(
+                  child: Icon(
+                    Icons.error_outline,
+                    color: Colors.white,
+                    size: 64,
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

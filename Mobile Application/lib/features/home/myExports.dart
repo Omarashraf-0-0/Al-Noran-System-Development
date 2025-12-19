@@ -317,7 +317,9 @@ class _MyExportsPageState extends State<MyExportsPage>
             'rawData': request,
           };
 
-          if (status == 'Completed' || status == 'Approved') {
+          // Completed UCR requests go to completed list, others to current
+          final statusLower = status.toLowerCase();
+          if (statusLower == 'completed') {
             completed.add(mappedRequest);
           } else {
             current.add(mappedRequest);
@@ -1357,22 +1359,39 @@ class _MyExportsPageState extends State<MyExportsPage>
     );
   }
 
-  /// Build Combined Current List (Export Shipments Only - Current/In Progress)
-  /// Shows only current export shipments. UCR requests are shown in separate tab.
+  /// Build Current Shipments List (Export Shipments only)
+  /// Shows current export shipments - same pattern as myShipments
   Widget _buildCombinedCurrentList() {
-    // Only show current export shipments (filtered)
-    final allCurrentItems = List<Map<String, dynamic>>.from(
-      _currentUcrShipments,
-    );
+    // Show only current export shipments
+    final shipmentsList = <Map<String, dynamic>>[];
 
-    // Sort by date
-    allCurrentItems.sort((a, b) {
-      final aDate = a['createdAt'] ?? a['rawData']?['createdAt'] ?? '';
-      final bDate = b['createdAt'] ?? b['rawData']?['createdAt'] ?? '';
-      return bDate.toString().compareTo(aDate.toString());
-    });
+    // If a type filter is selected (بحري/جوي), show from both current and completed
+    if (_selectedFilter == 'بحري' || _selectedFilter == 'جوي') {
+      shipmentsList.addAll(_currentUcrShipments);
+      shipmentsList.addAll(_completedUcrShipments);
+      print(
+        '🔍 [MyExports] Type Filter "$_selectedFilter" - Shipments: ${shipmentsList.length}',
+      );
+    } else {
+      shipmentsList.addAll(_currentUcrShipments);
+      print('🔍 [MyExports] Current Shipments: ${_currentUcrShipments.length}');
+    }
 
-    if (allCurrentItems.isEmpty) {
+    if (shipmentsList.isEmpty) {
+      String emptyMessage;
+      IconData emptyIcon;
+
+      if (_selectedFilter == 'بحري') {
+        emptyIcon = Icons.directions_boat_outlined;
+        emptyMessage = 'لا توجد شحنات تصدير بحرية جارية';
+      } else if (_selectedFilter == 'جوي') {
+        emptyIcon = Icons.flight_takeoff_outlined;
+        emptyMessage = 'لا توجد شحنات تصدير جوية جارية';
+      } else {
+        emptyIcon = Icons.flight_takeoff_outlined;
+        emptyMessage = 'لا توجد شحنات تصدير جارية';
+      }
+
       return RefreshIndicator(
         onRefresh: _loadUcrRequests,
         color: const Color(0xFF690000),
@@ -1384,28 +1403,24 @@ class _MyExportsPageState extends State<MyExportsPage>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.flight_takeoff_outlined,
-                    size: 80,
-                    color: Colors.grey[300],
-                  ),
+                  Icon(emptyIcon, size: 80, color: Colors.grey[300]),
                   const SizedBox(height: 16),
                   Text(
-                    'لا توجد شحنات صادرة جارية',
+                    emptyMessage,
                     style: TextStyle(
                       fontSize: 18,
                       fontFamily: 'Cairo',
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
+                      color: Colors.grey[500],
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'الشحنات ستظهر هنا بعد إصدار UCR',
+                    'اسحب لأسفل للتحديث',
                     style: TextStyle(
                       fontSize: 14,
                       fontFamily: 'Cairo',
-                      color: Colors.grey[500],
+                      color: Colors.grey[400],
                     ),
                   ),
                 ],
@@ -1421,29 +1436,42 @@ class _MyExportsPageState extends State<MyExportsPage>
       color: const Color(0xFF690000),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: allCurrentItems.length,
+        itemCount: shipmentsList.length,
         itemBuilder: (context, index) {
-          final item = allCurrentItems[index];
-          return _buildExportShipmentCard(item);
+          return _buildExportShipmentCard(shipmentsList[index]);
         },
       ),
     );
   }
 
-  /// Build Combined Completed List (Completed Export Shipments)
+  /// Build Completed Shipments List
   Widget _buildCombinedCompletedList() {
-    // Show completed export shipments
-    final allCompletedItems = <Map<String, dynamic>>[];
-    allCompletedItems.addAll(_completedUcrShipments);
+    // Show completed export shipments - same pattern as myShipments
+    final shipmentsList = <Map<String, dynamic>>[];
 
-    // Sort by date
-    allCompletedItems.sort((a, b) {
-      final aDate = a['createdAt'] ?? a['rawData']?['createdAt'] ?? '';
-      final bDate = b['createdAt'] ?? b['rawData']?['createdAt'] ?? '';
-      return bDate.toString().compareTo(aDate.toString());
-    });
+    // If a type filter is selected (بحري/جوي), show from both current and completed
+    if (_selectedFilter == 'بحري' || _selectedFilter == 'جوي') {
+      shipmentsList.addAll(_currentUcrShipments);
+      shipmentsList.addAll(_completedUcrShipments);
+    } else {
+      shipmentsList.addAll(_completedUcrShipments);
+    }
 
-    if (allCompletedItems.isEmpty) {
+    if (shipmentsList.isEmpty) {
+      String emptyMessage;
+      IconData emptyIcon;
+
+      if (_selectedFilter == 'بحري') {
+        emptyIcon = Icons.directions_boat_outlined;
+        emptyMessage = 'لا توجد شحنات تصدير بحرية مكتملة';
+      } else if (_selectedFilter == 'جوي') {
+        emptyIcon = Icons.flight_takeoff_outlined;
+        emptyMessage = 'لا توجد شحنات تصدير جوية مكتملة';
+      } else {
+        emptyIcon = Icons.check_circle_outline;
+        emptyMessage = 'لا توجد شحنات تصدير مكتملة';
+      }
+
       return RefreshIndicator(
         onRefresh: _loadUcrRequests,
         color: const Color(0xFF690000),
@@ -1455,19 +1483,24 @@ class _MyExportsPageState extends State<MyExportsPage>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    size: 80,
-                    color: Colors.grey[300],
-                  ),
+                  Icon(emptyIcon, size: 80, color: Colors.grey[300]),
                   const SizedBox(height: 16),
                   Text(
-                    'لا توجد شحنات مكتملة',
+                    emptyMessage,
                     style: TextStyle(
                       fontSize: 18,
                       fontFamily: 'Cairo',
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'اسحب لأسفل للتحديث',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'Cairo',
+                      color: Colors.grey[400],
                     ),
                   ),
                 ],
@@ -1483,10 +1516,9 @@ class _MyExportsPageState extends State<MyExportsPage>
       color: const Color(0xFF690000),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: allCompletedItems.length,
+        itemCount: shipmentsList.length,
         itemBuilder: (context, index) {
-          final item = allCompletedItems[index];
-          return _buildExportShipmentCard(item);
+          return _buildExportShipmentCard(shipmentsList[index]);
         },
       ),
     );

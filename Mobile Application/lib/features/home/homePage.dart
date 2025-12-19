@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
@@ -110,20 +111,111 @@ class _HomePageState extends State<HomePage> {
       // Get last 3 opened shipments from RecentShipmentsService
       var recentShipments = await RecentShipmentsService.getRecentShipments();
 
-      // Also load all shipments for statistics
-      final allShipments = await _shipmentsCache.getAllShipments();
+      // Also load all shipments for statistics (imports)
+      final allImportShipments = await _shipmentsCache.getAllShipments();
 
-      // Fallback: If no recent shipments opened, show latest 3 shipments
-      if (recentShipments.isEmpty && allShipments.isNotEmpty) {
-        print('🏠 [HomePage] No recent shipments, using latest 3 from cache');
-        recentShipments = allShipments.take(3).toList();
+      // Load export shipments as well
+      List<Map<String, dynamic>> allExportShipments = [];
+      try {
+        final exportResponse = await ApiService.getMyExportShipments();
+        if (exportResponse['success'] == true) {
+          allExportShipments = List<Map<String, dynamic>>.from(
+            exportResponse['data'] ?? [],
+          );
+        }
+      } catch (e) {
+        print('❌ [HomePage] Error loading export shipments: $e');
       }
 
-      _processShipments(recentShipments, allShipments);
+      // Fallback: If no recent shipments opened, show random 3 shipments from imports and exports
+      if (recentShipments.isEmpty &&
+          (allImportShipments.isNotEmpty || allExportShipments.isNotEmpty)) {
+        print(
+          '🏠 [HomePage] No recent shipments, picking 3 random from imports/exports',
+        );
+        recentShipments = _getRandomShipments(
+          allImportShipments,
+          allExportShipments,
+          3,
+        );
+      }
+
+      _processShipments(recentShipments, allImportShipments);
     } catch (e) {
       print('❌ [HomePage] Error loading shipments: $e');
       if (!mounted) return;
       setState(() => _isLoadingShipments = false);
+    }
+  }
+
+  /// اختيار شحنات عشوائية من الوارد والصادر
+  List<Map<String, dynamic>> _getRandomShipments(
+    List<Map<String, dynamic>> importShipments,
+    List<Map<String, dynamic>> exportShipments,
+    int count,
+  ) {
+    final random = Random();
+    final List<Map<String, dynamic>> result = [];
+
+    // جمع كل الشحنات (imports + exports) مع تحديد النوع
+    final List<Map<String, dynamic>> allShipments = [];
+
+    // إضافة شحنات الوارد
+    for (var shipment in importShipments) {
+      allShipments.add({...shipment, '_sourceType': 'import'});
+    }
+
+    // إضافة شحنات الصادر
+    for (var shipment in exportShipments) {
+      allShipments.add({
+        ...shipment,
+        '_sourceType': 'export',
+        // تحويل حقول الصادر لتتوافق مع شكل الوارد
+        'acid': shipment['ucrNumber'] ?? shipment['_id'],
+        'shipmentDescription':
+            shipment['productDescription'] ?? shipment['shipmentNumber'],
+        'shipment_type': shipment['shippingMethod'] ?? 'بحري',
+        'status': _translateExportStatus(shipment['currentStatus']),
+      });
+    }
+
+    // لو مافيش شحنات
+    if (allShipments.isEmpty) return [];
+
+    // اختيار عشوائي
+    if (allShipments.length <= count) {
+      return allShipments;
+    }
+
+    // خلط عشوائي
+    final shuffled = List<Map<String, dynamic>>.from(allShipments)
+      ..shuffle(random);
+
+    return shuffled.take(count).toList();
+  }
+
+  /// ترجمة حالات شحنات الصادر
+  String _translateExportStatus(String? status) {
+    if (status == null) return 'غير محدد';
+    switch (status.toLowerCase()) {
+      case 'documents_verification':
+        return 'التحقق من المستندات';
+      case 'regulatory_inspection':
+        return 'فحص الجهات الرقابية';
+      case 'payment_cleared':
+        return 'تم السداد';
+      case 'goods_loaded':
+        return 'تم التحميل';
+      case 'in_transit':
+        return 'في الطريق';
+      case 'delivered':
+        return 'تم التسليم';
+      case 'completed':
+        return 'مكتمل';
+      case 'cancelled':
+        return 'ملغي';
+      default:
+        return status;
     }
   }
 

@@ -998,6 +998,11 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // زر رفع مستند جديد
+        _buildAddNewDocumentButton(),
+
+        const SizedBox(height: 16),
+
         // عرض المستندات المطلوبة من الموظف
         if (_requiredDocuments.isNotEmpty)
           ..._requiredDocuments.map((doc) {
@@ -1042,6 +1047,419 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
           ),
       ],
     );
+  }
+
+  /// زر رفع مستند جديد مع اختيار الاسم
+  Widget _buildAddNewDocumentButton() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [accent, accent.withOpacity(0.8)]),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _showNewDocumentDialog,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.add_circle_outline,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'رفع مستند جديد',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// عرض popup لرفع مستند جديد مع اختيار الاسم
+  Future<void> _showNewDocumentDialog() async {
+    final TextEditingController documentNameController =
+        TextEditingController();
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder:
+          (dialogContext) => Directionality(
+            textDirection: TextDirection.rtl,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [accent, accent.withOpacity(0.8)],
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(25),
+                          topRight: Radius.circular(25),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.upload_file,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'رفع مستند جديد',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'أدخل اسم المستند ثم اختر الملف',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 13,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Document name input
+                          const Text(
+                            'اسم المستند',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: documentNameController,
+                            textDirection: TextDirection.rtl,
+                            decoration: InputDecoration(
+                              hintText: 'مثال: فاتورة، شهادة منشأ، بوليصة شحن',
+                              hintStyle: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 14,
+                                color: Colors.grey[400],
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey[50],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[300]!,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[300]!,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: accent,
+                                  width: 2,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.description,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Upload button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                final name = documentNameController.text.trim();
+                                if (name.isEmpty) {
+                                  AlNoranPopups.showError(
+                                    context: dialogContext,
+                                    message: 'يرجى إدخال اسم المستند',
+                                  );
+                                  return;
+                                }
+                                Navigator.pop(dialogContext, name);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: accent,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              icon: const Icon(
+                                Icons.upload_file,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                'اختيار الملف ورفعه',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Cancel button
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(dialogContext, null),
+                          child: Text(
+                            'إلغاء',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+    );
+
+    // If user entered a name, proceed to file upload
+    if (result != null && result.isNotEmpty) {
+      await _uploadNewDocument(result);
+    }
+  }
+
+  /// رفع مستند جديد باسم محدد
+  Future<void> _uploadNewDocument(String documentName) async {
+    try {
+      // Pick file
+      final file = await FilePickerHelper.pickFile(context);
+      if (file == null) return;
+
+      if (!mounted) return;
+      AlNoranPopups.showLoading(
+        context: context,
+        message: 'جاري رفع المستند...',
+      );
+
+      final userData = await ApiService.getUserData();
+      final userId = userData['id'];
+      if (userId == null) {
+        context.pop();
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: 'يجب تسجيل الدخول أولاً',
+          );
+        }
+        return;
+      }
+
+      final shipmentId = _shipmentData?['_id'];
+      if (shipmentId == null) {
+        context.pop();
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: 'معرف الشحنة غير متوفر',
+          );
+        }
+        return;
+      }
+
+      // Map document name to enum
+      final documentType = _mapDocumentTypeToEnum(documentName);
+      print(
+        '📤 [NewUpload] Document name: $documentName -> Type: $documentType',
+      );
+
+      // Upload file
+      final uploadResult = await ApiService.uploadFile(
+        filePath: file.path,
+        category: 'shipment',
+        documentType: documentType,
+        relatedId: shipmentId,
+      );
+
+      print('📤 [NewUpload] Result: $uploadResult');
+
+      if (uploadResult['success'] == true) {
+        // Get the uploaded file ID
+        final uploadedFileId =
+            uploadResult['upload']?['id']?.toString() ??
+            uploadResult['upload']?['_id']?.toString();
+
+        print('📤 [NewUpload] Uploaded file ID: $uploadedFileId');
+
+        // Add document to shipment's requiredDocuments list
+        if (uploadedFileId != null) {
+          await _addDocumentToShipment(
+            shipmentId: shipmentId,
+            documentName: documentName,
+            fileId: uploadedFileId,
+          );
+        }
+
+        context.pop(); // Close loading
+
+        if (mounted) {
+          await AlNoranPopups.showSuccess(
+            context: context,
+            title: 'تم الرفع بنجاح',
+            message: 'تم رفع المستند "$documentName" بنجاح',
+          );
+        }
+        // Refresh notifications and documents
+        NotificationService().refresh();
+        _loadRequiredDocuments();
+      } else {
+        context.pop();
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: uploadResult['message'] ?? 'فشل رفع المستند',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        try {
+          context.pop();
+        } catch (_) {}
+      }
+      print('❌ [NewUpload] Error: $e');
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ أثناء رفع المستند',
+        );
+      }
+    }
+  }
+
+  /// إضافة المستند لقائمة مستندات الشحنة
+  Future<void> _addDocumentToShipment({
+    required String shipmentId,
+    required String documentName,
+    required String fileId,
+  }) async {
+    try {
+      print('📝 [AddDocument] Adding "$documentName" to shipment $shipmentId');
+
+      // استخدام API لإضافة المستند للشحنة
+      final result = await ApiService.addDocumentToShipment(
+        shipmentId: shipmentId,
+        documentName: documentName,
+        fileId: fileId,
+      );
+
+      print('📝 [AddDocument] Result: $result');
+    } catch (e) {
+      print('❌ [AddDocument] Error: $e');
+      // لا نعرض خطأ للمستخدم لأن الملف تم رفعه بنجاح
+    }
   }
 
   Widget _buildDocumentItem({
