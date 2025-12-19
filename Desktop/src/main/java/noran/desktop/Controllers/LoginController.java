@@ -61,6 +61,7 @@ public class LoginController {
                 String extractedId = "";
                 String extractedName = "";
                 String extractedRole = "";
+                String extractedEmail = "";
 
                 try {
                     if (json.has("user") && json.get("user") instanceof JSONObject) {
@@ -68,21 +69,25 @@ public class LoginController {
                         extractedId = u.optString("id", u.optString("_id", u.optString("userId", "")));
                         extractedName = u.optString("name", u.optString("username", u.optString("fullname", "")));
                         extractedRole = u.optString("type", u.optString("role", ""));
+                        extractedEmail = u.optString("email", "");
                     } else {
                         extractedId = json.optString("id", json.optString("_id", ""));
                         extractedName = json.optString("name", json.optString("username", ""));
                         extractedRole = json.optString("type", json.optString("role", ""));
+                        extractedEmail = json.optString("email", "");
                     }
 
                     // 🛑 ACCESS CONTROL CHECK 🛑
                     // Check if role is strictly "employee" (ignoring case)
                     if (!extractedRole.equalsIgnoreCase("employee")) {
-                        showAlert(Alert.AlertType.ERROR, "تم رفض الوصول", "هذا التطبيق مخصص للموظفين فقط.\n(الدور الحالي: " + extractedRole + ")");
+                        showAlert(Alert.AlertType.ERROR, "تم رفض الوصول",
+                                "هذا التطبيق مخصص للموظفين فقط.\n(الدور الحالي: " + extractedRole + ")");
                         return; // Stop here, do not load dashboard
                     }
 
                     // Create user and save to session
-                    noran.desktop.Controllers.User loggedInUser = new noran.desktop.Controllers.User(extractedId, extractedName, extractedRole);
+                    noran.desktop.Controllers.User loggedInUser = new noran.desktop.Controllers.User(extractedId,
+                            extractedName, extractedRole, extractedEmail);
                     noran.desktop.AppSession.getInstance().setCurrentUser(loggedInUser);
 
                 } catch (Exception ex) {
@@ -93,13 +98,11 @@ public class LoginController {
 
                 showAlert(Alert.AlertType.INFORMATION, "تم تسجيل الدخول", "أهلاً بك يا " + extractedName);
 
-                // Navigate to Dashboard
+                // Navigate to Dashboard - use setRoot to preserve window size
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/dashboard.fxml"));
                 Parent root = loader.load();
-                Scene scene = new Scene(root);
                 Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-                stage.setScene(scene);
-                stage.show();
+                stage.getScene().setRoot(root);
 
             } else {
                 showAlert(Alert.AlertType.INFORMATION, "استجابة الخادم", response);
@@ -116,10 +119,8 @@ public class LoginController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/email-for-otp-ar.fxml"));
             Parent root = loader.load();
-            Scene scene = new Scene(root);
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setScene(scene);
-            stage.show();
+            stage.getScene().setRoot(root);
         } catch (IOException e) {
             e.printStackTrace();
             showAlert(Alert.AlertType.ERROR, "خطأ", "تعذر فتح شاشة إعادة تعيين كلمة المرور.");

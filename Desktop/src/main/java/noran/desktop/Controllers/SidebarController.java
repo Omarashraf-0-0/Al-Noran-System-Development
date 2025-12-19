@@ -13,13 +13,20 @@ import java.io.IOException;
 public class SidebarController {
 
     // 1. Inject the Buttons from FXML
-    @FXML private Button dashboardBtn;
-    @FXML private Button clientsBtn;
-    @FXML private Button invoicesBtn;
-    @FXML private Button employeesBtn;
-    @FXML private Button shipmentsBtn;
-    @FXML private Button addInvoicesBtn;
-    @FXML private Button invoiceCompletionBtn;
+    @FXML
+    private Button dashboardBtn;
+    @FXML
+    private Button clientsBtn;
+    @FXML
+    private Button invoicesBtn;
+    @FXML
+    private Button employeesBtn;
+    @FXML
+    private Button shipmentsBtn;
+    @FXML
+    private Button addInvoicesBtn;
+    @FXML
+    private Button invoiceCompletionBtn;
 
     // Constant Styles
     private final String ACTIVE_STYLE = "-fx-background-color: #c91e2b; -fx-text-fill: white; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12; -fx-background-radius: 8;";
@@ -27,6 +34,7 @@ public class SidebarController {
 
     /**
      * Call this method from your Page Controllers to highlight the sidebar.
+     * 
      * @param pageName The name of the page (e.g., "dashboard", "clients")
      */
     public void setActivePage(String pageName) {
@@ -60,13 +68,20 @@ public class SidebarController {
     }
 
     private void resetStyles() {
-        if(dashboardBtn != null) dashboardBtn.setStyle(INACTIVE_STYLE);
-        if(clientsBtn != null) clientsBtn.setStyle(INACTIVE_STYLE);
-        if(invoicesBtn != null) invoicesBtn.setStyle(INACTIVE_STYLE);
-        if(employeesBtn != null) employeesBtn.setStyle(INACTIVE_STYLE);
-        if(shipmentsBtn != null) shipmentsBtn.setStyle(INACTIVE_STYLE);
-        if(addInvoicesBtn != null) addInvoicesBtn.setStyle(INACTIVE_STYLE);
-        if(invoiceCompletionBtn != null) invoiceCompletionBtn.setStyle(INACTIVE_STYLE);
+        if (dashboardBtn != null)
+            dashboardBtn.setStyle(INACTIVE_STYLE);
+        if (clientsBtn != null)
+            clientsBtn.setStyle(INACTIVE_STYLE);
+        if (invoicesBtn != null)
+            invoicesBtn.setStyle(INACTIVE_STYLE);
+        if (employeesBtn != null)
+            employeesBtn.setStyle(INACTIVE_STYLE);
+        if (shipmentsBtn != null)
+            shipmentsBtn.setStyle(INACTIVE_STYLE);
+        if (addInvoicesBtn != null)
+            addInvoicesBtn.setStyle(INACTIVE_STYLE);
+        if (invoiceCompletionBtn != null)
+            invoiceCompletionBtn.setStyle(INACTIVE_STYLE);
     }
 
     // --- Navigation Methods ---
@@ -100,17 +115,20 @@ public class SidebarController {
     public void shipments_management(ActionEvent event) throws IOException {
         loadPage(event, "/noran/desktop/shipments-management.fxml");
     }
+
     @FXML
     public void navigateToTa5lees(ActionEvent event) throws IOException {
         loadPage(event, "/noran/desktop/AdminInvoices.fxml");
     }
+
     // Helper method to avoid repeating code
     private void loadPage(ActionEvent event, String fxmlPath) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
         Parent root = loader.load();
-        Scene scene = new Scene(root);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
+
+        // Keep the existing scene and just change its root content
+        // This preserves window size because we don't create a new Scene
+        stage.getScene().setRoot(root);
     }
 }

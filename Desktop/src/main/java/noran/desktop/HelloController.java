@@ -19,6 +19,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import noran.desktop.AppSession;
 import noran.desktop.Controllers.SidebarController;
@@ -37,17 +38,27 @@ import java.util.*;
 
 public class HelloController implements Initializable {
 
-    @FXML private Label clientNameLabel;
-    @FXML private Label taxNumberLabel;
-    @FXML private Label invoiceNumberLabel;
-    @FXML private Label invoiceDateLabel;
-    @FXML private ComboBox<Shipment> clientShipmentComboBox;
+    @FXML
+    private Label clientNameLabel;
+    @FXML
+    private Label taxNumberLabel;
+    @FXML
+    private Label invoiceNumberLabel;
+    @FXML
+    private Label invoiceDateLabel;
+    @FXML
+    private ComboBox<Shipment> clientShipmentComboBox;
 
-    @FXML private TableView<InvoiceItem> invoicesTable;
-    @FXML private TableColumn<InvoiceItem, String> colDescription;
-    @FXML private TableColumn<InvoiceItem, String> colPrice;
-    @FXML private TableColumn<InvoiceItem, String> colDate; // Currency Column
-    @FXML private Label totalCost1;
+    @FXML
+    private TableView<InvoiceItem> invoicesTable;
+    @FXML
+    private TableColumn<InvoiceItem, String> colDescription;
+    @FXML
+    private TableColumn<InvoiceItem, String> colPrice;
+    @FXML
+    private TableColumn<InvoiceItem, String> colDate; // Currency Column
+    @FXML
+    private Label totalCost1;
 
     private final ObservableList<Shipment> shipmentList = FXCollections.observableArrayList();
     private final ObservableList<InvoiceItem> invoiceItems = FXCollections.observableArrayList();
@@ -56,8 +67,12 @@ public class HelloController implements Initializable {
     private String selectedClientId;
     private Shipment selectedShipment;
 
-    @FXML private SidebarController sidebarController;
-    @FXML private TopBarController topBarController;
+    @FXML
+    private SidebarController sidebarController;
+    @FXML
+    private VBox sidebar;
+    @FXML
+    private TopBarController topBarController;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -67,7 +82,8 @@ public class HelloController implements Initializable {
         invoiceItems.addListener((ListChangeListener<InvoiceItem>) c -> updateTotal());
         invoiceDateLabel.setText("التاريخ: " + new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
 
-        if (sidebarController != null) sidebarController.setActivePage("invoices");
+        if (sidebarController != null)
+            sidebarController.setActivePage("invoices");
         setupTopBar();
     }
 
@@ -75,8 +91,8 @@ public class HelloController implements Initializable {
         colDescription.setCellValueFactory(new PropertyValueFactory<>("description"));
 
         // Format Price
-        colPrice.setCellValueFactory(cellData ->
-                new SimpleStringProperty(String.format("%.2f", cellData.getValue().getPrice())));
+        colPrice.setCellValueFactory(
+                cellData -> new SimpleStringProperty(String.format("%.2f", cellData.getValue().getPrice())));
 
         // Currency
         colDate.setText("العملة");
@@ -99,11 +115,13 @@ public class HelloController implements Initializable {
     }
 
     public void setSelectedClient(String name, String taxNumber, String clientType, String id, String rank) {
-        if (id != null) id = id.trim();
+        if (id != null)
+            id = id.trim();
         this.selectedClientId = id;
 
         clientNameLabel.setText("اسم العميل: " + (name != null ? name : "غير محدد"));
-        taxNumberLabel.setText("الرقم الضريبي: " + (taxNumber != null && !taxNumber.equals("-") ? taxNumber : "غير متوفر"));
+        taxNumberLabel
+                .setText("الرقم الضريبي: " + (taxNumber != null && !taxNumber.equals("-") ? taxNumber : "غير متوفر"));
 
         invoiceItems.clear();
         shipmentList.clear();
@@ -124,14 +142,16 @@ public class HelloController implements Initializable {
             MongoCollection<Document> collection = db.getCollection("shipments");
 
             // Find shipments for this user
-            List<Document> found = collection.find(new Document("user_id", new ObjectId(clientId))).into(new ArrayList<>());
+            List<Document> found = collection.find(new Document("user_id", new ObjectId(clientId)))
+                    .into(new ArrayList<>());
 
             for (Document doc : found) {
                 String id = doc.getObjectId("_id").toString();
 
                 // 🛑 FIX: Extract ACID from MongoDB
                 String acid = doc.getString("acid");
-                if (acid == null) acid = "غير محدد"; // Fallback if missing
+                if (acid == null)
+                    acid = "غير محدد"; // Fallback if missing
 
                 String port = doc.getString("port_name");
                 int num = doc.getInteger("num_of_containers", 0);
@@ -148,6 +168,7 @@ public class HelloController implements Initializable {
         }
         clientShipmentComboBox.setPromptText(shipmentList.isEmpty() ? "لا توجد شحنات" : "اختر الشحنة");
     }
+
     private void prepareInvoiceHeader(Shipment shipment) {
         invoiceItems.clear();
         // Generate Invoice Number (Example: INV-LAST6DIGITS)
@@ -232,11 +253,15 @@ public class HelloController implements Initializable {
         }
 
         StringBuilder sb = new StringBuilder("المجموع: ");
-        if (totalEGP > 0) sb.append(String.format("%.2f EGP", totalEGP));
-        if (totalEGP > 0 && totalUSD > 0) sb.append(" + ");
-        if (totalUSD > 0) sb.append(String.format("%.2f USD", totalUSD));
+        if (totalEGP > 0)
+            sb.append(String.format("%.2f EGP", totalEGP));
+        if (totalEGP > 0 && totalUSD > 0)
+            sb.append(" + ");
+        if (totalUSD > 0)
+            sb.append(String.format("%.2f USD", totalUSD));
 
-        if (totalEGP == 0 && totalUSD == 0) sb.append("0.00");
+        if (totalEGP == 0 && totalUSD == 0)
+            sb.append("0.00");
 
         totalCost1.setText(sb.toString());
     }
@@ -287,8 +312,7 @@ public class HelloController implements Initializable {
             MongoCollection<Document> shipmentsCol = db.getCollection("shipments");
             shipmentsCol.updateOne(
                     new Document("_id", new ObjectId(selectedShipment.getId())),
-                    new Document("$set", new Document("is_invoiced", true))
-            );
+                    new Document("$set", new Document("is_invoiced", true)));
 
             new Alert(Alert.AlertType.INFORMATION, "تم إرسال الفاتورة للموافقة بنجاح").show();
 
@@ -305,25 +329,42 @@ public class HelloController implements Initializable {
     private void setupTopBar() {
         if (topBarController != null) {
             topBarController.setPageTitle("إنشاء فاتورة");
+            topBarController.setSidebar(sidebar);
             User u = AppSession.getInstance().getCurrentUser();
-            if(u != null) topBarController.setUserData(u.getName(), "ID: " + u.getId());
+            if (u != null)
+                topBarController.setUserData(u.getName(), u.getEmail() != null ? u.getEmail() : "");
         }
     }
 
-    @FXML public void onDashboardClick(ActionEvent e) throws Exception { navigate(e, "/noran/desktop/dashboard.fxml"); }
+    @FXML
+    public void onDashboardClick(ActionEvent e) throws Exception {
+        navigate(e, "/noran/desktop/dashboard.fxml");
+    }
+
     // This goes back to the client selection list
-    @FXML public void onInvoiceManagementClick(ActionEvent e) throws IOException { navigate(e, "/noran/desktop/client-data-invoice.fxml"); }
+    @FXML
+    public void onInvoiceManagementClick(ActionEvent e) throws IOException {
+        navigate(e, "/noran/desktop/client-data-invoice.fxml");
+    }
 
     private void navigate(ActionEvent event, String fxml) throws IOException {
-        if (event == null) return; // Guard clause
+        if (event == null)
+            return; // Guard clause
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
         Parent root = loader.load();
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(new Scene(root));
-        stage.show();
+        stage.getScene().setRoot(root);
     }
 
-    @FXML public void refresh(ActionEvent event) {}
-    @FXML private void onSearch(ActionEvent e) {}
-    @FXML private void downloadInvoicePDF() {}
+    @FXML
+    public void refresh(ActionEvent event) {
+    }
+
+    @FXML
+    private void onSearch(ActionEvent e) {
+    }
+
+    @FXML
+    private void downloadInvoicePDF() {
+    }
 }

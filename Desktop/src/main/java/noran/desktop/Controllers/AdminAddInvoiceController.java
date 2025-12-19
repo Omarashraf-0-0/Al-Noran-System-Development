@@ -27,6 +27,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import noran.desktop.AppSession;
 import noran.desktop.Database.MongoDirectConnection;
@@ -38,13 +39,28 @@ import java.util.Date;
 
 public class AdminAddInvoiceController {
 
-    @FXML private TextField clientNameField;
-    @FXML private Label invoiceNumberLabel;
-    @FXML private Label invoiceDateLabel;
-    @FXML private TableView<InvoiceRow> invoiceTable;
-    @FXML private TableColumn<InvoiceRow, String> colDesc;
-    @FXML private TableColumn<InvoiceRow, Double> colPrice;
-    @FXML private Label totalLabel;
+    @FXML
+    private TextField clientNameField;
+    @FXML
+    private Label invoiceNumberLabel;
+    @FXML
+    private Label invoiceDateLabel;
+    @FXML
+    private TableView<InvoiceRow> invoiceTable;
+    @FXML
+    private TableColumn<InvoiceRow, String> colDesc;
+    @FXML
+    private TableColumn<InvoiceRow, Double> colPrice;
+    @FXML
+    private Label totalLabel;
+
+    // Sidebar and TopBar controller injection
+    @FXML
+    private SidebarController sidebarController;
+    @FXML
+    private VBox sidebar;
+    @FXML
+    private TopBarController topBarController;
 
     private final ObservableList<InvoiceRow> items = FXCollections.observableArrayList();
 
@@ -68,13 +84,26 @@ public class AdminAddInvoiceController {
                 deleteSelectedRow();
             }
         });
+
+        // Set the active page in sidebar
+        if (sidebarController != null) {
+            sidebarController.setActivePage("new invoice");
+        }
+
+        // Setup TopBar with sidebar reference for toggle
+        if (topBarController != null) {
+            topBarController.setPageTitle("إضافة فاتورة جديدة");
+            topBarController.setSidebar(sidebar);
+            topBarController.setSearchBarVisible(false);
+        }
     }
 
     // ================= SHORTCUTS =================
 
     private void registerShortcuts() {
         Scene scene = invoiceTable.getScene();
-        if (scene == null) return;
+        if (scene == null)
+            return;
 
         scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 
@@ -157,8 +186,7 @@ public class AdminAddInvoiceController {
                     return new InvoiceRow(
                             descField.getText().trim(),
                             Double.parseDouble(priceField.getText().trim()),
-                            currencyBox.getValue()
-                    );
+                            currencyBox.getValue());
                 } catch (Exception e) {
                     new Alert(Alert.AlertType.ERROR, "بيانات غير صحيحة").show();
                 }
@@ -174,7 +202,8 @@ public class AdminAddInvoiceController {
     @FXML
     private void deleteSelectedRow() {
         InvoiceRow row = invoiceTable.getSelectionModel().getSelectedItem();
-        if (row != null) items.remove(row);
+        if (row != null)
+            items.remove(row);
     }
 
     // ================= TOTAL =================
@@ -207,7 +236,8 @@ public class AdminAddInvoiceController {
         chooser.setInitialFileName("فاتورة_" + invoiceNumberLabel.getText() + ".pdf");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
         File file = chooser.showSaveDialog(invoiceTable.getScene().getWindow());
-        if (file == null) return;
+        if (file == null)
+            return;
 
         try {
             PdfWriter writer = new PdfWriter(file);
@@ -225,7 +255,8 @@ public class AdminAddInvoiceController {
                 logo.setHeight(pdf.getDefaultPageSize().getHeight());
                 logo.setOpacity(0.08f);
                 document.add(logo);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
 
             document.add(new Paragraph(shapeArabic("فاتورة رسمية"))
                     .setFont(font).setFontSize(28).setBold()
@@ -234,11 +265,13 @@ public class AdminAddInvoiceController {
             document.add(new Paragraph("\n"));
 
             document.add(new Paragraph(shapeArabic("اسم العميل: " + clientName)).setFont(font).setFontSize(16));
-            document.add(new Paragraph(shapeArabic("رقم الفاتورة: " + invoiceNumberLabel.getText())).setFont(font).setFontSize(15));
-            document.add(new Paragraph(shapeArabic("التاريخ: " + invoiceDateLabel.getText())).setFont(font).setFontSize(15));
+            document.add(new Paragraph(shapeArabic("رقم الفاتورة: " + invoiceNumberLabel.getText())).setFont(font)
+                    .setFontSize(15));
+            document.add(
+                    new Paragraph(shapeArabic("التاريخ: " + invoiceDateLabel.getText())).setFont(font).setFontSize(15));
             document.add(new Paragraph("\n"));
 
-            Table table = new Table(UnitValue.createPercentArray(new float[]{6, 2}))
+            Table table = new Table(UnitValue.createPercentArray(new float[] { 6, 2 }))
                     .useAllAvailableWidth()
                     .setTextAlignment(TextAlignment.RIGHT);
 
@@ -284,7 +317,8 @@ public class AdminAddInvoiceController {
     private void saveInvoiceToMongo(String clientName) {
 
         var db = MongoDirectConnection.connect();
-        if (db == null) return;
+        if (db == null)
+            return;
 
         MongoCollection<org.bson.Document> invoices = db.getCollection("invoices");
 
@@ -297,7 +331,8 @@ public class AdminAddInvoiceController {
         java.util.List<org.bson.Document> itemsList = new java.util.ArrayList<>();
 
         for (InvoiceRow row : items) {
-            if (row.getPrice() <= 0) continue;
+            if (row.getPrice() <= 0)
+                continue;
 
             itemsList.add(new org.bson.Document()
                     .append("item", row.getDescription())
@@ -334,15 +369,24 @@ public class AdminAddInvoiceController {
             this.currency = currency;
         }
 
-        public String getDescription() { return description; }
-        public double getPrice() { return price; }
-        public String getCurrency() { return currency; }
+        public String getDescription() {
+            return description;
+        }
+
+        public double getPrice() {
+            return price;
+        }
+
+        public String getCurrency() {
+            return currency;
+        }
     }
 
     // ================= ARABIC =================
 
     private String shapeArabic(String text) {
-        if (text == null || text.isEmpty()) return "";
+        if (text == null || text.isEmpty())
+            return "";
         try {
             ArabicShaping shaper = new ArabicShaping(ArabicShaping.LETTERS_SHAPE);
             String shaped = shaper.shape(text);

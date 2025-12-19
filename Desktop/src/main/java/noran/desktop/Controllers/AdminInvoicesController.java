@@ -63,17 +63,29 @@ import java.util.List;
 
 public class AdminInvoicesController {
 
-    @FXML private TableView<InvoiceAdminModel> adminInvoicesTable;
-    @FXML private TableColumn<InvoiceAdminModel, String> colInvoiceNumber;
-    @FXML private TableColumn<InvoiceAdminModel, String> colClientName;
-    @FXML private TableColumn<InvoiceAdminModel, String> colTotal;
-    @FXML private TableColumn<InvoiceAdminModel, String> colDate;
-    @FXML private TableColumn<InvoiceAdminModel, String> colStatus;
-    @FXML private TableColumn<InvoiceAdminModel, Void> colActions;
-    @FXML private ComboBox<String> statusFilter;
+    @FXML
+    private TableView<InvoiceAdminModel> adminInvoicesTable;
+    @FXML
+    private TableColumn<InvoiceAdminModel, String> colInvoiceNumber;
+    @FXML
+    private TableColumn<InvoiceAdminModel, String> colClientName;
+    @FXML
+    private TableColumn<InvoiceAdminModel, String> colTotal;
+    @FXML
+    private TableColumn<InvoiceAdminModel, String> colDate;
+    @FXML
+    private TableColumn<InvoiceAdminModel, String> colStatus;
+    @FXML
+    private TableColumn<InvoiceAdminModel, Void> colActions;
+    @FXML
+    private ComboBox<String> statusFilter;
 
-    @FXML private SidebarController sidebarController;
-    @FXML private TopBarController topBarController;
+    @FXML
+    private SidebarController sidebarController;
+    @FXML
+    private VBox sidebar;
+    @FXML
+    private TopBarController topBarController;
 
     private final ObservableList<InvoiceAdminModel> invoicesList = FXCollections.observableArrayList();
 
@@ -87,15 +99,18 @@ public class AdminInvoicesController {
 
         refreshTable();
 
-        if (sidebarController != null) sidebarController.setActivePage("invoice completion");
+        if (sidebarController != null)
+            sidebarController.setActivePage("invoice completion");
         setupTopBar();
     }
 
     private void setupTopBar() {
         if (topBarController != null) {
             topBarController.setPageTitle("تخليص الفواتير");
+            topBarController.setSidebar(sidebar);
             User u = AppSession.getInstance().getCurrentUser();
-            if(u != null) topBarController.setUserData(u.getName(), "ID: " + u.getId());
+            if (u != null)
+                topBarController.setUserData(u.getName(), u.getEmail() != null ? u.getEmail() : "");
         }
     }
 
@@ -110,7 +125,8 @@ public class AdminInvoicesController {
             private final Button actionBtn = new Button("عرض / اتخاذ إجراء");
 
             {
-                actionBtn.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-padding: 6 12; -fx-background-radius: 5; -fx-font-weight: bold;");
+                actionBtn.setStyle(
+                        "-fx-background-color: #007bff; -fx-text-fill: white; -fx-padding: 6 12; -fx-background-radius: 5; -fx-font-weight: bold;");
                 actionBtn.setCursor(javafx.scene.Cursor.HAND);
             }
 
@@ -164,7 +180,8 @@ public class AdminInvoicesController {
                 if (users != null && !users.isEmpty()) {
                     Document user = users.get(0);
                     clientName = user.getString("fullname");
-                    if (clientName == null) clientName = user.getString("username");
+                    if (clientName == null)
+                        clientName = user.getString("username");
                 }
 
                 // Calculate Totals form Items Array
@@ -176,16 +193,22 @@ public class AdminInvoicesController {
                     for (Document item : items) {
                         double price = getDoubleSafe(item, "itemPrice");
                         String curr = item.getString("currencyType");
-                        if ("USD".equalsIgnoreCase(curr)) sumUSD += price;
-                        else sumEGP += price;
+                        if ("USD".equalsIgnoreCase(curr))
+                            sumUSD += price;
+                        else
+                            sumEGP += price;
                     }
                 }
 
                 StringBuilder totalStr = new StringBuilder();
-                if (sumEGP > 0) totalStr.append(String.format("%.2f EGP", sumEGP));
-                if (sumEGP > 0 && sumUSD > 0) totalStr.append(" + ");
-                if (sumUSD > 0) totalStr.append(String.format("%.2f USD", sumUSD));
-                if (totalStr.length() == 0) totalStr.append("0.00");
+                if (sumEGP > 0)
+                    totalStr.append(String.format("%.2f EGP", sumEGP));
+                if (sumEGP > 0 && sumUSD > 0)
+                    totalStr.append(" + ");
+                if (sumUSD > 0)
+                    totalStr.append(String.format("%.2f USD", sumUSD));
+                if (totalStr.length() == 0)
+                    totalStr.append("0.00");
 
                 invoicesList.add(new InvoiceAdminModel(invNum, clientName, totalStr.toString(), dateStr, status, doc));
             }
@@ -226,7 +249,8 @@ public class AdminInvoicesController {
         itemsTable.getColumns().addAll(colItem, colPrice);
 
         List<Document> items = invoice.getSourceDoc().getList("invoiceItems", Document.class);
-        if (items != null) itemsTable.setItems(FXCollections.observableArrayList(items));
+        if (items != null)
+            itemsTable.setItems(FXCollections.observableArrayList(items));
 
         content.getChildren().addAll(new Label("بنود الفاتورة:"), itemsTable);
 
@@ -273,8 +297,7 @@ public class AdminInvoicesController {
 
             collection.updateOne(
                     Filters.eq("invoiceNumber", invoice.getInvoiceNumber()),
-                    Updates.set("status", newStatus)
-            );
+                    Updates.set("status", newStatus));
 
             new Alert(Alert.AlertType.INFORMATION, "تم تحديث الحالة إلى: " + newStatus).show();
             refreshTable();
@@ -290,7 +313,8 @@ public class AdminInvoicesController {
         chooser.setInitialFileName("فاتورة_" + invoice.getInvoiceNumber() + ".pdf");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
         File file = chooser.showSaveDialog(null);
-        if (file == null) return;
+        if (file == null)
+            return;
 
         try {
             PdfWriter writer = new PdfWriter(file);
@@ -305,7 +329,8 @@ public class AdminInvoicesController {
             PdfFont font = PdfFontFactory.createFont(fontPath, PdfEncodings.IDENTITY_H);
 
             // Header
-            document.add(new Paragraph(shapeArabic("فاتورة رسمية")).setFont(font).setFontSize(24).setBold().setTextAlignment(TextAlignment.CENTER));
+            document.add(new Paragraph(shapeArabic("فاتورة رسمية")).setFont(font).setFontSize(24).setBold()
+                    .setTextAlignment(TextAlignment.CENTER));
             document.add(new Paragraph("\n"));
             document.add(new Paragraph(shapeArabic("رقم الفاتورة: " + invoice.getInvoiceNumber())).setFont(font));
             document.add(new Paragraph(shapeArabic("العميل: " + invoice.getClientName())).setFont(font));
@@ -313,13 +338,16 @@ public class AdminInvoicesController {
             document.add(new Paragraph("\n"));
 
             // Table
-            Table table = new Table(UnitValue.createPercentArray(new float[]{4, 2, 2})).useAllAvailableWidth();
+            Table table = new Table(UnitValue.createPercentArray(new float[] { 4, 2, 2 })).useAllAvailableWidth();
             table.setTextAlignment(TextAlignment.RIGHT);
             table.setProperty(Property.BASE_DIRECTION, BaseDirection.RIGHT_TO_LEFT);
 
-            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("البند")).setFont(font).setBold().setBackgroundColor(ColorConstants.LIGHT_GRAY)));
-            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("السعر")).setFont(font).setBold().setBackgroundColor(ColorConstants.LIGHT_GRAY)));
-            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("العملة")).setFont(font).setBold().setBackgroundColor(ColorConstants.LIGHT_GRAY)));
+            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("البند")).setFont(font).setBold()
+                    .setBackgroundColor(ColorConstants.LIGHT_GRAY)));
+            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("السعر")).setFont(font).setBold()
+                    .setBackgroundColor(ColorConstants.LIGHT_GRAY)));
+            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("العملة")).setFont(font).setBold()
+                    .setBackgroundColor(ColorConstants.LIGHT_GRAY)));
 
             List<Document> items = invoice.getSourceDoc().getList("invoiceItems", Document.class);
             if (items != null) {
@@ -360,7 +388,8 @@ public class AdminInvoicesController {
     }
 
     private String shapeArabic(String text) {
-        if (text == null) return "";
+        if (text == null)
+            return "";
         try {
             ArabicShaping shaper = new ArabicShaping(ArabicShaping.LETTERS_SHAPE);
             String shaped = shaper.shape(text);
@@ -389,22 +418,45 @@ public class AdminInvoicesController {
             this.sourceDoc = source;
         }
 
-        public String getInvoiceNumber() { return invoiceNumber; }
-        public String getClientName() { return clientName; }
-        public String getTotalDisplay() { return totalDisplay; }
-        public String getDate() { return date; }
-        public String getStatus() { return status; }
-        public Document getSourceDoc() { return sourceDoc; }
+        public String getInvoiceNumber() {
+            return invoiceNumber;
+        }
+
+        public String getClientName() {
+            return clientName;
+        }
+
+        public String getTotalDisplay() {
+            return totalDisplay;
+        }
+
+        public String getDate() {
+            return date;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public Document getSourceDoc() {
+            return sourceDoc;
+        }
     }
 
-    @FXML public void onDashboardClick(ActionEvent e) throws IOException { navigate(e, "/noran/desktop/dashboard.fxml"); }
-    @FXML public void refresh(ActionEvent e) { refreshTable(); }
+    @FXML
+    public void onDashboardClick(ActionEvent e) throws IOException {
+        navigate(e, "/noran/desktop/dashboard.fxml");
+    }
+
+    @FXML
+    public void refresh(ActionEvent e) {
+        refreshTable();
+    }
 
     private void navigate(ActionEvent event, String fxml) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
         Parent root = loader.load();
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(new Scene(root));
-        stage.show();
+        stage.getScene().setRoot(root);
     }
 }

@@ -10,7 +10,8 @@ public class LoginApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/noran/desktop/login-view-ar.fxml"));
-        Scene scene = new Scene(fxmlLoader.load());
+        // Set explicit window size (1250x780) for consistent sizing across the app
+        Scene scene = new Scene(fxmlLoader.load(), 1250, 780);
         stage.setTitle("Al Noran");
         stage.getIcons().add(new javafx.scene.image.Image("/noran/desktop/images/logo.png"));
         stage.setScene(scene);
@@ -20,12 +21,5 @@ public class LoginApplication extends Application {
     public static void main(String[] args) {
         launch();
 
-
-
-
-
-
-
     }
 }
-

@@ -18,6 +18,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
+import javafx.scene.layout.VBox;
 import noran.desktop.AppSession;
 import noran.desktop.Database.MongoConnection;
 import noran.desktop.HelloController;
@@ -32,22 +33,32 @@ import java.util.ResourceBundle;
 
 public class ClientDataInvoiceController implements Initializable {
 
-    @FXML private Button btnViewAcceptedInvoices;
+    @FXML
+    private Button btnViewAcceptedInvoices;
 
     // Table Setup
-    @FXML private TableView<UserRow> invoicesTable;
-    @FXML private TableColumn<UserRow, String> colClientName;
-    @FXML private TableColumn<UserRow, String> colClientNumber;
-    @FXML private TableColumn<UserRow, String> colClientType;
-    @FXML private TableColumn<UserRow, String> colClientRank;
+    @FXML
+    private TableView<UserRow> invoicesTable;
+    @FXML
+    private TableColumn<UserRow, String> colClientName;
+    @FXML
+    private TableColumn<UserRow, String> colClientNumber;
+    @FXML
+    private TableColumn<UserRow, String> colClientType;
+    @FXML
+    private TableColumn<UserRow, String> colClientRank;
 
     // --- Data Lists ---
     private final ObservableList<UserRow> userList = FXCollections.observableArrayList();
     private FilteredList<UserRow> filteredData;
 
     // --- Injected Controllers ---
-    @FXML private SidebarController sidebarController;
-    @FXML private TopBarController topBarController;
+    @FXML
+    private SidebarController sidebarController;
+    @FXML
+    private VBox sidebar;
+    @FXML
+    private TopBarController topBarController;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -67,7 +78,8 @@ public class ClientDataInvoiceController implements Initializable {
         loadUsersWithShipments();
 
         // 4. Setup UI Components
-        if (sidebarController != null) sidebarController.setActivePage("invoices");
+        if (sidebarController != null)
+            sidebarController.setActivePage("invoices");
         setupTopBar();
 
         // 5. Double-click Action
@@ -85,14 +97,17 @@ public class ClientDataInvoiceController implements Initializable {
         User currentUser = AppSession.getInstance().getCurrentUser();
         if (topBarController != null) {
             topBarController.setPageTitle("إدارة الفواتير");
+            topBarController.setSidebar(sidebar);
             if (currentUser != null) {
-                topBarController.setUserData(currentUser.getName(), "ID: " + currentUser.getId());
+                topBarController.setUserData(currentUser.getName(),
+                        currentUser.getEmail() != null ? currentUser.getEmail() : "");
             }
 
             // Dynamic Search
             topBarController.setOnSearchAction(searchText -> {
                 filteredData.setPredicate(user -> {
-                    if (searchText == null || searchText.isEmpty()) return true;
+                    if (searchText == null || searchText.isEmpty())
+                        return true;
                     String lower = searchText.toLowerCase();
                     return (user.getUsername() != null && user.getUsername().toLowerCase().contains(lower)) ||
                             (user.getTaxNumber() != null && user.getTaxNumber().contains(lower));
@@ -125,8 +140,7 @@ public class ClientDataInvoiceController implements Initializable {
                     Filters.and(
                             Filters.in("_id", distinctUserIds),
                             Filters.eq("active", true) // Optional: Ensure user is active
-                    )
-            ).into(new ArrayList<>());
+                    )).into(new ArrayList<>());
 
             for (Document doc : usersFound) {
                 String id = doc.getObjectId("_id").toString();
@@ -136,18 +150,24 @@ public class ClientDataInvoiceController implements Initializable {
                 String rank = doc.getString("rank");
 
                 // Normalize Data
-                if (fullname == null) fullname = doc.getString("username"); // Fallback
-                if (taxNumber == null) taxNumber = "-";
-                if (clientType == null) clientType = "عادي";
+                if (fullname == null)
+                    fullname = doc.getString("username"); // Fallback
+                if (taxNumber == null)
+                    taxNumber = "-";
+                if (clientType == null)
+                    clientType = "عادي";
 
                 // Rank Logic
                 if (rank == null || rank.trim().isEmpty()) {
                     rank = "low";
                 } else {
                     rank = rank.toLowerCase();
-                    if (rank.equals("rank1")) rank = "low";
-                    else if (rank.equals("rank2")) rank = "med";
-                    else if (rank.equals("rank3")) rank = "high";
+                    if (rank.equals("rank1"))
+                        rank = "low";
+                    else if (rank.equals("rank2"))
+                        rank = "med";
+                    else if (rank.equals("rank3"))
+                        rank = "high";
                 }
 
                 userList.add(new UserRow(fullname, clientType, taxNumber, rank, id));
@@ -165,12 +185,9 @@ public class ClientDataInvoiceController implements Initializable {
     private void openAcceptedInvoices() {
         try {
             Stage currentStage = (Stage) btnViewAcceptedInvoices.getScene().getWindow();
-            // Ensure this points to your new MongoDB-based AcceptedInvoicesController
             Parent root = FXMLLoader.load(getClass().getResource("/noran/desktop/AcceptedInvoicesView.fxml"));
-            Scene scene = new Scene(root);
-            currentStage.setScene(scene);
+            currentStage.getScene().setRoot(root);
             currentStage.setTitle("الفواتير المقبولة والمرسلة");
-            currentStage.centerOnScreen();
         } catch (IOException e) {
             e.printStackTrace();
             showAlert("خطأ", "فشل في فتح الصفحة: " + e.getMessage());
@@ -189,13 +206,10 @@ public class ClientDataInvoiceController implements Initializable {
                     user.getTaxNumber(),
                     user.getClientType(),
                     user.getId(),
-                    user.getRank()
-            );
+                    user.getRank());
 
-            Scene scene = new Scene(root);
             Stage stage = (Stage) invoicesTable.getScene().getWindow();
-            stage.setScene(scene);
-            stage.show();
+            stage.getScene().setRoot(root);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -211,17 +225,26 @@ public class ClientDataInvoiceController implements Initializable {
         alert.showAndWait();
     }
 
-    @FXML public void onDashboardClick(ActionEvent e) throws IOException { navigate(e, "/noran/desktop/dashboard.fxml"); }
-    @FXML public void onTa5les(ActionEvent e) throws IOException { navigate(e, "/noran/desktop/AdminInvoices.fxml"); }
-    @FXML public void refresh(ActionEvent e) { loadUsersWithShipments(); }
+    @FXML
+    public void onDashboardClick(ActionEvent e) throws IOException {
+        navigate(e, "/noran/desktop/dashboard.fxml");
+    }
+
+    @FXML
+    public void onTa5les(ActionEvent e) throws IOException {
+        navigate(e, "/noran/desktop/AdminInvoices.fxml");
+    }
+
+    @FXML
+    public void refresh(ActionEvent e) {
+        loadUsersWithShipments();
+    }
 
     private void navigate(ActionEvent event, String fxmlPath) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
         Parent root = loader.load();
-        Scene scene = new Scene(root);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
+        stage.getScene().setRoot(root);
     }
 
     // --- Inner Class: UserRow ---
@@ -240,15 +263,40 @@ public class ClientDataInvoiceController implements Initializable {
             this.id = new SimpleStringProperty(id);
         }
 
-        public String getId() { return id.get(); }
-        public String getUsername() { return username.get(); }
-        public String getClientType() { return clientType.get(); }
-        public String getTaxNumber() { return taxNumber.get(); }
-        public String getRank() { return rank.get(); }
+        public String getId() {
+            return id.get();
+        }
 
-        public StringProperty usernameProperty() { return username; }
-        public StringProperty clientTypeProperty() { return clientType; }
-        public StringProperty taxNumberProperty() { return taxNumber; }
-        public StringProperty rankProperty() { return rank; }
+        public String getUsername() {
+            return username.get();
+        }
+
+        public String getClientType() {
+            return clientType.get();
+        }
+
+        public String getTaxNumber() {
+            return taxNumber.get();
+        }
+
+        public String getRank() {
+            return rank.get();
+        }
+
+        public StringProperty usernameProperty() {
+            return username;
+        }
+
+        public StringProperty clientTypeProperty() {
+            return clientType;
+        }
+
+        public StringProperty taxNumberProperty() {
+            return taxNumber;
+        }
+
+        public StringProperty rankProperty() {
+            return rank;
+        }
     }
 }

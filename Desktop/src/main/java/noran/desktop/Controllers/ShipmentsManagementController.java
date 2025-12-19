@@ -23,6 +23,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.scene.layout.VBox;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
@@ -33,20 +34,30 @@ import java.util.List;
 
 public class ShipmentsManagementController {
 
-    @FXML private TableView<Shipment> clientTable;
+    @FXML
+    private TableView<Shipment> clientTable;
 
     // Updated columns based on your request
-    @FXML private TableColumn<Shipment, String> colCustomerName;
-    @FXML private TableColumn<Shipment, String> colAcid;
-    @FXML private TableColumn<Shipment, String> colPortName;
-    @FXML private TableColumn<Shipment, String> colCountry;
-    @FXML private TableColumn<Shipment, String> colShipmentStatus;
+    @FXML
+    private TableColumn<Shipment, String> colCustomerName;
+    @FXML
+    private TableColumn<Shipment, String> colAcid;
+    @FXML
+    private TableColumn<Shipment, String> colPortName;
+    @FXML
+    private TableColumn<Shipment, String> colCountry;
+    @FXML
+    private TableColumn<Shipment, String> colShipmentStatus;
 
     private final ObservableList<Shipment> shipments = FXCollections.observableArrayList();
     private FilteredList<Shipment> filteredData;
 
-    @FXML private SidebarController sidebarController;
-    @FXML private TopBarController topBarController;
+    @FXML
+    private SidebarController sidebarController;
+    @FXML
+    private VBox sidebar;
+    @FXML
+    private TopBarController topBarController;
 
     @FXML
     public void initialize() {
@@ -66,7 +77,8 @@ public class ShipmentsManagementController {
         // Load Data directly from MongoDB
         loadShipmentsFromMongo();
 
-        if (sidebarController != null) sidebarController.setActivePage("shipments");
+        if (sidebarController != null)
+            sidebarController.setActivePage("shipments");
         setupTopBar();
     }
 
@@ -84,8 +96,7 @@ public class ShipmentsManagementController {
                     // Join shipments.user_id == users._id to get Customer Name
                     List<Bson> pipeline = Arrays.asList(
                             Aggregates.lookup("users", "user_id", "_id", "userDetails"),
-                            Aggregates.unwind("$userDetails", new UnwindOptions().preserveNullAndEmptyArrays(true))
-                    );
+                            Aggregates.unwind("$userDetails", new UnwindOptions().preserveNullAndEmptyArrays(true)));
 
                     for (Document doc : collection.aggregate(pipeline)) {
 
@@ -114,7 +125,8 @@ public class ShipmentsManagementController {
                         String policy = doc.getString("policy") != null ? doc.getString("policy") : "";
 
                         // ✅ FIX: Pass 'userId' as the 2nd argument (Total 9 arguments)
-                        loadedList.add(new Shipment(id, userId, customerName, acid, portName, country, status, containers, policy));
+                        loadedList.add(new Shipment(id, userId, customerName, acid, portName, country, status,
+                                containers, policy));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -131,8 +143,9 @@ public class ShipmentsManagementController {
 
         // Run the task
         new Thread(fetchDataTask).start();
-    }    // --- OTHER METHODS (Add/Edit/Delete) ---
-    // You should update these to use MongoConnection directly instead of RestMongoSyncClient later
+    } // --- OTHER METHODS (Add/Edit/Delete) ---
+      // You should update these to use MongoConnection directly instead of
+      // RestMongoSyncClient later
 
     @FXML
     public void deleteShipment(ActionEvent event) {
@@ -156,7 +169,6 @@ public class ShipmentsManagementController {
     // ... Keep your Edit, OpenPopup, Navigation, and SetupTopBar methods ...
     // Note: In editShipment, ensure you pass the new fields correctly.
 
-
     private void showAlert(String msg) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setHeaderText(null);
@@ -168,14 +180,18 @@ public class ShipmentsManagementController {
     private void setupTopBar() {
         if (topBarController != null) {
             topBarController.setPageTitle("إدارة الشحنات");
+            topBarController.setSidebar(sidebar);
             // Search Logic
             topBarController.setOnSearchAction(searchText -> {
                 filteredData.setPredicate(shipment -> {
-                    if (searchText == null || searchText.isEmpty()) return true;
+                    if (searchText == null || searchText.isEmpty())
+                        return true;
                     String lower = searchText.toLowerCase();
                     // Search by Port OR Customer Name OR ACID
                     return (shipment.getPortName() != null && shipment.getPortName().toLowerCase().contains(lower)) ||
-                            (shipment.getCustomerName() != null && shipment.getCustomerName().toLowerCase().contains(lower)) ||
+                            (shipment.getCustomerName() != null
+                                    && shipment.getCustomerName().toLowerCase().contains(lower))
+                            ||
                             (shipment.getAcid() != null && shipment.getAcid().toLowerCase().contains(lower));
                 });
             });
@@ -248,8 +264,7 @@ public class ShipmentsManagementController {
                 // UPDATE EXISTING
                 collection.updateOne(
                         new Document("_id", new ObjectId(s.getId())),
-                        new Document("$set", doc)
-                );
+                        new Document("$set", doc));
                 System.out.println("Updated shipment: " + s.getId());
             }
         } catch (Exception e) {
@@ -259,17 +274,35 @@ public class ShipmentsManagementController {
     }
 
     // Navigation methods...
-    @FXML public void onDashboardClick(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/dashboard.fxml"); }
-    @FXML public void onInvoiceManagementClick(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/client-data-invoice.fxml"); }
-    @FXML public void client_management_btn_handle(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/client-data.fxml"); }
-    @FXML public void employee_management_btn_handle(ActionEvent event) throws IOException { navigate(event, "/noran/desktop/employee-management.fxml"); }
+    @FXML
+    public void onDashboardClick(ActionEvent event) throws IOException {
+        navigate(event, "/noran/desktop/dashboard.fxml");
+    }
+
+    @FXML
+    public void onInvoiceManagementClick(ActionEvent event) throws IOException {
+        navigate(event, "/noran/desktop/client-data-invoice.fxml");
+    }
+
+    @FXML
+    public void client_management_btn_handle(ActionEvent event) throws IOException {
+        navigate(event, "/noran/desktop/client-data.fxml");
+    }
+
+    @FXML
+    public void employee_management_btn_handle(ActionEvent event) throws IOException {
+        navigate(event, "/noran/desktop/employee-management.fxml");
+    }
 
     private void navigate(ActionEvent event, String fxmlPath) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
         Parent root = loader.load();
-        Scene scene = new Scene(root);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(scene);
-        stage.show();
+        stage.getScene().setRoot(root);
+    }
+
+    @FXML
+    public void refresh(ActionEvent e) {
+        loadShipmentsFromMongo();
     }
 }

@@ -12,7 +12,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.ClientDataController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.ClientDataController">
 
     <left>
         <fx:include fx:id="sidebar" source="Sidebar.fxml" />
@@ -25,23 +25,25 @@
     <!-- CENTER CONTENT -->
     <center>
         <VBox alignment="TOP_CENTER" spacing="24" style="-fx-padding: 32 24;">
-         <AnchorPane prefHeight="200.0" prefWidth="200.0">
-            <children>
-               <Button fx:id="refreshBtn" onAction="#refresh" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
-               <ImageView fitHeight="47.0" fitWidth="61.0" pickOnBounds="true" preserveRatio="true">
-                  <image>
-                     <Image url="@images/cached.png" />
-                  </image>
-               </ImageView>
-            </children>
-         </AnchorPane>
+            <!-- Header with refresh button and illustration -->
+            <HBox alignment="CENTER_LEFT" spacing="300">
+                <Button onAction="#refresh" style="-fx-background-color: transparent; -fx-cursor: hand;">
+                    <graphic>
+                        <ImageView fitHeight="47.0" fitWidth="61.0" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="@images/cached.png" />
+                            </image>
+                        </ImageView>
+                    </graphic>
+                </Button>
+                <!--                <Region prefHeight="166.0" prefWidth="10.0" HBox.hgrow="ALWAYS" />-->
+                <ImageView fitHeight="200.0" fitWidth="350.0" preserveRatio="true">
+                    <image>
+                        <Image url="@images/Untitled%20design%20(10).png" />
+                    </image>
+                </ImageView>
+            </HBox>
 
-
-            <ImageView fitHeight="220" preserveRatio="true">
-                <image>
-                    <Image url="@images/Untitled%20design%20(10).png" />
-                </image>
-            </ImageView>
             <!-- Table container -->
             <StackPane style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 12;">
                 <TableView fx:id="clientTable" prefHeight="380" prefWidth="880" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css">

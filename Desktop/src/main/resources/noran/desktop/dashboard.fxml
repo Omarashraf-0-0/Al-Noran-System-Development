@@ -4,7 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" stylesheets="@charts.css" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.DashboardController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" stylesheets="@charts.css" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.DashboardController">
 
     <left>
         <fx:include fx:id="sidebar" source="Sidebar.fxml" />

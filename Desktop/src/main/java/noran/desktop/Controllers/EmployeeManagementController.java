@@ -21,6 +21,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.scene.layout.VBox;
 import noran.desktop.AppSession;
 import noran.desktop.Database.MongoConnection;
 import noran.desktop.models.Employee;
@@ -35,18 +36,28 @@ import java.util.List;
 
 public class EmployeeManagementController {
 
-    @FXML private TableView<Employee> clientTable;
-    @FXML private TableColumn<Employee, String> colName;
-    @FXML private TableColumn<Employee, String> colEmail;
-    @FXML private TableColumn<Employee, String> colPhone;
-    @FXML private TableColumn<Employee, String> colType;
-    @FXML private TableColumn<Employee, String> colRank;
+    @FXML
+    private TableView<Employee> clientTable;
+    @FXML
+    private TableColumn<Employee, String> colName;
+    @FXML
+    private TableColumn<Employee, String> colEmail;
+    @FXML
+    private TableColumn<Employee, String> colPhone;
+    @FXML
+    private TableColumn<Employee, String> colType;
+    @FXML
+    private TableColumn<Employee, String> colRank;
 
     private final ObservableList<Employee> employees = FXCollections.observableArrayList();
     private FilteredList<Employee> filteredData;
 
-    @FXML private SidebarController sidebarController;
-    @FXML private TopBarController topBarController;
+    @FXML
+    private SidebarController sidebarController;
+    @FXML
+    private VBox sidebar;
+    @FXML
+    private TopBarController topBarController;
 
     @FXML
     public void initialize() {
@@ -57,9 +68,8 @@ public class EmployeeManagementController {
         colType.setCellValueFactory(data -> data.getValue().jobTypeProperty());
 
         // Display "Active" or "Frozen" based on boolean
-        colRank.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(data.getValue().isActive() ? "نشط" : "مجمد")
-        );
+        colRank.setCellValueFactory(
+                data -> new javafx.beans.property.SimpleStringProperty(data.getValue().isActive() ? "نشط" : "مجمد"));
 
         // 2. Wrap List
         filteredData = new FilteredList<>(employees, p -> true);
@@ -70,7 +80,8 @@ public class EmployeeManagementController {
         // 3. Load Data
         loadEmployeesFromMongo();
 
-        if (sidebarController != null) sidebarController.setActivePage("employees");
+        if (sidebarController != null)
+            sidebarController.setActivePage("employees");
         setupTopBar();
     }
 
@@ -219,8 +230,7 @@ public class EmployeeManagementController {
                 doc.append("updatedAt", new Date());
                 users.updateOne(
                         Filters.eq("_id", new ObjectId(emp.getId())),
-                        new Document("$set", doc)
-                );
+                        new Document("$set", doc));
                 System.out.println("✔ Updated employee: " + emp.getId());
             }
 
@@ -250,6 +260,7 @@ public class EmployeeManagementController {
             return false; // ❌ Fail
         }
     }
+
     // ✅ 3. DELETE
     @FXML
     public void deleteEmployee(ActionEvent event) {
@@ -287,8 +298,7 @@ public class EmployeeManagementController {
             MongoDatabase db = MongoConnection.getDatabase();
             db.getCollection("users").updateOne(
                     Filters.eq("_id", new ObjectId(selected.getId())),
-                    Updates.set("active", newStatus)
-            );
+                    Updates.set("active", newStatus));
 
             selected.setActive(newStatus);
             clientTable.refresh();
@@ -316,15 +326,17 @@ public class EmployeeManagementController {
         User currentUser = AppSession.getInstance().getCurrentUser();
         if (topBarController != null) {
             topBarController.setPageTitle("إدارة الصلاحيات");
+            topBarController.setSidebar(sidebar);
             if (currentUser != null) {
                 String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
-                String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
-                topBarController.setUserData(name, id);
+                String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
+                topBarController.setUserData(name, email);
             }
 
             topBarController.setOnSearchAction(searchText -> {
                 filteredData.setPredicate(employee -> {
-                    if (searchText == null || searchText.isEmpty()) return true;
+                    if (searchText == null || searchText.isEmpty())
+                        return true;
                     String lower = searchText.toLowerCase();
                     return (employee.getFullname() != null && employee.getFullname().toLowerCase().contains(lower)) ||
                             (employee.getPhone() != null && employee.getPhone().contains(lower));
@@ -332,6 +344,5 @@ public class EmployeeManagementController {
             });
         }
     }
-
 
 }
