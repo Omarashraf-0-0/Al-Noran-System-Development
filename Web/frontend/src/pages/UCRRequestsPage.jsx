@@ -388,12 +388,12 @@ const UCRRequestsPage = () => {
 						<div className="overflow-x-auto">
 							<table className="w-full text-right border-separate border-spacing-y-3">
 								<thead>
-									<tr className="text-gray-600 text-sm">
-										<th className="py-2 px-4 text-right font-semibold">رقم UCR / التاريخ</th>
-										<th className="py-2 px-4 text-right font-semibold">الوجهة</th>
-										<th className="py-2 px-4 text-right font-semibold">القيمة</th>
-										<th className="py-2 px-4 text-right font-semibold">الحالة</th>
-										<th className="py-2 px-4 text-right font-semibold">الإجراءات</th>
+									<tr className="bg-red-800 text-white">
+										<th className="py-3 px-4 text-right rounded-tr-lg">رقم UCR / التاريخ</th>
+										<th className="py-3 px-4 text-right">الوجهة</th>
+										<th className="py-3 px-4 text-right">القيمة</th>
+										<th className="py-3 px-4 text-right">الحالة</th>
+										<th className="py-3 px-4 text-right rounded-tl-lg">الإجراءات</th>
 									</tr>
 								</thead>
 								<tbody>

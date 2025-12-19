@@ -21,6 +21,15 @@ const ShipmentsTable = ({
 	return (
 		<div className="overflow-x-auto">
 			<table className="w-full text-right border-separate border-spacing-y-3">
+				<thead>
+					<tr className="bg-red-800 text-white">
+						<th className="py-3 px-4 text-right rounded-tr-lg">العميل / التاريخ</th>
+						<th className="py-3 px-4 text-right">رقم الشحنة</th>
+						<th className="py-3 px-4 text-right">رقم ACID</th>
+						<th className="py-3 px-4 text-right">الحالة</th>
+						<th className="py-3 px-4 text-right rounded-tl-lg">الإجراءات</th>
+					</tr>
+				</thead>
 				<tbody>
 					{displayedShipments.map((shipment) => (
 						<tr
@@ -40,6 +49,14 @@ const ShipmentsTable = ({
 								<div className="flex flex-col text-sm">
 									<span className="font-semibold text-gray-800">
 										{shipment.shipmentNo}
+									</span>
+								</div>
+							</td>
+
+							<td className="py-3 px-4 align-top">
+								<div className="flex flex-col text-sm">
+									<span className="font-semibold text-gray-800">
+										{shipment.acid}
 									</span>
 								</div>
 							</td>

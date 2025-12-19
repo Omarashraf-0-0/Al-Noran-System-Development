@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { toast } from "react-hot-toast";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import BackgroundContainer from "../components/BackgroundContainer";
-import FormContainer from "../components/FormContainer";
-import LoadingSpinner from "../components/LoadingSpinner";
+import WelcomeBanner from "./WelcomeBanner";
+import quickReorderIcon from "../assets/images/quick_reorder.png";
+import filterListIcon from "../assets/images/filter_list.png";
+import filterAltIcon from "../assets/images/filter_alt.png";
+import searchIcon from "../assets/images/Search.svg";
+import axios from "axios";
+import { toast } from "react-hot-toast";
 
-// Status configurations for export shipments (matching backend model)
+// Status configurations for export shipments
 const STATUS_CONFIG = {
 	documents_verification: {
 		label: "التحقق من المستندات",
@@ -60,20 +62,37 @@ const STATUS_CONFIG = {
 	},
 };
 
-const ExportShipmentsPage = () => {
+export default function ExportShipmentsPage() {
 	const navigate = useNavigate();
-	const [loading, setLoading] = useState(true);
+	const [searchTerm, setSearchTerm] = useState("");
+	const [isFilterOpen, setIsFilterOpen] = useState(false);
+	const [isSortOpen, setIsSortOpen] = useState(false);
 	const [shipments, setShipments] = useState([]);
-	const [filteredShipments, setFilteredShipments] = useState([]);
-	const [statusFilter, setStatusFilter] = useState("all");
-	const [searchQuery, setSearchQuery] = useState("");
-	const [sortBy, setSortBy] = useState("newest");
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
+	const [selectedStatus, setSelectedStatus] = useState("الكل");
+	const [sortOption, setSortOption] = useState("newest");
 
-	// Fetch export shipments
+	const token = localStorage.getItem("token");
+
+	// Available shipment statuses for filter
+	const shipmentStatuses = [
+		{ value: "الكل", label: "الكل" },
+		{ value: "documents_verification", label: "التحقق من المستندات" },
+		{ value: "regulatory_inspection", label: "فحص الجهات الرقابية" },
+		{ value: "payment_cleared", label: "تم السداد" },
+		{ value: "goods_loaded", label: "تم التحميل" },
+		{ value: "in_transit", label: "في الطريق" },
+		{ value: "delivered", label: "تم التسليم" },
+		{ value: "completed", label: "مكتمل" },
+		{ value: "cancelled", label: "ملغي" },
+	];
+
+	// Fetch export shipments for client
 	const fetchShipments = useCallback(async () => {
 		setLoading(true);
+		setError(null);
 		try {
-			const token = localStorage.getItem("token");
 			if (!token) {
 				toast.error("يجب تسجيل الدخول أولاً");
 				navigate("/login");
@@ -88,357 +107,329 @@ const ExportShipmentsPage = () => {
 			);
 
 			if (response.data.success) {
-				setShipments(response.data.shipments || []);
+				const formattedShipments = (response.data.shipments || []).map((shipment) => ({
+					id: shipment._id,
+					shipmentNo: shipment.shipmentNumber || `شحنة #${shipment._id.slice(-6)}`,
+					ucrNumber: shipment.ucrNumber || shipment.ucrRequestId?.ucrNumber || "—",
+					destination: shipment.destinationCountry || "—",
+					port: shipment.destinationPort || "—",
+					status: shipment.currentStatus || "documents_verification",
+					createdAt: shipment.createdAt,
+					date: new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
+						day: "numeric",
+						month: "long",
+						year: "numeric",
+					}),
+				}));
+				setShipments(formattedShipments);
+
+				if (formattedShipments.length === 0) {
+					toast("لا توجد شحنات تصديرية");
+				}
 			}
-		} catch (error) {
-			console.error("Error fetching export shipments:", error);
-			if (error.response?.status === 401) {
+		} catch (err) {
+			console.error("Error fetching export shipments:", err);
+			if (err.response?.status === 401) {
 				toast.error("انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى");
 				navigate("/login");
 			} else {
-				toast.error("فشل في جلب الشحنات");
+				const errorMessage =
+					err.response?.data?.message ||
+					err.message ||
+					"فشل في جلب الشحنات";
+				setError(errorMessage);
+				toast.error(errorMessage);
 			}
 		} finally {
 			setLoading(false);
 		}
-	}, [navigate]);
+	}, [navigate, token]);
 
 	useEffect(() => {
 		fetchShipments();
 	}, [fetchShipments]);
 
+	const toggleFilter = () => {
+		setIsFilterOpen(!isFilterOpen);
+		setIsSortOpen(false);
+	};
+	const toggleSort = () => {
+		setIsSortOpen(!isSortOpen);
+		setIsFilterOpen(false);
+	};
+
+	const handleFilterApply = () => {
+		setIsFilterOpen(false);
+	};
+
+	const handleSortApply = () => {
+		setIsSortOpen(false);
+	};
+
+	// Get status label
+	const getStatusLabel = (status) => {
+		return STATUS_CONFIG[status]?.label || status;
+	};
+
 	// Filter and sort shipments
-	useEffect(() => {
-		let result = [...shipments];
+	let filteredShipments = shipments.filter((shipment) => {
+		// Filter by search term (shipment number, UCR, destination)
+		const matchesSearch =
+			shipment.shipmentNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			shipment.ucrNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			shipment.destination.toLowerCase().includes(searchTerm.toLowerCase());
 
-		// Apply status filter
-		if (statusFilter !== "all") {
-			result = result.filter((shipment) => shipment.currentStatus === statusFilter);
-		}
+		// Filter by status
+		const matchesStatus =
+			selectedStatus === "الكل" ||
+			shipment.status === selectedStatus;
 
-		// Apply search filter
-		if (searchQuery) {
-			const query = searchQuery.toLowerCase();
-			result = result.filter(
-				(shipment) =>
-					shipment.shipmentNumber?.toLowerCase().includes(query) ||
-					shipment.destinationCountry?.toLowerCase().includes(query) ||
-					shipment.destinationPort?.toLowerCase().includes(query) ||
-					shipment.ucrRequestId?.ucrNumber?.toLowerCase().includes(query)
-			);
-		}
+		return matchesSearch && matchesStatus;
+	});
 
-		// Apply sorting
-		result.sort((a, b) => {
-			if (sortBy === "newest") {
-				return new Date(b.createdAt) - new Date(a.createdAt);
-			} else if (sortBy === "oldest") {
-				return new Date(a.createdAt) - new Date(b.createdAt);
+	// Sort shipments
+	filteredShipments = [...filteredShipments].sort((a, b) => {
+		switch (sortOption) {
+			case "newest": {
+				const dateA = new Date(a.createdAt).getTime();
+				const dateB = new Date(b.createdAt).getTime();
+				return dateB - dateA;
 			}
-			return 0;
-		});
-
-		setFilteredShipments(result);
-	}, [shipments, statusFilter, searchQuery, sortBy]);
-
-	// Format date
-	const formatDate = (dateStr) => {
-		if (!dateStr) return "—";
-		return new Date(dateStr).toLocaleDateString("ar-EG", {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
-	};
-
-	// Get status count
-	const getStatusCount = (status) => {
-		if (status === "all") return shipments.length;
-		return shipments.filter((s) => s.currentStatus === status).length;
-	};
-
-	// Get active shipments (not completed or cancelled)
-	const activeShipments = shipments.filter(
-		(s) => !["completed", "cancelled"].includes(s.currentStatus)
-	);
+			case "oldest": {
+				const dateA = new Date(a.createdAt).getTime();
+				const dateB = new Date(b.createdAt).getTime();
+				return dateA - dateB;
+			}
+			default:
+				return 0;
+		}
+	});
 
 	return (
-		<div className="min-h-screen flex flex-col bg-gray-50" dir="rtl">
+		<div className="flex flex-col min-h-screen bg-gray-50 font-sans relative">
 			<Header />
+			<WelcomeBanner />
 
-			<BackgroundContainer>
-				<FormContainer title="شحناتي التصديرية">
-					{/* Header Section */}
-					<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+			<section className="flex-grow w-full bg-white py-12 px-8 shadow-inner relative">
+				<div className="max-w-6xl mx-auto">
+					<h1 className="text-3xl font-bold text-right text-red-800 mb-8">
+						شحناتي التصديرية
+					</h1>
+
+					{/* 🔍 Search + Filter + Sort */}
+					<div className="flex items-center justify-center mb-8 gap-4 relative">
+						{/* Left side — Filter + Sort */}
 						<div className="flex items-center gap-3">
-							<span className="text-3xl">📦</span>
-							<div>
-								<p className="text-gray-600">
-									تتبع شحنات التصدير الخاصة بك
-								</p>
-								<p className="text-sm text-gray-500">
-									{activeShipments.length} شحنة نشطة من أصل {shipments.length}
-								</p>
-							</div>
-						</div>
-					</div>
-
-					{/* Quick Stats */}
-					<div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-						<div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-							<div className="flex items-center gap-2">
-								<span className="text-2xl">📄</span>
-								<div>
-									<p className="text-xs text-blue-600">قيد المعالجة</p>
-									<p className="text-xl font-bold text-blue-800">
-										{getStatusCount("documents_verification") +
-											getStatusCount("regulatory_inspection")}
-									</p>
-								</div>
-							</div>
-						</div>
-						<div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-							<div className="flex items-center gap-2">
-								<span className="text-2xl">💰</span>
-								<div>
-									<p className="text-xs text-yellow-600">في انتظار السداد</p>
-									<p className="text-xl font-bold text-yellow-800">
-										{getStatusCount("payment_cleared")}
-									</p>
-								</div>
-							</div>
-						</div>
-						<div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
-							<div className="flex items-center gap-2">
-								<span className="text-2xl">🚢</span>
-								<div>
-									<p className="text-xs text-cyan-600">في الطريق</p>
-									<p className="text-xl font-bold text-cyan-800">
-										{getStatusCount("goods_loaded") + getStatusCount("in_transit")}
-									</p>
-								</div>
-							</div>
-						</div>
-						<div className="bg-green-50 p-4 rounded-lg border border-green-200">
-							<div className="flex items-center gap-2">
-								<span className="text-2xl">✨</span>
-								<div>
-									<p className="text-xs text-green-600">مكتمل</p>
-									<p className="text-xl font-bold text-green-800">
-										{getStatusCount("delivered") + getStatusCount("completed")}
-									</p>
-								</div>
-							</div>
-						</div>
-					</div>
-
-					{/* Filters */}
-					<div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							{/* Search */}
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									بحث
-								</label>
-								<input
-									type="text"
-									value={searchQuery}
-									onChange={(e) => setSearchQuery(e.target.value)}
-									placeholder="رقم الشحنة، الوجهة..."
-									className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-red-500 focus:border-red-500"
+							{/* Filter Button */}
+							<button
+								onClick={toggleFilter}
+								className={`flex items-center gap-2 font-medium transition-colors ${
+									isFilterOpen
+										? "bg-red-800 text-white px-3 py-1 rounded-md"
+										: "text-red-800"
+								}`}
+							>
+								<img
+									src={filterAltIcon}
+									alt="Filter"
+									className="w-5 h-5 object-contain"
 								/>
-							</div>
+								تصفية
+							</button>
 
-							{/* Status Filter */}
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									الحالة
-								</label>
+							{/* Sort Button */}
+							<button
+								onClick={toggleSort}
+								className={`flex items-center gap-2 font-medium transition-colors ${
+									isSortOpen
+										? "bg-red-800 text-white px-3 py-1 rounded-md"
+										: "text-red-800"
+								}`}
+							>
+								<img
+									src={filterListIcon}
+									alt="Sort"
+									className="w-5 h-5 object-contain"
+								/>
+								ترتيب
+							</button>
+						</div>
+
+						{/* Search Bar */}
+						<div className="relative w-1/2">
+							<input
+								type="text"
+								placeholder="ابحث برقم الشحنة، UCR، أو الوجهة"
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								className="w-full bg-white shadow-md rounded-full py-2 px-4 pr-10 text-right focus:outline-none focus:ring-2 focus:ring-red-500 placeholder-gray-400 text-black"
+							/>
+							<img
+								src={searchIcon}
+								alt="Search"
+								className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+							/>
+						</div>
+
+						{/* 🧩 Filter Dropdown */}
+						{isFilterOpen && (
+							<div className="absolute top-14 left-40 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
+								<h4 className="font-semibold text-red-800 mb-3">
+									تصفية حسب الحالة:
+								</h4>
 								<select
-									value={statusFilter}
-									onChange={(e) => setStatusFilter(e.target.value)}
-									className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-red-500 focus:border-red-500"
+									value={selectedStatus}
+									onChange={(e) => setSelectedStatus(e.target.value)}
+									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
 								>
-									<option value="all">الكل ({getStatusCount("all")})</option>
-									{Object.entries(STATUS_CONFIG).map(([key, config]) => (
-										<option key={key} value={key}>
-											{config.icon} {config.label} ({getStatusCount(key)})
+									{shipmentStatuses.map((status) => (
+										<option key={status.value} value={status.value}>
+											{status.label}
 										</option>
 									))}
 								</select>
+								<button
+									onClick={handleFilterApply}
+									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
+								>
+									تطبيق
+								</button>
 							</div>
+						)}
 
-							{/* Sort */}
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									ترتيب حسب
-								</label>
+						{/* 🧩 Sort Dropdown */}
+						{isSortOpen && (
+							<div className="absolute top-14 left-20 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
+								<h4 className="font-semibold text-red-800 mb-3">ترتيب حسب:</h4>
 								<select
-									value={sortBy}
-									onChange={(e) => setSortBy(e.target.value)}
-									className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-red-500 focus:border-red-500"
+									value={sortOption}
+									onChange={(e) => setSortOption(e.target.value)}
+									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
 								>
 									<option value="newest">الأحدث أولاً</option>
 									<option value="oldest">الأقدم أولاً</option>
 								</select>
+								<button
+									onClick={handleSortApply}
+									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
+								>
+									تطبيق
+								</button>
 							</div>
-						</div>
+						)}
 					</div>
 
-					{/* Shipments List */}
+					{/* 📦 Shipments Table */}
 					{loading ? (
-						<div className="flex justify-center items-center py-12">
-							<LoadingSpinner />
+						<div className="flex justify-center items-center py-12 gap-4">
+							<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
+							<span className="text-gray-600 text-lg">
+								جاري تحميل الشحنات...
+							</span>
+						</div>
+					) : error ? (
+						<div className="bg-red-50 border border-red-300 rounded-lg p-4 text-right">
+							<p className="text-red-800 font-medium mb-3">
+								❌ حدث خطأ: {error}
+							</p>
+							<button
+								onClick={() => fetchShipments()}
+								className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-700 transition"
+							>
+								إعادة محاولة
+							</button>
 						</div>
 					) : filteredShipments.length === 0 ? (
 						<div className="text-center py-12">
-							<span className="text-5xl mb-4 block">📭</span>
-							<p className="text-gray-600 mb-4">
-								{shipments.length === 0
-									? "لا توجد شحنات تصديرية بعد"
-									: "لا توجد شحنات تطابق معايير البحث"}
-							</p>
-							{shipments.length === 0 && (
-								<p className="text-sm text-gray-500">
-									ستظهر الشحنات هنا بعد الموافقة على طلبات UCR الخاصة بك
-								</p>
-							)}
+							<p className="text-gray-500 text-lg">لا توجد شحنات تصديرية</p>
 						</div>
 					) : (
-						<div className="space-y-4">
-							{filteredShipments.map((shipment) => {
-								const statusConfig =
-									STATUS_CONFIG[shipment.currentStatus] || STATUS_CONFIG.documents_verification;
-
-								return (
-									<div
-										key={shipment._id}
-										className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
-									>
-										<div className="p-4">
-											{/* Header */}
-											<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-3">
-												<div className="flex items-center gap-3">
-													<span className="text-xl">
-														{shipment.shippingMethod === "air" ? "✈️" : "🚢"}
+						<div className="overflow-x-auto">
+							<table className="w-full text-right border-separate border-spacing-y-3">
+								<thead>
+									<tr className="bg-red-800 text-white">
+										<th className="py-3 px-4 text-right rounded-tr-lg">التاريخ</th>
+										<th className="py-3 px-4 text-right">رقم الشحنة</th>
+										<th className="py-3 px-4 text-right">رقم UCR</th>
+										<th className="py-3 px-4 text-right">الوجهة</th>
+										<th className="py-3 px-4 text-right">الحالة</th>
+										<th className="py-3 px-4 text-right rounded-tl-lg">الإجراءات</th>
+									</tr>
+								</thead>
+								<tbody>
+									{filteredShipments.map((shipment) => (
+										<tr
+											key={shipment.id}
+											className="bg-gray-100 hover:bg-gray-200 rounded-xl transition text-right"
+										>
+											<td className="py-3 px-4 align-top">
+												<div className="flex flex-col text-sm">
+													<span className="text-gray-700 text-base font-semibold">
+														{shipment.date}
 													</span>
-													<div>
-														<h3 className="font-bold text-gray-800">
-															{shipment.shipmentNumber ||
-																`شحنة #${shipment._id.slice(-6)}`}
-														</h3>
-														<p className="text-sm text-gray-500">
-															{formatDate(shipment.createdAt)}
-														</p>
-													</div>
 												</div>
-												<span
-													className={`px-3 py-1 text-sm rounded-full border ${statusConfig.color}`}
-												>
-													{statusConfig.icon} {statusConfig.label}
-												</span>
-											</div>
+											</td>
 
-											{/* Progress Bar */}
-											<div className="mb-4">
-												<div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-													<div
-														className="h-full bg-gradient-to-l from-green-500 to-green-400 transition-all duration-500"
-														style={{
-															width: `${Math.max(
-																(statusConfig.step / 7) * 100,
-																5
-															)}%`,
-														}}
-													/>
+											<td className="py-3 px-4 align-top">
+												<div className="flex flex-col text-sm">
+													<span className="font-semibold text-gray-800">
+														{shipment.shipmentNo}
+													</span>
 												</div>
-												<div className="flex justify-between text-xs text-gray-500 mt-1">
-													<span>بداية</span>
-													<span>{Math.round((statusConfig.step / 7) * 100)}%</span>
-													<span>مكتمل</span>
-												</div>
-											</div>
+											</td>
 
-											{/* Details */}
-											<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-												<div>
-													<p className="text-xs text-gray-500">الوجهة</p>
-													<p className="font-medium">
-														{shipment.destinationCountry || "—"}
-													</p>
+											<td className="py-3 px-4 align-top">
+												<div className="flex flex-col text-sm">
+													<span className="text-blue-600 text-base font-medium">
+														{shipment.ucrNumber}
+													</span>
 												</div>
-												<div>
-													<p className="text-xs text-gray-500">الميناء/المطار</p>
-													<p className="font-medium">
-														{shipment.destinationPort || "—"}
-													</p>
-												</div>
-												<div>
-													<p className="text-xs text-gray-500">رقم UCR</p>
-													<p className="font-medium text-blue-600">
-														{shipment.ucrRequestId?.ucrNumber || "—"}
-													</p>
-												</div>
-												<div>
-													<p className="text-xs text-gray-500">شهادة المنشأ</p>
-													<p className="font-medium">
-														{shipment.certificateOfOriginStatus === "issued" ? (
-															<span className="text-green-600">✅ صادرة</span>
-														) : shipment.certificateOfOriginStatus === "pending" ? (
-															<span className="text-yellow-600">⏳ قيد الإصدار</span>
-														) : shipment.certificateOfOriginStatus === "not_required" ? (
-															<span className="text-gray-400">غير مطلوبة</span>
-														) : (
-															<span className="text-gray-400">—</span>
-														)}
-													</p>
-												</div>
-											</div>
+											</td>
 
-											{/* Sea Shipment Container Info */}
-											{shipment.shippingMethod === "sea" &&
-												shipment.containerWeights &&
-												shipment.containerWeights.length > 0 && (
-													<div className="bg-blue-50 p-2 rounded mb-3 text-sm">
-														<span className="text-blue-700">
-															🚢 {shipment.containersCount || shipment.containerWeights.length} حاوية
+											<td className="py-3 px-4 align-top">
+												<div className="flex flex-col text-sm">
+													<span className="text-gray-700 text-base">
+														{shipment.destination}
+													</span>
+													{shipment.port !== "—" && (
+														<span className="text-gray-500 text-xs">
+															{shipment.port}
 														</span>
-													</div>
-												)}
+													)}
+												</div>
+											</td>
 
-											{/* Actions */}
-											<div className="flex justify-end gap-2 border-t pt-3">
-												<button
-													onClick={() =>
-														navigate(`/export-shipment/${shipment._id}`)
-													}
-													className="px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-50 rounded transition-colors"
+											<td className="py-3 px-4 align-top">
+												<span
+													className="bg-blue-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit"
+													style={{ color: "#690000" }}
 												>
-													عرض التفاصيل
-												</button>
-												{shipment.ucrRequestId?._id && (
-													<button
-														onClick={() =>
-															navigate(`/ucr-request/${shipment.ucrRequestId._id}`)
-														}
-														className="px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 rounded transition-colors"
-													>
-														عرض UCR
+													<img
+														src={quickReorderIcon}
+														alt="status icon"
+														className="w-4 h-4"
+													/>
+													{getStatusLabel(shipment.status)}
+												</span>
+											</td>
+
+											<td className="py-3 px-4 align-top">
+												<a href={`/export-shipment/${shipment.id}`}>
+													<button className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition text-sm font-medium">
+														عرض التفاصيل
 													</button>
-												)}
-											</div>
-										</div>
-									</div>
-								);
-							})}
+												</a>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
 						</div>
 					)}
-				</FormContainer>
-			</BackgroundContainer>
+				</div>
+			</section>
 
 			<Footer />
 		</div>
 	);
-};
-
-export default ExportShipmentsPage;
+}
