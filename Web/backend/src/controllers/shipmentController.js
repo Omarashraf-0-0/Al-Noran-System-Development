@@ -189,6 +189,29 @@ const createShipment = async (req, res) => {
 			}
 		}
 
+		// 📬 Notify assigned employee about new customer/shipment assignment
+		if (shipmentData.employee_id) {
+			try {
+				await notificationService.createNotification({
+					userId: shipmentData.employee_id,
+					type: "shipment_created",
+					title: "تم تعيين عميل جديد لك",
+					message: `تم تعيين عميل جديد لك للشحنة ${shipment.acid}`,
+					data: {
+						shipmentId: shipment._id,
+						shipmentAcid: shipment.acid,
+						clientId: shipmentData.user_id,
+						actionUrl: `/employee/shipments/${shipment._id}`,
+					},
+					sendPush: true,
+					priority: "high",
+				});
+				console.log(`📬 Employee ${shipmentData.employee_id} notified about new customer assignment`);
+			} catch (notifError) {
+				console.error("Failed to send employee assignment notification:", notifError.message);
+			}
+		}
+
 		// ✅ Respond to client
 		res.status(201).json({
 			success: true,
@@ -364,14 +387,17 @@ const updateShipmentStatus = async (req, res) => {
 			updateData.invoiceUrl = `/uploads/shipments/${req.file.filename}`;
 		}
 
+		// Get the existing shipment to check what changed
+		const existingShipment = await Shipment.findOne({ acid });
+		if (!existingShipment) {
+			return res.status(404).json({ message: "Shipment not found" });
+		}
+
 		// (هنا يتم تحديث الداتا بيز)
 		const shipment = await Shipment.findOneAndUpdate({ acid }, updateData, {
 			new: true, // (مهم جداً لإرجاع الداتا بعد التحديث)
 			runValidators: true,
 		});
-
-		if (!shipment)
-			return res.status(404).json({ message: "Shipment not found" });
 
 		if (updateData.status) {
 			const { io } = req;
@@ -382,6 +408,49 @@ const updateShipmentStatus = async (req, res) => {
 			console.log(
 				`Socket event emitted for ACID: ${acid} with status: ${shipment.status}`
 			);
+		}
+
+		// 📬 Notify employee if client makes updates to shipment details
+		if (shipment.employee_id && req.user && req.user.type === "client") {
+			try {
+				const updateFields = [];
+				
+				// Check what client updated
+				if (updateData.claimNumber && updateData.claimNumber !== existingShipment.claimNumber) {
+					updateFields.push("رقم المطالبة");
+				}
+				if (updateData.claimImageUrl && updateData.claimImageUrl !== existingShipment.claimImageUrl) {
+					updateFields.push("صورة المطالبة");
+				}
+				if (updateData.paymentParty && updateData.paymentParty !== existingShipment.paymentParty) {
+					updateFields.push(`جهة الدفع (${updateData.paymentParty})`);
+				}
+				if (updateData.customDuties && updateData.customDuties !== existingShipment.customDuties) {
+					updateFields.push("الرسوم الجمركية");
+				}
+
+				// Send notification if something relevant was updated
+				if (updateFields.length > 0) {
+					const fieldsText = updateFields.join("، ");
+					await notificationService.createNotification({
+						userId: shipment.employee_id,
+						type: "shipment_status_changed",
+						title: "العميل قام بتحديث بيانات الشحنة",
+						message: `قام العميل بتحديث ${fieldsText} للشحنة ${shipment.acid}`,
+						data: {
+							shipmentId: shipment._id,
+							shipmentAcid: shipment.acid,
+							updatedFields: updateFields,
+							actionUrl: `/employee/shipments/${shipment._id}`,
+						},
+						sendPush: true,
+						priority: "medium",
+					});
+					console.log(`📬 Employee notified about client updates: ${fieldsText}`);
+				}
+			} catch (notifError) {
+				console.error("Failed to send client update notification:", notifError.message);
+			}
 		}
 
 		res.json(shipment); // إرسال الرد الطبيعي للـ API
@@ -432,9 +501,11 @@ const getShipmentrelatedToEmployee = async (req, res) => {
 		const employeeId = req.params.employeeId;
 		console.log("Fetching shipments for employee:", employeeId);
 
-		const shipments = await Shipment.find({ employee_id: employeeId }).sort({
-			createdAt: -1,
-		});
+		const shipments = await Shipment.find({ employee_id: employeeId })
+			.populate('user_id', 'fullname username email phone')
+			.sort({
+				createdAt: -1,
+			});
 
 		console.log(
 			`Found ${shipments.length} shipments for employee ${employeeId}`
@@ -898,6 +969,30 @@ const markDocumentAsUploaded = async (req, res) => {
 
 		console.log("✅ Returning updated document:", updatedDoc);
 
+		// 📬 Notify assigned employee about document upload
+		if (shipment.employee_id && req.user && req.user.type === "client") {
+			try {
+				await notificationService.createNotification({
+					userId: shipment.employee_id,
+					type: "document_uploaded",
+					title: "العميل قام برفع مستند",
+					message: `قام العميل برفع مستند "${document.name}" للشحنة ${shipment.acid}`,
+					data: {
+						shipmentId: shipment._id,
+						shipmentAcid: shipment.acid,
+						documentId: documentId,
+						documentName: document.name,
+						actionUrl: `/employee/shipments/${shipment._id}`,
+					},
+					sendPush: true,
+					priority: "medium",
+				});
+				console.log(`📬 Employee notified about document upload: ${document.name}`);
+			} catch (notifError) {
+				console.error("Failed to send document upload notification:", notifError.message);
+			}
+		}
+
 		res.json({
 			success: true,
 			message: "Document marked as uploaded successfully",
@@ -914,7 +1009,7 @@ const resetUploadedDocument = async (req, res) => {
 	try {
 		const { shipmentId, documentId } = req.params;
 
-		console.log("🗑️ Resetting uploaded document:", {
+		console.log("🗑️ Deleting document completely:", {
 			shipmentId,
 			documentId,
 		});
@@ -931,38 +1026,32 @@ const resetUploadedDocument = async (req, res) => {
 			return res.status(404).json({ message: "Document not found" });
 		}
 
-		// Reset document to pending state
-		document.uploaded = false;
-		document.uploadedAt = null;
-		document.fileId = null;
+		const documentName = document.name;
+
+		// COMPLETELY REMOVE the document from the array
+		shipment.requiredDocuments.pull(documentId);
 
 		await shipment.save();
 
-		console.log("✅ Document reset successfully:", document.name);
+		console.log("✅ Document removed completely:", documentName);
 
 		// Emit socket event
 		if (req.io) {
-			req.io.to(shipment.acid).emit("documentReset", {
+			req.io.to(shipment.acid).emit("documentDeleted", {
 				shipmentId: shipment._id,
 				acid: shipment.acid,
 				documentId: documentId,
-				documentName: document.name,
+				documentName: documentName,
 			});
 		}
 
 		res.json({
 			success: true,
-			message: "تم حذف المستند بنجاح. يمكن للعميل إعادة رفعه.",
-			data: {
-				_id: document._id,
-				name: document.name,
-				uploaded: document.uploaded,
-				requestedAt: document.requestedAt,
-			},
-		});
-	} catch (error) {
-		console.error("Error resetting document:", error);
-		res.status(500).json({ message: error.message });
+			message: "تم حذف المستند بنجاح.",
+	});
+} catch (error) {
+	console.error("Error resetting document:", error);
+	res.status(500).json({ success: false, message: error.message });
 	}
 };
 

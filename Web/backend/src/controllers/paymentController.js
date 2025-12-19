@@ -27,12 +27,42 @@ const createPayment = async (req, res) => {
             transactions,
         });
 
-        // 📬 Send notification for payment receipt upload
+        // 📬 Send notification to client about payment receipt upload
         try {
             await notificationService.notifyPaymentReceiptUploaded(userId, payment._id);
             console.log(`📬 Payment receipt notification sent to user: ${userId}`);
         } catch (notifError) {
             console.error("Failed to send payment receipt notification:", notifError.message);
+        }
+
+        // 📬 Notify assigned employee about client payment upload
+        try {
+            // Find if any invoices in the payment have related shipments with assigned employees
+            for (const transaction of transactions) {
+                if (transaction.invoiceId) {
+                    const invoice = await Invoice.findById(transaction.invoiceId).populate('shipmentId');
+                    if (invoice && invoice.shipmentId && invoice.shipmentId.employee_id) {
+                        await notificationService.createNotification({
+                            userId: invoice.shipmentId.employee_id,
+                            type: "payment_received",
+                            title: "العميل قام برفع إيصال دفع",
+                            message: `قام العميل برفع إيصال دفع للشحنة ${invoice.shipmentId.acid}`,
+                            data: {
+                                paymentId: payment._id,
+                                shipmentId: invoice.shipmentId._id,
+                                shipmentAcid: invoice.shipmentId.acid,
+                                amount: transaction.amount,
+                                actionUrl: `/employee/payments/${payment._id}`,
+                            },
+                            sendPush: true,
+                            priority: "high",
+                        });
+                        console.log(`📬 Employee notified about payment upload for shipment: ${invoice.shipmentId.acid}`);
+                    }
+                }
+            }
+        } catch (notifError) {
+            console.error("Failed to send employee payment notification:", notifError.message);
         }
 
         res.status(201).json(payment);

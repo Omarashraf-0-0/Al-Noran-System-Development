@@ -4,6 +4,7 @@ import Spacer from "./Spacer";
 import Button from "./Button";
 import FieldRow from "./FieldRow";
 import { Link } from "react-router";
+import { isValidEgyptianNationalId } from "../utils/validationUtils";
 
 const RegisterForm = ({ onSubmit }) => {
 	const [formData, setFormData] = React.useState({
@@ -43,8 +44,9 @@ const RegisterForm = ({ onSubmit }) => {
 
 		// التحقق من رقم البطاقة القومية للحسابات الشخصية
 		if (formData.type === "personal") {
-			if (!formData.ssn || formData.ssn.length !== 14) {
-				alert("رجاءً أدخل رقم بطاقة قومية صحيح (14 رقم)");
+			const { isValid, error } = isValidEgyptianNationalId(formData.ssn);
+			if (!isValid) {
+				alert(error);
 				return;
 			}
 		}

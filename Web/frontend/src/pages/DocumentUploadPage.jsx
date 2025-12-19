@@ -8,11 +8,13 @@ import DocumentUploadCard from "../components/DocumentUploadCard";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import Tesseract from "tesseract.js";
 
 const DocumentUploadPage = () => {
 	const navigate = useNavigate();
 	const [userInfo, setUserInfo] = useState(null);
 	const [clientType, setClientType] = useState(null);
+	const [isEgyptian, setIsEgyptian] = useState(true); // Default to Egyptian
 	const [uploads, setUploads] = useState({});
 	const [uploading, setUploading] = useState({});
 	const [progress, setProgress] = useState({});
@@ -59,7 +61,10 @@ const DocumentUploadPage = () => {
 		],
 		personal: [
 			{ key: "power_of_attorney", label: "التوكيل", required: true },
-			{ key: "personal_id", label: "البطاقة الشخصية", required: true },
+			// Dynamic requirement based on isEgyptian state
+			isEgyptian
+				? { key: "personal_id", label: "البطاقة الشخصية", required: true }
+				: { key: "passport", label: "جواز السفر", required: true },
 			// { key: "sample_document", label: "مستند داعم", required: true },
 		],
 	};
@@ -144,6 +149,11 @@ const DocumentUploadPage = () => {
 			});
 			console.log("Mapped uploads:", existingUploads);
 			setUploads(existingUploads);
+
+			// If passport already exists, switch to non-Egyptian view
+			if (existingUploads["passport"]) {
+				setIsEgyptian(false);
+			}
 		} catch (error) {
 			console.error("Error fetching existing uploads:", error);
 		}
@@ -170,6 +180,50 @@ const DocumentUploadPage = () => {
 		if (file.size > 10 * 1024 * 1024) {
 			toast.error("حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت");
 			return;
+		}
+
+		// 🔍 Validation: Check if it's an Egyptian National ID
+		// Only validate if user is Egyptian AND uploading a personal ID
+		if (
+			isEgyptian &&
+			(documentKey === "personal_id" ||
+				documentKey === "personal_id_of_representative")
+		) {
+			const loadingToast = toast.loading("جاري التحقق من هوية المستند...");
+			try {
+				const result = await Tesseract.recognize(file, "ara+eng", {
+					logger: (m) => console.log(m),
+				});
+				const text = result.data.text.toLowerCase();
+				console.log("OCR Result:", text);
+
+				const keywords = [
+					"مصر",
+					"بطاقة",
+					"قومي",
+					"egypt",
+					"identity",
+					"national",
+					"جمهورية",
+					"id",
+				];
+				const isValid = keywords.some((keyword) => text.includes(keyword));
+
+				toast.dismiss(loadingToast);
+
+				if (!isValid) {
+					toast.error(
+						"عفواً، هذا المستند لا يبدو وكأنه بطاقة رقم قومي مصرية. يرجى رفع صورة واضحة."
+					);
+					return;
+				}
+				toast.success("تم التحقق من المستند بنجاح! ✅");
+			} catch (err) {
+				console.error("OCR Error:", err);
+				toast.dismiss(loadingToast);
+				toast.error("حدث خطأ أثناء فحص المستند. يرجى المحاولة مرة أخرى.");
+				return;
+			}
 		}
 
 		// Start upload
@@ -429,6 +483,37 @@ const DocumentUploadPage = () => {
 							completedCount={completedCount}
 							totalCount={totalCount}
 						/>
+
+						{/* Nationality Toggle for Personal Accounts */}
+						{clientType === "personal" && (
+							<div className="mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+								<div className="flex items-center justify-between">
+									<span className="text-gray-700 font-medium">الجنسية:</span>
+									<div className="flex items-center gap-4">
+										<label className="cursor-pointer flex items-center gap-2">
+											<input
+												type="radio"
+												name="nationality"
+												className="radio radio-primary radio-sm"
+												checked={isEgyptian}
+												onChange={() => setIsEgyptian(true)}
+											/>
+											<span className="text-sm">مصري (بطاقة رقم قومي)</span>
+										</label>
+										<label className="cursor-pointer flex items-center gap-2">
+											<input
+												type="radio"
+												name="nationality"
+												className="radio radio-primary radio-sm"
+												checked={!isEgyptian}
+												onChange={() => setIsEgyptian(false)}
+											/>
+											<span className="text-sm">غير مصري (جواز سفر)</span>
+										</label>
+									</div>
+								</div>
+							</div>
+						)}
 
 						{/* Document Upload Cards - TODO: RBAC - Only show upload cards if user has permission */}
 						<div className="space-y-4 mb-6">
