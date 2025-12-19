@@ -18,45 +18,88 @@ const uploadSchema = new mongoose.Schema(
 			enum: ["factory", "commercial", "personal", null],
 			default: null,
 		},
-		
+
 		// File categorization
 		category: {
 			type: String,
-			enum: ["registration", "acidrequest", "acid", "shipment", "invoice", "archive"],
+			enum: [
+				"registration",
+				"acidrequest",
+				"acid",
+				"shipment",
+				"invoice",
+				"archive",
+				// Export categories
+				"ucr_request", // طلب UCR
+				"export_shipment", // شحنة تصدير
+				"certificate_origin", // شهادة المنشأ
+				"form_46", // نموذج 46
+				"payment"
+			],
 			required: true,
 		},
 		documentType: {
 			type: String,
 			enum: [
+				// Profile photo
+				"profilePhoto", // صورة الملف الشخصي
+
 				// Factory documents (مصنع)
-				"commercial_register",        // السجل التجاري
-				"tax_card",                   // البطاقة الضريبية
-				"contract",                   // العقد
-				"industrial_register",        // السجل الصناعي
-				"certificate_vat",            // شهادة القيمة المضافة
-				"production_supplies",        // مستلزمات الإنتاج
-				"power_of_attorney",          // التوكيل
+				"commercial_register", // السجل التجاري
+				"tax_card", // البطاقة الضريبية
+				"contract", // العقد
+				"industrial_register", // السجل الصناعي
+				"certificate_vat", // شهادة القيمة المضافة
+				"production_supplies", // مستلزمات الإنتاج
+				"power_of_attorney", // التوكيل
 				"personal_id_of_representative", // بطاقة ممثل/مندوب
-				
+
 				// Commercial documents (تجاري)
-				"import_export_card",         // بطاقة استيراد/تصدير
-				"trade_certificates",         // شهادات تجارية
-				
+				"import_export_card", // بطاقة استيراد/تصدير
+				"trade_certificates", // شهادات تجارية
+
 				// Personal documents (فردي)
-				"personal_id",                // البطاقة الشخصية
-				"sample_document",            // مستند داعم
-				
-				// Shipment documents
+				"personal_id", // البطاقة الشخصية
+				"sample_document", // مستند داعم
+
+				// Shipment documents (Import)
 				"bill_of_lading",
 				"delivery_permit",
 				"discharge_docs",
 				"proforma_invoice",
-				
+
+				// =====================
+				// Export Documents (NEW)
+				// =====================
+				// UCR Request Documents
+				"bank_waiver", // التنازل البنكي (Noran Certified only)
+				"export_invoice", // فاتورة التصدير
+				"export_packing_list", // كشف عبوة التصدير
+				"shipping_permit", // إذن الشحن
+				"awb", // Air Waybill (بوليصة الشحن الجوي)
+				"bl", // Bill of Lading (بوليصة الشحن البحري)
+
+				// Noran Created Documents
+				"noran_invoice", // فاتورة النوران
+				"noran_packing_list", // كشف عبوة النوران
+
+				// Regulatory Documents
+				"regulatory_approval", // موافقة الجهات الرقابية
+				"phytosanitary_cert", // شهادة صحة نباتية
+				"veterinary_cert", // شهادة صحة حيوانية
+				"health_cert", // شهادة صحية
+
+				// Certificate of Origin
+				"certificate_of_origin", // شهادة المنشأ
+
+				// Form 46
+				"form_46", // نموذج 46
+
 				// Other
 				"invoice",
 				"report",
 				"other",
-				null
+				null,
 			],
 			default: null,
 		},
@@ -64,7 +107,7 @@ const uploadSchema = new mongoose.Schema(
 			type: String,
 			default: null,
 		},
-		
+
 		// File information
 		filename: {
 			type: String,
@@ -91,7 +134,7 @@ const uploadSchema = new mongoose.Schema(
 			type: Number,
 			required: true,
 		},
-		
+
 		// Legacy fields (for backward compatibility)
 		uploadedBy: {
 			type: mongoose.Schema.Types.ObjectId,
@@ -114,6 +157,26 @@ const uploadSchema = new mongoose.Schema(
 		uploadedAt: {
 			type: Date,
 			default: Date.now,
+		},
+
+		// Document approval fields
+		approvalStatus: {
+			type: String,
+			enum: ["pending", "approved", "rejected"],
+			default: "pending",
+		},
+		approvedBy: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "User",
+			default: null,
+		},
+		approvedAt: {
+			type: Date,
+			default: null,
+		},
+		rejectionReason: {
+			type: String,
+			default: null,
 		},
 	},
 	{
@@ -168,25 +231,25 @@ uploadSchema.statics.getRequiredDocuments = function (clientType) {
 			"personal_id_of_representative",
 			"trade_certificates",
 		],
-		personal: [
-			"power_of_attorney",
-			"personal_id",
-			"sample_document",
-		],
+		personal: ["power_of_attorney", "personal_id"],
 	};
 	return requiredDocs[clientType] || [];
 };
 
 // Method to check if user has completed required uploads
-uploadSchema.statics.checkRequiredUploads = async function (userId, clientType) {
+uploadSchema.statics.checkRequiredUploads = async function (
+	userId,
+	clientType
+) {
 	const required = this.getRequiredDocuments(clientType);
 	const uploaded = await this.find({
 		userId,
-		category: "registration",
+		category: { $in: ["registration", "client_registration_docs"] },
 		isActive: true,
+		approvalStatus: "approved",
 	}).distinct("documentType");
-	
-	const missing = required.filter(doc => !uploaded.includes(doc));
+
+	const missing = required.filter((doc) => !uploaded.includes(doc));
 	return {
 		completed: missing.length === 0,
 		missing,

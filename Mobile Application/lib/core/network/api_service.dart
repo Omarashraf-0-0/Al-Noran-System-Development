@@ -16,12 +16,11 @@ class ApiService {
 
     // لو Android (Emulator أو Physical Device)
     if (Platform.isAndroid) {
-      // للموبايل الحقيقي - استخدم IP اللابتوب على نفس الشبكة
-      // تأكد إن اللابتوب والموبايل على نفس WiFi
-      return 'http://192.168.1.14:3500';
-
-      // لو Emulator فقط، استخدم:
+      // للـ Emulator - استخدم IP الخاص
       // return 'http://10.0.2.2:3500';
+
+      // لو موبايل حقيقي، استخدم IP اللابتوب:
+      return 'http://192.168.137.139:3500';
     }
 
     // لو iOS Simulator أو جهاز حقيقي
@@ -98,6 +97,79 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في الاتصال بالسيرفر - تأكد من تشغيل السيرفر',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Google Sign In API
+  static Future<Map<String, dynamic>> googleSignIn({
+    required String email,
+    required String displayName,
+    required String googleId,
+    String? idToken,
+    String? accessToken,
+  }) async {
+    try {
+      print('🔐 [API] Google Sign In request to: $baseUrl/api/auth/google');
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/auth/google'),
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true',
+            },
+            body: jsonEncode({
+              'email': email,
+              'displayName': displayName,
+              'googleId': googleId,
+              'idToken': idToken,
+              'accessToken': accessToken,
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception('انتهت مهلة الاتصال - يرجى المحاولة مرة أخرى');
+            },
+          );
+
+      print('🔐 [API] Google Sign In response status: ${response.statusCode}');
+      print('🔐 [API] Google Sign In response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('🔐 [API] Google Sign In successful!');
+
+        // إذا كان مستخدم موجود، احفظ الـ token
+        if (data['token'] != null) {
+          await saveToken(data['token']);
+          if (data['user'] != null) {
+            await saveUserData(data['user']);
+          }
+        }
+
+        return {
+          'success': true,
+          'isNewUser': data['isNewUser'] ?? false,
+          'message': data['message'] ?? 'تم تسجيل الدخول بنجاح',
+          'data': data,
+        };
+      } else {
+        print('🔐 [API] Google Sign In failed: ${data['message']}');
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تسجيل الدخول بجوجل',
+          'error': data['error'],
+        };
+      }
+    } catch (e) {
+      print('🔐 [API] Google Sign In exception: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في الاتصال بالسيرفر',
         'error': e.toString(),
       };
     }
@@ -238,6 +310,14 @@ class ApiService {
     await prefs.setString('user_email', user['email'] ?? '');
     await prefs.setString('user_type', user['type'] ?? '');
     await prefs.setString('username', user['username'] ?? '');
+
+    // حفظ clientType بشكل منفصل للوصول السريع
+    final clientType =
+        user['clientDetails']?['clientType']?.toString() ??
+        user['clientType']?.toString() ??
+        'personal';
+    await prefs.setString('client_type', clientType);
+    print('💾 [saveUserData] ClientType saved: $clientType');
     print('💾 [saveUserData] Saved to SharedPreferences');
   }
 
@@ -582,8 +662,35 @@ class ApiService {
       var fileLength = await file.length();
       print('📦 File size: ${(fileLength / 1024).toStringAsFixed(2)} KB');
 
+      // Check if file exists and has content
+      if (!await file.exists()) {
+        print('❌ [Upload] File does not exist at path: ${file.path}');
+        return {
+          'success': false,
+          'message': 'الملف غير موجود',
+          'error': 'File does not exist at path: ${file.path}',
+        };
+      }
+
+      if (fileLength == 0) {
+        print('❌ [Upload] File is empty');
+        return {
+          'success': false,
+          'message': 'الملف فارغ',
+          'error': 'File is empty',
+        };
+      }
+
       // Detect correct mimetype from file extension
-      String fileName = file.path.split('/').last;
+      // Handle both Unix (/) and Windows (\) path separators
+      String fileName = file.path.split(Platform.pathSeparator).last;
+      // Also handle cases where path might have mixed separators
+      if (fileName.contains('/')) {
+        fileName = fileName.split('/').last;
+      }
+      if (fileName.contains('\\')) {
+        fileName = fileName.split('\\').last;
+      }
       String fileExtension = fileName.split('.').last.toLowerCase();
 
       MediaType? contentType;
@@ -990,8 +1097,9 @@ class ApiService {
         return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
       }
 
+      // Use the profile change-password endpoint (without userId in URL)
       final response = await http.put(
-        Uri.parse('$baseUrl/api/users/$userId/change-password'),
+        Uri.parse('$baseUrl/api/users/change-password'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -1252,6 +1360,61 @@ class ApiService {
     }
   }
 
+  /// Mark Document as Uploaded
+  /// Updates the required document status to uploaded with the file ID
+  static Future<Map<String, dynamic>> markDocumentAsUploaded({
+    required String shipmentId,
+    required String documentId,
+    required String fileId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📝 [markDocumentAsUploaded] Marking document: $documentId');
+      print('📝 [markDocumentAsUploaded] For shipment: $shipmentId');
+      print('📝 [markDocumentAsUploaded] With file ID: $fileId');
+
+      final response = await http.patch(
+        Uri.parse(
+          '$baseUrl/api/shipments/id/$shipmentId/required-documents/$documentId',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'fileId': fileId}),
+      );
+
+      print('📝 [markDocumentAsUploaded] Status: ${response.statusCode}');
+      print('📝 [markDocumentAsUploaded] Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم تحديث حالة المستند',
+          'data': data['data'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث حالة المستند',
+        };
+      }
+    } catch (e) {
+      print('❌ [markDocumentAsUploaded] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث حالة المستند',
+        'error': e.toString(),
+      };
+    }
+  }
+
   /// Create Shipment
   /// Creates a new shipment
   static Future<Map<String, dynamic>> createShipment({
@@ -1428,12 +1591,107 @@ class ApiService {
     }
   }
 
+  /// Get All ACID Requests for current user
+  static Future<Map<String, dynamic>> getAllAcidRequests() async {
+    try {
+      final token = await SecureStorage.getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'لم يتم تسجيل الدخول'};
+      }
+
+      print('📦 [getAllAcidRequests] Fetching ACID requests...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/acid'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
+
+      print('📦 [getAllAcidRequests] Response status: ${response.statusCode}');
+      print('📦 [getAllAcidRequests] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        // Handle both array response and object with requests array
+        List<dynamic> requests = [];
+        if (data is List) {
+          requests = data;
+        } else if (data is Map && data.containsKey('requests')) {
+          requests = data['requests'];
+        }
+
+        return {'success': true, 'requests': requests};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب طلبات ACID',
+        };
+      }
+    } catch (e) {
+      print('❌ [getAllAcidRequests] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب طلبات ACID',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get ACID Request by ACID code
+  static Future<Map<String, dynamic>> getAcidRequestByCode(
+    String acidCode,
+  ) async {
+    try {
+      final token = await SecureStorage.getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'لم يتم تسجيل الدخول'};
+      }
+
+      print('📦 [getAcidRequestByCode] Fetching ACID: $acidCode');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/acid/$acidCode'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
+
+      print(
+        '📦 [getAcidRequestByCode] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'request': data};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب طلب ACID',
+        };
+      }
+    } catch (e) {
+      print('❌ [getAcidRequestByCode] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب طلب ACID',
+        'error': e.toString(),
+      };
+    }
+  }
+
   /// Upload file (general purpose)
   static Future<Map<String, dynamic>> uploadFile({
     required String filePath,
     required String category,
     String? documentType,
     String? relatedId,
+    String? clientType,
   }) async {
     try {
       final token = await SecureStorage.getToken();
@@ -1441,11 +1699,29 @@ class ApiService {
         return {'success': false, 'message': 'لم يتم تسجيل الدخول'};
       }
 
+      // Auto-detect clientType for registration category if not provided
+      String? effectiveClientType = clientType;
+      if (category == 'registration' && effectiveClientType == null) {
+        try {
+          final userData = await SecureStorage.getUserData();
+          effectiveClientType = userData?['clientDetails']?['clientType'];
+          print(
+            '📤 [uploadFile] Auto-detected clientType: $effectiveClientType',
+          );
+        } catch (e) {
+          print('📤 [uploadFile] Could not auto-detect clientType: $e');
+        }
+      }
+
       print('📤 [uploadFile] Uploading: $filePath');
+      print('📤 [uploadFile] URL: $baseUrl/api/uploads');
+      print(
+        '📤 [uploadFile] Category: $category, ClientType: $effectiveClientType',
+      );
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/api/uploads/upload'),
+        Uri.parse('$baseUrl/api/uploads'),
       );
 
       request.headers.addAll({
@@ -1453,11 +1729,44 @@ class ApiService {
         'ngrok-skip-browser-warning': 'true',
       });
 
-      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+      // Get filename and detect mimetype
+      String fileName = filePath.split('/').last;
+      if (fileName.contains('\\')) {
+        fileName = fileName.split('\\').last;
+      }
+      String fileExtension = fileName.split('.').last.toLowerCase();
+
+      MediaType? contentType;
+      if (fileExtension == 'pdf') {
+        contentType = MediaType('application', 'pdf');
+      } else if (['jpg', 'jpeg'].contains(fileExtension)) {
+        contentType = MediaType('image', 'jpeg');
+      } else if (fileExtension == 'png') {
+        contentType = MediaType('image', 'png');
+      } else if (fileExtension == 'gif') {
+        contentType = MediaType('image', 'gif');
+      } else if (fileExtension == 'webp') {
+        contentType = MediaType('image', 'webp');
+      } else {
+        contentType = MediaType('application', 'octet-stream');
+      }
+
+      print('📤 [uploadFile] File: $fileName, Type: ${contentType.mimeType}');
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          filePath,
+          contentType: contentType,
+        ),
+      );
 
       request.fields['category'] = category;
       if (documentType != null) request.fields['documentType'] = documentType;
       if (relatedId != null) request.fields['relatedId'] = relatedId;
+      if (effectiveClientType != null)
+        request.fields['clientType'] = effectiveClientType;
+      request.fields['userType'] = 'client';
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -1484,6 +1793,1625 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في رفع الملف',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get upload details by ID
+  static Future<Map<String, dynamic>> getUploadDetails(String uploadId) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📥 [getUploadDetails] Fetching upload: $uploadId');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/uploads/$uploadId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📥 [getUploadDetails] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('✅ [getUploadDetails] Success');
+        return {'success': true, 'upload': data['upload'] ?? data['data']};
+      } else {
+        print('❌ [getUploadDetails] Failed: ${response.statusCode}');
+        return {'success': false, 'message': 'فشل في جلب معلومات الملف'};
+      }
+    } catch (e) {
+      print('❌ [getUploadDetails] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب معلومات الملف',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // ============= CHAT API =============
+
+  /// Get all chats for current user
+  static Future<Map<String, dynamic>> getChats() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💬 [getChats] Fetching chats...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/chat'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💬 [getChats] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'chats': data['chats'] ?? []};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحميل المحادثات',
+        };
+      }
+    } catch (e) {
+      print('❌ [getChats] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل المحادثات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get or create a chat for a specific shipment
+  static Future<Map<String, dynamic>> getOrCreateChat(String shipmentId) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💬 [getOrCreateChat] Creating chat for shipment: $shipmentId');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/chat'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'shipmentId': shipmentId}),
+      );
+
+      print('💬 [getOrCreateChat] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'chat': data['chat']};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل إنشاء المحادثة',
+        };
+      }
+    } catch (e) {
+      print('❌ [getOrCreateChat] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في إنشاء المحادثة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get messages for a specific chat
+  static Future<Map<String, dynamic>> getMessages(String chatId) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💬 [getMessages] Fetching messages for chat: $chatId');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/chat/$chatId/messages'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💬 [getMessages] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'messages': data['messages'] ?? []};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحميل الرسائل',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMessages] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل الرسائل',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Send a message in a chat
+  static Future<Map<String, dynamic>> sendMessage(
+    String chatId,
+    String text,
+  ) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💬 [sendMessage] Sending message to chat: $chatId');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/chat/$chatId/messages'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'text': text}),
+      );
+
+      print('💬 [sendMessage] Status: ${response.statusCode}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'message': data['message']};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل إرسال الرسالة',
+        };
+      }
+    } catch (e) {
+      print('❌ [sendMessage] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في إرسال الرسالة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get Upload By ID
+  /// Fetches complete file details including URL, mimetype, filename, etc.
+  static Future<Map<String, dynamic>> getUploadById({
+    required String uploadId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📄 [getUploadById] Fetching upload: $uploadId');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/uploads/$uploadId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📄 [getUploadById] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'upload': data['upload']};
+      } else if (response.statusCode == 404) {
+        return {'success': false, 'message': 'الملف غير موجود'};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحميل بيانات الملف',
+        };
+      }
+    } catch (e) {
+      print('❌ [getUploadById] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل بيانات الملف',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // ============= PROFILE PHOTO APIS =============
+
+  /// Get User Profile with Photo
+  /// Fetches user profile including profile photo presigned URL
+  static Future<Map<String, dynamic>> getUserProfile() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('👤 [getUserProfile] Fetching user profile...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/users/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('👤 [getUserProfile] Status: ${response.statusCode}');
+      print('👤 [getUserProfile] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final user = data['user'];
+
+        print(
+          '👤 [getUserProfile] User profilePhoto field: ${user?['profilePhoto']}',
+        );
+
+        // Get presigned URL for profile photo if exists
+        if (user != null && user['profilePhoto'] != null) {
+          final photoKey = user['profilePhoto'];
+          print('👤 [getUserProfile] Photo key: $photoKey');
+
+          if (photoKey.toString().isNotEmpty &&
+              !photoKey.toString().startsWith('http')) {
+            try {
+              print(
+                '👤 [getUserProfile] Getting presigned URL for key: $photoKey',
+              );
+              final photoUrl = await getPresignedUrl(photoKey.toString());
+              print('👤 [getUserProfile] Got presigned URL: $photoUrl');
+              if (photoUrl != null) {
+                user['profilePhotoUrl'] = photoUrl;
+              }
+            } catch (e) {
+              print('⚠️ [getUserProfile] Could not get photo URL: $e');
+            }
+          } else if (photoKey.toString().startsWith('http')) {
+            print('👤 [getUserProfile] Photo is already a URL');
+            user['profilePhotoUrl'] = photoKey;
+          }
+        } else {
+          print('👤 [getUserProfile] No profile photo found');
+        }
+
+        return {'success': true, 'user': user};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحميل بيانات المستخدم',
+        };
+      }
+    } catch (e) {
+      print('❌ [getUserProfile] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل بيانات المستخدم',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get Presigned URL for S3 Key
+  static Future<String?> getPresignedUrl(String s3Key) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) return null;
+
+      final encodedKey = Uri.encodeComponent(s3Key);
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/uploads/presigned-url/$encodedKey'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['url'];
+      }
+      return null;
+    } catch (e) {
+      print('❌ [getPresignedUrl] Error: $e');
+      return null;
+    }
+  }
+
+  /// Upload Profile Photo
+  /// Uploads a profile photo to S3 and updates user profile
+  static Future<Map<String, dynamic>> uploadProfilePhoto({
+    required File file,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📸 [uploadProfilePhoto] Uploading profile photo...');
+
+      // First upload to S3
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/uploads'),
+      );
+
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Detect mimetype
+      String fileName = file.path.split('/').last;
+      String fileExtension = fileName.split('.').last.toLowerCase();
+      MediaType contentType;
+
+      if (['jpg', 'jpeg'].contains(fileExtension)) {
+        contentType = MediaType('image', 'jpeg');
+      } else if (fileExtension == 'png') {
+        contentType = MediaType('image', 'png');
+      } else {
+        contentType = MediaType('image', 'jpeg');
+      }
+
+      var fileStream = http.ByteStream(file.openRead());
+      var fileLength = await file.length();
+
+      var multipartFile = http.MultipartFile(
+        'file',
+        fileStream,
+        fileLength,
+        filename: fileName,
+        contentType: contentType,
+      );
+      request.files.add(multipartFile);
+
+      // Use 'archive' category since 'profile' is not supported
+      request.fields['category'] = 'archive';
+      // Don't send documentType for profile photos (not in backend enum)
+      request.fields['description'] = 'صورة البروفايل';
+      request.fields['userType'] = 'client';
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      print('📸 [uploadProfilePhoto] Upload status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final uploadData = jsonDecode(response.body);
+        final s3Key =
+            uploadData['data']?['s3Key'] ?? uploadData['upload']?['s3Key'];
+
+        if (s3Key != null) {
+          // Update user profile with the S3 key
+          final updateResult = await updateUserProfilePhoto(s3Key: s3Key);
+          if (updateResult['success'] == true) {
+            // Get presigned URL for the new photo
+            final photoUrl = await getPresignedUrl(s3Key);
+            return {
+              'success': true,
+              'message': 'تم رفع صورة البروفايل بنجاح',
+              's3Key': s3Key,
+              'photoUrl': photoUrl,
+            };
+          } else {
+            return updateResult;
+          }
+        }
+
+        return {
+          'success': true,
+          'message': 'تم رفع الصورة بنجاح',
+          'data': uploadData,
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل رفع صورة البروفايل',
+        };
+      }
+    } catch (e) {
+      print('❌ [uploadProfilePhoto] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في رفع صورة البروفايل',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update User Profile Photo
+  /// Updates user's profilePhoto field with S3 key
+  static Future<Map<String, dynamic>> updateUserProfilePhoto({
+    required String s3Key,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      // Get current user data first
+      final profileResponse = await http.get(
+        Uri.parse('$baseUrl/api/users/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (profileResponse.statusCode != 200) {
+        return {'success': false, 'message': 'فشل جلب بيانات المستخدم'};
+      }
+
+      final profileData = jsonDecode(profileResponse.body);
+      final user = profileData['user'];
+
+      print('📸 [updateUserProfilePhoto] Updating profile photo to: $s3Key');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/users/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'fullname': user['fullname'],
+          'username': user['username'],
+          'phone': user['phone'],
+          'email': user['email'],
+          'profilePhoto': s3Key,
+        }),
+      );
+
+      print('📸 [updateUserProfilePhoto] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        // Update local storage
+        final data = jsonDecode(response.body);
+        if (data['user'] != null) {
+          await SecureStorage.saveUserData(data['user']);
+        }
+        return {
+          'success': true,
+          'message': 'تم تحديث صورة البروفايل بنجاح',
+          'user': data['user'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث صورة البروفايل',
+        };
+      }
+    } catch (e) {
+      print('❌ [updateUserProfilePhoto] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث صورة البروفايل',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Delete Profile Photo
+  /// Removes profile photo from user profile
+  static Future<Map<String, dynamic>> deleteProfilePhoto() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      // Get current user data first
+      final profileResponse = await http.get(
+        Uri.parse('$baseUrl/api/users/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (profileResponse.statusCode != 200) {
+        return {'success': false, 'message': 'فشل جلب بيانات المستخدم'};
+      }
+
+      final profileData = jsonDecode(profileResponse.body);
+      final user = profileData['user'];
+
+      print('🗑️ [deleteProfilePhoto] Removing profile photo...');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/users/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'fullname': user['fullname'],
+          'username': user['username'],
+          'phone': user['phone'],
+          'email': user['email'],
+          'profilePhoto': null,
+        }),
+      );
+
+      print('🗑️ [deleteProfilePhoto] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'تم حذف صورة البروفايل بنجاح'};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل حذف صورة البروفايل',
+        };
+      }
+    } catch (e) {
+      print('❌ [deleteProfilePhoto] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في حذف صورة البروفايل',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // =====================================================
+  // UCR REQUEST ENDPOINTS (Export)
+  // =====================================================
+
+  /// Create UCR Request
+  /// Creates a new UCR (export) request
+  static Future<Map<String, dynamic>> createUcrRequest(
+    Map<String, dynamic> requestData,
+  ) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📤 [createUcrRequest] Creating UCR request...');
+      print('📤 [createUcrRequest] Data: $requestData');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/ucr'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(requestData),
+      );
+
+      print('📤 [createUcrRequest] Status: ${response.statusCode}');
+      print('📤 [createUcrRequest] Response: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم إنشاء طلب UCR بنجاح',
+          'request': data['request'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل إنشاء طلب UCR',
+        };
+      }
+    } catch (e) {
+      print('❌ [createUcrRequest] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في إنشاء طلب UCR',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get My UCR Requests
+  /// Gets all UCR requests for current user
+  static Future<Map<String, dynamic>> getMyUcrRequests() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📋 [getMyUcrRequests] Fetching UCR requests...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/ucr'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📋 [getMyUcrRequests] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'data': data['data'] ?? []};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب طلبات UCR',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMyUcrRequests] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب طلبات UCR',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get My Export Shipments
+  /// Gets all export shipments for the current user
+  static Future<Map<String, dynamic>> getMyExportShipments() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📦 [getMyExportShipments] Fetching export shipments...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/export-shipments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📦 [getMyExportShipments] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('📦 [getMyExportShipments] Response keys: ${data.keys}');
+
+        // Backend returns 'shipments' not 'data'
+        final shipments = data['shipments'] ?? data['data'] ?? [];
+        print('📦 [getMyExportShipments] Got ${shipments.length} shipments');
+
+        return {'success': true, 'data': shipments};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب شحنات التصدير',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMyExportShipments] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب شحنات التصدير',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get Export Shipment by ID
+  /// Gets a single export shipment by its ID
+  static Future<Map<String, dynamic>> getExportShipmentById({
+    required String id,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🚢 [getExportShipmentById] Fetching export shipment: $id');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/export-shipments/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🚢 [getExportShipmentById] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': data['shipment'] ?? data['data'] ?? data,
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب تفاصيل الشحنة',
+        };
+      }
+    } catch (e) {
+      print('❌ [getExportShipmentById] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب تفاصيل الشحنة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get UCR Request by ID
+  /// Gets a single UCR request by its ID
+  static Future<Map<String, dynamic>> getUcrRequestById({
+    required String id,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📋 [getUcrRequestById] Fetching UCR request: $id');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/ucr/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📋 [getUcrRequestById] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'data': data['data'] ?? data};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب تفاصيل الطلب',
+        };
+      }
+    } catch (e) {
+      print('❌ [getUcrRequestById] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب تفاصيل الطلب',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // =====================================================
+  // 🔔 NOTIFICATIONS API
+  // =====================================================
+
+  /// Get user notifications with pagination
+  static Future<Map<String, dynamic>> getNotifications({
+    int page = 1,
+    int limit = 20,
+    String? type,
+    bool? isRead,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [getNotifications] Fetching notifications... page: $page');
+
+      String url = '$baseUrl/api/notifications?page=$page&limit=$limit';
+      if (type != null) url += '&type=$type';
+      if (isRead != null) url += '&isRead=$isRead';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [getNotifications] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'notifications': data['notifications'] ?? [],
+          'pagination': data['pagination'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب الإشعارات',
+        };
+      }
+    } catch (e) {
+      print('❌ [getNotifications] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب الإشعارات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get unread notifications count
+  static Future<Map<String, dynamic>> getUnreadNotificationsCount() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [getUnreadCount] Fetching unread count...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/notifications/unread-count'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [getUnreadCount] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('🔔 [getUnreadCount] Response: $data');
+        // Backend returns 'unreadCount' not 'count'
+        final count = data['unreadCount'] ?? data['count'] ?? 0;
+        return {'success': true, 'count': count};
+      } else {
+        return {'success': false, 'count': 0};
+      }
+    } catch (e) {
+      print('❌ [getUnreadCount] Error: $e');
+      return {'success': false, 'count': 0};
+    }
+  }
+
+  /// Mark notification as read
+  static Future<Map<String, dynamic>> markNotificationAsRead(
+    String notificationId,
+  ) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [markAsRead] Marking notification $notificationId as read...');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/notifications/$notificationId/read'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [markAsRead] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'تم تحديد الإشعار كمقروء'};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث الإشعار',
+        };
+      }
+    } catch (e) {
+      print('❌ [markAsRead] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث الإشعار',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Mark all notifications as read
+  static Future<Map<String, dynamic>> markAllNotificationsAsRead() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [markAllAsRead] Marking all notifications as read...');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/notifications/read-all'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [markAllAsRead] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم تحديد جميع الإشعارات كمقروءة',
+          'modifiedCount': data['modifiedCount'] ?? 0,
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث الإشعارات',
+        };
+      }
+    } catch (e) {
+      print('❌ [markAllAsRead] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث الإشعارات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Delete a notification
+  static Future<Map<String, dynamic>> deleteNotification(
+    String notificationId,
+  ) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [deleteNotification] Deleting notification $notificationId...');
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/notifications/$notificationId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [deleteNotification] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'تم حذف الإشعار بنجاح'};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل حذف الإشعار',
+        };
+      }
+    } catch (e) {
+      print('❌ [deleteNotification] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في حذف الإشعار',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Clear all read notifications
+  static Future<Map<String, dynamic>> clearReadNotifications() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [clearReadNotifications] Clearing read notifications...');
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/notifications/clear-read'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [clearReadNotifications] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم حذف الإشعارات المقروءة بنجاح',
+          'deletedCount': data['deletedCount'] ?? 0,
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل حذف الإشعارات المقروءة',
+        };
+      }
+    } catch (e) {
+      print('❌ [clearReadNotifications] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في حذف الإشعارات المقروءة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update FCM token for push notifications
+  static Future<Map<String, dynamic>> updateFCMToken(String fcmToken) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [updateFCMToken] Updating FCM token...');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/notifications/fcm-token'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'fcmToken': fcmToken}),
+      );
+
+      print('🔔 [updateFCMToken] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'تم تحديث الـ FCM Token بنجاح'};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث الـ FCM Token',
+        };
+      }
+    } catch (e) {
+      print('❌ [updateFCMToken] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث الـ FCM Token',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get notification settings
+  static Future<Map<String, dynamic>> getNotificationSettings() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [getNotificationSettings] Fetching settings...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/notifications/settings'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🔔 [getNotificationSettings] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'settings': data['settings']};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب إعدادات الإشعارات',
+        };
+      }
+    } catch (e) {
+      print('❌ [getNotificationSettings] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب إعدادات الإشعارات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update notification settings
+  static Future<Map<String, dynamic>> updateNotificationSettings({
+    bool? pushEnabled,
+    bool? emailEnabled,
+    bool? soundEnabled,
+    Map<String, bool>? categories,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [updateNotificationSettings] Updating settings...');
+
+      final Map<String, dynamic> body = {};
+      if (pushEnabled != null) body['pushEnabled'] = pushEnabled;
+      if (emailEnabled != null) body['emailEnabled'] = emailEnabled;
+      if (soundEnabled != null) body['soundEnabled'] = soundEnabled;
+      if (categories != null) body['categories'] = categories;
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/notifications/settings'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      print('🔔 [updateNotificationSettings] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم تحديث إعدادات الإشعارات بنجاح',
+          'settings': data['settings'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تحديث إعدادات الإشعارات',
+        };
+      }
+    } catch (e) {
+      print('❌ [updateNotificationSettings] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث إعدادات الإشعارات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update FCM Token for push notifications
+  static Future<Map<String, dynamic>> updateFcmToken(String fcmToken) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🔔 [updateFcmToken] Sending FCM token to server...');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/notifications/fcm-token'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'fcmToken': fcmToken}),
+      );
+
+      print('🔔 [updateFcmToken] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'تم حفظ FCM Token بنجاح'};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل حفظ FCM Token',
+        };
+      }
+    } catch (e) {
+      print('❌ [updateFcmToken] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في حفظ FCM Token',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // ============================================================================
+  // ======================== PAYMENTS & INVOICES APIs ==========================
+  // ============================================================================
+
+  /// Get My Invoices
+  /// Fetches all invoices for the currently logged-in user
+  static Future<Map<String, dynamic>> getMyInvoices() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💰 [getMyInvoices] Fetching invoices...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/invoices/myInvoices'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💰 [getMyInvoices] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print(
+          '💰 [getMyInvoices] Got ${data['invoices']?.length ?? 0} invoices',
+        );
+        return {
+          'success': true,
+          'invoices': data['invoices'] ?? [],
+          'message': data['message'] ?? 'تم جلب الفواتير بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في جلب الفواتير',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMyInvoices] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب الفواتير',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get My Payments
+  /// Fetches all payments/receipts for the currently logged-in user
+  static Future<Map<String, dynamic>> getMyPayments() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💳 [getMyPayments] Fetching payments...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/payments/my-payments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💳 [getMyPayments] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Backend returns array directly, not wrapped in object
+        final payments = data is List ? data : [];
+        print('💳 [getMyPayments] Got ${payments.length} payments');
+        return {
+          'success': true,
+          'payments': payments,
+          'message': 'تم جلب المدفوعات بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في جلب المدفوعات',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMyPayments] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب المدفوعات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Create Payment (Upload Receipt)
+  /// Creates a new payment with receipt image(s)
+  static Future<Map<String, dynamic>> createPayment({
+    required List<String> imageUrls,
+    String paymentMethod = 'BANK_TRANSFER',
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print(
+        '💳 [createPayment] Creating payment with ${imageUrls.length} receipts...',
+      );
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/payments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'transactions':
+              imageUrls
+                  .map((url) => {'imageUrls': url, 'status': 'PENDING'})
+                  .toList(),
+          'paymentMethod': paymentMethod,
+        }),
+      );
+
+      print('💳 [createPayment] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'payment': data['payment'],
+          'message': data['message'] ?? 'تم رفع الإيصال بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في رفع الإيصال',
+        };
+      }
+    } catch (e) {
+      print('❌ [createPayment] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في رفع الإيصال',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update Payment Receipt
+  /// Updates the receipt image for a pending or rejected payment
+  static Future<Map<String, dynamic>> updatePaymentReceipt({
+    required String paymentId,
+    required String imageUrl,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💳 [updatePaymentReceipt] Updating payment: $paymentId');
+
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/payments/$paymentId/receipt'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'imageUrls': imageUrl}),
+      );
+
+      print('💳 [updatePaymentReceipt] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'payment': data['payment'],
+          'message': data['message'] ?? 'تم تحديث الإيصال بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في تحديث الإيصال',
+        };
+      }
+    } catch (e) {
+      print('❌ [updatePaymentReceipt] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث الإيصال',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Pay Invoice from Wallet
+  /// Pays an invoice using the user's wallet balance
+  static Future<Map<String, dynamic>> payInvoice(String invoiceId) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💰 [payInvoice] Paying invoice: $invoiceId');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/invoices/$invoiceId/pay'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💰 [payInvoice] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم الدفع بنجاح',
+          'invoice': data['invoice'],
+          'newBalance': data['newBalance'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {'success': false, 'message': data['message'] ?? 'فشل في الدفع'};
+      }
+    } catch (e) {
+      print('❌ [payInvoice] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في عملية الدفع',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get User Wallet Balance
+  /// Gets the current wallet balance from user profile
+  static Future<Map<String, dynamic>> getWalletBalance() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('👛 [getWalletBalance] Fetching wallet balance...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/auth/me'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('👛 [getWalletBalance] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final wallet = data['user']?['wallet'] ?? 0;
+        print('👛 [getWalletBalance] Wallet: $wallet EGP');
+        return {'success': true, 'wallet': wallet, 'user': data['user']};
+      } else {
+        return {'success': false, 'message': 'فشل في جلب رصيد المحفظة'};
+      }
+    } catch (e) {
+      print('❌ [getWalletBalance] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب رصيد المحفظة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Upload Receipt Image to Cloudinary
+  /// Uploads a receipt image and returns the URL
+  static Future<Map<String, dynamic>> uploadReceiptImage(File imageFile) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📤 [uploadReceiptImage] Uploading receipt image...');
+
+      // Create multipart request
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/uploads'),
+      );
+
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add category field (required by backend)
+      request.fields['category'] = 'payment';
+      // documentType is optional for payment category, backend will accept null
+
+      // Add file
+      final fileExtension = imageFile.path.split('.').last.toLowerCase();
+      String mimeType = 'image/jpeg';
+      if (fileExtension == 'png') mimeType = 'image/png';
+      if (fileExtension == 'gif') mimeType = 'image/gif';
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          imageFile.path,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('📤 [uploadReceiptImage] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        // Backend returns: { success: true, upload: { url: "...", publicUrl: "..." } }
+        final uploadData = data['upload'] ?? {};
+        final url = uploadData['url'] ?? uploadData['publicUrl'] ?? '';
+        print('📤 [uploadReceiptImage] URL: $url');
+        return {
+          'success': true,
+          'url': url,
+          'uploadId': uploadData['id'],
+          'message': data['message'] ?? 'تم رفع الصورة بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في رفع الصورة',
+        };
+      }
+    } catch (e) {
+      print('❌ [uploadReceiptImage] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في رفع الصورة',
         'error': e.toString(),
       };
     }

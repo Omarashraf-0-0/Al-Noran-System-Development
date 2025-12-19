@@ -33,7 +33,7 @@ StatCard.propTypes = {
 const WelcomeBanner = () => {
 	const user = JSON.parse(localStorage.getItem("user"));
 	const userName = user?.username || user?.fullname || user?.name || "الزائر";
-	const userID = user?.id;
+	const userID = user?.id || user?._id;
 	const userType = user?.type || user?.userType || user?.role; // Check multiple properties for user type
 	const token = localStorage.getItem("token");
 

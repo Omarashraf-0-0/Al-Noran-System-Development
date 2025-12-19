@@ -30,6 +30,7 @@ export default function MostActiveCustomers() {
         
         // Transform the data to match the chart format
         const formattedData = clientsArray.map((client) => ({
+          id: client._id,
           name: client.name || client.clientName || client.importerName || "غير محدد",
           value: client.count || client.shipmentCount || 0,
         }));
@@ -73,7 +74,16 @@ export default function MostActiveCustomers() {
             {customersData.map((item, index) => (
               <div key={index} className="flex items-center gap-2 justify-end">
                 <span className="text-sm font-semibold text-gray-700">({item.value})</span>
-                <span className="text-sm">{item.name}</span>
+                {item.id ? (
+                  <a 
+                    href={`/client/${item.id}`}
+                    className="text-sm hover:text-[#1BA3B6] hover:underline transition-colors cursor-pointer"
+                  >
+                    {item.name}
+                  </a>
+                ) : (
+                  <span className="text-sm">{item.name}</span>
+                )}
                 <span
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: COLORS[index % COLORS.length] }}

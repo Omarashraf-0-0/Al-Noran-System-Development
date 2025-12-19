@@ -7,6 +7,7 @@ const {
 	deleteFromS3,
 	validateFile,
 } = require("../utils/s3Helpers");
+const notificationService = require("../services/notificationService");
 
 /**
  * @route   POST /api/uploads
@@ -92,6 +93,9 @@ const uploadFile = async (req, res) => {
 			"shipment",
 			"invoice",
 			"archive",
+			"ucr_request",
+			"payment",
+			"export_shipment",
 		];
 		if (!validCategories.includes(category)) {
 			console.log("❌ Invalid category:", category);
@@ -103,7 +107,7 @@ const uploadFile = async (req, res) => {
 		}
 
 		// Validate relatedId for specific categories
-		if (["acid", "shipment", "invoice"].includes(category) && !relatedId) {
+		if (["acid", "shipment", "invoice", "export_shipment"].includes(category) && !relatedId) {
 			console.log("❌ relatedId required for category:", category);
 			return res.status(400).json({
 				message: `relatedId is required for category: ${category}`,
@@ -205,7 +209,18 @@ const uploadFile = async (req, res) => {
 		console.log("🆔 Upload Record ID:", uploadRecord._id);
 
 		// Generate presigned URL for immediate access
-		const presignedUrl = await getPresignedUrl(uploadResult.s3Key, 3600); // 1 hour
+		let presignedUrl = null;
+		try {
+			presignedUrl = await getPresignedUrl(uploadResult.s3Key, 3600); // 1 hour
+			console.log("✅ Presigned URL generated");
+		} catch (urlError) {
+			if (urlError.message === "AWS_PERMISSION_ERROR") {
+				console.warn("⚠️ Could not generate presigned URL due to AWS permissions");
+				// Continue without presigned URL
+			} else {
+				console.error("Error generating presigned URL:", urlError.message);
+			}
+		}
 
 		console.log("✅✅✅ [Backend Upload SUCCESS] عملية الرفع اكتملت بنجاح!");
 		console.log("📊 Summary:");
@@ -274,6 +289,9 @@ const uploadMultipleFiles = async (req, res) => {
 		const uploadedFiles = [];
 		const errors = [];
 
+		console.log(`[MultiUpload] Received ${req.files.length} files`);
+		console.log(`[MultiUpload] Category: ${category}, User Type: ${userType}`);
+
 		// Process each file
 		for (let i = 0; i < req.files.length; i++) {
 			const file = req.files[i];
@@ -335,7 +353,15 @@ const uploadMultipleFiles = async (req, res) => {
 				await uploadRecord.save();
 
 				// Generate presigned URL
-				const presignedUrl = await getPresignedUrl(uploadResult.s3Key, 3600);
+				let presignedUrl = null;
+				try {
+					presignedUrl = await getPresignedUrl(uploadResult.s3Key, 3600);
+				} catch (urlError) {
+					if (urlError.message === "AWS_PERMISSION_ERROR") {
+						console.warn(`⚠️ Could not generate presigned URL for ${file.originalname}`);
+						// Continue without presigned URL
+					}
+				}
 
 				uploadedFiles.push({
 					id: uploadRecord._id,
@@ -346,6 +372,7 @@ const uploadMultipleFiles = async (req, res) => {
 					mimetype: uploadRecord.mimetype,
 				});
 			} catch (error) {
+				console.error(`[MultiUpload] Error processing file ${file.originalname}:`, error);
 				errors.push({
 					filename: file.originalname,
 					error: error.message,
@@ -412,14 +439,23 @@ const getUploads = async (req, res) => {
 						presignedUrl,
 					};
 				} catch (error) {
-					console.error(
-						`Error generating presigned URL for ${upload.s3Key}:`,
-						error
-					);
+					if (error.message === "AWS_PERMISSION_ERROR") {
+						console.warn(
+							`⚠️ Could not generate presigned URL for ${upload.s3Key} - AWS permission issue`
+						);
+					} else {
+						console.error(
+							`Error generating presigned URL for ${upload.s3Key}:`,
+							error.message
+						);
+					}
+					// Return upload without presigned URL
 					return {
 						id: upload._id,
 						_id: upload._id,
 						...upload,
+						presignedUrl: null,
+						permissionError: error.message === "AWS_PERMISSION_ERROR",
 					};
 				}
 			})
@@ -472,13 +508,21 @@ const getUploadById = async (req, res) => {
 		// Try to generate fresh presigned URL (valid for 1 hour)
 		let presignedUrl = null;
 		let permissionError = false;
+		let errorDetails = null;
 		try {
 			presignedUrl = await getPresignedUrl(upload.s3Key, 3600);
-			console.log("Presigned URL generated successfully");
+			console.log("✅ Presigned URL generated successfully");
 		} catch (urlError) {
 			if (urlError.message === "AWS_PERMISSION_ERROR") {
-				console.warn("⚠️ Cannot generate presigned URL due to AWS permissions");
+				console.error("❌ Cannot generate presigned URL due to AWS permissions");
+				console.error("❌ IAM Policy Issue: Explicit deny for s3:GetObject detected");
 				permissionError = true;
+				errorDetails = {
+					code: "AWS_PERMISSION_DENIED",
+					message: "The AWS IAM user does not have permission to read files from S3",
+					action: "Contact administrator to update IAM policy",
+					technicalInfo: "IAM policy has explicit deny for s3:GetObject action"
+				};
 				// Continue with response but indicate the error
 			} else {
 				throw urlError; // Re-throw if it's a different error
@@ -488,8 +532,9 @@ const getUploadById = async (req, res) => {
 		res.status(200).json({
 			success: !permissionError,
 			warning: permissionError
-				? "File cannot be viewed due to AWS permission restrictions. Please contact administrator."
+				? "⚠️ لا يمكن عرض الملف حالياً بسبب قيود AWS. يرجى الاتصال بالمسؤول.\n\nFile cannot be viewed due to AWS permission restrictions. Please contact administrator."
 				: null,
+			error: errorDetails,
 			upload: {
 				id: upload._id,
 				filename: upload.filename,
@@ -620,7 +665,12 @@ const deleteUpload = async (req, res) => {
 
 		// Soft delete from database (mark as inactive)
 		upload.isActive = false;
+
 		await upload.save();
+		// we need to change the status of the user.clientDetails.documentsVerified to false
+		const user = await User.findById(userId);
+		user.clientDetails.documentsVerified = false;
+		await user.save();
 
 		res.status(200).json({
 			success: true,
@@ -672,6 +722,28 @@ const checkRequiredDocuments = async (req, res) => {
 	}
 };
 
+/**
+ * Get presigned URL for an S3 key
+ */
+const getPresignedUrlForKey = async (req, res) => {
+	try {
+		const s3Key = decodeURIComponent(req.params.s3Key);
+
+		console.log("🔗 Generating presigned URL for key:", s3Key);
+
+		const presignedUrl = await getPresignedUrl(s3Key, 3600); // 1 hour
+
+		res.status(200).json({
+			success: true,
+			url: presignedUrl,
+			expiresIn: 3600
+		});
+	} catch (error) {
+		console.error("Get Presigned URL Error:", error);
+		res.status(500).json({ message: error.message || "Failed to generate presigned URL" });
+	}
+};
+
 module.exports = {
 	uploadFile,
 	uploadMultipleFiles,
@@ -680,4 +752,5 @@ module.exports = {
 	updateUpload,
 	deleteUpload,
 	checkRequiredDocuments,
+	getPresignedUrlForKey,
 };

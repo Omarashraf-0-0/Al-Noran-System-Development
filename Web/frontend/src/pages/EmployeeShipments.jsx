@@ -26,14 +26,15 @@ export default function EmployeeShipments() {
 	// Available shipment statuses
 	const shipmentStatuses = [
 		{ value: "الكل", label: "الكل" },
-		{ value: "Pending", label: "قيد الانتظار" },
 		{ value: "في انتظار الشحن", label: "في انتظار الشحن" },
-		{ value: "In Transit", label: "في الطريق" },
-		{ value: "Arrived", label: "تم وصول البضاعة" },
+		{ value: "في الطريق", label: "في الطريق" },
+		{ value: "تم وصول البضاعة", label: "تم وصول البضاعة" },
 		{ value: "في انتظار وصول الإذن", label: "في انتظار وصول الإذن" },
-		{ value: "Customs Clearance", label: "التخليص الجمركي" },
+		{ value: "تم وصول الإذن", label: "تم وصول الإذن" },
+		{ value: "التخليص الجمركي", label: "التخليص الجمركي" },
+		{ value: "جارى ادراج الشحنة واستكمال الاجراءات", label: "جارى ادراج الشحنة واستكمال الاجراءات" },
 		{ value: "جاري الكشف والتثمين", label: "جاري الكشف والتثمين" },
-		{ value: "Completed", label: "مكتملة" },
+		{ value: "مكتملة", label: "مكتملة" },
 		{ value: "تمت بنجاح", label: "تمت بنجاح" },
 	];
 
@@ -62,6 +63,7 @@ export default function EmployeeShipments() {
 
 				const formattedShipments = (response.data || []).map((shipment) => ({
 					id: shipment._id,
+					userId: shipment.user_id, // For client profile link
 					clientName: shipment.employerName || "Unknown Client",
 					shipmentNo: shipment.number46 || shipment.shipmentNumber || "N/A",
 					acid: shipment.acid || "N/A",
@@ -112,22 +114,24 @@ export default function EmployeeShipments() {
 		setIsSortOpen(false);
 	};
 
-	// Normalize status for comparison (handles both English and Arabic)
+	// Normalize status for comparison (all Arabic)
 	const normalizeStatus = (status) => {
 		const statusNormalization = {
-			Pending: "Pending",
-			"قيد الانتظار": "Pending",
+			"Pending": "في انتظار الشحن",
+			"قيد الانتظار": "في انتظار الشحن",
 			"في انتظار الشحن": "في انتظار الشحن",
-			"In Transit": "In Transit",
-			"في الطريق": "In Transit",
-			Arrived: "Arrived",
-			"تم وصول البضاعة": "Arrived",
+			"In Transit": "في الطريق",
+			"في الطريق": "في الطريق",
+			"Arrived": "تم وصول البضاعة",
+			"تم وصول البضاعة": "تم وصول البضاعة",
 			"في انتظار وصول الإذن": "في انتظار وصول الإذن",
-			"Customs Clearance": "Customs Clearance",
-			"التخليص الجمركي": "Customs Clearance",
+			"تم وصول الإذن": "تم وصول الإذن",
+			"Customs Clearance": "التخليص الجمركي",
+			"التخليص الجمركي": "التخليص الجمركي",
+			"جارى ادراج الشحنة واستكمال الاجراءات": "جارى ادراج الشحنة واستكمال الاجراءات",
 			"جاري الكشف والتثمين": "جاري الكشف والتثمين",
-			Completed: "Completed",
-			مكتملة: "Completed",
+			"Completed": "مكتملة",
+			"مكتملة": "مكتملة",
 			"تمت بنجاح": "تمت بنجاح",
 		};
 		return statusNormalization[status] || status;
@@ -314,6 +318,15 @@ export default function EmployeeShipments() {
 					) : (
 						<div className="overflow-x-auto">
 							<table className="w-full text-right border-separate border-spacing-y-3">
+								<thead>
+									<tr className="bg-red-800 text-white">
+										<th className="py-3 px-4 text-right rounded-tr-lg">العميل / التاريخ</th>
+										<th className="py-3 px-4 text-right">رقم الشحنة</th>
+										<th className="py-3 px-4 text-right">رقم ACID</th>
+										<th className="py-3 px-4 text-right">الحالة</th>
+										<th className="py-3 px-4 text-right rounded-tl-lg">الإجراءات</th>
+									</tr>
+								</thead>
 								<tbody>
 									{filteredShipments.map((shipment) => (
 										<tr
@@ -323,7 +336,14 @@ export default function EmployeeShipments() {
 											<td className="py-3 px-4 align-top">
 												<div className="flex flex-col text-sm">
 													<span className="text-gray-700 text-base font-semibold">
-														{shipment.clientName}
+														{shipment.userId ? (
+												<a 
+													href={`/client/${shipment.userId}`}
+													className="hover:text-[#1BA3B6] hover:underline"
+												>
+													{shipment.clientName}
+												</a>
+											) : shipment.clientName}
 													</span>
 													<span className="text-gray-500 text-xs">
 														{shipment.date}
@@ -363,9 +383,9 @@ export default function EmployeeShipments() {
 
 											<td className="py-3 px-4 align-top">
 												<a href={`/employee-shipment/${shipment.id}`}>
-													<span className="text-blue-600 text-sm font-medium underline cursor-pointer">
+													<button className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition text-sm font-medium">
 														إدارة الشحنة
-													</span>
+													</button>
 												</a>
 											</td>
 										</tr>

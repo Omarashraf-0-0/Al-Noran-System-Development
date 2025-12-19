@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
 import '../../util/validators.dart';
@@ -435,19 +436,63 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
 
       // JWT Token is automatically saved by ApiService.register
       // Now we can upload to S3 using the token
+      // Add a small delay to ensure token is saved to SharedPreferences
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Verify token is saved before uploading
+      final savedToken = await ApiService.getToken();
+      if (savedToken == null || savedToken.isEmpty) {
+        setState(() {
+          _isLoading = false;
+        });
+        AlNoranPopups.showError(
+          context: context,
+          title: 'خطأ في التوثيق',
+          message:
+              'تم إنشاء الحساب لكن حدث خطأ في الجلسة. يرجى تسجيل الدخول ورفع المستندات من الإعدادات',
+        );
+        if (mounted) {
+          context.go('/login');
+        }
+        return;
+      }
+
+      print(
+        '🔑 Token verified before upload: ${savedToken.substring(0, 20)}...',
+      );
 
       // Upload National ID Card image to S3
+      print('📤 Uploading National ID Card...');
       final idCardUploadResult = await ApiService.uploadToS3(
         file: _nationalIdCardFile!,
         category: 'registration',
-        documentType: 'national_id',
+        documentType: 'personal_id',
         description: 'صورة البطاقة الشخصية - حساب شخصي',
-        tags: ['national_id', 'personal', 'registration'],
+        tags: ['personal_id', 'personal', 'registration'],
         userType: 'client',
         clientType: 'personal',
       );
 
+      if (!idCardUploadResult['success']) {
+        setState(() {
+          _isLoading = false;
+        });
+        print('❌ ID Card upload failed: ${idCardUploadResult['error']}');
+        AlNoranPopups.showError(
+          context: context,
+          title: 'خطأ في رفع المستندات',
+          message:
+              'تم إنشاء الحساب لكن فشل رفع صورة البطاقة. السبب: ${idCardUploadResult['message'] ?? 'خطأ غير معروف'}',
+        );
+        if (mounted) {
+          context.go('/login');
+        }
+        return;
+      }
+      print('✅ ID Card uploaded successfully');
+
       // Upload power of attorney document to S3
+      print('📤 Uploading Power of Attorney...');
       final uploadResult = await ApiService.uploadToS3(
         file: _powerOfAttorneyFile!,
         category: 'registration',
@@ -462,43 +507,47 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
         _isLoading = false;
       });
 
-      if (uploadResult['success'] && idCardUploadResult['success']) {
-        await AlNoranPopups.showSuccess(
-          context: context,
-          title: 'تم التسجيل بنجاح',
-          message:
-              'تم إنشاء حسابك وتحميل جميع المستندات إلى السحابة بنجاح. سيتم مراجعة حسابك وتفعيله خلال 24 ساعة',
-        );
-
-        if (mounted) {
-          // Navigate to login page
-          Navigator.of(
-            context,
-          ).pushNamedAndRemoveUntil('/login', (route) => false);
-        }
-      } else {
-        String failedDoc = '';
-        if (!uploadResult['success']) failedDoc = 'التوكيل';
-        if (!idCardUploadResult['success'])
-          failedDoc =
-              failedDoc.isEmpty ? 'صورة البطاقة' : '$failedDoc وصورة البطاقة';
-
+      if (!uploadResult['success']) {
+        print('❌ Power of Attorney upload failed: ${uploadResult['error']}');
         AlNoranPopups.showError(
           context: context,
-          title: 'تحذير',
+          title: 'خطأ في رفع المستندات',
           message:
-              'تم إنشاء الحساب ولكن فشل رفع: $failedDoc. يرجى تسجيل الدخول ورفع المستندات من الإعدادات',
+              'تم إنشاء الحساب لكن فشل رفع التوكيل. السبب: ${uploadResult['message'] ?? 'خطأ غير معروف'}',
         );
+        if (mounted) {
+          context.go('/login');
+        }
+        return;
+      }
+
+      print('✅ Power of Attorney uploaded successfully');
+      print('✅✅✅ All documents uploaded successfully!');
+
+      await AlNoranPopups.showSuccess(
+        context: context,
+        title: 'تم التسجيل بنجاح',
+        message:
+            'تم إنشاء حسابك وتحميل جميع المستندات إلى السحابة بنجاح. سيتم مراجعة حسابك وتفعيله خلال 24 ساعة',
+      );
+
+      if (mounted) {
+        // Navigate to login page using GoRouter
+        context.go('/login');
       }
     } catch (e) {
+      print('❌ Registration exception: $e');
       setState(() {
         _isLoading = false;
       });
-      AlNoranPopups.showError(
-        context: context,
-        title: 'خطأ في الاتصال',
-        message: 'حدث خطأ أثناء الاتصال بالسيرفر. يرجى المحاولة مرة أخرى',
-      );
+      // Only show error if context is still valid and we haven't navigated
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          title: 'خطأ في الاتصال',
+          message: 'حدث خطأ أثناء الاتصال بالسيرفر. يرجى المحاولة مرة أخرى',
+        );
+      }
     }
   }
 

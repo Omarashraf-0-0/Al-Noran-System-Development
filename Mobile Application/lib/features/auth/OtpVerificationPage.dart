@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import '../../core/network/api_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
-import 'reset_password_page.dart';
 
 class OtpVerificationPage extends StatefulWidget {
   final String email;
@@ -149,7 +149,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
       if (!mounted) return;
 
       // العودة لصفحة نسيت كلمة المرور
-      Navigator.of(context).pop();
+      context.go('/forgot-password');
       return;
     }
 
@@ -163,13 +163,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
       if (!mounted) return;
 
       if (result['success']) {
-        // Navigate to reset password page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ResetPasswordPage(email: widget.email),
-          ),
-        );
+        // Navigate to reset password page using GoRouter
+        context.go('/reset-password', extra: {'email': widget.email});
       } else {
         setState(() => _wrongAttempts++);
 
@@ -213,7 +208,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () => context.go('/forgot-password'),
                     child: Directionality(
                       textDirection: TextDirection.ltr,
                       child: const Row(

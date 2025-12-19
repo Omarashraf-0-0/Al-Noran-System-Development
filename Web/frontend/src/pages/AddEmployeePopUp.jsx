@@ -94,11 +94,12 @@ export default function AddEmployeePopUp({ onClose, onEmployeeAdded }) {
 			const token = localStorage.getItem("token");
 
 			const response = await axios.post(
-				`${import.meta.env.VITE_API_URL}/api/users/getAll`,
+				`${import.meta.env.VITE_API_URL}/api/users`,
 				{
 					...formData,
 					type: "employee",
 					permissions: selectedPermissions,
+					verified: true,
 				},
 				{
 					headers: {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import close from "../assets/images/close(1).png";
@@ -32,7 +32,7 @@ export default function ShipmentDetailsModal({
 	const fetchEmployees = async () => {
 		try {
 			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/users/getAll`,
+				`${import.meta.env.VITE_API_URL}/api/users`,
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -47,7 +47,7 @@ export default function ShipmentDetailsModal({
 			setEmployees(employeeList);
 		} catch (error) {
 			console.error("Error fetching employees:", error);
-			toast.error("فشل تحميل قائمة الموظفين");
+			toast.error("خطأ أثناء جلب الموظفين");
 		}
 	};
 
@@ -72,7 +72,7 @@ export default function ShipmentDetailsModal({
 			setLoading(false);
 		} catch (error) {
 			console.error("Error fetching shipment details:", error);
-			toast.error("فشل تحميل تفاصيل الشحنة");
+			toast.error("خطأ أثناء تحميل الشحنة");
 			setLoading(false);
 		}
 	};
@@ -104,7 +104,7 @@ export default function ShipmentDetailsModal({
 			if (onUpdate) onUpdate();
 		} catch (error) {
 			console.error("Error updating shipment:", error);
-			toast.error(error.response?.data?.message || "فشل تحديث الشحنة");
+			toast.error(error.response?.data?.message || "خطأ أثناء التحديث");
 		}
 	};
 
@@ -175,7 +175,7 @@ export default function ShipmentDetailsModal({
 			if (onUpdate) onUpdate();
 		} catch (error) {
 			console.error("Error uploading document:", error);
-			toast.error(error.response?.data?.message || "فشل رفع المستند");
+			toast.error(error.response?.data?.message || "خطأ رفع المستند");
 		} finally {
 			setUploadingDocument(false);
 		}
@@ -196,26 +196,28 @@ export default function ShipmentDetailsModal({
 			window.open(response.data.upload.s3Url, "_blank");
 		} catch (error) {
 			console.error("Error downloading document:", error);
-			toast.error("فشل تحميل المستند");
+			toast.error("خطأ تحميل المستند");
 		}
 	};
 
 	const getStatusBadgeColor = (status) => {
 		switch (status) {
-			case "Completed":
+			case "مكتملة":
 			case "تمت بنجاح":
 				return "bg-green-100 text-green-800";
-			case "In Transit":
 			case "في الطريق":
 				return "bg-blue-100 text-blue-800";
-			case "Arrived":
-			case "Customs Clearance":
+			case "تم وصول البضاعة":
+				return "bg-cyan-100 text-cyan-800";
+			case "التخليص الجمركي":
 			case "جاري الكشف والتثمين":
+			case "جارى ادراج الشحنة واستكمال الاجراءات":
+				return "bg-indigo-100 text-indigo-800";
 			case "في انتظار وصول الإذن":
-				return "bg-yellow-100 text-yellow-800";
-			case "Pending":
+			case "تم وصول الإذن":
+				return "bg-purple-100 text-purple-800";
 			case "في انتظار الشحن":
-				return "bg-gray-100 text-gray-800";
+				return "bg-orange-100 text-orange-800";
 			default:
 				return "bg-gray-100 text-gray-800";
 		}
@@ -318,7 +320,7 @@ export default function ShipmentDetailsModal({
 										<p className="font-semibold text-gray-900">
 											{shipment.user_id.username ||
 												shipment.user_id.fullname ||
-												"غير متاح"}
+												"غير معروف"}
 										</p>
 									</div>
 									<div>
@@ -326,7 +328,7 @@ export default function ShipmentDetailsModal({
 											البريد الإلكتروني
 										</p>
 										<p className="font-semibold text-gray-900">
-											{shipment.user_id.email || "غير متاح"}
+											{shipment.user_id.email || "غير معروف"}
 										</p>
 									</div>
 								</>
@@ -338,7 +340,7 @@ export default function ShipmentDetailsModal({
 								<p className="font-semibold text-gray-900">
 									{shipment.employee_id?.username ||
 										shipment.employee_id?.fullname ||
-										"لم يعين بعد"}
+										"لم يتم تعيين"}
 								</p>
 							</div>
 
@@ -381,7 +383,7 @@ export default function ShipmentDetailsModal({
 								)}
 								{shipment.sundries > 0 && (
 									<div>
-										<p className="text-sm text-gray-500 mb-1">مصروفات متنوعة</p>
+										<p className="text-sm text-gray-500 mb-1">مصاريف متنوعة</p>
 										<p className="font-semibold text-gray-900">
 											{shipment.sundries} جنيه
 										</p>
@@ -399,14 +401,14 @@ export default function ShipmentDetailsModal({
 						<div className="bg-gray-50 rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
 							{shipment.policy && (
 								<div>
-									<p className="text-sm text-gray-500 mb-1">السياسة</p>
+									<p className="text-sm text-gray-500 mb-1">البوليصة</p>
 									<p className="font-semibold text-gray-900">
 										{shipment.policy}
 									</p>
 								</div>
 							)}
 							<div>
-								<p className="text-sm text-gray-500 mb-1">حالة المسودة</p>
+								<p className="text-sm text-gray-500 mb-1">حالة الدراجت</p>
 								<span
 									className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
 										shipment.dragt
@@ -414,61 +416,63 @@ export default function ShipmentDetailsModal({
 											: "bg-green-100 text-green-800"
 									}`}
 								>
-							{shipment.dragt ? "مسودة" : "نهائي"}
-						</span>
-					</div>
-				</div>
-			</div>
-
-			{/* Documents Section */}
-			<div className="mb-6">
-				<h3 className="text-lg font-bold text-[#690000] mb-3">المستندات</h3>
-
-				{/* Upload New Document */}
-				<div className="bg-red-50 rounded-lg p-4 mb-4 border border-red-200">
-					<h4 className="text-sm font-semibold text-[#690000] mb-3">
-						رفع مستند جديد
-					</h4>
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1 text-right">
-								اسم المستند
-							</label>
-							<input
-								type="text"
-								value={documentName}
-								onChange={(e) => setDocumentName(e.target.value)}
-								placeholder="مثال: فاتورة، شهادة منشأ، بوليصة شحن"
-								className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
-							/>
-						</div>
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1 text-right">
-								اختر الملف
-							</label>
-							<input
-								type="file"
-								onChange={handleFileSelect}
-								className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
-								accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-							/>
+									{shipment.dragt ? "مطلوب" : "غير مطلوب"}
+								</span>
+							</div>
 						</div>
 					</div>
-					{selectedFile && (
-						<div className="mt-3 flex items-center justify-between">
-							<button
-								onClick={handleUploadDocument}
-								disabled={uploadingDocument}
-								className="px-6 py-2 bg-[#690000] text-white rounded-lg hover:bg-[#991b1b] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-							>
-								{uploadingDocument ? "جاري الرفع..." : "رفع المستند"}
-							</button>
-							<p className="text-sm text-gray-600">
-								الملف المحدد: {selectedFile.name}
-							</p>
+
+					{/* Documents Section */}
+					<div className="mb-6">
+						<h3 className="text-lg font-bold text-[#690000] mb-3">المستندات</h3>
+
+						{/* Upload New Document */}
+						<div className="bg-red-50 rounded-lg p-4 mb-4 border border-red-200">
+							<h4 className="text-sm font-semibold text-[#690000] mb-3">
+								رفع مستند جديد
+							</h4>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1 text-right">
+										اسم المستند
+									</label>
+									<input
+										type="text"
+										value={documentName}
+										onChange={(e) => setDocumentName(e.target.value)}
+										placeholder="مثال: فاتورة تجارية، بوليصة شحن، إلخ"
+										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent bg-white text-gray-800"
+									/>
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1 text-right">
+										ملف المستند
+									</label>
+									<input
+										type="file"
+										onChange={handleFileSelect}
+										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent bg-white text-gray-800"
+										accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+									/>
+								</div>
+							</div>
+							{selectedFile && (
+								<div className="mt-3 flex items-center justify-between">
+									<button
+										onClick={handleUploadDocument}
+										disabled={uploadingDocument}
+										className="px-6 py-2 bg-[#690000] text-white rounded-lg hover:bg-[#991b1b] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+									>
+										{uploadingDocument ? "جاري الرفع..." : "رفع المستند"}
+									</button>
+									<p className="text-sm text-gray-600">
+										الملف المختار: {selectedFile.name}
+									</p>
+								</div>
+							)}
 						</div>
-					)}
-				</div>						{/* Existing Documents List */}
+
+						{/* Existing Documents List */}
 						{shipment.requiredDocuments &&
 						shipment.requiredDocuments.length > 0 ? (
 							<div className="bg-gray-50 rounded-lg p-4">
@@ -489,7 +493,7 @@ export default function ShipmentDetailsModal({
 															: "bg-yellow-100 text-yellow-800"
 													}`}
 												>
-													{doc.uploaded ? "✓ مرفوع" : "⏳ مطلوب"}
+													{doc.uploaded ? "✓ مرفوع" : "⏳ معلق"}
 												</span>
 												{doc.uploaded && doc.fileId && (
 													<button
@@ -519,14 +523,14 @@ export default function ShipmentDetailsModal({
 								</div>
 							</div>
 						) : (
-					<div className="bg-gray-50 rounded-lg p-6 text-center">
-							<p className="text-gray-500">لا توجد مستندات مرفوعة بعد</p>
-						</div>
-					)}
-				</div>
+							<div className="bg-gray-50 rounded-lg p-6 text-center">
+								<p className="text-gray-500">لا توجد مستندات مرفوعة حتى الآن</p>
+							</div>
+						)}
+					</div>
 
-				{/* Edit Form */}
-				{isEditing ? (
+					{/* Edit Form */}
+					{isEditing ? (
 						<div className="border-t pt-6">
 							<h3 className="text-lg font-bold text-[#690000] mb-4">
 								تعديل بيانات الشحنة
@@ -541,21 +545,23 @@ export default function ShipmentDetailsModal({
 										name="status"
 										value={formData.status}
 										onChange={handleInputChange}
-										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
+										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent bg-white text-gray-800"
 									>
 										<option value="Pending">قيد الانتظار</option>
-										<option value="في انتظار الشحن">في انتظار الشحن</option>
+										<option value="في انتظار المراجعة">
+											في انتظار المراجعة
+										</option>
 										<option value="In Transit">في الطريق</option>
 										<option value="Arrived">وصلت</option>
 										<option value="في انتظار وصول الإذن">
 											في انتظار وصول الإذن
 										</option>
 										<option value="Customs Clearance">التخليص الجمركي</option>
-										<option value="جاري الكشف والتثمين">
-											جاري الكشف والتثمين
+										<option value="جاري التخليص الجمركي">
+											جاري التخليص الجمركي
 										</option>
 										<option value="Completed">مكتملة</option>
-										<option value="تمت بنجاح">تمت بنجاح</option>
+										<option value="تمت العملية">تمت العملية</option>
 									</select>
 								</div>
 
@@ -568,9 +574,9 @@ export default function ShipmentDetailsModal({
 										name="employee_id"
 										value={formData.employee_id}
 										onChange={handleInputChange}
-										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
+										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent bg-white text-gray-800"
 									>
-										<option value="">-- لم يعين بعد --</option>
+										<option value="">-- لم يتم تعيين --</option>
 										{employees.map((emp) => (
 											<option key={emp._id} value={emp._id}>
 												{emp.fullname || emp.username} ({emp.email})
@@ -591,7 +597,7 @@ export default function ShipmentDetailsModal({
 										onClick={handleSave}
 										className="px-6 py-2 bg-[#690000] text-white rounded-lg hover:bg-[#991b1b] transition-colors"
 									>
-										حفظ التعديلات
+										حفظ التغييرات
 									</button>
 								</div>
 							</div>

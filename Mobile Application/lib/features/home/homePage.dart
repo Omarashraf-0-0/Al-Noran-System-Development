@@ -1,9 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
-import '../../core/storage/secure_storage.dart';
-import '../profile/profile_page.dart';
-import '../profile/profile_settings_page.dart';
+import '../../core/services/user_cache_service.dart';
+import '../../core/services/shipments_cache_service.dart';
+import '../../core/services/notification_service.dart';
+import '../../core/services/firebase_push_service.dart';
+import '../../core/services/recent_shipments_service.dart';
+import '../../core/widgets/unified_top_bar.dart';
 
 class HomePage extends StatefulWidget {
   final String userName;
@@ -19,6 +24,12 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   final TextEditingController _trackingController = TextEditingController();
 
+  // User cache service - still needed for logout and refresh operations
+  final UserCacheService _userCache = UserCacheService();
+  final ShipmentsCacheService _shipmentsCache = ShipmentsCacheService();
+  StreamSubscription? _userDataSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _shipmentsSubscription;
+
   // بيانات ديناميكية ستأتي من الـ Backend
   Map<String, dynamic> _userStats = {
     'totalShipments': 0,
@@ -32,12 +43,61 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+
+    // Initialize Firebase Push Service (in case not initialized during login)
+    _initializeFirebaseAndNotifications();
+
+    // Initialize user cache (for logout operations and other usage)
+    _initializeUserData();
     _loadRecentShipments();
+
+    // Listen to shipments cache updates
+    _shipmentsSubscription = _shipmentsCache.shipmentsStream.listen((_) {
+      if (mounted) {
+        _updateShipmentsFromCache();
+      }
+    });
   }
 
-  Future<void> _loadUserData() async {
-    // TODO: Implement API call to get user statistics
+  /// Initialize Firebase Push and Notification services
+  Future<void> _initializeFirebaseAndNotifications() async {
+    try {
+      // Initialize Firebase Push Service if not already initialized
+      if (!FirebasePushService().isInitialized) {
+        print('🏠 [HomePage] Initializing Firebase Push Service...');
+        await FirebasePushService().initialize();
+      }
+
+      // Initialize Notification Service if not already initialized
+      if (!NotificationService().isInitialized) {
+        print('🏠 [HomePage] Initializing Notification Service...');
+        await NotificationService().initialize();
+      }
+    } catch (e) {
+      print('❌ [HomePage] Error initializing services: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _userDataSubscription?.cancel();
+    _shipmentsSubscription?.cancel();
+    _trackingController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeUserData() async {
+    try {
+      await _userCache.initialize();
+    } catch (e) {
+      print('❌ [HomePage] Error initializing user cache: $e');
+    }
+  }
+
+  void _updateShipmentsFromCache() async {
+    final allShipments = _shipmentsCache.allShipments;
+    final recentShipments = await RecentShipmentsService.getRecentShipments();
+    _processShipments(recentShipments, allShipments);
   }
 
   Future<void> _loadRecentShipments() async {
@@ -45,52 +105,21 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       setState(() => _isLoadingShipments = true);
 
-      print('🏠 [HomePage] Loading recent shipments...');
+      print('🏠 [HomePage] Loading recently opened shipments...');
 
-      final response = await ApiService.getAllShipments();
+      // Get last 3 opened shipments from RecentShipmentsService
+      var recentShipments = await RecentShipmentsService.getRecentShipments();
 
-      if (response['success'] == true) {
-        final shipments = List<Map<String, dynamic>>.from(
-          response['shipments'] ?? [],
-        );
+      // Also load all shipments for statistics
+      final allShipments = await _shipmentsCache.getAllShipments();
 
-        print('🏠 [HomePage] Found ${shipments.length} shipments');
-
-        // أخذ آخر 3 شحنات فقط
-        final recent =
-            shipments.take(3).map((shipment) {
-              return {
-                'id': shipment['acid'] ?? 'N/A',
-                'name': shipment['shipmentDescription'] ?? 'شحنة',
-                'polNumber': shipment['number46'] ?? 'غير محدد',
-                'date': _formatDate(
-                  shipment['arrivalDate'] ?? shipment['createdAt'],
-                ),
-                'status': shipment['status'] ?? 'غير محدد',
-                'isUrgent': _isUrgent(shipment['status']),
-                'rawData': shipment,
-              };
-            }).toList();
-
-        if (!mounted) return;
-        setState(() {
-          _recentShipments = recent;
-          _isLoadingShipments = false;
-          // تحديث الإحصائيات
-          _userStats = {
-            'totalShipments': shipments.length,
-            'activeShipments':
-                shipments.where((s) => s['status'] != 'تمت بنجاح').length,
-            'completedShipments':
-                shipments.where((s) => s['status'] == 'تمت بنجاح').length,
-          };
-        });
-
-        print('🏠 [HomePage] Recent shipments loaded: ${recent.length}');
-      } else {
-        if (!mounted) return;
-        setState(() => _isLoadingShipments = false);
+      // Fallback: If no recent shipments opened, show latest 3 shipments
+      if (recentShipments.isEmpty && allShipments.isNotEmpty) {
+        print('🏠 [HomePage] No recent shipments, using latest 3 from cache');
+        recentShipments = allShipments.take(3).toList();
       }
+
+      _processShipments(recentShipments, allShipments);
     } catch (e) {
       print('❌ [HomePage] Error loading shipments: $e');
       if (!mounted) return;
@@ -98,8 +127,93 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _processShipments(
+    List<Map<String, dynamic>> recentShipments,
+    List<Map<String, dynamic>> allShipments,
+  ) {
+    if (!mounted) return;
+
+    print(
+      '🏠 [HomePage] Processing ${recentShipments.length} recent shipments',
+    );
+
+    // Format recent shipments for display
+    final recent =
+        recentShipments.map((shipment) {
+          // Determine shipment type from shipment_type field
+          final shipmentType =
+              shipment['shipment_type']?.toString().toLowerCase() ?? '';
+          final isSea =
+              shipmentType.contains('بحري') || shipmentType.contains('sea');
+
+          return {
+            'id': shipment['acid'] ?? shipment['id'] ?? 'N/A',
+            'shipmentCode': shipment['shipmentCode'] ?? '',
+            'name':
+                shipment['shipmentDescription'] ?? shipment['name'] ?? 'شحنة',
+            'number46': shipment['number46'] ?? '',
+            'shipment_type': shipment['shipment_type'] ?? 'بحري',
+            'type': isSea ? 'بحري' : 'جوي',
+            'date': _formatDate(
+              shipment['updatedAt'] ??
+                  shipment['createdAt'] ??
+                  shipment['viewedAt'],
+            ),
+            'status': shipment['status'] ?? 'غير محدد',
+            'isUrgent': _isUrgent(shipment['status']),
+            'rawData': shipment,
+          };
+        }).toList();
+
+    setState(() {
+      _recentShipments = recent;
+      _isLoadingShipments = false;
+      // تحديث الإحصائيات من كل الشحنات
+      _userStats = {
+        'totalShipments': allShipments.length,
+        'activeShipments':
+            allShipments.where((s) => s['status'] != 'تمت بنجاح').length,
+        'completedShipments':
+            allShipments.where((s) => s['status'] == 'تمت بنجاح').length,
+      };
+    });
+
+    print('🏠 [HomePage] Recent opened shipments loaded: ${recent.length}');
+  }
+
   bool _isUrgent(String? status) {
     return status == 'في انتظار الشحن' || status == 'في انتظار وصول الإذن';
+  }
+
+  Color _getStatusColor(String? status) {
+    switch (status) {
+      case 'في انتظار الشحن':
+        return Colors.orange;
+      case 'في الطريق':
+        return Colors.blue;
+      case 'تم وصول البضاعة':
+        return Colors.cyan;
+      case 'في انتظار وصول الإذن':
+      case 'في انتظار وصول الاذن':
+        return Colors.amber;
+      case 'تم وصول الإذن':
+        return Colors.teal;
+      case 'التخليص الجمركي':
+      case 'التخليص الجمركى':
+        return Colors.deepOrange;
+      case 'جارى ادراج الشحنة واستكمال الاجراءات':
+      case 'جاري ادراج الشحنة واستكمال الاجراءات':
+        return Colors.indigo;
+      case 'جاري الكشف والتثمين':
+      case 'جارى الكشف والتثمين':
+        return Colors.purple;
+      case 'مكتملة':
+        return Colors.lightGreen;
+      case 'تمت بنجاح':
+        return Colors.green;
+      default:
+        return Colors.orange;
+    }
   }
 
   String _formatDate(dynamic date) {
@@ -144,14 +258,19 @@ class _HomePageState extends State<HomePage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Top Bar
-              _buildTopBar(),
+        body: Column(
+          children: [
+            // Top Bar - Uses UnifiedTopBar with UserCacheService
+            UnifiedTopBar(
+              showBackButton: false,
+              showMenu: true,
+              onMenuPressed: () => _showMenu(),
+            ),
 
-              // Main Content
-              Expanded(
+            // Main Content
+            Expanded(
+              child: SafeArea(
+                top: false,
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
@@ -180,136 +299,10 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
         bottomNavigationBar: _buildBottomNavigationBar(),
-      ),
-    );
-  }
-
-  Widget _buildTopBar() {
-    // استخراج الاسم الأول من الاسم الكامل
-    String firstName = widget.userName.split(' ').first;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF690000),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(25),
-          bottomRight: Radius.circular(25),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Profile Picture & Notification (على اليمين في RTL - أول عناصر في Row)
-          Row(
-            children: [
-              InkWell(
-                onTap: () {
-                  Navigator.pushNamed(context, '/profile');
-                },
-                borderRadius: BorderRadius.circular(50),
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 2,
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.person,
-                      color: const Color(0xFF690000),
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.notifications,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      onPressed: () {},
-                    ),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1ba3b6),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          // Title - عرض اسم المستخدم الفعلي
-          Column(
-            children: [
-              Text(
-                firstName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-              Text(
-                widget.userEmail,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-            ],
-          ),
-
-          // Menu Icon (على الشمال في RTL - آخر عنصر في Row)
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white, size: 26),
-              onPressed: () {
-                _showMenu();
-              },
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -399,7 +392,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _handleTrackShipment() {
+  void _handleTrackShipment() async {
     final trackingNumber = _trackingController.text.trim();
     if (trackingNumber.isEmpty) {
       AlNoranPopups.showError(
@@ -409,11 +402,332 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    // TODO: تنفيذ البحث عن الشحنة
-    AlNoranPopups.showInfo(
+    // Show loading
+    showDialog(
       context: context,
-      title: 'البحث عن الشحنة',
-      message: 'جاري البحث عن الشحنة رقم: $trackingNumber',
+      barrierDismissible: false,
+      builder:
+          (context) => const Center(
+            child: CircularProgressIndicator(color: Color(0xFF690000)),
+          ),
+    );
+
+    try {
+      // Get all shipments from API
+      final response = await ApiService.getAllShipments();
+
+      if (!mounted) return;
+      context.pop(); // Close loading
+
+      if (response['success'] == true) {
+        final allShipments = List<Map<String, dynamic>>.from(
+          response['shipments'] ?? [],
+        );
+
+        // Filter shipments that match the search query
+        final searchLower = trackingNumber.toLowerCase();
+        final matchingShipments =
+            allShipments.where((shipment) {
+              final acid = (shipment['acid'] ?? '').toString().toLowerCase();
+              final number46 =
+                  (shipment['number46'] ?? '').toString().toLowerCase();
+              final description =
+                  (shipment['shipmentDescription'] ?? '')
+                      .toString()
+                      .toLowerCase();
+
+              return acid.contains(searchLower) ||
+                  number46.contains(searchLower) ||
+                  description.contains(searchLower);
+            }).toList();
+
+        if (matchingShipments.isEmpty) {
+          AlNoranPopups.showError(
+            context: context,
+            message: 'لم يتم العثور على شحنات تطابق: $trackingNumber',
+          );
+          return;
+        }
+
+        // Show results in popup
+        _showSearchResultsPopup(matchingShipments, trackingNumber);
+      } else {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ أثناء البحث',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      context.pop(); // Close loading if still open
+      AlNoranPopups.showError(
+        context: context,
+        message: 'حدث خطأ أثناء البحث: ${e.toString()}',
+      );
+    }
+  }
+
+  void _showSearchResultsPopup(
+    List<Map<String, dynamic>> results,
+    String query,
+  ) {
+    final homeContext = context; // Save home page context
+
+    showDialog(
+      context: context,
+      builder:
+          (dialogContext) => Directionality(
+            textDirection: TextDirection.rtl,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(dialogContext).size.height * 0.7,
+                  maxWidth: MediaQuery.of(dialogContext).size.width * 0.9,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF690000),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(25),
+                          topRight: Radius.circular(25),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.search_rounded,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'نتائج البحث',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'تم العثور على ${results.length} شحنة',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            icon: const Icon(Icons.close, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Results List
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: results.length,
+                        itemBuilder: (context, index) {
+                          final shipment = results[index];
+                          return _buildSearchResultCard(shipment, homeContext);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+    );
+  }
+
+  Widget _buildSearchResultCard(
+    Map<String, dynamic> shipment,
+    BuildContext homeContext,
+  ) {
+    final acid = shipment['acid'] ?? 'N/A';
+    final polNumber = shipment['number46'] ?? 'غير محدد';
+    final status = shipment['status'] ?? 'غير محدد';
+    final description = shipment['shipmentDescription'] ?? 'شحنة';
+    final isUrgent = _isUrgent(status);
+
+    return InkWell(
+      onTap: () {
+        Navigator.pop(context); // Close dialog using dialog context
+        homeContext.push(
+          '/shipment-details/$acid',
+        ); // Navigate using home context
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF690000),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        acid,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cairo',
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    if (isUrgent) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'عاجل',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                Icon(Icons.arrow_back_ios, size: 16, color: Colors.grey[400]),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            // Description
+            Text(
+              description,
+              style: const TextStyle(
+                fontSize: 13,
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF424242),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            const SizedBox(height: 8),
+
+            // POL Number
+            Row(
+              children: [
+                Icon(
+                  Icons.description_outlined,
+                  size: 14,
+                  color: Colors.grey[600],
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'رقم البوليصة: ',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'Cairo',
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  polNumber,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF424242),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 6),
+
+            // Status
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Icon(
+                    Icons.access_time,
+                    size: 12,
+                    color: Colors.orange[700],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange[700],
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -484,13 +798,8 @@ class _HomePageState extends State<HomePage> {
                       'الملف الشخصي',
                       const Color(0xFF690000),
                       () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfilePage(),
-                          ),
-                        );
+                        context.pop();
+                        context.push('/profile');
                       },
                     ),
                     _buildMenuItem(
@@ -498,8 +807,8 @@ class _HomePageState extends State<HomePage> {
                       'الإعدادات',
                       const Color(0xFF690000),
                       () {
-                        Navigator.pop(context);
-                        Navigator.pushNamed(context, '/settings');
+                        context.pop();
+                        context.push('/settings');
                       },
                     ),
                     _buildMenuItem(
@@ -507,7 +816,7 @@ class _HomePageState extends State<HomePage> {
                       'المساعدة',
                       const Color(0xFF1ba3b6),
                       () {
-                        Navigator.pop(context);
+                        context.pop();
                         // TODO: Navigate to help
                       },
                     ),
@@ -521,7 +830,7 @@ class _HomePageState extends State<HomePage> {
                       'تسجيل الخروج',
                       Colors.red,
                       () {
-                        Navigator.pop(context);
+                        context.pop();
                         _handleLogout();
                       },
                     ),
@@ -651,7 +960,7 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           Expanded(
                             child: TextButton(
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () => context.pop(),
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 14,
@@ -681,15 +990,14 @@ class _HomePageState extends State<HomePage> {
                               onPressed: () async {
                                 // حذف جميع بيانات المستخدم والـ Token
                                 await ApiService.removeToken();
-                                await SecureStorage.clearAll();
+
+                                // Clear user cache
+                                _userCache.clear();
 
                                 // إغلاق الـ dialog ثم الانتقال لصفحة تسجيل الدخول
                                 if (mounted) {
-                                  Navigator.pop(context); // Close dialog
-                                  Navigator.of(context).pushNamedAndRemoveUntil(
-                                    '/login',
-                                    (route) => false,
-                                  );
+                                  context.pop(); // Close dialog
+                                  context.go('/login');
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -833,6 +1141,7 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
+              // Row 1: الملف الشخصي - إعدادات الحساب
               Row(
                 children: [
                   Expanded(
@@ -840,12 +1149,7 @@ class _HomePageState extends State<HomePage> {
                       'الملف الشخصي',
                       Icons.person_outline,
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfilePage(),
-                          ),
-                        );
+                        context.push('/profile');
                       },
                     ),
                   ),
@@ -855,36 +1159,40 @@ class _HomePageState extends State<HomePage> {
                       'إعدادات الحساب',
                       Icons.settings_outlined,
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfileSettingsPage(),
-                          ),
-                        );
+                        context.push('/settings');
                       },
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
+              // Row 2: طلب رقم ACID (الوارد) - طلب رقم UCR (الصادر)
               Row(
                 children: [
                   Expanded(
                     child: _buildServiceCard(
-                      'تواصل معنا',
-                      Icons.headset_mic_outlined,
+                      'طلب رقم ACID\n(الوارد)',
+                      Icons.flight_land_rounded,
+                      onTap: () {
+                        context.push(
+                          '/acid-request',
+                          extra: {
+                            'userName': widget.userName,
+                            'userEmail': widget.userEmail,
+                          },
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildServiceCard(
-                      'طلب رقم ACID',
-                      Icons.description_outlined,
+                      'طلب رقم UCR\n(الصادر)',
+                      Icons.flight_takeoff_rounded,
                       onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/acid-request',
-                          arguments: {
+                        context.push(
+                          '/ucr-request',
+                          extra: {
                             'userName': widget.userName,
                             'userEmail': widget.userEmail,
                           },
@@ -895,20 +1203,20 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               const SizedBox(height: 12),
+              // Row 3: تواصل معنا
               Row(
                 children: [
                   Expanded(
+                    flex: 1,
                     child: _buildServiceCard(
-                      'طلب إدراج شهادة بحرية',
-                      Icons.directions_boat_outlined,
+                      'تواصل معنا',
+                      Icons.headset_mic_outlined,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _buildServiceCard(
-                      'طلب إدراج شهادة جوية',
-                      Icons.flight_outlined,
-                    ),
+                    flex: 1,
+                    child: Container(), // Empty space
                   ),
                 ],
               ),
@@ -1076,15 +1384,33 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _handleViewAllShipments() {
-    // الانتقال لصفحة جميع الشحنات (الصفحة الجديدة التي أنشأناها)
-    Navigator.pushNamed(
-      context,
+    // الانتقال لصفحة جميع الشحنات
+    context.go(
       '/shipments',
-      arguments: {'userName': widget.userName, 'userEmail': widget.userEmail},
+      extra: {
+        'userName': widget.userName,
+        'userEmail': widget.userEmail,
+        'type': 'incoming',
+      },
     );
   }
 
   Widget _buildShipmentCard(Map<String, dynamic> shipment) {
+    // Get shipment type from shipment_type field
+    final shipmentType =
+        shipment['shipment_type']?.toString().toLowerCase() ?? '';
+    final isSea =
+        shipmentType.contains('بحري') ||
+        shipmentType.contains('sea') ||
+        shipment['type'] == 'بحري';
+    final typeText = isSea ? 'بحري' : 'جوي';
+    final typeIcon =
+        isSea ? Icons.directions_boat_rounded : Icons.flight_takeoff_rounded;
+    final typeColor = isSea ? const Color(0xFF1ba3b6) : Colors.orange[700]!;
+
+    // Get status color
+    final statusColor = _getStatusColor(shipment['status']);
+
     return InkWell(
       onTap: () {
         _handleShipmentTap(shipment);
@@ -1108,64 +1434,100 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with ID and Urgent Badge
+            // Header Row - Shipment Code and Type Badge
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF690000).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        shipment['id'],
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
-                          color: Color(0xFF690000),
+                Expanded(
+                  child: Row(
+                    children: [
+                      // Shipment Code Badge (if available)
+                      if (shipment['shipmentCode']?.toString().isNotEmpty ==
+                          true) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF690000),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            shipment['shipmentCode'],
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    if (shipment['isUrgent']) ...[
-                      const SizedBox(width: 8),
+                        const SizedBox(width: 8),
+                      ],
+                      // Type Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: 10,
+                          vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: typeColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
-                          children: const [
-                            Icon(
-                              Icons.priority_high,
-                              size: 14,
-                              color: Colors.red,
-                            ),
-                            SizedBox(width: 2),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(typeIcon, size: 14, color: typeColor),
+                            const SizedBox(width: 4),
                             Text(
-                              'عاجل',
+                              typeText,
                               style: TextStyle(
                                 fontSize: 11,
-                                fontWeight: FontWeight.bold,
                                 fontFamily: 'Cairo',
-                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                                color: typeColor,
                               ),
                             ),
                           ],
                         ),
                       ),
+                      // Urgent Badge
+                      if (shipment['isUrgent']) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(
+                                Icons.priority_high,
+                                size: 14,
+                                color: Colors.red,
+                              ),
+                              SizedBox(width: 2),
+                              Text(
+                                'عاجل',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
                 Icon(
                   Icons.arrow_forward_ios,
@@ -1177,20 +1539,20 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 14),
 
-            // POL Number
+            // ACID Number Row
             Row(
               children: [
                 Icon(
-                  Icons.description_outlined,
+                  Icons.qr_code_2_rounded,
                   size: 18,
-                  color: Colors.grey[600],
+                  color: const Color(0xFF690000),
                 ),
                 const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'رقم البوليصة',
+                      'رقم ACID',
                       style: TextStyle(
                         fontSize: 11,
                         fontFamily: 'Cairo',
@@ -1199,7 +1561,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      shipment['polNumber'],
+                      shipment['id'],
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -1212,13 +1574,51 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
 
+            // Number 46 Row (if available)
+            if (shipment['number46']?.toString().isNotEmpty == true) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(
+                    Icons.description_outlined,
+                    size: 18,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'رقم 46',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'Cairo',
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        shipment['number46'],
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Cairo',
+                          color: Color(0xFF424242),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+
             const SizedBox(height: 12),
 
             const Divider(height: 1, thickness: 1),
 
             const SizedBox(height: 12),
 
-            // Status and Date
+            // Status and Date Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1229,13 +1629,13 @@ class _HomePageState extends State<HomePage> {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: statusColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Icon(
-                          Icons.access_time,
+                          Icons.info_outline,
                           size: 14,
-                          color: Colors.orange[700],
+                          color: statusColor,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1246,7 +1646,7 @@ class _HomePageState extends State<HomePage> {
                             fontSize: 12,
                             fontFamily: 'Cairo',
                             fontWeight: FontWeight.w600,
-                            color: Colors.orange[700],
+                            color: statusColor,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1257,14 +1657,10 @@ class _HomePageState extends State<HomePage> {
 
                 const SizedBox(width: 12),
 
-                // Date
+                // Last Update Date
                 Row(
                   children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      size: 13,
-                      color: Colors.grey[500],
-                    ),
+                    Icon(Icons.update, size: 13, color: Colors.grey[500]),
                     const SizedBox(width: 6),
                     Text(
                       shipment['date'],
@@ -1285,11 +1681,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _handleShipmentTap(Map<String, dynamic> shipment) {
-    Navigator.pushNamed(
-      context,
-      '/shipment-details',
-      arguments: {'shipmentId': shipment['id']},
-    );
+    context.push('/shipment-details/${shipment['id']}');
   }
 
   Widget _buildBottomNavigationBar() {
@@ -1320,14 +1712,9 @@ class _HomePageState extends State<HomePage> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(0, Icons.home_rounded, 'الرئيسية'),
-                _buildNavItem(1, Icons.receipt_long_rounded, 'الفواتير'),
-                _buildNavItem(2, Icons.flight_takeoff_rounded, 'الشحنات'),
-                _buildNavItem(
-                  3,
-                  Icons.account_balance_wallet_rounded,
-                  'المدفوعات',
-                ),
-                _buildNavItem(4, Icons.person_rounded, 'حسابي'),
+                _buildNavItem(1, Icons.flight_land_rounded, 'الوارد'),
+                _buildNavItem(2, Icons.flight_takeoff_rounded, 'الصادر'),
+                _buildNavItem(3, Icons.receipt_long_rounded, 'الفواتير'),
               ],
             ),
           ),
@@ -1342,9 +1729,6 @@ class _HomePageState extends State<HomePage> {
       child: InkWell(
         onTap: () {
           if (!mounted) return;
-          setState(() {
-            _selectedIndex = index;
-          });
           _handleNavigationTap(index);
         },
         borderRadius: BorderRadius.circular(15),
@@ -1403,57 +1787,39 @@ class _HomePageState extends State<HomePage> {
   void _handleNavigationTap(int index) {
     switch (index) {
       case 0:
-        // الرئيسية - already here
+        // الرئيسية - already here, just update state if needed
+        if (_selectedIndex != 0) {
+          setState(() => _selectedIndex = 0);
+        }
         break;
       case 1:
-        // الفواتير
-        AlNoranPopups.showInfo(
-          context: context,
-          title: 'الفواتير',
-          message: 'قسم الفواتير قيد التطوير',
+        // الوارد - Navigate to incoming shipments (الشحنات الحالية)
+        setState(() => _selectedIndex = index);
+        context.go(
+          '/shipments',
+          extra: {
+            'userName': widget.userName,
+            'userEmail': widget.userEmail,
+            'type': 'incoming',
+          },
         );
         break;
       case 2:
-        // الشحنات - Navigate to shipments screen
-        Navigator.pushNamed(
-          context,
-          '/shipments',
-          arguments: {
-            'userName': widget.userName,
-            'userEmail': widget.userEmail,
-          },
-        ).then((_) {
-          // إعادة تعيين الـ selected index عند الرجوع
-          if (!mounted) return;
-          setState(() {
-            _selectedIndex = 0;
-          });
-        });
-        break;
-      case 3:
-        // إدارة المدفوعات
-        AlNoranPopups.showInfo(
-          context: context,
-          title: 'إدارة المدفوعات',
-          message: 'قسم المدفوعات قيد التطوير',
+        // الصادر - Navigate to exports page
+        setState(() => _selectedIndex = index);
+        context.go(
+          '/exports',
+          extra: {'userName': widget.userName, 'userEmail': widget.userEmail},
         );
         break;
-      case 4:
-        // حسابي - Navigate to Profile Page
-        Navigator.pushNamed(context, '/profile').then((_) {
-          // إعادة تعيين الـ selected index عند الرجوع
-          if (!mounted) return;
-          setState(() {
-            _selectedIndex = 0;
-          });
-        });
+      case 3:
+        // الفواتير - Navigate to payments page
+        setState(() => _selectedIndex = index);
+        context.go(
+          '/payments',
+          extra: {'userName': widget.userName, 'userEmail': widget.userEmail},
+        );
         break;
     }
-  }
-
-  @override
-  void dispose() {
-    _trackingController.dispose();
-    super.dispose();
   }
 }

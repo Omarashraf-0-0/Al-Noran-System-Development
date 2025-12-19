@@ -10,7 +10,6 @@ import folderCheck from "../assets/images/folder_check.png";
 import pdfPic from "../assets/images/picture_as_pdf.png";
 
 const Header = () => {
-	const primaryColor = "#690000";
 	const [showNotifications, setShowNotifications] = useState(false);
 	const [showMobileMenu, setShowMobileMenu] = useState(false);
 	const [showUserMenu, setShowUserMenu] = useState(false);
@@ -103,6 +102,7 @@ const Header = () => {
 		{ label: "إدارة العملاء", path: "/customermanagement", icon: "👥" },
 		{ label: "إدارة الشهادات", path: "/certificatesmanagement", icon: "📜" },
 		{ label: "إدارة الشحنات", path: "/shipmentsmanagement", icon: "🚢" },
+		{ label: "إدارة المدفوعات", path: "/payments-management", icon: "💳" },
 	];
 
 	const getUserDisplayName = () => {
@@ -140,11 +140,10 @@ const Header = () => {
 									<a
 										key={item.path}
 										href={item.path}
-										className={`px-3 py-2 rounded-md text-sm font-bold transition-colors ${
-											isActivePath(item.path)
+										className={`px-3 py-2 rounded-md text-sm font-bold transition-colors ${isActivePath(item.path)
 												? "bg-red-800 text-white"
 												: "text-red-800 hover:bg-red-50"
-										}`}
+											}`}
 									>
 										{item.icon && <span className="mr-1">{item.icon}</span>}
 										{item.label}
@@ -278,6 +277,18 @@ const Header = () => {
 										>
 											📊 لوحة التحكم
 										</a>
+										<a
+											href="/employeedashboard"
+											className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right"
+										>
+											💼 لوحة الموظف
+										</a>
+										<a
+											href="/profile"
+											className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-right"
+										>
+											👤 الملف الشخصي
+										</a>
 										<button
 											onClick={handleLogout}
 											className="w-full text-right block px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
@@ -299,11 +310,10 @@ const Header = () => {
 								<a
 									key={item.path}
 									href={item.path}
-									className={`block px-3 py-2 rounded-md text-sm font-bold transition-colors ${
-										isActivePath(item.path)
+									className={`block px-3 py-2 rounded-md text-sm font-bold transition-colors ${isActivePath(item.path)
 											? "bg-red-800 text-white"
 											: "text-red-800 hover:bg-red-50"
-									}`}
+										}`}
 									onClick={() => setShowMobileMenu(false)}
 								>
 									{item.icon && <span className="mr-2">{item.icon}</span>}

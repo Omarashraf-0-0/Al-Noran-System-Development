@@ -2,6 +2,7 @@ const Shipment = require("../models/shipment");
 const Invoice = require("../models/invoice");
 const mailSender = require("../services/mailer");
 const jwt = require("jsonwebtoken");
+const notificationService = require("../services/notificationService");
 
 // ✅ إنشاء شحنة جديدة
 const createShipment = async (req, res) => {
@@ -12,14 +13,27 @@ const createShipment = async (req, res) => {
 		const decoded = jwt.verify(token, process.env.JWT_SECRET);
 		const shipmentData = req.body;
 
+		console.log("🔐 Decoded token:", decoded);
+		console.log("👤 User type check:", decoded.type, decoded.userType);
+		console.log("📦 Shipment data employee_id:", shipmentData.employee_id);
+
+		// Check if this is an employee creating the shipment
+		const isEmployee =
+			decoded.type === "employee" ||
+			decoded.userType === "employee" ||
+			shipmentData.employee_id; // If employee_id is provided, it's an employee creating it
+
 		// Handle invoice file
 		if (req.file) {
 			// New file uploaded
 			shipmentData.invoiceUrl = `/uploads/shipments/${req.file.filename}`;
-		} else if (decoded.type === "employee" || decoded.userType === "employee") {
+		} else if (isEmployee) {
 			// Employee creating shipment - invoice comes from ACID request uploads
+			console.log("👨‍💼 Employee creating shipment, checking uploads...");
+
 			// Find invoice from uploads array if provided
 			if (shipmentData.uploads && Array.isArray(shipmentData.uploads)) {
+				console.log("📎 Uploads array:", shipmentData.uploads);
 				const invoiceUpload = shipmentData.uploads.find(
 					(upload) =>
 						upload.category === "invoice" ||
@@ -27,21 +41,54 @@ const createShipment = async (req, res) => {
 				);
 				if (invoiceUpload && invoiceUpload.s3Url) {
 					shipmentData.invoiceUrl = invoiceUpload.s3Url;
+					console.log("✅ Invoice URL found:", shipmentData.invoiceUrl);
 				}
 			}
 			// If no invoice found in uploads, it can be added later
 			if (!shipmentData.invoiceUrl) {
+				console.log(
+					"⚠️ No invoice found, setting to null (can be added later)"
+				);
 				shipmentData.invoiceUrl = null;
 			}
 		} else {
 			// Client must provide invoice file
+			console.log("❌ Client creating shipment without file");
 			return res.status(400).json({ message: "Invoice file is required" });
 		}
 
-		console.log("Final shipment data to be saved:", shipmentData);
+		console.log("Final shipment data before mapping:", shipmentData);
+
+		// Map frontend field names to database schema
+		const mappedShipmentData = {
+			user_id: shipmentData.user_id,
+			employee_id: shipmentData.employee_id,
+			acid: shipmentData.acid,
+			shipment_type:
+				shipmentData.shipment_type || shipmentData.shipmentType || "بحري",
+			port_name: shipmentData.port_name || shipmentData.portName,
+			country: shipmentData.country,
+			num_of_containers:
+				shipmentData.num_of_containers || shipmentData.numContainers || 1,
+			type_of_containers:
+				shipmentData.type_of_containers || shipmentData.containerTypes || [],
+			status: shipmentData.status || "Pending",
+			policy: shipmentData.policy || "",
+			arrivalDate: shipmentData.arrivalDate,
+			invoiceUrl: shipmentData.invoiceUrl,
+			acid_request_id: shipmentData.acid_request_id,
+			uploads: shipmentData.uploads || [],
+			// Legacy fields for display
+			importerName: shipmentData.importerName || "",
+			employerName: shipmentData.employerName || "",
+			shipmentDescription: shipmentData.shipmentDescription || "",
+			number46: shipmentData.number46 || "",
+		};
+
+		console.log("Mapped shipment data to be saved:", mappedShipmentData);
 
 		// Save shipment in DB
-		const shipment = new Shipment(shipmentData);
+		const shipment = new Shipment(mappedShipmentData);
 		await shipment.save();
 
 		// Generate unique ACID request ID (example)
@@ -69,21 +116,18 @@ const createShipment = async (req, res) => {
 				</tr>
 				<tr>
 					<td style="padding:10px; border:1px solid #ddd; background:#f9fafb;"><strong>Importer Name</strong></td>
-					<td style="padding:10px; border:1px solid #ddd;">${
-						shipmentData.importerName
-					}</td>
+					<td style="padding:10px; border:1px solid #ddd;">${shipmentData.importerName
+			}</td>
 				</tr>
 				<tr>
 					<td style="padding:10px; border:1px solid #ddd; background:#f9fafb;"><strong>Employer Name</strong></td>
-					<td style="padding:10px; border:1px solid #ddd;">${
-						shipmentData.employerName
-					}</td>
+					<td style="padding:10px; border:1px solid #ddd;">${shipmentData.employerName
+			}</td>
 				</tr>
 				<tr>
 					<td style="padding:10px; border:1px solid #ddd; background:#f9fafb;"><strong>Description</strong></td>
-					<td style="padding:10px; border:1px solid #ddd;">${
-						shipmentData.shipmentDescription
-					}</td>
+					<td style="padding:10px; border:1px solid #ddd;">${shipmentData.shipmentDescription
+			}</td>
 				</tr>
 				<tr>
 					<td style="padding:10px; border:1px solid #ddd; background:#f9fafb;"><strong>Status</strong></td>
@@ -92,15 +136,14 @@ const createShipment = async (req, res) => {
 				<tr>
 					<td style="padding:10px; border:1px solid #ddd; background:#f9fafb;"><strong>Expected Arrival</strong></td>
 					<td style="padding:10px; border:1px solid #ddd;">${new Date(
-						shipmentData.arrivalDate
-					).toLocaleDateString()}</td>
+				shipmentData.arrivalDate
+			).toLocaleDateString()}</td>
 				</tr>
 				<tr>
 					<td style="padding:10px; border:1px solid #ddd; background:#f9fafb;"><strong>Invoice File</strong></td>
 					<td style="padding:10px; border:1px solid #ddd;">
-					<a href="${process.env.BASE_URL}${
-			shipmentData.invoiceUrl
-		}" target="_blank" style="color:#0b74de; text-decoration:none;">View Invoice</a>
+					<a href="${process.env.BASE_URL}${shipmentData.invoiceUrl
+			}" target="_blank" style="color:#0b74de; text-decoration:none;">View Invoice</a>
 					</td>
 				</tr>
 				<tr>
@@ -127,6 +170,25 @@ const createShipment = async (req, res) => {
 			htmlContent
 		);
 
+		// 📬 Send notification to user
+		if (shipmentData.user_id) {
+			try {
+				await notificationService.createNotification({
+					userId: shipmentData.user_id,
+					type: "shipment_created",
+					message: `تم إنشاء شحنة جديدة برقم ${shipment.acid}`,
+					data: {
+						shipmentId: shipment._id,
+						shipmentAcid: shipment.acid,
+					},
+					sendPush: true,
+					priority: "medium",
+				});
+			} catch (notifError) {
+				console.error("Failed to send notification:", notifError.message);
+			}
+		}
+
 		// ✅ Respond to client
 		res.status(201).json({
 			success: true,
@@ -142,12 +204,55 @@ const createShipment = async (req, res) => {
 // ✅ جلب كل الشحنات
 const getAllShipments = async (req, res) => {
 	try {
-		const shipments = await Shipment.find()
+		// Get userId from authenticated user (from protect middleware)
+		const userId = req.user ? req.user._id : null;
+		let userType = req.user ? req.user.type || req.user.userType : null;
+
+		console.log(`🔍 [getAllShipments] userId: ${userId}, userType: ${userType}`);
+		console.log(`🔍 [getAllShipments] req.user:`, JSON.stringify(req.user, null, 2));
+
+		if (!userId) {
+			return res.status(401).json({
+				success: false,
+				message: "User not authenticated",
+			});
+		}
+
+		// If userType is not in token, fetch from database
+		if (!userType) {
+			const User = require("../models/user");
+			const user = await User.findById(userId);
+			if (user) {
+				userType = user.type;
+				console.log(`✅ Fetched userType from database: ${userType}`);
+			}
+		}
+
+		let query = {};
+
+		// If user is a client, show only their shipments
+		if (userType === "client") {
+			query.user_id = userId;
+			console.log(`🔒 Client filter applied for user: ${userId}`);
+		} else if (userType === "employee" && req.query.createdBy === "me") {
+			query.employee_id = userId;
+			console.log(`🔒 Employee filter applied for user: ${userId}`);
+		}
+		// If user is employee or admin, show all shipments (or filter by employee_id if needed)
+		// For now, employees and admins see all shipments
+
+		console.log(`📦 [getAllShipments] Query:`, JSON.stringify(query));
+
+		const shipments = await Shipment.find(query)
 			.populate("user_id", "username fullname email")
 			.populate("employee_id", "username fullname email")
 			.sort({ createdAt: -1 });
+		
+		console.log(`📦 [getAllShipments] Found ${shipments.length} shipments for userType: ${userType}`);
+		
 		res.json(shipments);
 	} catch (error) {
+		console.error(`❌ [getAllShipments] Error:`, error);
 		res.status(500).json({ message: error.message });
 	}
 };
@@ -176,20 +281,68 @@ const getShipmentById = async (req, res) => {
 			console.log(
 				`Invalid ObjectId format: ${shipmentId}, trying to find by ACID code...`
 			);
-			const shipment = await Shipment.findOne({ acid: shipmentId })
+			let shipment = await Shipment.findOne({ acid: shipmentId })
 				.populate("user_id", "username fullname email")
 				.populate("employee_id", "username fullname email");
+
 			if (!shipment) {
 				return res.status(404).json({ message: "Shipment not found" });
 			}
+
+			// Try to populate acid_request_id with uploads if it exists
+			if (shipment.acid_request_id) {
+				try {
+					shipment = await Shipment.findOne({ acid: shipmentId })
+						.populate("user_id", "username fullname email")
+						.populate("employee_id", "username fullname email")
+						.populate({
+							path: "acid_request_id",
+							populate: {
+								path: "uploads",
+								model: "Upload",
+							},
+						});
+				} catch (populateError) {
+					console.log(
+						"Could not populate acid_request_id uploads:",
+						populateError.message
+					);
+					// Continue without populated uploads
+				}
+			}
+
 			return res.json(shipment);
 		}
 
-		const shipment = await Shipment.findById(shipmentId)
+		let shipment = await Shipment.findById(shipmentId)
 			.populate("user_id", "username fullname email")
 			.populate("employee_id", "username fullname email");
+
 		if (!shipment)
 			return res.status(404).json({ message: "Shipment not found" });
+
+		// Try to populate acid_request_id with uploads if it exists
+		if (shipment.acid_request_id) {
+			try {
+				shipment = await Shipment.findById(shipmentId)
+					.populate("user_id", "username fullname email")
+					.populate("employee_id", "username fullname email")
+					.populate({
+						path: "acid_request_id",
+						populate: {
+							path: "uploads",
+							model: "Upload",
+						},
+					});
+			} catch (populateError) {
+				console.log(
+					"Could not populate acid_request_id uploads:",
+					populateError.message
+				);
+				// Continue without populated uploads
+			}
+		}
+
 		res.json(shipment);
 	} catch (error) {
 		console.error("Error in getShipmentById:", error);
@@ -351,38 +504,93 @@ const addShipments = async (req, res) => {
 const updateShipmentStatusById = async (req, res) => {
 	try {
 		const { shipmentId } = req.params;
-		const { status } = req.body;
+		const { status, number46, subStatus, paymentParty } = req.body;
 
-		// Validate status
-		const validStatuses = [
-			"In Transit",
-			"في انتظار الشحن",
-			"في انتظار وصول الإذن",
-			"جاري الكشف والتثمين",
-			"تمت بنجاح",
-			"Pending",
-			"Arrived",
-			"Customs Clearance",
-			"Completed",
-		];
+		// Build update object
+		const updateData = {};
 
-		if (!status) {
-			return res.status(400).json({ message: "Status is required" });
+		// Validate and add status if provided
+		if (status) {
+			const validStatuses = [
+				"في انتظار الشحن",
+				"في الطريق",
+				"تم وصول البضاعة",
+				"في انتظار وصول الإذن",
+				"تم وصول الإذن",
+				"التخليص الجمركي",
+				"جارى ادراج الشحنة واستكمال الاجراءات",
+				"جاري الكشف والتثمين",
+				"مكتملة",
+				"تمت بنجاح",
+			];
+
+			if (!validStatuses.includes(status)) {
+				return res.status(400).json({
+					message: "Invalid status value",
+					validStatuses,
+				});
+			}
+			updateData.status = status;
+
+			// Clear subStatus and paymentParty if status is NOT "جاري الكشف والتثمين"
+			if (status !== "جاري الكشف والتثمين") {
+				updateData.subStatus = null;
+				updateData.paymentParty = null;
+			}
 		}
 
-		if (!validStatuses.includes(status)) {
-			return res.status(400).json({
-				message: "Invalid status value",
-				validStatuses,
-			});
+		// Handle subStatus update
+		if (subStatus !== undefined) {
+			const validSubStatuses = [
+				null,
+				"انتظار الرسوم الجمركية من المصلحة",
+				"ادخال رقم المطالبة و صورة المطالبة",
+				"اختيار جهة الدفع",
+				"في انتظار استلام الافراج الجمركى",
+				"مرحلة الترانزيت",
+			];
+
+			if (subStatus !== null && !validSubStatuses.includes(subStatus)) {
+				return res.status(400).json({
+					message: "Invalid subStatus value",
+					validSubStatuses,
+				});
+			}
+			updateData.subStatus = subStatus;
+		}
+
+		// Handle paymentParty update
+		if (paymentParty !== undefined) {
+			const validPaymentParties = [null, "العميل", "الشركة"];
+
+			if (paymentParty !== null && !validPaymentParties.includes(paymentParty)) {
+				return res.status(400).json({
+					message: "Invalid paymentParty value",
+					validPaymentParties,
+				});
+			}
+			updateData.paymentParty = paymentParty;
+		}
+
+		// Add number46 if provided
+		if (number46 !== undefined) {
+			updateData.number46 = number46;
+		}
+
+		// Check if there's anything to update
+		if (Object.keys(updateData).length === 0) {
+			return res.status(400).json({ message: "No valid fields to update" });
 		}
 
 		// Find and update shipment
-		const shipment = await Shipment.findByIdAndUpdate(
-			shipmentId,
-			{ status },
-			{ new: true, runValidators: true }
-		);
+		// First, get the old status before updating
+		const existingShipment = await Shipment.findById(shipmentId);
+		const oldStatus = existingShipment?.status;
+		
+		const shipment = await Shipment.findByIdAndUpdate(shipmentId, updateData, {
+			new: true,
+			runValidators: true,
+		});
 
 		if (!shipment) {
 			return res.status(404).json({ message: "Shipment not found" });
@@ -394,15 +602,30 @@ const updateShipmentStatusById = async (req, res) => {
 				shipmentId: shipment._id,
 				acid: shipment.acid,
 				status: shipment.status,
+				subStatus: shipment.subStatus,
+				paymentParty: shipment.paymentParty,
 				updatedAt: new Date(),
 			});
 			console.log(
-				`Socket event emitted for shipment ID: ${shipmentId} with status: ${status}`
+				`Socket event emitted for shipment ID: ${shipmentId} with status: ${status}, subStatus: ${subStatus}`
 			);
 		}
 
-		// TODO: Send email/notification to client about status change
-		// You can add email notification here using mailSender service
+		// 📬 Send notification to client about status change
+		if (shipment.user_id && status && oldStatus !== status) {
+			try {
+				await notificationService.notifyShipmentStatusChange(
+					shipment.user_id,
+					shipment._id,
+					shipment.acid,
+					oldStatus,
+					status
+				);
+				console.log(`📬 Notification sent for shipment status change: ${oldStatus} → ${status}`);
+			} catch (notifError) {
+				console.error("Failed to send status change notification:", notifError.message);
+			}
+		}
 
 		res.json({
 			success: true,
@@ -467,19 +690,17 @@ const requestRequiredDocuments = async (req, res) => {
 			<body style="font-family:Arial, sans-serif; background:#f5f7fa; padding:20px;">
 			<div style="max-width:600px; margin:auto; background:#ffffff; padding:25px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.1);">
 				<h2 style="color:#dc2626; text-align:center;">📄 مستندات مطلوبة لشحنتك</h2>
-				<p>مرحباً <strong>${
-					shipment.user_id?.username ||
-					shipment.user_id?.fullname ||
-					"عزيزي العميل"
-				}</strong>,</p>
+				<p>مرحباً <strong>${shipment.user_id?.username ||
+			shipment.user_id?.fullname ||
+			"عزيزي العميل"
+			}</strong>,</p>
 				<p>نود إعلامك بأننا نحتاج إلى المستندات التالية لاستكمال معالجة شحنتك:</p>
 
 				<div style="background:#fef2f2; border-right:4px solid #dc2626; padding:15px; margin:20px 0; border-radius:5px;">
 					<h3 style="color:#dc2626; margin-top:0;">تفاصيل الشحنة:</h3>
 					<p style="margin:5px 0;"><strong>رقم ACID:</strong> ${shipment.acid}</p>
-					<p style="margin:5px 0;"><strong>رقم البوليصة:</strong> ${
-						shipment.number46 || "غير محدد"
-					}</p>
+					<p style="margin:5px 0;"><strong>رقم البوليصة:</strong> ${shipment.number46 || "غير محدد"
+			}</p>
 					<p style="margin:5px 0;"><strong>الحالة الحالية:</strong> ${shipment.status}</p>
 				</div>
 
@@ -493,10 +714,9 @@ const requestRequiredDocuments = async (req, res) => {
 				</div>
 
 				<div style="text-align:center; margin-top:30px;">
-					<a href="${
-						process.env.FRONTEND_URL ||
-						"http://section-assignment-bucket.s3-website-us-east-1.amazonaws.com"
-					}/shipmentstatus/${shipment.acid}" 
+					<a href="${process.env.FRONTEND_URL ||
+			"http://section-assignment-bucket.s3-website-us-east-1.amazonaws.com"
+			}/shipmentstatus/${shipment.acid}" 
 					   style="display:inline-block; background:#dc2626; color:#ffffff; padding:12px 30px; text-decoration:none; border-radius:8px; font-weight:bold;">
 						رفع المستندات الآن
 					</a>
@@ -521,6 +741,19 @@ const requestRequiredDocuments = async (req, res) => {
 				`مستندات مطلوبة - شحنة ${shipment.acid}`,
 				htmlContent
 			);
+		}
+
+		// 📬 Send push notification for document request
+		try {
+			await notificationService.notifyShipmentDocumentsRequested(
+				shipment.user_id._id || shipment.user_id,
+				shipment._id,
+				shipment.acid,
+				documents  // Pass the array directly, not the string
+			);
+			console.log(`📬 Document request notification sent to user: ${shipment.user_id._id || shipment.user_id}`);
+		} catch (notifError) {
+			console.error("Failed to send document request notification:", notifError.message);
 		}
 
 		// Emit socket event for real-time notification
@@ -672,6 +905,63 @@ const markDocumentAsUploaded = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error marking document as uploaded:", error);
+		res.status(500).json({ message: error.message });
+	}
+};
+
+// ✅ Reset/Delete uploaded document (allows client to re-upload)
+const resetUploadedDocument = async (req, res) => {
+	try {
+		const { shipmentId, documentId } = req.params;
+
+		console.log("🗑️ Resetting uploaded document:", {
+			shipmentId,
+			documentId,
+		});
+
+		const shipment = await Shipment.findById(shipmentId);
+
+		if (!shipment) {
+			return res.status(404).json({ message: "Shipment not found" });
+		}
+
+		const document = shipment.requiredDocuments.id(documentId);
+
+		if (!document) {
+			return res.status(404).json({ message: "Document not found" });
+		}
+
+		// Reset document to pending state
+		document.uploaded = false;
+		document.uploadedAt = null;
+		document.fileId = null;
+
+		await shipment.save();
+
+		console.log("✅ Document reset successfully:", document.name);
+
+		// Emit socket event
+		if (req.io) {
+			req.io.to(shipment.acid).emit("documentReset", {
+				shipmentId: shipment._id,
+				acid: shipment.acid,
+				documentId: documentId,
+				documentName: document.name,
+			});
+		}
+
+		res.json({
+			success: true,
+			message: "تم حذف المستند بنجاح. يمكن للعميل إعادة رفعه.",
+			data: {
+				_id: document._id,
+				name: document.name,
+				uploaded: document.uploaded,
+				requestedAt: document.requestedAt,
+			},
+		});
+	} catch (error) {
+		console.error("Error resetting document:", error);
 		res.status(500).json({ message: error.message });
 	}
 };
@@ -1012,6 +1302,7 @@ const searchShipments = async (req, res) => {
 				{ third_gomroky: searchRegex },
 				{ number46: searchRegex },
 				{ bl_number: searchRegex },
+				{ shipmentCode: searchRegex },
 			],
 		};
 
@@ -1035,6 +1326,48 @@ const searchShipments = async (req, res) => {
 	}
 };
 
+// ✅ Get predefined document names for autocomplete suggestions
+// Only returns predefined document types - does NOT save custom entries
+const getDistinctDocumentNames = async (req, res) => {
+	try {
+		// Only return predefined document names - no database queries
+		// Custom entries typed by employee will NOT be saved for future use
+		const predefinedNames = [
+			"صورة البطاقة",
+			"صورة السجل التجاري",
+			"صورة البطاقة الضريبية",
+			"شهادة المنشأ",
+			"بوليصة الشحن",
+			"صورة الفاتورة",
+			"صورة العقد",
+			"كشف العبوة",
+			"إذن الإفراج",
+			"صورة التوكيل",
+			"شهادة الجودة",
+			"شهادة المطابقة",
+			"صورة بطاقة الاستيراد",
+			"صورة رخصة الاستيراد",
+			"صورة الموافقة الجمركية",
+			"الفاتورة التجارية",
+			"شهادة الصحة",
+			"شهادة التأمين",
+			"إذن الاستيراد",
+			"تصريح الجمارك",
+		];
+
+		res.json({
+			success: true,
+			documentNames: predefinedNames,
+		});
+	} catch (error) {
+		console.error("Error getting document names:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error while fetching document names",
+		});
+	}
+};
+
 module.exports = {
 	createShipment,
 	getAllShipments,
@@ -1050,6 +1383,7 @@ module.exports = {
 	requestRequiredDocuments,
 	getRequiredDocuments,
 	markDocumentAsUploaded,
+	resetUploadedDocument,
 	getEmployeeShipmentStats,
 	getClientShipmentStats,
 	addShipments,
@@ -1057,4 +1391,5 @@ module.exports = {
 	getDashboardStats,
 	getRevenueComparison,
 	searchShipments,
+	getDistinctDocumentNames,
 };

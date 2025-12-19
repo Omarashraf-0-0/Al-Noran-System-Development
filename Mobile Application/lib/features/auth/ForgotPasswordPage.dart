@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
-import 'OtpVerificationPage.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -35,22 +35,22 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         email: _emailController.text.trim(),
       );
 
-      setState(() => _isLoading = false);
-
       if (!mounted) return;
 
       if (result['success']) {
-        // Navigate to OTP page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) =>
-                    OtpVerificationPage(email: _emailController.text.trim()),
-          ),
+        // Navigate to OTP page using GoRouter
+        setState(() => _isLoading = false);
+        await Future.delayed(Duration.zero); // Wait for setState to complete
+        if (!mounted) return;
+        context.go(
+          '/otp-verification',
+          extra: {'email': _emailController.text.trim()},
         );
       } else {
         // Show error message
+        setState(() => _isLoading = false);
+        await Future.delayed(Duration.zero); // Wait for setState to complete
+        if (!mounted) return;
         await AlNoranPopups.showError(
           context: context,
           title: 'خطأ',
@@ -58,9 +58,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         );
       }
     } catch (e) {
-      setState(() => _isLoading = false);
       if (!mounted) return;
-
+      setState(() => _isLoading = false);
+      await Future.delayed(Duration.zero); // Wait for setState to complete
+      if (!mounted) return;
       await AlNoranPopups.showError(
         context: context,
         title: 'خطأ',
@@ -199,7 +200,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
                   // Back to Login
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => context.go('/login'),
                     child: const Text(
                       'العودة لتسجيل الدخول',
                       style: TextStyle(

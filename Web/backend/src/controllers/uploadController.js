@@ -1,6 +1,7 @@
 const Upload = require("../models/upload");
 const fs = require("fs");
 const path = require("path");
+const notificationService = require("../services/notificationService");
 
 // ✅ Create upload record in database
 const createUploadRecord = async (
@@ -65,6 +66,26 @@ const uploadSingleFile = async (req, res) => {
 			uploadType,
 			additionalData
 		);
+
+		// 📬 Send notification if it's a user document upload (registration docs)
+		if (uploadType === "users" && additionalData.uploadedBy) {
+			try {
+				await notificationService.createNotification({
+					userId: additionalData.uploadedBy,
+					type: "document_uploaded",
+					message: "تم رفع المستند بنجاح وجاري مراجعته",
+					data: {
+						uploadId: uploadRecord._id,
+						documentType: req.body.documentType || "document",
+					},
+					sendPush: true,
+					priority: "low",
+				});
+				console.log(`📬 Document upload notification sent to user: ${additionalData.uploadedBy}`);
+			} catch (notifError) {
+				console.error("Failed to send upload notification:", notifError.message);
+			}
+		}
 
 		res.status(200).json({
 			message: "File uploaded successfully",
@@ -204,6 +225,24 @@ const getUploadById = async (req, res) => {
 			return res.status(404).json({ message: "Upload not found" });
 		}
 
+		// Generate presigned URL for S3 files
+		if (upload.s3Key) {
+			try {
+				const { getPresignedUrl } = require("../utils/s3Helpers");
+				const presignedUrl = await getPresignedUrl(upload.s3Key, 3600); // 1 hour expiry
+
+				// Return upload data with presigned URL
+				return res.json({
+					...upload.toObject(),
+					presignedUrl,
+				});
+			} catch (s3Error) {
+				console.error("Error generating presigned URL:", s3Error);
+				// If presigned URL generation fails, return upload data with regular URL
+				return res.json(upload);
+			}
+		}
+
 		res.json(upload);
 	} catch (error) {
 		res.status(500).json({ message: error.message });
@@ -269,6 +308,17 @@ const softDeleteUpload = async (req, res) => {
 		upload.isActive = false;
 		await upload.save();
 
+		// Invalidate user verification if it's a client's registration document
+		if (upload.userId && upload.category === "registration") {
+			const User = require("../models/user");
+			const user = await User.findById(upload.userId);
+			if (user && user.type === "client") {
+				user.clientDetails.documentsVerified = false;
+				await user.save();
+				console.log(`User ${user._id} verification invalidated due to document deletion.`);
+			}
+		}
+
 		res.json({ message: "Upload deleted successfully" });
 	} catch (error) {
 		res.status(500).json({ message: error.message });
@@ -294,6 +344,17 @@ const permanentDeleteUpload = async (req, res) => {
 
 		// Delete database record
 		await Upload.findByIdAndDelete(upload._id);
+
+		// Invalidate user verification if it's a client's registration document
+		if (upload.userId && upload.category === "registration") {
+			const User = require("../models/user");
+			const user = await User.findById(upload.userId);
+			if (user && user.type === "client") {
+				user.clientDetails.documentsVerified = false;
+				await user.save();
+				console.log(`User ${user._id} verification invalidated due to permanent document deletion.`);
+			}
+		}
 
 		res.json({ message: "Upload permanently deleted" });
 	} catch (error) {
@@ -333,6 +394,161 @@ const getUploadStats = async (req, res) => {
 	}
 };
 
+// ✅ Get all pending documents for admin approval
+const getPendingDocuments = async (req, res) => {
+	try {
+		const { category, userType, clientType } = req.query;
+
+		const query = {
+			approvalStatus: "pending",
+			category: "registration", // Only registration documents need approval
+		};
+
+		if (userType) query.userType = userType;
+		if (clientType) query.clientType = clientType;
+
+		const pendingDocs = await Upload.find(query)
+			.populate("userId", "fullname username email clientDetails")
+			.sort({ uploadedAt: -1 });
+
+		res.json({
+			success: true,
+			count: pendingDocs.length,
+			documents: pendingDocs,
+		});
+	} catch (error) {
+		console.error("Error fetching pending documents:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error fetching pending documents",
+		});
+	}
+};
+
+// ✅ Approve document
+const approveDocument = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const adminId = req.user?._id;
+
+		const document = await Upload.findById(id);
+
+		if (!document) {
+			return res.status(404).json({
+				success: false,
+				message: "Document not found",
+			});
+		}
+
+		document.approvalStatus = "approved";
+		document.approvedBy = adminId;
+		document.approvedAt = new Date();
+		document.rejectionReason = null;
+
+		await document.save();
+
+		// Check if user has verified all documents
+		if (document.userId && document.userType === "client") {
+			const Upload = require("../models/upload");
+			const User = require("../models/user");
+			
+			// Re-fetch user to get client details
+			const user = await User.findById(document.userId);
+			
+			if (user && user.type === "client") {
+				const status = await Upload.checkRequiredUploads(
+					document.userId,
+					user.clientDetails.clientType
+				);
+				
+				if (status.completed) {
+					user.clientDetails.documentsVerified = true;
+					await user.save();
+					console.log(`User ${user._id} documents verified!`);
+				}
+			}
+		}
+
+		// 📬 Send notification to user about document approval
+		if (document.userId) {
+			try {
+				await notificationService.notifyDocumentStatus(
+					document.userId,
+					document.documentType || document.uploadType || "Document",
+					"approved"
+				);
+				console.log(`📬 Document approval notification sent to ${document.userId}`);
+			} catch (notifError) {
+				console.error("Failed to send document approval notification:", notifError.message);
+			}
+		}
+
+		res.json({
+			success: true,
+			message: "Document approved successfully",
+			document,
+		});
+	} catch (error) {
+		console.error("Error approving document:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error approving document",
+		});
+	}
+};
+
+// ✅ Reject document
+const rejectDocument = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { reason } = req.body;
+		const adminId = req.user?._id;
+
+		const document = await Upload.findById(id);
+
+		if (!document) {
+			return res.status(404).json({
+				success: false,
+				message: "Document not found",
+			});
+		}
+
+		document.approvalStatus = "rejected";
+		document.approvedBy = adminId;
+		document.approvedAt = new Date();
+		document.rejectionReason = reason || "No reason provided";
+
+		await document.save();
+
+		// 📬 Send notification to user about document rejection
+		if (document.userId) {
+			try {
+				await notificationService.notifyDocumentStatus(
+					document.userId,
+					document.documentType || document.uploadType || "Document",
+					"rejected",
+					reason || "No reason provided"
+				);
+				console.log(`📬 Document rejection notification sent to ${document.userId}`);
+			} catch (notifError) {
+				console.error("Failed to send document rejection notification:", notifError.message);
+			}
+		}
+
+		res.json({
+			success: true,
+			message: "Document rejected successfully",
+			document,
+		});
+	} catch (error) {
+		console.error("Error rejecting document:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error rejecting document",
+		});
+	}
+};
+
 module.exports = {
 	uploadSingleFile,
 	uploadMultipleFiles,
@@ -343,4 +559,7 @@ module.exports = {
 	softDeleteUpload,
 	permanentDeleteUpload,
 	getUploadStats,
+	getPendingDocuments,
+	approveDocument,
+	rejectDocument,
 };

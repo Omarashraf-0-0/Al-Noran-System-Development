@@ -4,19 +4,13 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorMessage from "../components/ErrorMessage";
+import FileUploadSection from "../components/FileUploadSection";
+import SupplierInfoForm from "../components/SupplierInfoForm";
+import GoodsInfoForm from "../components/GoodsInfoForm";
 import mainIllustration from "../assets/images/Untitled design (7) 1.png";
-import contractIcon from "../assets/images/contract.png";
-import {
-	FileText,
-	Package,
-	User,
-	Globe,
-	Phone,
-	Mail,
-	Weight,
-	ArrowLeft,
-	Save,
-} from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 
 const EditAcidRequestPage = () => {
 	const { requestId } = useParams();
@@ -28,6 +22,11 @@ const EditAcidRequestPage = () => {
 	const [uploadedInvoice, setUploadedInvoice] = useState(null);
 	const [uploading, setUploading] = useState(false);
 	const [progress, setProgress] = useState(0);
+
+	// TODO: RBAC - Get user permissions from context/store
+	// Example: const { user, hasPermission } = useAuth();
+	// const canEditAcidRequest = hasPermission('acid:edit');
+	// const canUploadDocuments = hasPermission('document:upload');
 
 	const [formData, setFormData] = useState({
 		supplier: {
@@ -43,6 +42,7 @@ const EditAcidRequestPage = () => {
 			weight: "",
 		},
 		uploads: [],
+		shipmentType: "بحري", // Default to sea shipment
 	});
 
 	const token = localStorage.getItem("token");
@@ -107,6 +107,7 @@ const EditAcidRequestPage = () => {
 						weight: "",
 					},
 					uploads: response.data.uploads || [],
+					shipmentType: response.data.shipmentType || "بحري",
 				});
 
 				// Set uploaded invoice if exists
@@ -210,6 +211,8 @@ const EditAcidRequestPage = () => {
 	};
 
 	const handleSubmit = async (e) => {
+		// TODO: RBAC - Check if user has permission to edit ACID requests
+		// if (!canEditAcidRequest) { toast.error('ليس لديك صلاحية لتعديل طلبات ACID'); return; }
 		e.preventDefault();
 
 		// Validation
@@ -267,6 +270,7 @@ const EditAcidRequestPage = () => {
 					weight: parseFloat(formData.goods.weight),
 				},
 				uploads: uploadIds,
+				shipmentType: formData.shipmentType || "بحري",
 			};
 
 			const response = await axios.patch(
@@ -299,12 +303,7 @@ const EditAcidRequestPage = () => {
 		return (
 			<div className="flex flex-col min-h-screen bg-gray-50">
 				<Header />
-				<main className="flex-grow flex items-center justify-center">
-					<div className="text-center">
-						<div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-900 mx-auto mb-4"></div>
-						<p className="text-gray-600 text-lg">جاري تحميل البيانات...</p>
-					</div>
-				</main>
+				<LoadingSpinner />
 				<Footer />
 			</div>
 		);
@@ -314,17 +313,11 @@ const EditAcidRequestPage = () => {
 		return (
 			<div className="flex flex-col min-h-screen bg-gray-50">
 				<Header />
-				<main className="flex-grow flex items-center justify-center">
-					<div className="text-center">
-						<p className="text-red-600 text-lg mb-4">{error}</p>
-						<button
-							onClick={() => navigate("/acidrequests")}
-							className="px-6 py-3 bg-red-900 text-white rounded-lg hover:bg-red-800"
-						>
-							العودة للطلبات
-						</button>
-					</div>
-				</main>
+				<ErrorMessage
+					message={error}
+					onRetry={() => navigate("/acidrequests")}
+					retryText="العودة للطلبات"
+				/>
 				<Footer />
 			</div>
 		);
@@ -357,216 +350,66 @@ const EditAcidRequestPage = () => {
 
 						<form onSubmit={handleSubmit}>
 							{/* Proforma Invoice Upload Section */}
-							<div className="mb-12">
-								<h2 className="text-2xl font-bold text-red-900 mb-6 flex items-center gap-2">
-									<FileText className="w-6 h-6" />
-									<span>الفاتورة المبدئية</span>
-								</h2>
-								<div
-									className={`border-2 rounded-lg p-4 transition-all ${
-										selectedFile || uploadedInvoice
-											? "border-green-500 bg-green-50"
-											: "border-gray-300 bg-white hover:border-blue-400"
-									}`}
-								>
-									<div className="flex items-center justify-between mb-2">
-										<div className="flex items-center gap-3">
-											<span className="text-2xl">
-												{uploadedInvoice ? "✅" : selectedFile ? "📄" : "📎"}
-											</span>
-											<div>
-												<h3 className="font-semibold text-gray-800">
-													فاتورة مبدئية <span className="text-red-500">*</span>
-												</h3>
-												<span className="text-xs text-gray-500">
-													{selectedFile
-														? selectedFile.name
-														: uploadedInvoice
-														? "فاتورة موجودة"
-														: "(PDF أو صورة - حد أقصى 10 ميجابايت)"}
-												</span>
-											</div>
-										</div>
+							{/* TODO: RBAC - Only show file upload if user has permission */}
+							<FileUploadSection
+								selectedFile={selectedFile}
+								uploadedFile={uploadedInvoice}
+								uploading={uploading}
+								progress={progress}
+								onFileSelect={handleFileSelect}
+								onDelete={handleDeleteUpload}
+								title="الفاتورة المبدئية"
+								required={true}
+							/>
 
-										{selectedFile || uploadedInvoice ? (
-											<div className="flex gap-2">
-												<button
-													type="button"
-													onClick={handleDeleteUpload}
-													className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-												>
-													🗑️ حذف
-												</button>
-											</div>
-										) : (
-											<label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
-												📤 اختر ملف جديد
-												<input
-													type="file"
-													className="hidden"
-													accept=".pdf,.jpg,.jpeg,.png"
-													onChange={handleFileSelect}
-													disabled={uploading}
-												/>
-											</label>
-										)}
-									</div>
-
-									{/* Upload Progress Bar */}
-									{uploading && (
-										<div className="mt-3">
-											<div className="w-full bg-gray-200 rounded-full h-2">
-												<div
-													className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-													style={{ width: `${progress}%` }}
-												></div>
-											</div>
-											<p className="text-xs text-gray-600 mt-1 text-center">
-												{progress}%
-											</p>
-										</div>
-									)}
+							{/* Shipment Type Selection */}
+							<div className="mb-6">
+								<label className="block text-gray-700 text-lg font-bold mb-3">
+									نوع الشحنة <span className="text-red-500">*</span>
+								</label>
+								<div className="flex gap-6">
+									<label className="flex items-center cursor-pointer">
+										<input
+											type="radio"
+											name="shipmentType"
+											value="بحري"
+											checked={formData.shipmentType === "بحري"}
+											onChange={(e) =>
+												handleInputChange("shipmentType", e.target.value)
+											}
+											className="ml-2 w-5 h-5 text-red-900 focus:ring-red-900"
+										/>
+										<span className="text-gray-700 text-lg">🚢 بحري</span>
+									</label>
+									<label className="flex items-center cursor-pointer">
+										<input
+											type="radio"
+											name="shipmentType"
+											value="جوي"
+											checked={formData.shipmentType === "جوي"}
+											onChange={(e) =>
+												handleInputChange("shipmentType", e.target.value)
+											}
+											className="ml-2 w-5 h-5 text-red-900 focus:ring-red-900"
+										/>
+										<span className="text-gray-700 text-lg">✈️ جوي</span>
+									</label>
 								</div>
 							</div>
 
 							{/* Supplier Information Section */}
-							<div className="mb-12">
-								<h2 className="text-2xl font-bold text-red-900 mb-6 flex items-center gap-2">
-									<User className="w-6 h-6" />
-									<span>بيانات المورد</span>
-								</h2>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-									<div>
-										<label className="block text-gray-700 font-semibold mb-2">
-											اسم المورد <span className="text-red-500">*</span>
-										</label>
-										<input
-											type="text"
-											value={formData.supplier.name}
-											onChange={(e) =>
-												handleInputChange("supplier.name", e.target.value)
-											}
-											className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-900 focus:border-transparent"
-											placeholder="أدخل اسم المورد"
-											required
-										/>
-									</div>
-									<div>
-										<label className="block text-gray-700 font-semibold mb-2">
-											الرقم الضريبي <span className="text-red-500">*</span>
-										</label>
-										<input
-											type="text"
-											value={formData.supplier.taxNum}
-											onChange={(e) =>
-												handleInputChange("supplier.taxNum", e.target.value)
-											}
-											className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-900 focus:border-transparent"
-											placeholder="أدخل الرقم الضريبي"
-											required
-										/>
-									</div>
-									<div>
-										<label className="block text-gray-700 font-semibold mb-2">
-											الدولة <span className="text-red-500">*</span>
-										</label>
-										<input
-											type="text"
-											value={formData.supplier.country}
-											onChange={(e) =>
-												handleInputChange("supplier.country", e.target.value)
-											}
-											className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-900 focus:border-transparent"
-											placeholder="أدخل الدولة"
-											required
-										/>
-									</div>
-									<div>
-										<label className="block text-gray-700 font-semibold mb-2">
-											البريد الإلكتروني
-										</label>
-										<input
-											type="email"
-											value={formData.supplier.email}
-											onChange={(e) =>
-												handleInputChange("supplier.email", e.target.value)
-											}
-											className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-900 focus:border-transparent"
-											placeholder="أدخل البريد الإلكتروني"
-										/>
-									</div>
-									<div>
-										<label className="block text-gray-700 font-semibold mb-2">
-											رقم الهاتف
-										</label>
-										<input
-											type="tel"
-											value={formData.supplier.mobileNum}
-											onChange={(e) =>
-												handleInputChange("supplier.mobileNum", e.target.value)
-											}
-											className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-900 focus:border-transparent"
-											placeholder="أدخل رقم الهاتف"
-										/>
-									</div>
-								</div>
-							</div>
+							{/* TODO: RBAC - Only show supplier form if user has permission */}
+							<SupplierInfoForm
+								supplierData={formData.supplier}
+								onChange={handleInputChange}
+							/>
 
 							{/* Goods Information Section */}
-							<div className="mb-12">
-								<h2 className="text-2xl font-bold text-red-900 mb-6 flex items-center gap-2">
-									<Package className="w-6 h-6" />
-									<span>بيانات البضاعة</span>
-								</h2>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-									<div className="md:col-span-2">
-										<label className="block text-gray-700 font-semibold mb-2">
-											وصف البضاعة <span className="text-red-500">*</span>
-										</label>
-										<textarea
-											value={formData.goods.description}
-											onChange={(e) =>
-												handleInputChange("goods.description", e.target.value)
-											}
-											className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-900 focus:border-transparent"
-											placeholder="أدخل وصف البضاعة"
-											rows="3"
-											required
-										/>
-									</div>
-									<div>
-										<label className="block text-gray-700 font-semibold mb-2">
-											البند الجمركي
-										</label>
-										<input
-											type="text"
-											value={formData.goods.customsItem}
-											onChange={(e) =>
-												handleInputChange("goods.customsItem", e.target.value)
-											}
-											className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-900 focus:border-transparent"
-											placeholder="أدخل البند الجمركي"
-										/>
-									</div>
-									<div>
-										<label className="block text-gray-700 font-semibold mb-2">
-											الوزن المبدئي (كجم){" "}
-											<span className="text-red-500">*</span>
-										</label>
-										<input
-											type="number"
-											step="0.01"
-											value={formData.goods.weight}
-											onChange={(e) =>
-												handleInputChange("goods.weight", e.target.value)
-											}
-											className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-900 focus:border-transparent"
-											placeholder="أدخل الوزن"
-											required
-										/>
-									</div>
-								</div>
-							</div>
+							{/* TODO: RBAC - Only show goods form if user has permission */}
+							<GoodsInfoForm
+								goodsData={formData.goods}
+								onChange={handleInputChange}
+							/>
 
 							{/* Action Buttons */}
 							<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-12">

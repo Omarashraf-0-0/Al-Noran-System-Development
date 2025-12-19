@@ -30,7 +30,7 @@ export default function CertificateDetailsModal({
 	const fetchEmployees = async () => {
 		try {
 			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/users/getAll`,
+				`${import.meta.env.VITE_API_URL}/api/users`,
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -382,7 +382,7 @@ export default function CertificateDetailsModal({
 										name="status"
 										value={formData.status}
 										onChange={handleInputChange}
-										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
+										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent bg-white text-gray-800"
 									>
 										<option value="Pending">قيد الانتظار</option>
 										<option value="Under Review">قيد المراجعة</option>
@@ -402,7 +402,7 @@ export default function CertificateDetailsModal({
 										value={formData.acidCode}
 										onChange={handleInputChange}
 										placeholder="أدخل كود ACID"
-										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
+										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent bg-white text-gray-800"
 									/>
 								</div>
 
@@ -415,7 +415,7 @@ export default function CertificateDetailsModal({
 										name="reviewingBy"
 										value={formData.reviewingBy}
 										onChange={handleInputChange}
-										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent"
+										className="w-full border border-gray-300 rounded-lg px-4 py-2 text-right focus:ring-2 focus:ring-red-800 focus:border-transparent bg-white text-gray-800"
 									>
 										<option value="">-- لم يعين بعد --</option>
 										{employees.map((emp) => (

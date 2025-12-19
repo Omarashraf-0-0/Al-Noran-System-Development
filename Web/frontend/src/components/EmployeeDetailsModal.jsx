@@ -48,7 +48,7 @@ export default function EmployeeDetailsModal({
 		try {
 			setLoading(true);
 			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/users/getAll`,
+				`${import.meta.env.VITE_API_URL}/api/users`,
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -83,17 +83,23 @@ export default function EmployeeDetailsModal({
 
 	const handleSave = async () => {
 		try {
-			await axios.patch(
+			const updateData = {
+				fullname: formData.fullname,
+				username: formData.username,
+				email: formData.email,
+				phone: formData.phone,
+				type: "employee",
+				employeeType: formData.employeeType,
+				active: formData.active,
+				// Explicitly clear clientDetails for employees
+				clientType: null,
+			};
+
+			console.log("Updating employee with data:", updateData);
+
+			const response = await axios.patch(
 				`${import.meta.env.VITE_API_URL}/api/users/${employeeId}`,
-				{
-					fullname: formData.fullname,
-					username: formData.username,
-					email: formData.email,
-					phone: formData.phone,
-					type: "employee",
-					employeeType: formData.employeeType,
-					active: formData.active,
-				},
+				updateData,
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -101,6 +107,7 @@ export default function EmployeeDetailsModal({
 				}
 			);
 
+			console.log("Update response:", response.data);
 			toast.success("تم تحديث بيانات الموظف بنجاح");
 			setIsEditing(false);
 			if (onUpdate) {
@@ -109,7 +116,8 @@ export default function EmployeeDetailsModal({
 			fetchEmployeeDetails();
 		} catch (error) {
 			console.error("Error updating employee:", error);
-			toast.error("فشل تحديث بيانات الموظف");
+			console.error("Error response:", error.response?.data);
+			toast.error(error.response?.data?.message || "فشل تحديث بيانات الموظف");
 		}
 	};
 
@@ -186,11 +194,7 @@ export default function EmployeeDetailsModal({
 								{getEmployeeTypeLabel(employee.employeeDetails?.employeeType)}
 							</div>
 
-							{employee.employeeDetails?.verified && (
-								<div className="bg-purple-100 text-purple-800 px-4 py-2 rounded-lg text-sm font-semibold">
-									✓ موظف معتمد
-								</div>
-							)}
+
 						</div>
 
 						<div className="mt-6 text-right w-full space-y-1 text-sm text-gray-600">
@@ -261,7 +265,7 @@ export default function EmployeeDetailsModal({
 										name="fullname"
 										value={formData.fullname}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -281,7 +285,7 @@ export default function EmployeeDetailsModal({
 										name="username"
 										value={formData.username}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -301,7 +305,7 @@ export default function EmployeeDetailsModal({
 										name="email"
 										value={formData.email}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -321,7 +325,7 @@ export default function EmployeeDetailsModal({
 										name="phone"
 										value={formData.phone}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -340,7 +344,7 @@ export default function EmployeeDetailsModal({
 										name="employeeType"
 										value={formData.employeeType}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									>
 										{employeeTypes.map((type) => (
 											<option key={type.value} value={type.value}>
@@ -372,7 +376,7 @@ export default function EmployeeDetailsModal({
 												active: e.target.value === "true",
 											})
 										}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									>
 										<option value="true">نشط</option>
 										<option value="false">غير نشط</option>
@@ -384,15 +388,7 @@ export default function EmployeeDetailsModal({
 								)}
 							</div>
 
-							{/* Verified Status */}
-							<div className="flex items-center gap-4">
-								<label className="w-1/3 text-right font-semibold text-gray-700">
-									التحقق:
-								</label>
-								<p className="flex-1 text-right text-gray-600">
-									{employee.employeeDetails?.verified ? "معتمد ✓" : "غير معتمد"}
-								</p>
-							</div>
+
 
 							{/* User ID */}
 							<div className="flex items-center gap-4">

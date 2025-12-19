@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/user_cache_service.dart';
 import '../../core/storage/secure_storage.dart';
+import '../../util/file_picker_helper.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -14,6 +18,9 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? _userData;
   List<Map<String, dynamic>> _uploadedDocuments = [];
   bool _isLoading = true;
+  String? _profilePhotoUrl;
+  bool _isUploadingPhoto = false;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -23,15 +30,53 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadUserData() async {
     try {
-      setState(() => _isLoading = true);
+      // Only show loading on first load, not on refresh
+      if (_isFirstLoad) {
+        setState(() => _isLoading = true);
+      }
 
-      // Get user data from storage
-      final userDataJson = await SecureStorage.getUserData();
-      print('📱 [ProfilePage] User Data from Storage: $userDataJson');
+      // Try to get from cache first (fast)
+      final userCache = UserCacheService();
+      if (userCache.isInitialized && _isFirstLoad) {
+        setState(() {
+          _userData = userCache.fullUserData;
+          _profilePhotoUrl = userCache.profilePhotoUrl;
+          _isLoading = false;
+        });
+        print('📱 [ProfilePage] Loaded from cache: ${userCache.userName}');
 
-      if (userDataJson != null) {
-        setState(() => _userData = userDataJson);
+        // Load documents in background
+        final userId = _userData?['_id'] ?? _userData?['id'];
+        if (userId != null) {
+          _loadDocuments(userId);
+        }
+        _isFirstLoad = false;
+        return;
+      }
 
+      // Get user profile from API (includes profile photo URL)
+      final profileResponse = await ApiService.getUserProfile();
+      if (profileResponse['success'] == true &&
+          profileResponse['user'] != null) {
+        final user = profileResponse['user'];
+        setState(() {
+          _userData = user;
+          _profilePhotoUrl = user['profilePhotoUrl'];
+        });
+
+        // Update cache
+        userCache.updateProfilePhoto(user['profilePhotoUrl']);
+        print('📱 [ProfilePage] Profile loaded with photo: $_profilePhotoUrl');
+      } else {
+        // Fallback to local storage
+        final userDataJson = await SecureStorage.getUserData();
+        print('📱 [ProfilePage] User Data from Storage: $userDataJson');
+        if (userDataJson != null) {
+          setState(() => _userData = userDataJson);
+        }
+      }
+
+      if (_userData != null) {
         // Debug: print clientDetails
         print('📱 [ProfilePage] ClientDetails: ${_userData?['clientDetails']}');
         print(
@@ -46,18 +91,193 @@ class _ProfilePageState extends State<ProfilePage> {
           await _loadDocuments(userId);
         }
       } else {
-        print('⚠️ [ProfilePage] No user data found in storage!');
+        print('⚠️ [ProfilePage] No user data found!');
       }
 
       setState(() => _isLoading = false);
+      _isFirstLoad = false;
     } catch (e) {
       print('❌ [ProfilePage] Error loading user data: $e');
       setState(() => _isLoading = false);
-      AlNoranPopups.showError(
-        context: context,
-        message: 'حدث خطأ في تحميل البيانات',
-      );
+      _isFirstLoad = false;
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ في تحميل البيانات',
+        );
+      }
     }
+  }
+
+  Future<void> _pickAndUploadProfilePhoto() async {
+    try {
+      final File? pickedFile = await FilePickerHelper.pickFile(context);
+      if (pickedFile == null) return;
+
+      setState(() => _isUploadingPhoto = true);
+
+      final result = await ApiService.uploadProfilePhoto(file: pickedFile);
+
+      setState(() => _isUploadingPhoto = false);
+
+      if (result['success'] == true) {
+        setState(() {
+          _profilePhotoUrl = result['photoUrl'];
+        });
+        if (mounted) {
+          AlNoranPopups.showSuccess(
+            context: context,
+            message: 'تم تحديث صورة البروفايل بنجاح',
+          );
+        }
+      } else {
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: result['message'] ?? 'فشل رفع صورة البروفايل',
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _isUploadingPhoto = false);
+      print('❌ [ProfilePage] Error uploading photo: $e');
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ أثناء رفع الصورة',
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteProfilePhoto() async {
+    final confirm = await AlNoranPopups.showConfirmation(
+      context: context,
+      title: 'حذف صورة البروفايل',
+      message: 'هل أنت متأكد من حذف صورة البروفايل؟',
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+    );
+
+    if (confirm == true) {
+      try {
+        setState(() => _isUploadingPhoto = true);
+        final result = await ApiService.deleteProfilePhoto();
+        setState(() => _isUploadingPhoto = false);
+
+        if (result['success'] == true) {
+          setState(() {
+            _profilePhotoUrl = null;
+          });
+          if (mounted) {
+            AlNoranPopups.showSuccess(
+              context: context,
+              message: 'تم حذف صورة البروفايل',
+            );
+          }
+        } else {
+          if (mounted) {
+            AlNoranPopups.showError(
+              context: context,
+              message: result['message'] ?? 'فشل حذف الصورة',
+            );
+          }
+        }
+      } catch (e) {
+        setState(() => _isUploadingPhoto = false);
+        print('❌ [ProfilePage] Error deleting photo: $e');
+      }
+    }
+  }
+
+  void _showPhotoOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder:
+          (ctx) => Directionality(
+            textDirection: TextDirection.rtl,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'صورة البروفايل',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1ba3b6).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.photo_camera,
+                        color: Color(0xFF1ba3b6),
+                      ),
+                    ),
+                    title: const Text(
+                      'اختيار صورة جديدة',
+                      style: TextStyle(fontFamily: 'Cairo'),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickAndUploadProfilePhoto();
+                    },
+                  ),
+                  if (_profilePhotoUrl != null) ...[
+                    const Divider(),
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.delete, color: Colors.red),
+                      ),
+                      title: const Text(
+                        'حذف الصورة',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          color: Colors.red,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _deleteProfilePhoto();
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+    );
   }
 
   Future<void> _loadDocuments(String userId) async {
@@ -157,7 +377,13 @@ class _ProfilePageState extends State<ProfilePage> {
           actions: [
             IconButton(
               icon: const Icon(Icons.arrow_forward, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                if (GoRouter.of(context).canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/home');
+                }
+              },
             ),
           ],
         ),
@@ -212,16 +438,88 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         children: [
           const SizedBox(height: 24),
-          // Profile Picture
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF1ba3b6), width: 3),
-            ),
-            child: const Icon(Icons.person, size: 60, color: Color(0xFF690000)),
+          // Profile Picture with change option
+          Stack(
+            children: [
+              GestureDetector(
+                onTap: _showPhotoOptions,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF1ba3b6),
+                      width: 3,
+                    ),
+                  ),
+                  child:
+                      _isUploadingPhoto
+                          ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF690000),
+                              strokeWidth: 3,
+                            ),
+                          )
+                          : _profilePhotoUrl != null
+                          ? ClipOval(
+                            child: Image.network(
+                              _profilePhotoUrl!,
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (
+                                context,
+                                child,
+                                loadingProgress,
+                              ) {
+                                if (loadingProgress == null) return child;
+                                return const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Color(0xFF690000),
+                                    strokeWidth: 2,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.person,
+                                  size: 60,
+                                  color: Color(0xFF690000),
+                                );
+                              },
+                            ),
+                          )
+                          : const Icon(
+                            Icons.person,
+                            size: 60,
+                            color: Color(0xFF690000),
+                          ),
+                ),
+              ),
+              // Camera icon overlay
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: _showPhotoOptions,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1ba3b6),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           // User Name

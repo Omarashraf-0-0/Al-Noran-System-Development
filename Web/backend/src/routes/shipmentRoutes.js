@@ -8,6 +8,7 @@ const {
 	requestRequiredDocuments,
 	getRequiredDocuments,
 	markDocumentAsUploaded,
+	resetUploadedDocument,
 	getEmployeeShipmentStats,
 	getClientShipmentStats,
 	createShipment,
@@ -22,6 +23,7 @@ const {
 	getDashboardStats,
 	getRevenueComparison,
 	searchShipments,
+	getDistinctDocumentNames,
 } = require("../controllers/shipmentController");
 
 const router = express.Router();
@@ -38,6 +40,7 @@ router.get("/get-dashboard-stats", protect, getDashboardStats);
 router.get("/revenue-comparison", protect, getRevenueComparison);
 router.get("/most-active-clients", protect, mostActiveClients);
 router.get("/search", protect, searchShipments);
+router.get("/document-names", protect, getDistinctDocumentNames);
 router.get("/getAll", protect, getAllShipments);
 router.get("/employee/:employeeId", protect, getShipmentrelatedToEmployee);
 router.get("/employee/:employeeId/stats", protect, getEmployeeShipmentStats);
@@ -59,11 +62,15 @@ router.patch(
 	protect,
 	markDocumentAsUploaded
 );
+router.delete(
+	"/id/:shipmentId/required-documents/:documentId",
+	protect,
+	resetUploadedDocument
+);
 router.get("/id/:shipmentId", protect, getShipmentById);
 
 // ACID-based routes (more generic, must come after specific routes)
 router.get("/:acid", protect, getShipmentByAcid);
 router.patch("/:acid", protect, updateShipmentStatus);
 router.delete("/:acid", protect, deleteShipment);
-
 module.exports = router;

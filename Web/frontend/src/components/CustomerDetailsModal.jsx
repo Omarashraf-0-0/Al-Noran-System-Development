@@ -55,7 +55,7 @@ export default function CustomerDetailsModal({
 		try {
 			setLoading(true);
 			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/users/getAll`,
+				`${import.meta.env.VITE_API_URL}/api/users`,
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -276,7 +276,7 @@ export default function CustomerDetailsModal({
 										name="fullname"
 										value={formData.fullname}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -296,7 +296,7 @@ export default function CustomerDetailsModal({
 										name="username"
 										value={formData.username}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -316,7 +316,7 @@ export default function CustomerDetailsModal({
 										name="email"
 										value={formData.email}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -336,7 +336,7 @@ export default function CustomerDetailsModal({
 										name="phone"
 										value={formData.phone}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -355,7 +355,7 @@ export default function CustomerDetailsModal({
 										name="clientType"
 										value={formData.clientType}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									>
 										{clientTypes.map((type) => (
 											<option key={type.value} value={type.value}>
@@ -383,7 +383,7 @@ export default function CustomerDetailsModal({
 											name="ssn"
 											value={formData.ssn}
 											onChange={handleInputChange}
-											className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+											className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 										/>
 									) : (
 										<p className="flex-1 text-right text-gray-600">
@@ -404,7 +404,7 @@ export default function CustomerDetailsModal({
 										name="taxNumber"
 										value={formData.taxNumber}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									/>
 								) : (
 									<p className="flex-1 text-right text-gray-600">
@@ -423,7 +423,7 @@ export default function CustomerDetailsModal({
 										name="rank"
 										value={formData.rank}
 										onChange={handleInputChange}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									>
 										<option value="">بدون رتبة</option>
 										{ranks.map((rank) => (
@@ -454,7 +454,7 @@ export default function CustomerDetailsModal({
 												active: e.target.value === "true",
 											})
 										}
-										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none"
+										className="flex-1 border rounded-lg py-2 px-4 text-right focus:border-[#690000] focus:outline-none bg-white text-gray-800"
 									>
 										<option value="true">نشط</option>
 										<option value="false">غير نشط</option>

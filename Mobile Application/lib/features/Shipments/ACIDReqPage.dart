@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/document_verification_service.dart';
+import '../../core/services/notification_service.dart';
+import '../../core/widgets/unified_top_bar.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/file_picker_helper.dart';
 
@@ -32,9 +36,14 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
   final TextEditingController _customsItemController = TextEditingController();
 
   // State
-  String? _userName;
-  String? _userEmail;
   bool _isSubmitting = false;
+
+  // Document verification
+  final DocumentVerificationService _docVerification =
+      DocumentVerificationService();
+  bool _isCheckingDocuments = true;
+  bool _canSubmitRequests = false;
+  String _verificationMessage = '';
 
   // Selected shipment type
   String selectedType = 'بحري'; // بحري or جوي
@@ -46,24 +55,23 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    // Check document verification status
+    _checkDocumentStatus();
   }
 
-  Future<void> _loadUserData() async {
-    try {
-      final userData = await ApiService.getUserData();
-      if (mounted) {
-        setState(() {
-          _userName =
-              widget.userName ??
-              userData['fullname'] ??
-              userData['username'] ??
-              'مستخدم';
-          _userEmail = widget.userEmail ?? userData['email'] ?? '';
-        });
-      }
-    } catch (e) {
-      print('❌ Error loading user data: $e');
+  Future<void> _checkDocumentStatus({bool forceRefresh = false}) async {
+    setState(() => _isCheckingDocuments = true);
+
+    final result = await _docVerification.checkDocumentStatus(
+      forceRefresh: forceRefresh,
+    );
+
+    if (mounted) {
+      setState(() {
+        _canSubmitRequests = result['canSubmitRequests'] ?? false;
+        _verificationMessage = result['message'] ?? '';
+        _isCheckingDocuments = false;
+      });
     }
   }
 
@@ -102,18 +110,45 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
       );
 
       if (mounted) {
-        Navigator.pop(context); // Close loading
+        context.pop(); // Close loading
 
         if (uploadResult['success'] == true) {
-          setState(() {
-            _uploadedFileName = result.path.split('/').last;
-            _uploadedFileId = uploadResult['upload']['_id'];
-          });
+          // Get upload ID from response - try multiple paths
+          final upload = uploadResult['upload'] ?? uploadResult['data'];
+          final uploadId = upload?['_id'] ?? upload?['id'];
 
-          AlNoranPopups.showSuccess(
-            context: context,
-            message: 'تم رفع الفاتورة بنجاح',
-          );
+          print('📄 [ACIDReq] Upload response: $uploadResult');
+          print('📄 [ACIDReq] Upload ID: $uploadId');
+
+          if (uploadId != null) {
+            setState(() {
+              _uploadedFileName = result.path.split('/').last;
+              if (_uploadedFileName!.contains('\\')) {
+                _uploadedFileName = _uploadedFileName!.split('\\').last;
+              }
+              _uploadedFileId = uploadId.toString();
+            });
+
+            AlNoranPopups.showSuccess(
+              context: context,
+              message: 'تم رفع الفاتورة بنجاح',
+            );
+          } else {
+            // File uploaded but no ID returned - still consider success
+            setState(() {
+              _uploadedFileName = result.path.split('/').last;
+              if (_uploadedFileName!.contains('\\')) {
+                _uploadedFileName = _uploadedFileName!.split('\\').last;
+              }
+              // Use a placeholder ID since upload succeeded
+              _uploadedFileId = 'uploaded';
+            });
+
+            AlNoranPopups.showSuccess(
+              context: context,
+              message: 'تم رفع الفاتورة بنجاح',
+            );
+          }
         } else {
           AlNoranPopups.showError(
             context: context,
@@ -123,7 +158,7 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Close loading
+        context.pop(); // Close loading
         AlNoranPopups.showError(
           context: context,
           message: 'حدث خطأ أثناء رفع الفاتورة',
@@ -134,6 +169,12 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
   }
 
   Future<void> _submitRequest() async {
+    // Check document verification first
+    if (!_canSubmitRequests) {
+      _showDocumentRequiredDialog();
+      return;
+    }
+
     // Validate
     if (_supplierNameController.text.trim().isEmpty ||
         _taxNumberController.text.trim().isEmpty ||
@@ -187,6 +228,13 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
             message: 'تم إرسال الطلب بنجاح',
           );
 
+          // Refresh notifications to update badge count
+          print(
+            '🔔 [ACIDReq] Refreshing notifications after successful request...',
+          );
+          await NotificationService().refresh();
+          print('🔔 [ACIDReq] Notifications refreshed!');
+
           // Clear form
           _clearForm();
         } else {
@@ -211,6 +259,315 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
     }
   }
 
+  /// Show dialog when documents are not verified
+  void _showDocumentRequiredDialog([Map<String, dynamic>? result]) {
+    // Get document lists from result
+    final missingDocs = result?['missingDocuments'] as List? ?? [];
+    final pendingDocs = result?['pendingDocuments'] as List? ?? [];
+    final rejectedDocs = result?['rejectedDocuments'] as List? ?? [];
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (dialogContext) => PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, result) {
+              if (!didPop) {
+                // When back button is pressed, go to home
+                Navigator.pop(dialogContext);
+                context.go('/home');
+              }
+            },
+            child: Directionality(
+              textDirection: TextDirection.rtl,
+              child: Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.white,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header with gradient
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 24,
+                          horizontal: 20,
+                        ),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF690000), Color(0xFF8B0000)],
+                          ),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              child: const Icon(
+                                Icons.folder_off_outlined,
+                                color: Colors.white,
+                                size: 36,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            const Text(
+                              'المستندات مطلوبة',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'لا يمكنك تقديم طلب ACID الآن',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 13,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Content
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.4,
+                        ),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'يجب الموافقة على جميع المستندات المطلوبة قبل تقديم الطلب:',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Missing documents
+                              if (missingDocs.isNotEmpty) ...[
+                                _buildDocumentStatusSection(
+                                  'مستندات مفقودة',
+                                  missingDocs,
+                                  const Color(0xFF690000),
+                                  Icons.cancel_outlined,
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+
+                              // Pending documents
+                              if (pendingDocs.isNotEmpty) ...[
+                                _buildDocumentStatusSection(
+                                  'قيد المراجعة',
+                                  pendingDocs,
+                                  Colors.orange.shade700,
+                                  Icons.hourglass_empty,
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+
+                              // Rejected documents
+                              if (rejectedDocs.isNotEmpty) ...[
+                                _buildDocumentStatusSection(
+                                  'مرفوضة - تحتاج إعادة رفع',
+                                  rejectedDocs,
+                                  Colors.red.shade700,
+                                  Icons.highlight_off,
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Actions
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                        child: Column(
+                          children: [
+                            // Primary action - Go to documents
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(dialogContext);
+                                  // Re-check documents when returning from documents page
+                                  context.push('/documents').then((_) {
+                                    if (mounted) {
+                                      _checkDocumentStatus(forceRefresh: true);
+                                    }
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF690000),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.folder_open,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      'الذهاب إلى المستندات',
+                                      style: TextStyle(
+                                        fontFamily: 'Cairo',
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            // Secondary action - Go home
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  Navigator.pop(dialogContext);
+                                  context.go('/home');
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  side: BorderSide(color: Colors.grey.shade300),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.home_outlined,
+                                      color: Colors.grey.shade600,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      'الرجوع للرئيسية',
+                                      style: TextStyle(
+                                        fontFamily: 'Cairo',
+                                        color: Colors.grey.shade600,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+    );
+  }
+
+  Widget _buildDocumentStatusSection(
+    String title,
+    List docs,
+    Color color,
+    IconData icon,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...docs.map(
+            (doc) => Padding(
+              padding: const EdgeInsets.only(right: 26, top: 4),
+              child: Text(
+                '• ${_getDocumentDisplayName(doc.toString())}',
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getDocumentDisplayName(String docType) {
+    final names = {
+      'personal_id': 'البطاقة الشخصية',
+      'power_of_attorney': 'التوكيل',
+      'contract': 'العقد',
+      'tax_card': 'البطاقة الضريبية',
+      'commercial_register': 'السجل التجاري',
+      'certificate_vat': 'شهادة القيمة المضافة',
+      'import_export_card': 'بطاقة الاستيراد والتصدير',
+      'production_supplies': 'مستلزمات الإنتاج',
+      'industrial_register': 'السجل الصناعي',
+    };
+    return names[docType] ?? docType;
+  }
+
   void _clearForm() {
     _weightController.clear();
     _itemDescController.clear();
@@ -233,181 +590,45 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildTopBar(),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 24),
+        body: Column(
+          children: [
+            UnifiedTopBar(showBackButton: true, showMenu: false),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 24),
 
-                      // Logo and Title
-                      _buildHeader(),
+                    // Logo and Title
+                    _buildHeader(),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                      // Shipment Type Toggle
-                      _buildTypeToggle(),
+                    // Shipment Type Toggle
+                    _buildTypeToggle(),
 
-                      const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                      // Invoice Upload Section
-                      _buildInvoiceUpload(),
+                    // Invoice Upload Section
+                    _buildInvoiceUpload(),
 
-                      const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                      // Form Fields
-                      _buildFormFields(),
+                    // Form Fields
+                    _buildFormFields(),
 
-                      const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-                      // Submit Button
-                      _buildSubmitButton(),
+                    // Submit Button
+                    _buildSubmitButton(),
 
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar() {
-    String firstName = _userName?.split(' ').first ?? 'مستخدم';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF690000),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(25),
-          bottomRight: Radius.circular(25),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Profile Picture & Notification (على اليمين في RTL)
-          Row(
-            children: [
-              InkWell(
-                onTap: () {
-                  Navigator.pushNamed(context, '/profile');
-                },
-                borderRadius: BorderRadius.circular(50),
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 2,
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.person,
-                      color: const Color(0xFF690000),
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.notifications,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      onPressed: () {},
-                    ),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1ba3b6),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          // Title - عرض اسم المستخدم الفعلي
-          Column(
-            children: [
-              Text(
-                firstName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-              if (_userEmail != null && _userEmail!.isNotEmpty)
-                Text(
-                  _userEmail!,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    fontFamily: 'Cairo',
-                  ),
-                ),
-            ],
-          ),
-
-          // Back Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
             ),
-            child: IconButton(
-              icon: const Icon(
-                Icons.arrow_forward,
-                color: Colors.white,
-                size: 24,
-              ),
-              onPressed: () {
-                Navigator.pushReplacementNamed(
-                  context,
-                  '/home',
-                  arguments: {'userName': _userName, 'userEmail': _userEmail},
-                );
-              },
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

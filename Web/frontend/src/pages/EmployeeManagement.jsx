@@ -3,10 +3,14 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import AdminHeader from "../components/AdminHeader";
 import Footer from "../components/Footer";
+import LoadingSpinner from "../components/LoadingSpinner";
+import EmployeeStatistics from "../components/EmployeeStatistics";
+import EmployeesTable from "../components/EmployeesTable";
 import bannerPic from "../assets/images/Untitled design (8) 2.png";
 import searchIcon from "../assets/images/search.svg";
 import AddEmployeePopUp from "../pages/AddEmployeePopUp";
 import EmployeeDetailsModal from "../components/EmployeeDetailsModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 export default function EmployeeManagement() {
 	const [employees, setEmployees] = useState([]);
@@ -15,6 +19,18 @@ export default function EmployeeManagement() {
 	const [loading, setLoading] = useState(true);
 	const [selectedEmployee, setSelectedEmployee] = useState(null);
 	const [showDetailsModal, setShowDetailsModal] = useState(false);
+	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [employeeToDelete, setEmployeeToDelete] = useState(null);
+	const [suspendModalOpen, setSuspendModalOpen] = useState(false);
+	const [employeeToSuspend, setEmployeeToSuspend] = useState(null);
+	const [suspensionReason, setSuspensionReason] = useState("");
+
+	// TODO: RBAC - Get user permissions from context/store
+	// Example: const { user, hasPermission } = useAuth();
+	// const canViewEmployees = hasPermission('employee:view');
+	// const canAddEmployee = hasPermission('employee:add');
+	// const canEditEmployee = hasPermission('employee:edit');
+	// const canDeleteEmployee = hasPermission('employee:delete');
 
 	const user = JSON.parse(localStorage.getItem("user"));
 	const adminName = user?.fullname || user?.username || "المدير";
@@ -24,7 +40,7 @@ export default function EmployeeManagement() {
 		try {
 			setLoading(true);
 			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/users/getAll`,
+				`${import.meta.env.VITE_API_URL}/api/users`,
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -43,7 +59,8 @@ export default function EmployeeManagement() {
 					phone: emp.phone,
 					status: emp.active ? "نشط" : "غير نشط",
 					employeeType: emp.employeeDetails?.employeeType || "Regular Employee",
-					verified: emp.employeeDetails?.verified || false,
+					suspended: emp.employeeDetails?.suspended || false,
+					suspensionReason: emp.employeeDetails?.suspensionReason,
 					createdAt: emp.createdAt,
 				}));
 
@@ -89,14 +106,71 @@ export default function EmployeeManagement() {
 		}
 	};
 
-	const handleDeleteEmployee = async (employeeId) => {
-		if (!window.confirm("هل أنت متأكد من حذف هذا الموظف؟")) {
-			return;
+	const handleDeleteEmployee = (employeeId) => {
+		setEmployeeToDelete(employeeId);
+		setDeleteModalOpen(true);
+	};
+
+	const handleSuspendEmployee = (employee) => {
+		setEmployeeToSuspend(employee);
+		setSuspensionReason("");
+		setSuspendModalOpen(true);
+	};
+
+	const confirmSuspend = async () => {
+		if (!employeeToSuspend) return;
+
+		try {
+			if (employeeToSuspend.suspended) {
+				// Unsuspend employee
+				await axios.patch(
+					`${import.meta.env.VITE_API_URL}/api/users/${
+						employeeToSuspend.id
+					}/unsuspend`,
+					{},
+					{
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					}
+				);
+				toast.success("تم إعادة تفعيل الموظف بنجاح");
+			} else {
+				// Suspend employee
+				if (!suspensionReason.trim()) {
+					toast.error("الرجاء إدخال سبب الإيقاف");
+					return;
+				}
+				await axios.patch(
+					`${import.meta.env.VITE_API_URL}/api/users/${
+						employeeToSuspend.id
+					}/suspend`,
+					{ reason: suspensionReason },
+					{
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					}
+				);
+				toast.success("تم إيقاف الموظف عن العمل بنجاح");
+			}
+			fetchEmployees();
+		} catch (error) {
+			console.error("Error updating employee suspension:", error);
+			toast.error(error.response?.data?.message || "فشل تحديث حالة الإيقاف");
+		} finally {
+			setSuspendModalOpen(false);
+			setEmployeeToSuspend(null);
+			setSuspensionReason("");
 		}
+	};
+
+	const confirmDelete = async () => {
+		if (!employeeToDelete) return;
 
 		try {
 			await axios.delete(
-				`${import.meta.env.VITE_API_URL}/api/users/${employeeId}`,
+				`${import.meta.env.VITE_API_URL}/api/users/${employeeToDelete}`,
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -109,6 +183,9 @@ export default function EmployeeManagement() {
 		} catch (error) {
 			console.error("Error deleting employee:", error);
 			toast.error("فشل حذف الموظف");
+		} finally {
+			setDeleteModalOpen(false);
+			setEmployeeToDelete(null);
 		}
 	};
 
@@ -141,15 +218,8 @@ export default function EmployeeManagement() {
 			</div>
 
 			{/* Section Title and Stats */}
-			<div className="flex justify-between items-center px-16 mb-6">
-				<div className="text-right">
-					<h2 className="text-4xl font-bold text-[#690000]">الموظفين</h2>
-					<p className="text-gray-600 mt-2">
-						إجمالي الموظفين: {employees.length} | نشط:{" "}
-						{employees.filter((e) => e.status === "نشط").length}
-					</p>
-				</div>
-			</div>
+			{/* TODO: RBAC - Only show stats if user has permission */}
+			<EmployeeStatistics employees={employees} />
 
 			{/* Search Bar */}
 			<div className="flex justify-center mb-8">
@@ -170,106 +240,28 @@ export default function EmployeeManagement() {
 			</div>
 
 			{/* Employees Table */}
+			{/* TODO: RBAC - Only show table if user has permission */}
 			{loading ? (
-				<div className="flex justify-center items-center py-12">
-					<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
-					<span className="text-gray-600 text-lg mr-4">
-						جاري تحميل الموظفين...
-					</span>
-				</div>
+				<LoadingSpinner />
 			) : (
-				<div className="overflow-x-auto px-8">
-					<table className="w-full text-center border-collapse bg-white rounded-lg shadow">
-						<thead>
-							<tr className="border-b bg-gradient-to-r from-red-800 to-red-900 text-white">
-								<th className="py-4 px-4">#</th>
-								<th className="py-4 px-4">اسم الموظف</th>
-								<th className="py-4 px-4">اسم المستخدم</th>
-								<th className="py-4 px-4">نوع الموظف</th>
-								<th className="py-4 px-4">الحالة</th>
-								<th className="py-4 px-4">البريد الإلكتروني</th>
-								<th className="py-4 px-4">الهاتف</th>
-								<th className="py-4 px-4">الإجراءات</th>
-							</tr>
-						</thead>
-
-						<tbody>
-							{filteredEmployees.length === 0 ? (
-								<tr>
-									<td colSpan="8" className="py-8 text-gray-500">
-										{search ? "لا يوجد موظفون مطابقون لبحثك" : "لا يوجد موظفون"}
-									</td>
-								</tr>
-							) : (
-								filteredEmployees.map((emp, index) => (
-									<tr
-										key={emp.id}
-										className="border-b text-gray-700 hover:bg-gray-50"
-									>
-										<td className="py-4 px-4 font-semibold text-gray-500">
-											{index + 1}
-										</td>
-										<td className="py-4 px-4 font-semibold">{emp.name}</td>
-										<td className="py-4 px-4">{emp.username}</td>
-										<td className="py-4 px-4">
-											<span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-												{getEmployeeTypeLabel(emp.employeeType)}
-											</span>
-										</td>
-										<td className="py-4 px-4">
-											<span
-												className={`px-3 py-1 rounded-full text-xs font-semibold ${
-													emp.status === "نشط"
-														? "bg-green-100 text-green-800"
-														: "bg-red-100 text-red-800"
-												}`}
-											>
-												{emp.status}
-											</span>
-										</td>
-										<td className="py-4 px-4">{emp.email}</td>
-										<td className="py-4 px-4">{emp.phone}</td>
-										<td className="py-4 px-4">
-											<div className="flex gap-2 justify-center flex-wrap">
-												<button
-													onClick={() => {
-														setSelectedEmployee(emp.id);
-														setShowDetailsModal(true);
-													}}
-													className="bg-[#1BA3B6] text-white px-3 py-1 rounded text-xs font-semibold hover:bg-[#158a9a]"
-													title="عرض التفاصيل"
-												>
-													👁️ عرض
-												</button>
-												<button
-													onClick={() => handleToggleStatus(emp.id, emp.status)}
-													className={`px-3 py-1 rounded text-xs font-semibold ${
-														emp.status === "نشط"
-															? "bg-yellow-500 text-white hover:bg-yellow-600"
-															: "bg-green-500 text-white hover:bg-green-600"
-													}`}
-													title={emp.status === "نشط" ? "تعطيل" : "تفعيل"}
-												>
-													{emp.status === "نشط" ? "تعطيل" : "تفعيل"}
-												</button>
-												<button
-													onClick={() => handleDeleteEmployee(emp.id)}
-													className="bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-red-700"
-													title="حذف"
-												>
-													🗑️ حذف
-												</button>
-											</div>
-										</td>
-									</tr>
-								))
-							)}
-						</tbody>
-					</table>
-				</div>
+				<EmployeesTable
+					employees={filteredEmployees}
+					onViewDetails={(id) => {
+						setSelectedEmployee(id);
+						setShowDetailsModal(true);
+					}}
+					onToggleStatus={handleToggleStatus}
+					onDelete={handleDeleteEmployee}
+					onSuspend={handleSuspendEmployee}
+					getEmployeeTypeLabel={getEmployeeTypeLabel}
+					emptyMessage={
+						search ? "لا يوجد موظفون مطابقون لبحثك" : "لا يوجد موظفون"
+					}
+				/>
 			)}
 
 			{/* Add Employee Button */}
+			{/* TODO: RBAC - Only show button if user has permission */}
 			<div className="flex justify-center mt-10">
 				<button
 					onClick={() => setShowPopup(true)}
@@ -294,6 +286,68 @@ export default function EmployeeManagement() {
 					onUpdate={fetchEmployees}
 				/>
 			)}
+			{/* Suspension Modal */}
+			{suspendModalOpen && employeeToSuspend && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+						<h3 className="text-xl font-bold text-gray-900 mb-4">
+							{employeeToSuspend.suspended
+								? "إعادة تفعيل الموظف"
+								: "إيقاف الموظف عن العمل"}
+						</h3>
+						<p className="text-gray-700 mb-4">
+							الموظف: <strong>{employeeToSuspend.name}</strong>
+						</p>
+						{employeeToSuspend.suspended ? (
+							<p className="text-gray-600 mb-4">
+								هل أنت متأكد من إعادة تفعيل هذا الموظف؟
+							</p>
+						) : (
+							<>
+								<p className="text-gray-600 mb-4">الرجاء إدخال سبب الإيقاف:</p>
+								<textarea
+									value={suspensionReason}
+									onChange={(e) => setSuspensionReason(e.target.value)}
+									className="w-full border border-gray-300 rounded-lg p-3 mb-4 min-h-[100px]"
+									placeholder="اكتب السبب هنا..."
+								/>
+							</>
+						)}
+						<div className="flex gap-3 justify-end">
+							<button
+								onClick={() => {
+									setSuspendModalOpen(false);
+									setEmployeeToSuspend(null);
+									setSuspensionReason("");
+								}}
+								className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+							>
+								إلغاء
+							</button>
+							<button
+								onClick={confirmSuspend}
+								className={`px-4 py-2 text-white rounded-lg ${
+									employeeToSuspend.suspended
+										? "bg-blue-600 hover:bg-blue-700"
+										: "bg-orange-600 hover:bg-orange-700"
+								}`}
+							>
+								{employeeToSuspend.suspended ? "إعادة تفعيل" : "تأكيد الإيقاف"}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+			<ConfirmDialog
+				isOpen={deleteModalOpen}
+				onConfirm={confirmDelete}
+				onCancel={() => {
+					setDeleteModalOpen(false);
+					setEmployeeToDelete(null);
+				}}
+				title="تأكيد الحذف"
+				message="هل أنت متأكد من أنك تريد حذف هذا الموظف؟ لا يمكن التراجع عن هذا الإجراء."
+			/>
 			<div className="mt-16">
 				<Footer />
 			</div>

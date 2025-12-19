@@ -1,16 +1,24 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
-const Navbar = ({
-	showAuth = false,
-	showSearch = false,
-	onSearchClick = null,
-}) => {
+const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) => {
+	const [scrolled, setScrolled] = useState(false);
+
+	// Handle scroll effect
+	useEffect(() => {
+		const handleScroll = () => {
+			const isScrolled = window.scrollY > 10;
+			setScrolled(isScrolled);
+		};
+
+		window.addEventListener("scroll", handleScroll);
+		return () => window.removeEventListener("scroll", handleScroll);
+	}, []);
+
 	const handleSearchClick = () => {
 		if (onSearchClick) {
 			onSearchClick();
 		} else {
-			// Default behavior: scroll to search section if it exists
 			const searchSection = document.getElementById("search-section");
 			if (searchSection) {
 				searchSection.scrollIntoView({ behavior: "smooth" });
@@ -19,89 +27,107 @@ const Navbar = ({
 	};
 
 	return (
-		<>
-			<header className="bg-[#1BA3B6] text-white p-4 shadow-md">
-				<div className="container mx-auto flex items-center justify-between">
+		<header
+			className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+				scrolled
+					? "bg-white shadow-md py-2"
+					: "bg-transparent py-4 md:py-6"
+			}`}
+		>
+			<div className="container mx-auto px-4 flex items-center justify-between">
 
-					{/* Right Section - Auth and Search */}
-          <div className="flex gap-8">
-            {/* need the logo to direct to the landing page */}
+				{/* Right Section - Logo and Nav */}
+				<div className="flex items-center gap-12">
+					<Link to="/" className="flex items-center gap-2">
+						{/* Use colored logo when scrolled, white logo when transparent (if available, else colored) */}
 						<img
-							src="/src/assets/images/logo.png"
+							src="/src/assets/images/coloredLogo.png"
 							alt="النوران"
-							className="h-10 cursor-pointer"
-							onClick={() => window.location.href = "/"}
+							className={`h-10 w-auto transition-transform hover:scale-105 ${
+								scrolled ? "" : "brightness-0 invert drop-shadow-md"
+							}`}
 						/>
-            <nav className="hidden md:flex gap-8">
-						<span className="text-xl cursor-pointer hover:text-gray-200 transition-colors">
-							الدعم
-						</span>
-						<span className="text-xl cursor-pointer hover:text-gray-200 transition-colors">
-							تتبع الشحنة
-						</span>
-						<span className="text-xl cursor-pointer hover:text-gray-200 transition-colors">
-							الشحن
-						</span>
-					</nav>
+					</Link>
 
-					</div>
-          {/* Center - Navigation Links */}
-					
-					{/* Left Section - Logo */}
-
-					<div className="flex items-center gap-6">
-						{/* Search Icon */}
-						{showSearch && (
-							<button
-								onClick={handleSearchClick}
-								className="hover:text-gray-200 transition-colors"
-								aria-label="بحث"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									className="h-6 w-6"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
+					<nav className="hidden md:flex items-center gap-8">
+						{[
+							{ label: "الرئيسية", path: "/" },
+							{ label: "عن النوران", path: "#about" },
+							{ label: "خدماتنا", path: "#services" },
+							{ label: "تتبع الشحنة", action: () => document.getElementById("tracking-section")?.scrollIntoView({ behavior: "smooth" }) },
+						].map((item, index) => (
+							item.action ? (
+								<button
+									key={index}
+									onClick={item.action}
+									className={`text-base font-medium transition-colors ${
+										scrolled
+											? "text-gray-700 hover:text-[#690000]"
+											: "text-white/90 hover:text-white"
+									}`}
 								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-									/>
-								</svg>
-							</button>
-						)}
-
-						{/* Auth Links with User Icon */}
-						{showAuth && (
-							<Link
-								to="/login"
-								className="flex items-center gap-2 hover:text-gray-200 transition-colors"
-							>
-								<svg
-									className="w-6 h-6"
-									fill="currentColor"
-									viewBox="0 0 20 20"
+									{item.label}
+								</button>
+							) : (
+								<Link
+									key={index}
+									to={item.path}
+									className={`text-base font-medium transition-colors ${
+										scrolled
+											? "text-gray-700 hover:text-[#690000]"
+											: "text-white/90 hover:text-white"
+									}`}
 								>
-									<path
-										fillRule="evenodd"
-										d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-										clipRule="evenodd"
-									/>
-								</svg>
-								<span className="text-lg">تسجيل الدخول / إنشاء حساب</span>
-							</Link>
-						)}
-					</div>
-
-					
-
-					
+									{item.label}
+								</Link>
+							)
+						))}
+</nav>
 				</div>
-			</header>
-		</>
+
+				{/* Left Section - Actions */}
+				<div className="flex items-center gap-4">
+					{showSearch && (
+						<button
+							onClick={handleSearchClick}
+							className={`p-2 rounded-full transition-colors ${
+								scrolled
+									? "text-gray-600 hover:bg-gray-100"
+									: "text-white hover:bg-white/10"
+							}`}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								className="h-6 w-6"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+								/>
+							</svg>
+						</button>
+					)}
+
+					{showAuth && (
+						<Link
+							to="/login"
+							className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all transform hover:-translate-y-0.5 ${
+								scrolled
+									? "bg-[#690000] text-white hover:bg-[#8B0000] shadow-lg hover:shadow-red-900/20"
+									: "bg-white text-[#690000] hover:bg-gray-100 shadow-xl"
+							}`}
+						>
+							تسجيل الدخول
+						</Link>
+					)}
+				</div>
+			</div>
+		</header>
 	);
 };
 

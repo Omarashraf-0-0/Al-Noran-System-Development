@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../util/validators.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/google_sign_in_service.dart';
+import '../../core/services/user_cache_service.dart';
+import '../../core/services/firebase_push_service.dart';
+import '../../core/services/notification_service.dart';
 import 'personalRegistration.dart';
 import 'commercialRegistration.dart';
 import 'factoryRegistration.dart';
@@ -49,7 +54,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         color: Color(0xFF690000),
                         size: 28,
                       ),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => context.go('/login'),
                     ),
                     const Spacer(),
                   ],
@@ -209,7 +214,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.pop(context);
+                        context.pop();
                       },
                       child: const Text(
                         'تسجيل الدخول',
@@ -221,6 +226,63 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // Divider with text
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.grey[300])),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'أو التسجيل باستخدام',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF757575),
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: Colors.grey[300])),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Google Sign Up Button
+                InkWell(
+                  onTap: _handleGoogleSignUp,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: double.infinity,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE0E0E0)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/img/googleIcon.png',
+                          width: 24,
+                          height: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'التسجيل بحساب جوجل',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
 
                 const SizedBox(height: 40),
@@ -346,7 +408,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
       // Dismiss loading
       if (mounted) {
-        Navigator.pop(context);
+        context.pop();
       }
 
       print('📨 Response: $checkResult');
@@ -383,7 +445,7 @@ class _RegisterPageState extends State<RegisterPage> {
     } catch (e) {
       // Dismiss loading if still showing
       if (mounted && Navigator.canPop(context)) {
-        Navigator.pop(context);
+        context.pop();
       }
 
       print('❌ Exception during validation: $e');
@@ -643,5 +705,134 @@ class _RegisterPageState extends State<RegisterPage> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  /// Handle Google Sign Up
+  Future<void> _handleGoogleSignUp() async {
+    try {
+      print('📝 [Register] Starting Google Sign Up...');
+
+      // Show loading
+      AlNoranPopups.showLoading(context: context, message: 'جاري التسجيل...');
+
+      // Sign in with Google
+      print('📝 [Register] Calling GoogleSignInService.signIn()...');
+      final googleUser = await GoogleSignInService.signIn();
+      print('📝 [Register] GoogleSignInService returned: $googleUser');
+
+      if (googleUser == null) {
+        // User cancelled
+        print('📝 [Register] User cancelled Google Sign In');
+        if (mounted) {
+          AlNoranPopups.hideLoading(context);
+        }
+        return;
+      }
+
+      print('📝 [Register] Google user data received successfully');
+
+      // Call API to check if user exists
+      print('📝 [Register] Calling API googleSignIn...');
+      print('📝 [Register] Email: ${googleUser['email']}');
+      print('📝 [Register] Display Name: ${googleUser['displayName']}');
+      print('📝 [Register] Google ID: ${googleUser['id']}');
+
+      final result = await ApiService.googleSignIn(
+        email: googleUser['email'] ?? '',
+        displayName: googleUser['displayName'] ?? '',
+        googleId: googleUser['id'] ?? '',
+        idToken: googleUser['idToken'],
+        accessToken: googleUser['accessToken'],
+      );
+
+      print('📝 [Register] API response: $result');
+
+      // Hide loading
+      if (mounted) {
+        AlNoranPopups.hideLoading(context);
+      }
+
+      if (result['success'] == true) {
+        print('📝 [Register] API call successful');
+        print('📝 [Register] Is new user: ${result['isNewUser']}');
+
+        if (result['isNewUser'] == true) {
+          // New user - pre-fill the registration form with Google data
+          print('📝 [Register] New user - pre-filling form');
+          final googleData = result['data']['googleData'];
+          print('📝 [Register] Google data: $googleData');
+
+          if (mounted) {
+            setState(() {
+              _nameController.text = googleData['displayName'] ?? '';
+              _emailController.text = googleData['email'] ?? '';
+            });
+
+            print('📝 [Register] Form fields updated:');
+            print('📝 [Register] Name: ${_nameController.text}');
+            print('📝 [Register] Email: ${_emailController.text}');
+
+            AlNoranPopups.showSuccess(
+              context: context,
+              message: 'تم جلب بياناتك من جوجل. أكمل بقية البيانات للتسجيل',
+            );
+          }
+        } else {
+          // Existing user - login successful
+          print('📝 [Register] Existing user - logging in');
+          if (mounted) {
+            AlNoranPopups.showSuccess(
+              context: context,
+              message: 'لديك حساب بالفعل! تم تسجيل الدخول بنجاح',
+            );
+          }
+
+          // Initialize services
+          await UserCacheService().initialize(forceRefresh: true);
+          try {
+            await FirebasePushService().initialize();
+          } catch (e) {
+            print('⚠️ [GoogleSignUp] Firebase init error: $e');
+          }
+          try {
+            await NotificationService().initialize(forceRefresh: true);
+          } catch (e) {
+            print('⚠️ [GoogleSignUp] Notification Service error: $e');
+          }
+
+          // Get user info
+          final userData = result['data']?['user'];
+          String userName =
+              userData?['fullname'] ?? userData?['username'] ?? 'مستخدم';
+          String userEmail = userData?['email'] ?? '';
+
+          // Navigate to home
+          if (mounted) {
+            context.go(
+              '/home',
+              extra: {'userName': userName, 'userEmail': userEmail},
+            );
+          }
+        }
+      } else {
+        print('📝 [Register] API call failed: ${result['message']}');
+        if (mounted) {
+          AlNoranPopups.showError(
+            context: context,
+            message: result['message'] ?? 'فشل التسجيل بجوجل',
+          );
+        }
+      }
+    } catch (e, stackTrace) {
+      print('❌ [GoogleSignUp] Error: $e');
+      print('❌ [GoogleSignUp] Stack trace: $stackTrace');
+      if (mounted) {
+        AlNoranPopups.hideLoading(context);
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ أثناء التسجيل بجوجل: $e',
+        );
+      }
+    }
   }
 }

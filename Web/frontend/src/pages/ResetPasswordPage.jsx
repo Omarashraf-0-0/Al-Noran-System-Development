@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-import Navbar from "../components/Navbar";
+import AuthNavbar from "../components/AuthNavbar";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import ResetPasswordForm from "../components/ResetPasswordForm";
@@ -46,7 +46,7 @@ const ResetPasswordPage = () => {
 
 	return (
 		<>
-			<Navbar />
+			<AuthNavbar />
 			<BackgroundContainer>
 				<FormContainer>
 					<ResetPasswordForm

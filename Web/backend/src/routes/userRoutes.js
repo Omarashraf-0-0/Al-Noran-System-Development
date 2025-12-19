@@ -1,33 +1,62 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 const {
-  getAllUsers,
-  createUser,
-  updateUser,
-  deleteUser,
-  changePassword,
-  addUsers,
-  getNotifications,
-  sendNotification
-} = require('../controllers/userController');
+	getAllUsers,
+	createUser,
+	updateUser,
+	deleteUser,
+	changePassword,
+	addUsers,
+	getNotifications,
+	sendNotification,
+	contactUs,
+	getUserProfile,
+	updateUserProfile,
+	changePasswordProfile,
+	suspendEmployee,
+	unsuspendEmployee,
+	checkVerificationStatus,
+	getClientProfile,
+} = require("../controllers/userController");
+const { protect } = require("../middleware/auth");
+const { phoneNumberValidation } = require("../middleware/validation");
 
-router.route('/getAll')
-  .get(getAllUsers)
-  .post(createUser);
+// Profile routes (protected)
+router
+	.route("/profile")
+	.get(protect, getUserProfile)
+	.put(protect, updateUserProfile);
 
-router.route('/:id/change-password')
-  .put(changePassword);
+// Check verification status
+router.route("/check-verification").get(protect, checkVerificationStatus);
 
-router.route('/:id')
-  .patch(updateUser)
-  .put(updateUser) // Add PUT support for mobile app
-  .delete(deleteUser);
+router.route("/change-password").put(protect, changePasswordProfile);
 
-router.route('/addUsers')
-  .post(addUsers);
+// User management routes
+router.route("/").get(getAllUsers).post(createUser);
 
-router.route('/notifications/sendNotification').post(sendNotification)
-router.route('/notifications/getAllNotifications').get(getNotifications)
+// Batch user creation
+router.route("/addUsers").post(addUsers);
 
+// Client profile (for admin/employee to view client details)
+router.route("/:clientId/profile").get(protect, getClientProfile);
+
+// User-specific operations
+router
+	.route("/:id")
+	.patch(updateUser)
+	.put(updateUser) // Add PUT support for mobile app
+	.delete(deleteUser);
+
+// Password management
+router.route("/:id/change-password").put(changePassword);
+
+// Employee suspension management (admin only)
+router.route("/:id/suspend").patch(protect, suspendEmployee);
+router.route("/:id/unsuspend").patch(protect, unsuspendEmployee);
+
+router.route("/notifications/sendNotification").post(sendNotification);
+router.route("/notifications/getAllNotifications").get(getNotifications);
+router.route("/contactUs/sendMail").post(phoneNumberValidation, contactUs);
 
 module.exports = router;

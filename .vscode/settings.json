@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "D:/Al Noran system/Al-Noran-System-Development/Mobile Application/linux"
+    "cmake.sourceDirectory": "D:/Al Noran system/Al-Noran-System-Development/Mobile Application/linux",
+    "java.configuration.updateBuildConfiguration": "interactive"
 }

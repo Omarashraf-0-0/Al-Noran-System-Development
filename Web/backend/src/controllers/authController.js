@@ -1,6 +1,7 @@
 const User = require("../models/user");
 const { validationResult } = require("express-validator");
 const asyncHandler = require("express-async-handler");
+const notificationService = require("../services/notificationService");
 
 // @desc    Login user
 // @route   POST /api/auth/login
@@ -34,6 +35,16 @@ const login = asyncHandler(async (req, res) => {
 	if (!user.active) {
 		res.status(403);
 		throw new Error("تم إيقاف حسابك. تواصل مع الإدارة");
+	}
+
+	// Check if employee is suspended
+	if (user.type === "employee" && user.employeeDetails?.suspended) {
+		res.status(403);
+		throw new Error(
+			user.employeeDetails.suspensionReason
+				? `تم إيقافك عن العمل. السبب: ${user.employeeDetails.suspensionReason}`
+				: "تم إيقافك عن العمل. تواصل مع الإدارة"
+		);
 	}
 
 	// Create token
@@ -93,13 +104,6 @@ const signup = asyncHandler(async (req, res) => {
 		.lean()
 		.exec();
 	if (userExists) {
-		// <<<<<<< HEAD
-		//      res.status(409).json({
-		//       success: false,
-		//       error: 'A user with that email, username, or phone number already exists.'
-		//     });
-		//     throw new Error('A user with that email, username, or phone number already exists.');
-		// =======
 		res.status(409);
 		throw new Error(
 			"البريد الإلكتروني أو اسم المستخدم أو رقم الهاتف مستخدم بالفعل"
@@ -152,6 +156,16 @@ const signup = asyncHandler(async (req, res) => {
 
 	if (user) {
 		const token = user.getSignedJwtToken();
+
+		// 📬 Send welcome notification to new user
+		try {
+			const clientTypeForNotif = user.clientDetails?.clientType || type;
+			await notificationService.notifyRegistration(user._id, clientTypeForNotif);
+			console.log(`📬 Registration notification sent to user: ${user._id}`);
+		} catch (notifError) {
+			console.error("Failed to send registration notification:", notifError.message);
+		}
+
 		res.status(201).json({
 			success: true,
 			message: "تم إنشاء الحساب بنجاح",
@@ -228,7 +242,6 @@ const checkAvailability = asyncHandler(async (req, res) => {
 		message: "Data is available",
 	});
 });
-
 // @desc    Get current user info
 // @route   GET /api/auth/me
 // @access  Private
@@ -254,7 +267,68 @@ const getMe = asyncHandler(async (req, res) => {
 			employeeDetails: user.employeeDetails,
 			taxNumber: user.taxNumber,
 			rank: user.rank,
+			wallet: user.wallet,
 			createdAt: user.createdAt,
+		},
+	});
+});
+
+// @desc    Google Sign In
+// @route   POST /api/auth/google
+// @access  Public
+const googleSignIn = asyncHandler(async (req, res) => {
+	const { email, displayName, googleId, idToken, accessToken } = req.body;
+
+	if (!email || !googleId) {
+		res.status(400);
+		throw new Error("بيانات جوجل غير مكتملة");
+	}
+
+	// Check if user exists with this email
+	let user = await User.findOne({ email });
+
+	if (user) {
+		// User exists - update Google ID if not set
+		if (!user.googleId) {
+			user.googleId = googleId;
+			await user.save();
+		}
+
+		// Check if user is active
+		if (!user.active) {
+			res.status(403);
+			throw new Error("تم إيقاف حسابك. تواصل مع الإدارة");
+		}
+
+		// Create token
+		const token = user.getSignedJwtToken();
+
+		return res.status(200).json({
+			success: true,
+			message: "تم تسجيل الدخول بنجاح",
+			isNewUser: false,
+			token,
+			user: {
+				id: user._id,
+				fullname: user.fullname,
+				username: user.username,
+				email: user.email,
+				type: user.type,
+				phone: user.phone,
+				clientDetails: user.clientDetails,
+			},
+		});
+	}
+
+	// User doesn't exist - return info for registration
+	res.status(200).json({
+		success: true,
+		isNewUser: true,
+		message: "حساب جديد - يرجى إكمال التسجيل",
+		googleData: {
+			email,
+			displayName,
+			googleId,
 		},
 	});
 });
@@ -264,4 +338,5 @@ module.exports = {
 	signup,
 	checkAvailability,
 	getMe,
+	googleSignIn,
 };

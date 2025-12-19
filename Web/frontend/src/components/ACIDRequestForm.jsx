@@ -1,8 +1,9 @@
 import React from "react";
-import InputField from "./InputField";
 import Spacer from "./Spacer";
 import Button from "./Button";
-import FieldRow from "./FieldRow";
+import FileUploadCard from "./FileUploadCard";
+import GoodsFormSection from "./GoodsFormSection";
+import SupplierFormSection from "./SupplierFormSection";
 import { Link } from "react-router";
 
 const ACIDRequestForm = ({
@@ -17,6 +18,7 @@ const ACIDRequestForm = ({
 }) => {
 	const [formData, setFormData] = React.useState({
 		preliminaryInvoice: "",
+		shipmentType: "بحري", // Default to sea shipment
 		goods: {
 			weight: "",
 			customsItem: "",
@@ -80,183 +82,65 @@ const ACIDRequestForm = ({
 
 			<form onSubmit={handleSubmit} className="w-full">
 				{/* Proforma Invoice Upload Card */}
-				<div
-					className={`border-2 rounded-lg p-4 mb-6 transition-all ${
-						selectedFile || uploadedInvoice
-							? "border-green-500 bg-green-50"
-							: "border-gray-300 bg-white hover:border-blue-400"
-					}`}
-					dir="rtl"
-				>
-					<div className="flex items-center justify-between mb-2">
-						<div className="flex items-center gap-3">
-							<span className="text-2xl">
-								{uploadedInvoice ? "✅" : selectedFile ? "📄" : "📎"}
-							</span>
-							<div>
-								<h3 className="font-semibold text-gray-800">
-									فاتورة مبدئية <span className="text-red-500">*</span>
-								</h3>
-								<span className="text-xs text-gray-500">
-									(PDF أو صورة - حد أقصى 10 ميجابايت)
-								</span>
-							</div>
-						</div>
+				<FileUploadCard
+					selectedFile={selectedFile}
+					uploadedFile={uploadedInvoice}
+					uploading={uploading}
+					progress={progress}
+					onFileSelect={onFileSelect}
+					onDeleteUpload={onDeleteUpload}
+					onViewDocument={onViewDocument}
+					label="فاتورة مبدئية"
+					required={true}
+				/>
 
-						{selectedFile || uploadedInvoice ? (
-							<div className="flex gap-2">
-								{uploadedInvoice && (
-									<button
-										type="button"
-										onClick={onViewDocument}
-										className="btn btn-sm btn-info text-white"
-									>
-										👁️ عرض
-									</button>
-								)}
-								<button
-									type="button"
-									onClick={onDeleteUpload}
-									className="btn btn-sm btn-error text-white"
-								>
-									🗑️ حذف
-								</button>
-							</div>
-						) : (
-							<label className="btn btn-sm btn-primary text-white">
-								📤 اختر ملف
-								<input
-									type="file"
-									className="hidden"
-									accept=".pdf,.jpg,.jpeg,.png"
-									onChange={(e) => onFileSelect(e.target.files[0])}
-									disabled={uploading}
-								/>
-							</label>
-						)}
+				<Spacer size="md" />
+
+				{/* Shipment Type Selection */}
+				<div className="mb-6">
+					<label className="block text-gray-700 text-sm font-bold mb-3">
+						نوع الشحنة <span className="text-red-500">*</span>
+					</label>
+					<div className="flex gap-4">
+						<label className="flex items-center cursor-pointer">
+							<input
+								type="radio"
+								name="shipmentType"
+								value="بحري"
+								checked={formData.shipmentType === "بحري"}
+								onChange={handleInputChange("shipmentType")}
+								className="mr-2 w-4 h-4 text-[#1BA3B6] focus:ring-[#1BA3B6]"
+							/>
+							<span className="text-gray-700 text-base">🚢 بحري</span>
+						</label>
+						<label className="flex items-center cursor-pointer">
+							<input
+								type="radio"
+								name="shipmentType"
+								value="جوي"
+								checked={formData.shipmentType === "جوي"}
+								onChange={handleInputChange("shipmentType")}
+								className="mr-2 w-4 h-4 text-[#1BA3B6] focus:ring-[#1BA3B6]"
+							/>
+							<span className="text-gray-700 text-base">✈️ جوي</span>
+						</label>
 					</div>
+				</div>
 
-					{/* Upload Progress Bar */}
-					{uploading && (
-						<div className="mt-3">
-							<div className="w-full bg-gray-200 rounded-full h-2">
-								<div
-									className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-									style={{ width: `${progress}%` }}
-								></div>
-							</div>
-							<p className="text-xs text-gray-600 mt-1 text-center">
-								{progress}%
-							</p>
-						</div>
-					)}
+				{/* Goods Information Section */}
+				<GoodsFormSection
+					goodsData={formData.goods}
+					onInputChange={handleInputChange}
+				/>
 
-					{/* File Info */}
-					{selectedFile && !uploadedInvoice && (
-						<div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded">
-							<p>📄 {selectedFile.name}</p>
-							<p className="text-gray-500">
-								الحجم: {(selectedFile.size / 1024 / 1024).toFixed(2)} ميجابايت
-							</p>
-							<p className="text-blue-600 font-semibold mt-1">
-								⏳ سيتم الرفع عند الضغط على "إرسال الطلب"
-							</p>
-						</div>
-					)}
+				<Spacer size="md" />
 
-					{uploadedInvoice && (
-						<div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded">
-							<p>📄 {uploadedInvoice.filename}</p>
-							<p className="text-gray-500">
-								تم الرفع:{" "}
-								{new Date(uploadedInvoice.uploadedAt).toLocaleDateString(
-									"ar-EG"
-								)}
-							</p>
-						</div>
-					)}
-				</div>{" "}
-				{/* رقم الهاتف ورقم الضريبة - جنب بعض في الشاشات الكبيرة */}
-				<FieldRow columns={2}>
-					<InputField
-						id="goods.weight"
-						type="number"
-						label=" (kg)الوزن المبدئى"
-						placeholder="50"
-						value={formData.goods?.weight}
-						onChange={handleInputChange("goods.weight")}
-					/>
+				{/* Supplier Information Section */}
+				<SupplierFormSection
+					supplierData={formData.supplier}
+					onInputChange={handleInputChange}
+				/>
 
-					<InputField
-						id="goods.customsItem"
-						type="text"
-						label="البند الجمركي"
-						placeholder="ادخل البند الجمركي"
-						value={formData.goods?.customsItem}
-						onChange={handleInputChange("goods.customsItem")}
-						required
-					/>
-				</FieldRow>
-				{/* كلمة المرور وتأكيدها - جنب بعض في الشاشات الكبيرة */}
-				<FieldRow columns={2}>
-					<InputField
-						id="goods.description"
-						type="text"
-						label="وصف البضاعة"
-						placeholder="أدخل وصف البضاعة"
-						value={formData.goods?.description}
-						onChange={handleInputChange("goods.description")}
-						required
-					/>
-					<InputField
-						id="supplier.name"
-						type="text"
-						label="اسم المورد"
-						placeholder="ادخل اسم المورد"
-						value={formData.supplier?.name}
-						onChange={handleInputChange("supplier.name")}
-					/>
-				</FieldRow>
-				<Spacer size="sm" />
-				{/* نوع الحساب */}
-				<FieldRow columns={2}>
-					<InputField
-						id="supplier.taxNum"
-						type="text"
-						label="نوع الحساب"
-						placeholder="ادخل نوع الحساب"
-						value={formData.supplier?.taxNum}
-						onChange={handleInputChange("supplier.taxNum")}
-					/>
-					<InputField
-						id="supplier.country"
-						type="text"
-						label="الدولة"
-						placeholder="ادخل الدولة"
-						value={formData.supplier?.country}
-						onChange={handleInputChange("supplier.country")}
-					/>
-				</FieldRow>
-				<Spacer size="sm" />
-				{/* الايميل والموبايل - جنب بعض في الشاشات الكبيرة */}
-				<FieldRow columns={2}>
-					<InputField
-						id="supplier.email"
-						type="email"
-						label="البريد الألكترونى"
-						placeholder="ادخل البريد الألكترونى"
-						value={formData.supplier?.email}
-						onChange={handleInputChange("supplier.email")}
-					/>
-					<InputField
-						id="supplier.mobileNum"
-						type="tel"
-						label="رقم الهاتف"
-						placeholder="ادخل رقم الهاتف"
-						value={formData.supplier?.mobileNum}
-						onChange={handleInputChange("supplier.mobileNum")}
-					/>
-				</FieldRow>
 				<Spacer size="md" />
 				<div className="flex items-center justify-center w-full">
 					<Button type="submit" size="full">

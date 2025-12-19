@@ -1,9 +1,10 @@
 const AcidRequest = require("../models/acid");
+const notificationService = require("../services/notificationService");
 
 // ✅ إنشاء طلب ACID جديد
 const createAcidRequest = async (req, res) => {
 	try {
-		const { supplier, goods, uploads } = req.body;
+		const { supplier, goods, uploads, shipmentType } = req.body;
 
 		// Get userId from authenticated user (from protect middleware)
 		const userId = req.user ? req.user._id : null;
@@ -36,12 +37,29 @@ const createAcidRequest = async (req, res) => {
 			supplier,
 			goods,
 			uploads: uploads || [], // Array of Upload document IDs
+			shipmentType: shipmentType || "بحري", // Default to sea shipment
 		});
 
 		await newRequest.save();
 
 		// Populate uploads to return full upload details
 		await newRequest.populate("uploads");
+
+		// 📬 Send notification to user
+		try {
+			await notificationService.createNotification({
+				userId: userId,
+				type: "acid_created",
+				message: "تم استلام طلب ACID الخاص بك وجاري مراجعته",
+				data: {
+					acidRequestId: newRequest._id,
+				},
+				priority: "medium",
+				sendPush: true, // Send push notification to mobile
+			});
+		} catch (notifError) {
+			console.error("Failed to send notification:", notifError.message);
+		}
 
 		res.status(201).json({
 			success: true,
@@ -72,13 +90,20 @@ const getAllRequests = async (req, res) => {
 		}
 
 		// Filter requests by userId to show only current user's requests
-		const requests = await AcidRequest.find({ userId }).sort({
-			requestDate: -1,
+		const requests = await AcidRequest.find({ userId })
+			.sort({ requestDate: -1 })
+			.populate("uploads");
+
+		res.json({
+			success: true,
+			requests: requests,
 		});
-		res.json(requests);
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ message: "Server error while fetching requests" });
+		res.status(500).json({
+			success: false,
+			message: "Server error while fetching requests",
+		});
 	}
 };
 
@@ -124,6 +149,7 @@ const updateAcidStatus = async (req, res) => {
 			hasShipment,
 			shipmentId,
 			shipmentCreatedAt,
+			shipmentType,
 		} = req.body;
 
 		const request = await AcidRequest.findById(id);
@@ -173,9 +199,51 @@ const updateAcidStatus = async (req, res) => {
 			if (supplier) request.supplier = supplier;
 			if (goods) request.goods = goods;
 			if (uploads) request.uploads = uploads;
+			if (shipmentType) request.shipmentType = shipmentType;
 		}
 
 		await request.save();
+
+		// 📬 Send notification for ACID status updates
+		if (status || acidCode) {
+			try {
+				if (acidCode) {
+					// ACID code issued
+					await notificationService.notifyAcidIssued(
+						request.userId,
+						acidCode,
+						request._id
+					);
+				} else if (status === "Rejected") {
+					// ACID rejected
+					await notificationService.createNotification({
+						userId: request.userId,
+						type: "acid_rejected",
+						message: "تم رفض طلب ACID الخاص بك",
+						data: {
+							acidRequestId: request._id,
+						},
+						sendEmail: true,
+						sendPush: true,
+						priority: "high",
+					});
+				} else if (status === "Reviewing" || status === "Under Review") {
+					// ACID under review
+					await notificationService.createNotification({
+						userId: request.userId,
+						type: "acid_reviewing",
+						message: "طلب ACID الخاص بك قيد المراجعة",
+						data: {
+							acidRequestId: request._id,
+						},
+						sendPush: true,
+						priority: "medium",
+					});
+				}
+			} catch (notifError) {
+				console.error("Failed to send notification:", notifError.message);
+			}
+		}
 
 		res.json({
 			success: true,
@@ -202,11 +270,27 @@ const getAllRequestsForEmployee = async (req, res) => {
 			});
 		}
 
+		const { myLocked, hasShipment, issuedByMe } = req.query;
+		const query = {};
+
+		if (myLocked === "true") {
+			query.reviewingBy = req.user._id;
+		}
+
+		if (hasShipment === "true") {
+			query.hasShipment = true;
+		}
+
+		if (issuedByMe === "true") {
+			query.issuedBy = req.user._id;
+		}
+
 		// Get all requests without filtering by userId
-		const requests = await AcidRequest.find()
-			.populate("userId", "username email")
+		const requests = await AcidRequest.find(query)
+			.populate("userId", "username email phone")
 			.populate("uploads")
 			.populate("reviewingBy", "username email")
+			.populate("issuedBy", "username email")
 			.populate("shipmentId")
 			.sort({ requestDate: -1 });
 
@@ -226,8 +310,10 @@ const getAllRequestsForEmployee = async (req, res) => {
 // ✅ Update ACID request status by employee
 const updateAcidStatusByEmployee = async (req, res) => {
 	try {
+		console.log("📝📝📝 [updateAcidStatusByEmployee] CALLED!");
 		// Check if user is employee (check both userType and type for compatibility)
 		const userType = req.user.userType || req.user.type;
+		console.log(`📝 [updateAcidStatusByEmployee] User Type: ${userType}`);
 		if (userType !== "employee") {
 			return res.status(403).json({
 				success: false,
@@ -236,7 +322,7 @@ const updateAcidStatusByEmployee = async (req, res) => {
 		}
 
 		const { id } = req.params;
-		const { status, acidCode, reviewingBy } = req.body;
+		const { status, acidCode, reviewingBy, rejectionReason } = req.body;
 
 		const request = await AcidRequest.findById(id);
 
@@ -248,7 +334,12 @@ const updateAcidStatusByEmployee = async (req, res) => {
 		}
 
 		// Validate status
-		const validStatuses = ["Pending", "ACID Issued", "Rejected"];
+		const validStatuses = [
+			"Pending",
+			"Under Review",
+			"ACID Issued",
+			"Rejected",
+		];
 		if (status && !validStatuses.includes(status)) {
 			return res.status(400).json({
 				success: false,
@@ -256,14 +347,70 @@ const updateAcidStatusByEmployee = async (req, res) => {
 			});
 		}
 
+		// Store old status for comparison
+		const oldStatus = request.status;
+
 		// Update fields
 		if (status) request.status = status;
 		if (acidCode) request.acidCode = acidCode;
 		if (reviewingBy !== undefined) {
 			request.reviewingBy = reviewingBy || null;
 		}
+		if (rejectionReason) request.rejectionReason = rejectionReason;
 
 		await request.save({ validateModifiedOnly: true });
+
+		// 📬 Send notifications based on status change
+		console.log(`📬📬📬 [updateAcidStatusByEmployee] Status changed from '${oldStatus}' to '${status}'`);
+		if (status && status !== oldStatus) {
+			try {
+				console.log(`📬 [updateAcidStatusByEmployee] Sending notification for status: ${status}`);
+				if (status === "Rejected") {
+					// ACID rejected
+					console.log(`📬 Sending rejection notification to user: ${request.userId}`);
+					await notificationService.createNotification({
+						userId: request.userId,
+						type: "acid_rejected",
+						message: rejectionReason 
+							? `تم رفض طلب ACID الخاص بك. السبب: ${rejectionReason}`
+							: "تم رفض طلب ACID الخاص بك",
+						data: {
+							acidRequestId: request._id,
+							reason: rejectionReason,
+						},
+						sendEmail: true,
+						sendPush: true,
+						priority: "high",
+					});
+					console.log(`✅ Rejection notification sent`);
+				} else if (status === "Under Review") {
+					// ACID under review
+					console.log(`📬 Sending review notification to user: ${request.userId}`);
+					await notificationService.createNotification({
+						userId: request.userId,
+						type: "acid_reviewing",
+						message: "طلب ACID الخاص بك قيد المراجعة الآن",
+						data: {
+							acidRequestId: request._id,
+						},
+						sendPush: true,
+						priority: "medium",
+					});
+					console.log(`✅ Review notification sent`);
+				} else if (status === "ACID Issued" && acidCode) {
+					// ACID issued
+					console.log(`📬 Sending ACID issued notification to user: ${request.userId}`);
+					await notificationService.notifyAcidIssued(
+						request.userId,
+						acidCode,
+						request._id
+					);
+					console.log(`✅ ACID issued notification sent`);
+				}
+			} catch (notifError) {
+				console.error("Failed to send notification:", notifError.message);
+			}
+		}
 
 		res.json({
 			success: true,
@@ -323,8 +470,10 @@ const deleteAcidRequest = async (req, res) => {
 // ✅ Lock ACID request for review (Employee starts reviewing)
 const lockAcidRequest = async (req, res) => {
 	try {
+		console.log("🔒🔒🔒 [lockAcidRequest] CALLED!");
 		const { id } = req.params;
 		const employeeId = req.user._id;
+		console.log(`🔒 [lockAcidRequest] Request ID: ${id}, Employee: ${employeeId}`);
 
 		const request = await AcidRequest.findById(id);
 
@@ -360,6 +509,28 @@ const lockAcidRequest = async (req, res) => {
 		request.status = "Under Review";
 
 		await request.save();
+
+		// 📬 Send notification that review has started
+		try {
+			console.log(`📬📬📬 [lockAcidRequest] About to send notification!`);
+			console.log(`📬 [lockAcidRequest] User ID: ${request.userId}`);
+			console.log(`📬 [lockAcidRequest] Request ID: ${request._id}`);
+			
+			const result = await notificationService.createNotification({
+				userId: request.userId,
+				type: "acid_reviewing",
+				message: "طلب ACID الخاص بك قيد المراجعة الآن",
+				data: {
+					acidRequestId: request._id,
+				},
+				sendPush: true,
+				priority: "medium",
+			});
+			console.log(`✅✅✅ [lockAcidRequest] Notification created:`, result?._id);
+		} catch (notifError) {
+			console.error("❌❌❌ [lockAcidRequest] Failed to send review notification:", notifError.message);
+			console.error("❌ Stack:", notifError.stack);
+		}
 
 		res.json({
 			success: true,
@@ -430,7 +601,7 @@ const issueAcidWithConfirmation = async (req, res) => {
 		const employeeId = req.user._id;
 
 		const request = await AcidRequest.findById(id)
-			.populate("userId", "username email")
+			.populate("userId", "username email phone")
 			.populate("uploads");
 
 		if (!request) {
@@ -481,8 +652,22 @@ const issueAcidWithConfirmation = async (req, res) => {
 		request.acidCode = acidCode;
 		request.isLocked = false;
 		request.reviewingBy = null;
+		request.issuedBy = employeeId;
 
 		await request.save();
+
+		// 📬 Send notification for ACID issuance
+		try {
+			console.log(`📬 Sending ACID issued notification to user: ${request.userId._id || request.userId}`);
+			await notificationService.notifyAcidIssued(
+				request.userId._id || request.userId,
+				acidCode,
+				request._id
+			);
+			console.log(`✅ ACID issued notification sent`);
+		} catch (notifError) {
+			console.error("Failed to send ACID issued notification:", notifError.message);
+		}
 
 		res.json({
 			success: true,

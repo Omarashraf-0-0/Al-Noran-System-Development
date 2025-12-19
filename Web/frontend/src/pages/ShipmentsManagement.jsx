@@ -97,19 +97,24 @@ export default function ShipmentsManagement() {
 
 	const getStatusColor = (status) => {
 		switch (status) {
-			case "Completed":
 			case "تمت بنجاح":
+			case "مكتملة":
+			case "Completed":
 				return "text-green-600";
-			case "In Transit":
 			case "في الطريق":
+			case "In Transit":
 				return "text-blue-600";
+			case "تم وصول البضاعة":
 			case "Arrived":
+			case "التخليص الجمركي":
 			case "Customs Clearance":
 			case "جاري الكشف والتثمين":
 			case "في انتظار وصول الإذن":
+			case "تم وصول الإذن":
+			case "جارى ادراج الشحنة واستكمال الاجراءات":
 				return "text-yellow-600";
-			case "Pending":
 			case "في انتظار الشحن":
+			case "Pending":
 				return "text-gray-600";
 			default:
 				return "text-gray-600";
@@ -257,7 +262,7 @@ export default function ShipmentsManagement() {
 									{
 										shipments.filter(
 											(s) =>
-												s.status === "Completed" || s.status === "تمت بنجاح"
+												s.status === "مكتملة" || s.status === "تمت بنجاح" || s.status === "Completed"
 										).length
 									}
 								</p>
@@ -268,7 +273,7 @@ export default function ShipmentsManagement() {
 									{
 										shipments.filter(
 											(s) =>
-												s.status === "In Transit" || s.status === "في الطريق"
+												s.status === "في الطريق" || s.status === "In Transit"
 										).length
 									}
 								</p>
@@ -279,11 +284,11 @@ export default function ShipmentsManagement() {
 									{
 										shipments.filter(
 											(s) =>
-												s.status === "Pending" || s.status === "في انتظار الشحن"
+												s.status === "في انتظار الشحن" || s.status === "Pending"
 										).length
 									}
 								</p>
-								<p className="text-sm text-gray-600">قيد الانتظار</p>
+								<p className="text-sm text-gray-600">في انتظار الشحن</p>
 							</div>
 						</div>
 					</div>

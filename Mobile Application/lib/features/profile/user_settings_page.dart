@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
 import '../../core/storage/secure_storage.dart';
@@ -110,7 +111,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
           AlNoranPopups.showSuccess(
             context: context,
             message: 'تم تحديث البيانات بنجاح',
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
           );
         }
       } else {
@@ -155,7 +156,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.arrow_forward, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => context.pop(),
                   ),
                 ),
               ],

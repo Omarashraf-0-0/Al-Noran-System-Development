@@ -4,6 +4,11 @@ import Header from "../components/Header";
 import Stepper from "../components/Stepper";
 import FileRow from "../components/FileRow";
 import Footer from "../components/Footer";
+import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorMessage from "../components/ErrorMessage";
+import AdminStatusControl from "../components/AdminStatusControl";
+import RequiredDocumentsModal from "../components/RequiredDocumentsModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import supportAgent from "../assets/images/support_agent.png";
 import documentText from "../assets/images/document-text.png";
 import mainIllustration from "../assets/images/Untitled design (7) 1.png";
@@ -23,39 +28,37 @@ const AdminShipmentManagement = () => {
 	const [user, setUser] = useState(null);
 
 	// Status change state
-	const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 	const [selectedStatus, setSelectedStatus] = useState("");
 	const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
 	// Required documents state
 	const [showDocumentModal, setShowDocumentModal] = useState(false);
-	const [requiredDocuments, setRequiredDocuments] = useState([]);
-	const [newDocument, setNewDocument] = useState("");
 	const [uploadingDoc, setUploadingDoc] = useState(false);
+
+	// TODO: RBAC - Get admin permissions from context/store
+	// Example: const { user, hasPermission } = useAuth();
+	// const canChangeStatus = hasPermission('shipment:updateStatus');
+	// const canRequestDocuments = hasPermission('shipment:requestDocuments');
+	// const canViewAllShipments = hasPermission('shipment:viewAll');
 
 	const token = localStorage.getItem("token");
 
-	// Available statuses
+	// Available statuses (Arabic only)
 	const availableStatuses = [
-		{
-			value: "Pending",
-			label: "قيد الانتظار",
-			color: "bg-yellow-100 text-yellow-800",
-		},
 		{
 			value: "في انتظار الشحن",
 			label: "في انتظار الشحن",
 			color: "bg-orange-100 text-orange-800",
 		},
 		{
-			value: "In Transit",
+			value: "في الطريق",
 			label: "في الطريق",
 			color: "bg-blue-100 text-blue-800",
 		},
 		{
-			value: "Arrived",
+			value: "تم وصول البضاعة",
 			label: "تم وصول البضاعة",
-			color: "bg-green-100 text-green-800",
+			color: "bg-cyan-100 text-cyan-800",
 		},
 		{
 			value: "في انتظار وصول الإذن",
@@ -63,9 +66,19 @@ const AdminShipmentManagement = () => {
 			color: "bg-purple-100 text-purple-800",
 		},
 		{
-			value: "Customs Clearance",
+			value: "تم وصول الإذن",
+			label: "تم وصول الإذن",
+			color: "bg-teal-100 text-teal-800",
+		},
+		{
+			value: "التخليص الجمركي",
 			label: "التخليص الجمركي",
 			color: "bg-indigo-100 text-indigo-800",
+		},
+		{
+			value: "جارى ادراج الشحنة واستكمال الاجراءات",
+			label: "جارى ادراج الشحنة واستكمال الاجراءات",
+			color: "bg-amber-100 text-amber-800",
 		},
 		{
 			value: "جاري الكشف والتثمين",
@@ -73,14 +86,14 @@ const AdminShipmentManagement = () => {
 			color: "bg-pink-100 text-pink-800",
 		},
 		{
-			value: "Completed",
+			value: "مكتملة",
 			label: "مكتملة",
 			color: "bg-green-100 text-green-800",
 		},
 		{
 			value: "تمت بنجاح",
 			label: "تمت بنجاح",
-			color: "bg-teal-100 text-teal-800",
+			color: "bg-emerald-100 text-emerald-800",
 		},
 	];
 
@@ -91,14 +104,15 @@ const AdminShipmentManagement = () => {
 			const parsedUser = JSON.parse(storedUser);
 			setUser(parsedUser);
 
-			// TODO: Uncomment this when admin authentication is ready
-			// Check if user is admin
-			// if (parsedUser.type !== "admin") {
+			// TODO: RBAC - Check if user has admin permission
+			// Example implementation:
+			// if (!hasPermission('admin:access')) {
 			// 	toast.error("غير مصرح لك بالوصول لهذه الصفحة");
 			// 	navigate("/");
+			// 	return;
 			// }
 		}
-		// TODO: Uncomment this when admin authentication is ready
+		// TODO: RBAC - Redirect if not authenticated
 		// else {
 		// 	toast.error("يجب تسجيل الدخول أولاً");
 		// 	navigate("/login");
@@ -126,7 +140,7 @@ const AdminShipmentManagement = () => {
 							acid: "ACID-2024-12345",
 							importerName: "شركة الاستيراد المثالية",
 							employerName: "محمد أحمد",
-							status: "In Transit",
+							status: "في الطريق",
 							shipmentDescription: "شحنة أجهزة إلكترونية",
 							country: "الصين",
 							number46: "BL-2024-5678",
@@ -149,7 +163,7 @@ const AdminShipmentManagement = () => {
 								},
 							],
 						});
-						setSelectedStatus("In Transit");
+						setSelectedStatus("في الطريق");
 						setFileItems([
 							{
 								name: "invoice.pdf",
@@ -274,8 +288,12 @@ const AdminShipmentManagement = () => {
 	};
 
 	const handleStatusChange = (newStatus) => {
+		// TODO: RBAC - Check permission before allowing status change
+		// if (!canChangeStatus) {
+		// 	toast.error("ليس لديك صلاحية لتغيير حالة الشحنة");
+		// 	return;
+		// }
 		setSelectedStatus(newStatus);
-		setShowStatusDropdown(false);
 		setShowConfirmDialog(true);
 	};
 
@@ -305,24 +323,13 @@ const AdminShipmentManagement = () => {
 		}
 	};
 
-	const handleAddRequiredDocument = () => {
-		if (newDocument.trim()) {
-			setRequiredDocuments([
-				...requiredDocuments,
-				{ name: newDocument, uploaded: false },
-			]);
-			setNewDocument("");
-			toast.success("تم إضافة المستند المطلوب");
-		}
-	};
+	const handleSaveRequiredDocuments = async (documents) => {
+		// TODO: RBAC - Check permission before requesting documents
+		// if (!canRequestDocuments) {
+		// 	toast.error("ليس لديك صلاحية لطلب مستندات");
+		// 	return;
+		// }
 
-	const handleRemoveRequiredDocument = (index) => {
-		const updated = requiredDocuments.filter((_, i) => i !== index);
-		setRequiredDocuments(updated);
-		toast.success("تم حذف المستند المطلوب");
-	};
-
-	const handleSaveRequiredDocuments = async () => {
 		try {
 			setUploadingDoc(true);
 			toast.loading("جاري إرسال طلب المستندات...");
@@ -332,7 +339,7 @@ const AdminShipmentManagement = () => {
 				`${
 					import.meta.env.VITE_API_URL
 				}/api/shipments/id/${shipmentId}/required-documents`,
-				{ documents: requiredDocuments },
+				{ documents },
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -344,7 +351,6 @@ const AdminShipmentManagement = () => {
 			toast.dismiss();
 			toast.success("تم حفظ المستندات المطلوبة وإرسال إشعار للعميل");
 			setShowDocumentModal(false);
-			setRequiredDocuments([]);
 		} catch (error) {
 			console.error("Error saving required documents:", error);
 			toast.dismiss();
@@ -365,12 +371,7 @@ const AdminShipmentManagement = () => {
 		return (
 			<div className="bg-gray-50 min-h-screen">
 				<Header />
-				<div className="flex justify-center items-center py-12 gap-4">
-					<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
-					<span className="text-gray-600 text-lg">
-						جاري تحميل بيانات الشحنة...
-					</span>
-				</div>
+				<LoadingSpinner message="جاري تحميل بيانات الشحنة..." />
 			</div>
 		);
 	}
@@ -381,15 +382,11 @@ const AdminShipmentManagement = () => {
 				<Header />
 				<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
 					<div className="max-w-5xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-sm">
-						<div className="bg-red-50 border border-red-300 rounded-lg p-4 text-right">
-							<p className="text-red-800 font-medium">❌ حدث خطأ: {error}</p>
-							<button
-								onClick={() => window.location.reload()}
-								className="mt-2 bg-red-800 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-							>
-								إعادة محاولة
-							</button>
-						</div>
+						<ErrorMessage
+							error={error}
+							onRetry={() => window.location.reload()}
+							retryButtonText="إعادة محاولة"
+						/>
 					</div>
 				</main>
 			</div>
@@ -399,7 +396,6 @@ const AdminShipmentManagement = () => {
 	return (
 		<div className="bg-gray-50 min-h-screen text-gray-800">
 			<Header />
-
 			<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
 				<div className="max-w-5xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-sm">
 					{shipment && (
@@ -418,7 +414,6 @@ const AdminShipmentManagement = () => {
 									← العودة للصفحة الرئيسية
 								</button>
 							</div>
-
 							{/* Top illustration */}
 							<div className="flex justify-center mb-10">
 								<img
@@ -427,100 +422,37 @@ const AdminShipmentManagement = () => {
 									className="w-full max-w-lg h-auto"
 								/>
 							</div>
-
 							{/* Status Control Section */}
-							<div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl p-6 mb-8">
-								<h3 className="text-xl font-bold text-red-900 mb-4 text-center">
-									🔄 إدارة حالة الشحنة
-								</h3>
-
-								<div className="flex flex-col md:flex-row items-center justify-center gap-4">
-									{/* Current Status Display */}
-									<div className="text-center">
-										<p className="text-sm text-gray-600 mb-2">
-											الحالة الحالية:
-										</p>
-										<span
-											className={`inline-block px-4 py-2 rounded-full text-sm font-bold ${getStatusColor(
-												shipment.status
-											)}`}
-										>
-											{availableStatuses.find(
-												(s) => s.value === shipment.status
-											)?.label || shipment.status}
-										</span>
-									</div>
-
-									{/* Change Status Dropdown */}
-									<div className="relative">
-										<button
-											onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-											className="bg-red-800 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-900 transition-all shadow-md flex items-center gap-2"
-										>
-											<span>تغيير الحالة</span>
-											<svg
-												className="w-5 h-5"
-												fill="currentColor"
-												viewBox="0 0 20 20"
-											>
-												<path
-													fillRule="evenodd"
-													d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-													clipRule="evenodd"
-												/>
-											</svg>
-										</button>
-
-										{/* Dropdown Menu */}
-										{showStatusDropdown && (
-											<div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
-												<div className="p-2">
-													{availableStatuses.map((status) => (
-														<button
-															key={status.value}
-															onClick={() => handleStatusChange(status.value)}
-															className={`w-full text-right px-4 py-3 rounded-md mb-1 transition-colors ${
-																status.value === shipment.status
-																	? "bg-red-50 text-red-800 font-bold"
-																	: "hover:bg-gray-50 text-gray-700"
-															}`}
-														>
-															<span
-																className={`inline-block px-3 py-1 rounded-full text-sm ${status.color} mb-1`}
-															>
-																{status.label}
-															</span>
-														</button>
-													))}
-												</div>
-											</div>
-										)}
-									</div>
-
-									{/* Request Documents Button */}
-									<button
-										onClick={() => setShowDocumentModal(true)}
-										className="bg-orange-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-orange-700 transition-all shadow-md flex items-center gap-2"
+							{/* TODO: RBAC - Only show status controls if user has permission */}
+							<AdminStatusControl
+								currentStatus={shipment.status}
+								availableStatuses={availableStatuses}
+								onStatusChange={handleStatusChange}
+								getStatusColor={getStatusColor}
+							/>
+							{/* Request Documents Button */}
+							{/* TODO: RBAC - Only show if user has document request permission */}
+							<div className="flex justify-center mb-8">
+								<button
+									onClick={() => setShowDocumentModal(true)}
+									className="bg-orange-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-orange-700 transition-all shadow-md flex items-center gap-2"
+								>
+									<svg
+										className="w-5 h-5"
+										fill="currentColor"
+										viewBox="0 0 20 20"
 									>
-										<svg
-											className="w-5 h-5"
-											fill="currentColor"
-											viewBox="0 0 20 20"
-										>
-											<path
-												fillRule="evenodd"
-												d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
-												clipRule="evenodd"
-											/>
-										</svg>
-										<span>طلب مستندات</span>
-									</button>
-								</div>
-							</div>
-
+										<path
+											fillRule="evenodd"
+											d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+											clipRule="evenodd"
+										/>
+									</svg>
+									<span>طلب مستندات</span>
+								</button>
+							</div>{" "}
 							{/* Stepper */}
 							<Stepper currentStatus={shipment.status} />
-
 							{/* Shipment Details */}
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mt-12 mb-12">
 								<Datafield
@@ -585,7 +517,6 @@ const AdminShipmentManagement = () => {
 									}
 								/>
 							</div>
-
 							{/* Required Documents Status Section (for Admin) */}
 							{shipment.requiredDocuments &&
 								shipment.requiredDocuments.length > 0 && (
@@ -761,7 +692,6 @@ const AdminShipmentManagement = () => {
 										</div>
 									</div>
 								)}
-
 							{/* Files Section */}
 							<div className="mt-16">
 								<h2 className="text-2xl font-bold text-center text-red-900 mb-8">
@@ -801,7 +731,6 @@ const AdminShipmentManagement = () => {
 									</div>
 								)}
 							</div>
-
 							{/* Action Buttons */}
 							<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-12">
 								<button
@@ -838,160 +767,41 @@ const AdminShipmentManagement = () => {
 					)}
 				</div>
 			</main>
-
 			{/* Status Confirmation Dialog */}
-			{showConfirmDialog && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-					<div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-						<h3 className="text-xl font-bold text-gray-800 mb-4 text-center">
-							⚠️ تأكيد تغيير الحالة
-						</h3>
-						<p className="text-gray-600 text-center mb-6">
+			<ConfirmDialog
+				isOpen={showConfirmDialog}
+				onConfirm={confirmStatusChange}
+				onCancel={() => setShowConfirmDialog(false)}
+				title="⚠️ تأكيد تغيير الحالة"
+				message={
+					<div className="text-center">
+						<p className="text-gray-600 mb-4">
 							هل أنت متأكد من تغيير حالة الشحنة إلى:
 						</p>
-						<div className="flex justify-center mb-6">
-							<span
-								className={`inline-block px-6 py-3 rounded-full text-lg font-bold ${getStatusColor(
-									selectedStatus
-								)}`}
-							>
-								{
-									availableStatuses.find((s) => s.value === selectedStatus)
-										?.label
-								}
-							</span>
-						</div>
-						<p className="text-sm text-gray-500 text-center mb-6">
+						<span
+							className={`inline-block px-6 py-3 rounded-full text-lg font-bold ${getStatusColor(
+								selectedStatus
+							)}`}
+						>
+							{availableStatuses.find((s) => s.value === selectedStatus)?.label}
+						</span>
+						<p className="text-sm text-gray-500 mt-4">
 							سيتم إرسال إشعار للعميل بالتحديث
 						</p>
-						<div className="flex gap-3">
-							<button
-								onClick={() => setShowConfirmDialog(false)}
-								className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition"
-							>
-								إلغاء
-							</button>
-							<button
-								onClick={confirmStatusChange}
-								className="flex-1 px-4 py-3 bg-red-800 text-white rounded-lg font-bold hover:bg-red-900 transition"
-							>
-								تأكيد
-							</button>
-						</div>
 					</div>
-				</div>
-			)}
-
+				}
+				confirmText="تأكيد"
+				cancelText="إلغاء"
+				confirmColor="red"
+			/>{" "}
 			{/* Required Documents Modal */}
-			{showDocumentModal && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-					<div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-						<div className="flex justify-between items-center mb-6">
-							<h3 className="text-2xl font-bold text-gray-800">
-								📄 طلب مستندات من العميل
-							</h3>
-							<button
-								onClick={() => setShowDocumentModal(false)}
-								className="text-gray-400 hover:text-gray-600"
-							>
-								<svg
-									className="w-6 h-6"
-									fill="currentColor"
-									viewBox="0 0 20 20"
-								>
-									<path
-										fillRule="evenodd"
-										d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-										clipRule="evenodd"
-									/>
-								</svg>
-							</button>
-						</div>
-
-						<p className="text-gray-600 mb-6">
-							أضف المستندات المطلوبة من العميل. سيتم إرسال إشعار له بالمستندات
-							التي يجب رفعها.
-						</p>
-
-						{/* Add Document Input */}
-						<div className="flex gap-2 mb-4">
-							<input
-								type="text"
-								value={newDocument}
-								onChange={(e) => setNewDocument(e.target.value)}
-								onKeyPress={(e) =>
-									e.key === "Enter" && handleAddRequiredDocument()
-								}
-								placeholder="اسم المستند المطلوب (مثال: شهادة منشأ)"
-								className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-gray-900 bg-white"
-							/>
-							<button
-								onClick={handleAddRequiredDocument}
-								className="px-6 py-2 bg-red-800 text-white rounded-lg font-medium hover:bg-red-900 transition"
-							>
-								إضافة
-							</button>
-						</div>
-
-						{/* Document List */}
-						<div className="space-y-2 mb-6">
-							{requiredDocuments.length === 0 ? (
-								<div className="text-center py-8 bg-gray-50 rounded-lg">
-									<p className="text-gray-500">لم يتم إضافة مستندات بعد</p>
-								</div>
-							) : (
-								requiredDocuments.map((doc, index) => (
-									<div
-										key={index}
-										className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg"
-									>
-										<div className="flex items-center gap-2">
-											<span className="text-red-800">📄</span>
-											<span className="text-gray-800 font-medium">
-												{doc.name}
-											</span>
-										</div>
-										<button
-											onClick={() => handleRemoveRequiredDocument(index)}
-											className="text-red-600 hover:text-red-800"
-										>
-											<svg
-												className="w-5 h-5"
-												fill="currentColor"
-												viewBox="0 0 20 20"
-											>
-												<path
-													fillRule="evenodd"
-													d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-													clipRule="evenodd"
-												/>
-											</svg>
-										</button>
-									</div>
-								))
-							)}
-						</div>
-
-						{/* Action Buttons */}
-						<div className="flex gap-3">
-							<button
-								onClick={() => setShowDocumentModal(false)}
-								className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition"
-							>
-								إلغاء
-							</button>
-							<button
-								onClick={handleSaveRequiredDocuments}
-								disabled={requiredDocuments.length === 0 || uploadingDoc}
-								className="flex-1 px-4 py-3 bg-red-800 text-white rounded-lg font-bold hover:bg-red-900 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-							>
-								{uploadingDoc ? "جاري الإرسال..." : "إرسال الطلب للعميل"}
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
-
+			{/* TODO: RBAC - Only allow document requests if user has permission */}
+			<RequiredDocumentsModal
+				isOpen={showDocumentModal}
+				onClose={() => setShowDocumentModal(false)}
+				onSave={handleSaveRequiredDocuments}
+				uploading={uploadingDoc}
+			/>{" "}
 			<Footer />
 		</div>
 	);
