@@ -315,10 +315,12 @@ const updateExportShipmentStatus = async (req, res) => {
 			});
 		}
 
-		// Add to status history
+		// Save old status BEFORE updating
+		const oldStatus = shipment.currentStatus;
+
+		// Add to status history (this changes currentStatus)
 		shipment.addStatusHistory(status, employeeId, notes);
 
-		const oldStatus = shipment.currentStatus;
 		await shipment.save();
 
 		// 📬 Send notification for status change
