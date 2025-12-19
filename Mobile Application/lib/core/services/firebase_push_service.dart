@@ -405,17 +405,19 @@ class FirebasePushService {
     try {
       // Delete token from FCM (this stops push notifications)
       await _messaging.deleteToken();
-      
+
       // Clear local token
       _fcmToken = null;
-      
+
       // Notify server to remove the FCM token
       try {
-        await ApiService.updateFcmToken('');  // Send empty token to clear on server
+        await ApiService.updateFcmToken(
+          '',
+        ); // Send empty token to clear on server
       } catch (e) {
         print('⚠️ [FCM] Could not clear token on server: $e');
       }
-      
+
       print('🔔 [FCM] Unsubscribed from notifications');
     } catch (e) {
       print('❌ [FCM] Error unsubscribing: $e');

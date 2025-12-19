@@ -12,63 +12,70 @@ class RecentShipmentsService {
   static Future<void> addRecentShipment(Map<String, dynamic> shipment) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Get existing recent shipments
-      final List<Map<String, dynamic>> recentShipments = await getRecentShipments();
-      
+      final List<Map<String, dynamic>> recentShipments =
+          await getRecentShipments();
+
       // Extract shipment ID
       final shipmentId = shipment['id'] ?? shipment['acid'] ?? shipment['_id'];
-      
+
       // Remove if already exists (to avoid duplicates)
       recentShipments.removeWhere((s) {
         final sId = s['id'] ?? s['acid'] ?? s['_id'];
         return sId == shipmentId;
       });
-      
+
       // Add to beginning
       recentShipments.insert(0, {
         ...shipment,
         'viewedAt': DateTime.now().toIso8601String(),
       });
-      
+
       // Keep only last 3
       if (recentShipments.length > _maxRecentShipments) {
-        recentShipments.removeRange(_maxRecentShipments, recentShipments.length);
+        recentShipments.removeRange(
+          _maxRecentShipments,
+          recentShipments.length,
+        );
       }
-      
+
       // Save to SharedPreferences
       final jsonString = jsonEncode(recentShipments);
       await prefs.setString(_recentShipmentsKey, jsonString);
-      
-      print('✅ [RecentShipments] Added shipment: $shipmentId, Total: ${recentShipments.length}');
+
+      print(
+        '✅ [RecentShipments] Added shipment: $shipmentId, Total: ${recentShipments.length}',
+      );
     } catch (e) {
       print('❌ [RecentShipments] Error adding shipment: $e');
     }
   }
-  
+
   /// Get list of recent shipments
   static Future<List<Map<String, dynamic>>> getRecentShipments() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_recentShipmentsKey);
-      
+
       if (jsonString == null || jsonString.isEmpty) {
         return [];
       }
-      
+
       final List<dynamic> decoded = jsonDecode(jsonString);
-      final List<Map<String, dynamic>> shipments = decoded
-          .map((item) => Map<String, dynamic>.from(item))
-          .toList();
-      
-      print('📋 [RecentShipments] Retrieved ${shipments.length} recent shipments');
+      final List<Map<String, dynamic>> shipments =
+          decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+
+      print(
+        '📋 [RecentShipments] Retrieved ${shipments.length} recent shipments',
+      );
       return shipments;
     } catch (e) {
       print('❌ [RecentShipments] Error getting shipments: $e');
       return [];
     }
   }
-  
+
   /// Clear all recent shipments
   static Future<void> clearRecentShipments() async {
     try {

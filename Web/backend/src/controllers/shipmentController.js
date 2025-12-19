@@ -208,6 +208,9 @@ const getAllShipments = async (req, res) => {
 		const userId = req.user ? req.user._id : null;
 		let userType = req.user ? req.user.type || req.user.userType : null;
 
+		console.log(`🔍 [getAllShipments] userId: ${userId}, userType: ${userType}`);
+		console.log(`🔍 [getAllShipments] req.user:`, JSON.stringify(req.user, null, 2));
+
 		if (!userId) {
 			return res.status(401).json({
 				success: false,
@@ -238,12 +241,18 @@ const getAllShipments = async (req, res) => {
 		// If user is employee or admin, show all shipments (or filter by employee_id if needed)
 		// For now, employees and admins see all shipments
 
+		console.log(`📦 [getAllShipments] Query:`, JSON.stringify(query));
+
 		const shipments = await Shipment.find(query)
 			.populate("user_id", "username fullname email")
 			.populate("employee_id", "username fullname email")
 			.sort({ createdAt: -1 });
+		
+		console.log(`📦 [getAllShipments] Found ${shipments.length} shipments for userType: ${userType}`);
+		
 		res.json(shipments);
 	} catch (error) {
+		console.error(`❌ [getAllShipments] Error:`, error);
 		res.status(500).json({ message: error.message });
 	}
 };

@@ -1,6 +1,7 @@
 const ExportShipment = require("../models/exportShipment");
 const UCRRequest = require("../models/ucrRequest");
 const { getPresignedUrl } = require("../utils/s3Helpers");
+const notificationService = require("../services/notificationService");
 
 // Helper function to add presigned URLs to documents array
 const addPresignedUrlsToDocuments = async (documents) => {
@@ -317,7 +318,24 @@ const updateExportShipmentStatus = async (req, res) => {
 		// Add to status history
 		shipment.addStatusHistory(status, employeeId, notes);
 
+		const oldStatus = shipment.currentStatus;
 		await shipment.save();
+
+		// 📬 Send notification for status change
+		if (shipment.userId && status !== oldStatus) {
+			try {
+				await notificationService.notifyExportShipmentStatusChange(
+					shipment.userId,
+					shipment._id,
+					shipment.exportNumber || shipment._id.toString().slice(-6),
+					oldStatus,
+					status
+				);
+				console.log(`📬 Export shipment status notification sent to user: ${shipment.userId}`);
+			} catch (notifError) {
+				console.error("Failed to send export shipment status notification:", notifError.message);
+			}
+		}
 
 		res.json({
 			success: true,

@@ -3162,9 +3162,7 @@ class ApiService {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'imageUrls': imageUrl,
-        }),
+        body: jsonEncode({'imageUrls': imageUrl}),
       );
 
       print('💳 [updatePaymentReceipt] Status: ${response.statusCode}');

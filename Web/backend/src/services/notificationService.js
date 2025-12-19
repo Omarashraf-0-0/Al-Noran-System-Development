@@ -822,6 +822,37 @@ const notifyPaymentReminder = async (userId, invoiceId, invoiceNumber, dueAmount
 	});
 };
 
+/**
+ * إشعار تغيير حالة شحنة التصدير
+ */
+const notifyExportShipmentStatusChange = async (userId, shipmentId, exportNumber, oldStatus, newStatus) => {
+	const statusMessages = {
+		"documents_verification": "التحقق من المستندات",
+		"regulatory_inspection": "الفحص التنظيمي",
+		"payment_cleared": "تم تسوية المدفوعات",
+		"goods_loaded": "تم تحميل البضائع",
+		"in_transit": "في الطريق",
+		"delivered": "تم التسليم",
+		"completed": "مكتملة",
+		"cancelled": "ملغية",
+	};
+
+	const newStatusAr = statusMessages[newStatus] || newStatus;
+	const isCompleted = newStatus === "completed" || newStatus === "delivered";
+	const isDelivered = newStatus === "delivered";
+	const isCancelled = newStatus === "cancelled";
+
+	return createNotification({
+		userId,
+		type: isCompleted ? "export_shipment_completed" : isCancelled ? "export_shipment_cancelled" : "export_shipment_status_changed",
+		message: `تم تحديث حالة شحنة التصدير ${exportNumber} إلى: ${newStatusAr}`,
+		data: { shipmentId, exportNumber, oldStatus, newStatus },
+		sendEmail: isCompleted || isCancelled,
+		sendPush: true,
+		priority: isCompleted || isDelivered || isCancelled ? "high" : "medium",
+	});
+};
+
 // =====================================================
 // EXPORTS
 // =====================================================
@@ -851,6 +882,7 @@ module.exports = {
 	notifyInvoiceCreated,
 	notifyInvoicePaid,
 	notifyPaymentReminder,
+	notifyExportShipmentStatusChange,
 	
 	// Templates (for reference)
 	NOTIFICATION_TEMPLATES,

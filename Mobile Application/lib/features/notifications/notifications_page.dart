@@ -608,6 +608,18 @@ class _NotificationsPageState extends State<NotificationsPage>
         }
         break;
 
+      case 'export_shipment_status_changed':
+      case 'export_shipment_completed':
+      case 'export_shipment_cancelled':
+        final exportShipmentId = data?['shipmentId'];
+        if (exportShipmentId != null &&
+            exportShipmentId.toString().isNotEmpty) {
+          context.push('/export-shipment-details/$exportShipmentId');
+        } else {
+          context.push('/exports');
+        }
+        break;
+
       case 'document_uploaded':
       case 'document_approved':
       case 'document_rejected':
@@ -682,6 +694,12 @@ class _NotificationsPageState extends State<NotificationsPage>
       case 'ucr_certificate_issued':
         categoryColor = const Color(0xFF10B981);
         categoryIcon = Icons.description_rounded;
+        break;
+      case 'export_shipment_status_changed':
+      case 'export_shipment_completed':
+      case 'export_shipment_cancelled':
+        categoryColor = const Color(0xFF059669);
+        categoryIcon = Icons.flight_takeoff_rounded;
         break;
       case 'document_uploaded':
       case 'document_approved':
@@ -1010,6 +1028,10 @@ class _NotificationCard extends StatelessWidget {
       case 'ucr_issued':
       case 'ucr_certificate_issued':
         return const Color(0xFF10B981); // Green
+      case 'export_shipment_status_changed':
+      case 'export_shipment_completed':
+      case 'export_shipment_cancelled':
+        return const Color(0xFF059669); // Emerald
       case 'document_uploaded':
       case 'document_approved':
       case 'document_rejected':
@@ -1055,6 +1077,10 @@ class _NotificationCard extends StatelessWidget {
       case 'ucr_issued':
       case 'ucr_certificate_issued':
         return Icons.description_rounded;
+      case 'export_shipment_status_changed':
+      case 'export_shipment_completed':
+      case 'export_shipment_cancelled':
+        return Icons.flight_takeoff_rounded;
       case 'document_uploaded':
       case 'document_approved':
       case 'document_rejected':

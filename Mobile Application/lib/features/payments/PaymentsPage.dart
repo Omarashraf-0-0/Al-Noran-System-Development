@@ -869,7 +869,9 @@ class _PaymentsPageState extends State<PaymentsPage>
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              status == 'REJECTED' ? 'إعادة رفع الإيصال' : 'تعديل الإيصال',
+                              status == 'REJECTED'
+                                  ? 'إعادة رفع الإيصال'
+                                  : 'تعديل الإيصال',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -1061,148 +1063,156 @@ class _PaymentsPageState extends State<PaymentsPage>
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
+      builder:
+          (context) => Directionality(
+            textDirection: TextDirection.rtl,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
               ),
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.edit_document,
-                        color: Colors.orange,
-                        size: 28,
-                      ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'تعديل الإيصال',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Cairo',
-                        color: Color(0xFF424242),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'اختر صورة جديدة للإيصال لتحل محل الصورة الحالية',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontFamily: 'Cairo',
-                    color: Colors.grey[600],
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Current image preview
-              if (currentImageUrl.isNotEmpty)
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          currentImageUrl,
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            width: 50,
-                            height: 50,
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.image, color: Colors.grey),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.edit_document,
+                            color: Colors.orange,
+                            size: 28,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'الإيصال الحالي',
+                        const SizedBox(width: 12),
+                        const Text(
+                          'تعديل الإيصال',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                             fontFamily: 'Cairo',
-                            color: Colors.grey[600],
+                            color: Color(0xFF424242),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 8),
-              _buildUploadOption(
-                icon: Icons.camera_alt_rounded,
-                title: 'التقاط صورة جديدة',
-                subtitle: 'استخدم الكاميرا',
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickAndUpdateReceipt(paymentId, ImageSource.camera);
-                },
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'اختر صورة جديدة للإيصال لتحل محل الصورة الحالية',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontFamily: 'Cairo',
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Current image preview
+                  if (currentImageUrl.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              currentImageUrl,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (_, __, ___) => Container(
+                                    width: 50,
+                                    height: 50,
+                                    color: Colors.grey[200],
+                                    child: const Icon(
+                                      Icons.image,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'الإيصال الحالي',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontFamily: 'Cairo',
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 8),
+                  _buildUploadOption(
+                    icon: Icons.camera_alt_rounded,
+                    title: 'التقاط صورة جديدة',
+                    subtitle: 'استخدم الكاميرا',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickAndUpdateReceipt(paymentId, ImageSource.camera);
+                    },
+                  ),
+                  _buildUploadOption(
+                    icon: Icons.photo_library_rounded,
+                    title: 'اختيار من المعرض',
+                    subtitle: 'اختر صورة موجودة',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickAndUpdateReceipt(paymentId, ImageSource.gallery);
+                    },
+                  ),
+                  _buildUploadOption(
+                    icon: Icons.picture_as_pdf_rounded,
+                    title: 'اختيار ملف PDF',
+                    subtitle: 'اختر ملف PDF من الجهاز',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickAndUpdateReceiptPdf(paymentId);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                ],
               ),
-              _buildUploadOption(
-                icon: Icons.photo_library_rounded,
-                title: 'اختيار من المعرض',
-                subtitle: 'اختر صورة موجودة',
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickAndUpdateReceipt(paymentId, ImageSource.gallery);
-                },
-              ),
-              _buildUploadOption(
-                icon: Icons.picture_as_pdf_rounded,
-                title: 'اختيار ملف PDF',
-                subtitle: 'اختر ملف PDF من الجهاز',
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickAndUpdateReceiptPdf(paymentId);
-                },
-              ),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 
-  Future<void> _pickAndUpdateReceipt(String paymentId, ImageSource source) async {
+  Future<void> _pickAndUpdateReceipt(
+    String paymentId,
+    ImageSource source,
+  ) async {
     try {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
@@ -1221,24 +1231,25 @@ class _PaymentsPageState extends State<PaymentsPage>
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const Center(
-            child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: Color(0xFF1ba3b6)),
-                    SizedBox(height: 16),
-                    Text(
-                      'جاري تحديث الإيصال...',
-                      style: TextStyle(fontFamily: 'Cairo'),
+          builder:
+              (context) => const Center(
+                child: Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Color(0xFF1ba3b6)),
+                        SizedBox(height: 16),
+                        Text(
+                          'جاري تحديث الإيصال...',
+                          style: TextStyle(fontFamily: 'Cairo'),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
         );
       }
 
@@ -1317,24 +1328,25 @@ class _PaymentsPageState extends State<PaymentsPage>
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const Center(
-            child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: Color(0xFF1ba3b6)),
-                    SizedBox(height: 16),
-                    Text(
-                      'جاري تحديث الإيصال...',
-                      style: TextStyle(fontFamily: 'Cairo'),
+          builder:
+              (context) => const Center(
+                child: Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Color(0xFF1ba3b6)),
+                        SizedBox(height: 16),
+                        Text(
+                          'جاري تحديث الإيصال...',
+                          style: TextStyle(fontFamily: 'Cairo'),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
         );
       }
 
