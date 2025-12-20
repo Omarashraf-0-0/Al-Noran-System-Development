@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
@@ -344,57 +346,284 @@ class _HomePageState extends State<HomePage> {
   // Mock Data - REMOVED
   // final List<Map<String, dynamic>> _currentShipments = [...]
 
+  // Premium Colors
+  static const Color primaryDark = Color(0xFF690000);
+  static const Color primaryLight = Color(0xFF8B0000);
+  static const Color accentColor = Color(0xFF1ba3b6);
+  static const Color goldAccent = Color(0xFFD4AF37);
+  static const Color bgColor = Color(0xFFF8F9FA);
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
-        body: Column(
+        backgroundColor: bgColor,
+        body: Stack(
           children: [
-            // Top Bar - Uses UnifiedTopBar with UserCacheService
-            UnifiedTopBar(
-              showBackButton: false,
-              showMenu: true,
-              onMenuPressed: () => _showMenu(),
-            ),
-
-            // Main Content
-            Expanded(
-              child: SafeArea(
-                top: false,
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 16),
-
-                      // Tracking Card
-                      _buildTrackingCard(),
-
-                      const SizedBox(height: 24),
-
-                      // Statistics Section
-                      _buildStatisticsSection(),
-
-                      const SizedBox(height: 24),
-
-                      // Services Section
-                      _buildServicesSection(),
-
-                      const SizedBox(height: 24),
-
-                      // Current Shipments Section
-                      _buildCurrentShipmentsSection(),
-
-                      const SizedBox(height: 16),
-                    ],
+            // Background Gradient
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 300,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [primaryDark.withValues(alpha: 0.05), bgColor],
                   ),
                 ),
               ),
             ),
+
+            // Main Content
+            Column(
+              children: [
+                // Premium Top Bar
+                UnifiedTopBar(
+                  showBackButton: false,
+                  showMenu: true,
+                  showWelcome: true,
+                  onMenuPressed: () => _showMenu(),
+                ),
+
+                // Scrollable Content
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _loadRecentShipments,
+                    color: primaryDark,
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 20),
+
+                          // Premium Tracking Card
+                          _buildPremiumTrackingCard(),
+
+                          const SizedBox(height: 24),
+
+                          // Premium Statistics Section
+                          _buildPremiumStatisticsSection(),
+
+                          const SizedBox(height: 24),
+
+                          // Premium Services Section
+                          _buildPremiumServicesSection(),
+
+                          const SizedBox(height: 24),
+
+                          // Premium Shipments Section
+                          _buildPremiumShipmentsSection(),
+
+                          const SizedBox(height: 100),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-        bottomNavigationBar: _buildBottomNavigationBar(),
+        bottomNavigationBar: _buildPremiumBottomNav(),
+      ),
+    );
+  }
+
+  // ==================== PREMIUM TRACKING CARD ====================
+  Widget _buildPremiumTrackingCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            primaryDark,
+            primaryLight,
+            primaryDark.withValues(alpha: 0.9),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            // Decorative Pattern
+            Positioned(
+              right: -30,
+              top: -30,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.05),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -20,
+              bottom: -20,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.05),
+                ),
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  // Header with Icon
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'تتبع شحنتك',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.local_shipping_rounded,
+                          color: goldAccent,
+                          size: 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'أدخل رقم الشحنة أو رقم ACID للتتبع',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 13,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Premium Search Bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        // QR Scanner Button
+                        Container(
+                          margin: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [primaryDark, primaryLight],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              // TODO: QR Scanner
+                            },
+                            icon: const Icon(
+                              Icons.qr_code_scanner_rounded,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                        // Text Field
+                        Expanded(
+                          child: TextField(
+                            controller: _trackingController,
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 15,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'رقم الشحنة أو ACID...',
+                              hintStyle: TextStyle(
+                                color: Colors.grey[400],
+                                fontFamily: 'Cairo',
+                                fontSize: 14,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                            onSubmitted: (_) => _handleTrackShipment(),
+                          ),
+                        ),
+                        // Search Button
+                        Container(
+                          margin: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                accentColor,
+                                accentColor.withValues(alpha: 0.8),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              _handleTrackShipment();
+                            },
+                            icon: const Icon(
+                              Icons.search_rounded,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -833,106 +1062,357 @@ class _HomePageState extends State<HomePage> {
             textDirection: TextDirection.rtl,
             child: Container(
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.75,
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
               ),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(30),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 30,
+                    offset: const Offset(0, -10),
+                  ),
+                ],
               ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Handle Bar
-                    Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle Bar
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 16),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
                     ),
+                  ),
 
-                    const SizedBox(height: 20),
-
-                    // Menu Header
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
-                        children: const [
-                          Icon(
-                            Icons.menu_rounded,
-                            color: Color(0xFF690000),
+                  // Profile Header Section
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          primaryDark,
+                          primaryLight,
+                          primaryDark.withValues(alpha: 0.9),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryDark.withValues(alpha: 0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        // Icon
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(
+                            Icons.person_rounded,
+                            color: goldAccent,
                             size: 28,
                           ),
-                          SizedBox(width: 12),
-                          Text(
-                            'القائمة',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo',
-                              color: Color(0xFF690000),
+                        ),
+                        const SizedBox(width: 16),
+                        // User Info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.userName.split(' ').first,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.userEmail,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: 13,
+                                  fontFamily: 'Cairo',
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Arrow Icon
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.pop(context);
+                            this.context.push('/profile');
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_ios_rounded,
+                              color: Colors.white,
+                              size: 16,
                             ),
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Menu Items
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        children: [
+                          _buildPremiumMenuItem(
+                            icon: Icons.person_rounded,
+                            title: 'الملف الشخصي',
+                            subtitle: 'عرض وتعديل معلوماتك',
+                            gradient: [primaryDark, primaryLight],
+                            onTap: () {
+                              Navigator.pop(context);
+                              this.context.push('/profile');
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _buildPremiumMenuItem(
+                            icon: Icons.settings_rounded,
+                            title: 'إعدادات الحساب',
+                            subtitle: 'التحكم في إعدادات التطبيق',
+                            gradient: [
+                              accentColor,
+                              accentColor.withValues(alpha: 0.7),
+                            ],
+                            onTap: () {
+                              Navigator.pop(context);
+                              this.context.push('/settings');
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _buildPremiumMenuItem(
+                            icon: Icons.notifications_rounded,
+                            title: 'الإشعارات',
+                            subtitle: 'إدارة الإشعارات والتنبيهات',
+                            gradient: [
+                              goldAccent,
+                              goldAccent.withValues(alpha: 0.7),
+                            ],
+                            onTap: () {
+                              Navigator.pop(context);
+                              this.context.push('/notifications');
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _buildPremiumMenuItem(
+                            icon: Icons.help_rounded,
+                            title: 'المساعدة والدعم',
+                            subtitle: 'تواصل معنا للمساعدة',
+                            gradient: [primaryLight, primaryDark],
+                            onTap: () {
+                              Navigator.pop(context);
+                              this.context.push('/contact');
+                            },
+                          ),
+
+                          const SizedBox(height: 20),
+                          Container(
+                            height: 1,
+                            margin: const EdgeInsets.symmetric(horizontal: 20),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.grey.withValues(alpha: 0.3),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Logout Button
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              Navigator.pop(context);
+                              _handleLogout();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.red.withValues(alpha: 0.3),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withValues(alpha: 0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.logout_rounded,
+                                      color: Colors.red,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  const Expanded(
+                                    child: Text(
+                                      'تسجيل الخروج',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Cairo',
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.arrow_back_ios_rounded,
+                                    size: 16,
+                                    color: Colors.red.withValues(alpha: 0.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
                         ],
                       ),
                     ),
-
-                    const SizedBox(height: 16),
-                    const Divider(height: 1),
-                    const SizedBox(height: 8),
-
-                    // Menu Items
-                    _buildMenuItem(
-                      Icons.person_rounded,
-                      'الملف الشخصي',
-                      const Color(0xFF690000),
-                      () {
-                        context.pop();
-                        context.push('/profile');
-                      },
-                    ),
-                    _buildMenuItem(
-                      Icons.settings_rounded,
-                      'الإعدادات',
-                      const Color(0xFF690000),
-                      () {
-                        context.pop();
-                        context.push('/settings');
-                      },
-                    ),
-                    _buildMenuItem(
-                      Icons.help_outline_rounded,
-                      'المساعدة',
-                      const Color(0xFF1ba3b6),
-                      () {
-                        context.pop();
-                        // TODO: Navigate to help
-                      },
-                    ),
-
-                    const SizedBox(height: 8),
-                    const Divider(height: 1),
-                    const SizedBox(height: 8),
-
-                    _buildMenuItem(
-                      Icons.logout_rounded,
-                      'تسجيل الخروج',
-                      Colors.red,
-                      () {
-                        context.pop();
-                        _handleLogout();
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
+    );
+  }
+
+  Widget _buildPremiumMenuItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required List<Color> gradient,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Icon with Gradient
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: gradient,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: gradient[0].withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 16),
+            // Text Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Cairo',
+                      color: Color(0xFF2D2D2D),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'Cairo',
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Arrow Icon
+            Icon(
+              Icons.arrow_back_ios_rounded,
+              size: 16,
+              color: Colors.grey[400],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1124,6 +1604,151 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ==================== PREMIUM STATISTICS SECTION ====================
+  Widget _buildPremiumStatisticsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'نظرة عامة',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Cairo',
+                  color: Color(0xFF2D2D2D),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.analytics_rounded, size: 16, color: accentColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      'إحصائياتك',
+                      style: TextStyle(
+                        color: accentColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Stats Cards Row
+          Row(
+            children: [
+              Expanded(
+                child: _buildPremiumStatCard(
+                  title: 'إجمالي الشحنات',
+                  value: _userStats['totalShipments'].toString(),
+                  icon: Icons.inventory_2_rounded,
+                  gradient: [primaryDark, primaryLight],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPremiumStatCard(
+                  title: 'نشطة',
+                  value: _userStats['activeShipments'].toString(),
+                  icon: Icons.flight_takeoff_rounded,
+                  gradient: [accentColor, accentColor.withValues(alpha: 0.7)],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPremiumStatCard(
+                  title: 'مكتملة',
+                  value: _userStats['completedShipments'].toString(),
+                  icon: Icons.check_circle_rounded,
+                  gradient: [goldAccent, goldAccent.withValues(alpha: 0.7)],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required List<Color> gradient,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradient,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: gradient[0].withValues(alpha: 0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontFamily: 'Cairo',
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withValues(alpha: 0.9),
+              fontFamily: 'Cairo',
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatisticsSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1203,6 +1828,205 @@ class _HomePageState extends State<HomePage> {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+
+  // ==================== PREMIUM SERVICES SECTION ====================
+  Widget _buildPremiumServicesSection() {
+    return Column(
+      children: [
+        // Section Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'خدماتنا',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Cairo',
+                  color: Color(0xFF2D2D2D),
+                ),
+              ),
+              TextButton(
+                onPressed: () {},
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'المزيد',
+                      style: TextStyle(
+                        color: primaryDark,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_ios, size: 14, color: primaryDark),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Services Grid
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildPremiumServiceCard(
+                      title: 'الملف الشخصي',
+                      icon: Icons.person_rounded,
+                      color: primaryDark,
+                      onTap: () => context.push('/profile'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildPremiumServiceCard(
+                      title: 'الإعدادات',
+                      icon: Icons.settings_rounded,
+                      color: primaryLight,
+                      onTap: () => context.push('/settings'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildPremiumServiceCard(
+                      title: 'طلب ACID\n(الوارد)',
+                      icon: Icons.flight_land_rounded,
+                      color: accentColor,
+                      onTap:
+                          () => context.push(
+                            '/acid-request',
+                            extra: {
+                              'userName': widget.userName,
+                              'userEmail': widget.userEmail,
+                            },
+                          ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildPremiumServiceCard(
+                      title: 'طلب UCR\n(الصادر)',
+                      icon: Icons.flight_takeoff_rounded,
+                      color: goldAccent,
+                      onTap:
+                          () => context.push(
+                            '/ucr-request',
+                            extra: {
+                              'userName': widget.userName,
+                              'userEmail': widget.userEmail,
+                            },
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildPremiumServiceCard(
+                      title: 'تواصل معنا',
+                      icon: Icons.headset_mic_rounded,
+                      color: accentColor,
+                      onTap: () => _handleServiceTap('تواصل معنا'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildPremiumServiceCard(
+                      title: 'الإشعارات',
+                      icon: Icons.notifications_rounded,
+                      color: primaryDark,
+                      onTap: () => context.push('/notifications'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumServiceCard({
+    required String title,
+    required IconData icon,
+    required Color color,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap?.call();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [color, color.withValues(alpha: 0.7)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(icon, size: 26, color: Colors.white),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Cairo',
+                color: Color(0xFF2D2D2D),
+                height: 1.3,
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1374,6 +2198,419 @@ class _HomePageState extends State<HomePage> {
       context: context,
       title: serviceName,
       message: 'سيتم تفعيل هذه الخدمة قريباً',
+    );
+  }
+
+  // ==================== PREMIUM SHIPMENTS SECTION ====================
+  Widget _buildPremiumShipmentsSection() {
+    return Column(
+      children: [
+        // Section Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    'آخر الشحنات',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Cairo',
+                      color: Color(0xFF2D2D2D),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: primaryDark.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.local_shipping_rounded,
+                      size: 20,
+                      color: primaryDark,
+                    ),
+                  ),
+                ],
+              ),
+
+              TextButton(
+                onPressed: _handleViewAllShipments,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'عرض الكل',
+                      style: TextStyle(
+                        color: primaryDark,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_ios, size: 14, color: primaryDark),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Content
+        if (_isLoadingShipments)
+          Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: 50,
+                  height: 50,
+                  child: CircularProgressIndicator(
+                    color: primaryDark,
+                    strokeWidth: 3,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'جاري تحميل الشحنات...',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (_recentShipments.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.inventory_2_outlined,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'لا توجد شحنات حالياً',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'ابدأ بإضافة شحنتك الأولى',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _recentShipments.length,
+            itemBuilder: (context, index) {
+              return _buildPremiumShipmentCard(_recentShipments[index], index);
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumShipmentCard(Map<String, dynamic> shipment, int index) {
+    final shipmentType =
+        shipment['shipment_type']?.toString().toLowerCase() ?? '';
+    final isSea =
+        shipmentType.contains('بحري') ||
+        shipmentType.contains('sea') ||
+        shipment['type'] == 'بحري';
+    final typeText = isSea ? 'بحري' : 'جوي';
+    final typeIcon =
+        isSea ? Icons.directions_boat_rounded : Icons.flight_takeoff_rounded;
+    final typeColor = isSea ? accentColor : const Color(0xFFf59e0b);
+    final statusColor = _getStatusColor(shipment['status']);
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _handleShipmentTap(shipment);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Row - Shipment Code and Type Badge
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      // Shipment Code Badge (if available)
+                      if (shipment['shipmentCode']?.toString().isNotEmpty ==
+                          true) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: primaryDark,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            shipment['shipmentCode'],
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      // Type Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: typeColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(typeIcon, size: 14, color: typeColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              typeText,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontFamily: 'Cairo',
+                                fontWeight: FontWeight.bold,
+                                color: typeColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Urgent Badge
+                      if (shipment['isUrgent'] == true) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(
+                                Icons.priority_high,
+                                size: 14,
+                                color: Colors.red,
+                              ),
+                              SizedBox(width: 2),
+                              Text(
+                                'عاجل',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey.withOpacity(0.4),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            // ACID Number Row
+            Row(
+              children: [
+                Icon(Icons.qr_code_2_rounded, size: 18, color: primaryDark),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'رقم ACID',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'Cairo',
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      shipment['id'] ?? 'N/A',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Cairo',
+                        color: Color(0xFF424242),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            // Number 46 Row (if available)
+            if (shipment['number46']?.toString().isNotEmpty == true) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(
+                    Icons.description_outlined,
+                    size: 18,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'رقم 46',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'Cairo',
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        shipment['number46'],
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Cairo',
+                          color: Color(0xFF424242),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: 12),
+            const Divider(height: 1, thickness: 1),
+            const SizedBox(height: 12),
+
+            // Status and Date Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Status
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 14,
+                          color: statusColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          shipment['status'] ?? 'غير محدد',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.w600,
+                            color: statusColor,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Last Update Date
+                Row(
+                  children: [
+                    Icon(Icons.update, size: 13, color: Colors.grey[500]),
+                    const SizedBox(width: 6),
+                    Text(
+                      shipment['date'] ?? '',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'Cairo',
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1774,6 +3011,98 @@ class _HomePageState extends State<HomePage> {
 
   void _handleShipmentTap(Map<String, dynamic> shipment) {
     context.push('/shipment-details/${shipment['id']}');
+  }
+
+  // ==================== PREMIUM BOTTOM NAVIGATION ====================
+  Widget _buildPremiumBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildPremiumNavItem(0, Icons.home_rounded, 'الرئيسية'),
+              _buildPremiumNavItem(1, Icons.flight_land_rounded, 'الوارد'),
+              _buildPremiumNavItem(2, Icons.flight_takeoff_rounded, 'الصادر'),
+              _buildPremiumNavItem(3, Icons.receipt_long_rounded, 'الفواتير'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumNavItem(int index, IconData icon, String label) {
+    final isSelected = _selectedIndex == index;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _handleNavigationTap(index);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 20 : 16,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          gradient:
+              isSelected
+                  ? LinearGradient(colors: [primaryDark, primaryLight])
+                  : null,
+          color: isSelected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: primaryDark.withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                  : [],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey[500],
+              size: 22,
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildBottomNavigationBar() {

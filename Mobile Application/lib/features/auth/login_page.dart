@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 import '../../core/services/user_cache_service.dart';
 import '../../core/services/firebase_push_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/services/google_sign_in_service.dart';
-import '../../Pop-ups/al_noran_popups.dart';
-import '../../core/widgets/al_noran_loading.dart';
+import '../../core/widgets/widgets.dart';
+import '../../theme/theme.dart';
 import '../../util/validators.dart';
 
 class LoginPage extends StatefulWidget {
@@ -16,499 +17,562 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _isPasswordVisible = false;
-  final bool _isLoading = false;
+  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 20),
-
-                    // Logo
-                    Image.asset('assets/img/logo.png', width: 150, height: 150),
-
-                    const SizedBox(height: 20),
-
-                    // Title
-                    const Text(
-                      'تسجيل الدخول',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF690000),
-                        fontFamily: 'Cairo',
-                      ),
-                    ),
-
-                    const SizedBox(height: 6),
-
-                    // Subtitle
-                    const Text(
-                      'أهلاً بك في النوران',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFFa40000),
-                        fontFamily: 'Cairo',
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // Email Field
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5F5F5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: TextField(
-                        controller: _emailController,
-                        textAlign: TextAlign.right,
-                        keyboardType: TextInputType.emailAddress,
-                        style: const TextStyle(fontFamily: 'Cairo'),
-                        decoration: const InputDecoration(
-                          hintText: 'البريد الإلكتروني',
-                          hintStyle: TextStyle(
-                            color: Color(0xFFBDBDBD),
-                            fontFamily: 'Cairo',
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 18,
-                          ),
-                          prefixIcon: Icon(
-                            Icons.email_outlined,
-                            color: Color(0xFF690000),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // Password Field
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5F5F5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: TextField(
-                        controller: _passwordController,
-                        obscureText: !_isPasswordVisible,
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(fontFamily: 'Cairo'),
-                        decoration: InputDecoration(
-                          hintText: 'كلمة المرور',
-                          hintStyle: const TextStyle(
-                            color: Color(0xFFBDBDBD),
-                            fontFamily: 'Cairo',
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 18,
-                          ),
-                          prefixIcon: const Icon(
-                            Icons.lock_outline,
-                            color: Color(0xFF690000),
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _isPasswordVisible
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                              color: const Color(0xFFBDBDBD),
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _isPasswordVisible = !_isPasswordVisible;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // OR Divider
-                    Row(
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.primary.withValues(alpha: 0.08),
+              AppColors.background,
+              AppColors.background,
+            ],
+            stops: const [0.0, 0.3, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Padding(
+                  padding: AppSpacing.paddingHorizontalLG,
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          child: Container(
-                            height: 1,
-                            color: const Color(0xFFE0E0E0),
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'أو',
-                            style: TextStyle(
-                              color: Color(0xFF9E9E9E),
-                              fontFamily: 'Cairo',
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Container(
-                            height: 1,
-                            color: const Color(0xFFE0E0E0),
-                          ),
-                        ),
+                        AppSpacing.gapVerticalLG,
+
+                        // Logo with animation
+                        _buildAnimatedLogo(),
+
+                        AppSpacing.gapVerticalLG,
+
+                        // Title & Subtitle
+                        _buildHeader(),
+
+                        AppSpacing.gapVerticalXL,
+
+                        // Form Card
+                        _buildFormCard(),
+
+                        AppSpacing.gapVerticalLG,
+
+                        // Divider
+                        _buildDivider(),
+
+                        AppSpacing.gapVerticalLG,
+
+                        // Social Login
+                        _buildSocialLogin(),
+
+                        AppSpacing.gapVerticalXL,
+
+                        // Sign Up Link
+                        _buildSignUpLink(),
+
+                        AppSpacing.gapVerticalLG,
                       ],
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // Social Login Text
-                    const Text(
-                      'التسجيل من خلال',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF757575),
-                        fontFamily: 'Cairo',
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Social Login Buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Google Button (على اليمين)
-                        InkWell(
-                          onTap: _handleGoogleSignIn,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            width: 140,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFFE0E0E0),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  'assets/img/googleIcon.png',
-                                  width: 24,
-                                  height: 24,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'جوجل',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontFamily: 'Cairo',
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 16),
-
-                        // Apple Button (على الشمال)
-                        Container(
-                          width: 140,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE0E0E0)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.apple, size: 28),
-                              SizedBox(width: 8),
-                              Text(
-                                'ابل',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontFamily: 'Cairo',
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Forgot Password - على اليمين
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: () {
-                          context.push('/forgot-password');
-                        },
-                        icon: const Icon(
-                          Icons.lock_outline,
-                          color: Color(0xFF690000),
-                          size: 18,
-                        ),
-                        label: const Text(
-                          'نسيت كلمة المرور؟',
-                          style: TextStyle(
-                            color: Color(0xFF690000),
-                            fontFamily: 'Cairo',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Login Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF690000),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child:
-                            _isLoading
-                                ? const AlNoranButtonLoading()
-                                : const Text(
-                                  'تسجيل الدخول',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Cairo',
-                                    color: Colors.white,
-                                  ),
-                                ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Sign Up Link
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          'ليس لديك حساب؟',
-                          style: TextStyle(
-                            color: Color(0xFF757575),
-                            fontFamily: 'Cairo',
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            context.push('/register');
-                          },
-                          child: const Text(
-                            'إنشاء حساب',
-                            style: TextStyle(
-                              color: Color(0xFF690000),
-                              fontFamily: 'Cairo',
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-                  ],
-                ), // Column
-              ), // Padding
-            ), // SingleScrollView
-          ), // Center
-        ), // SafeArea
-      ), // Scaffold
-    ); // Directionality
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
-  // Handle Login
-  Future<void> _handleLogin() async {
-    // Validation
-    if (_emailController.text.trim().isEmpty) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'من فضلك أدخل البريد الإلكتروني',
-      );
-      return;
-    }
-
-    if (_passwordController.text.trim().isEmpty) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'من فضلك أدخل كلمة المرور',
-      );
-      return;
-    }
-
-    // Show loading
-    AlNoranPopups.showLoading(
-      context: context,
-      message: 'جاري تسجيل الدخول...',
+  // ============= ANIMATED LOGO =============
+  Widget _buildAnimatedLogo() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.elasticOut,
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: value,
+          child: Center(
+            child: Container(
+              width: 130,
+              height: 130,
+              padding: AppSpacing.paddingMD,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    blurRadius: 30,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: Image.asset(
+                'assets/img/logo.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.local_shipping_rounded,
+                    size: 65,
+                    color: AppColors.primary,
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  // ============= HEADER =============
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        Text(
+          'مرحباً بعودتك',
+          style: AppTypography.h1.copyWith(
+            color: AppColors.primary,
+            fontSize: 28,
+          ),
+        ),
+        AppSpacing.gapVerticalXS,
+        Text(
+          'سجّل دخولك للوصول إلى حسابك',
+          style: AppTypography.body.copyWith(color: AppColors.textLight),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  // ============= FORM CARD =============
+  Widget _buildFormCard() {
+    return Container(
+      padding: AppSpacing.paddingLG,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: AppSpacing.borderRadiusLG,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Email Field
+          _buildLabeledTextField(
+            controller: _emailController,
+            label: 'البريد الإلكتروني',
+            hint: 'example@email.com',
+            icon: Icons.email_rounded,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'من فضلك أدخل البريد الإلكتروني';
+              }
+              if (!AlNoranValidators.isValidEmail(value)) {
+                return 'البريد الإلكتروني غير صحيح';
+              }
+              return null;
+            },
+          ),
+
+          AppSpacing.gapVerticalMD,
+
+          // Password Field
+          _buildLabeledTextField(
+            controller: _passwordController,
+            label: 'كلمة المرور',
+            hint: '••••••••',
+            icon: Icons.lock_rounded,
+            isPassword: true,
+            textInputAction: TextInputAction.done,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'من فضلك أدخل كلمة المرور';
+              }
+              if (value.length < 6) {
+                return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+              }
+              return null;
+            },
+            onSubmitted: (_) => _handleLogin(),
+          ),
+
+          AppSpacing.gapVerticalSM,
+
+          // Forgot Password - على الشمال (RTL)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(
+              onPressed: () => context.push('/forgot-password'),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'نسيت كلمة المرور؟',
+                    style: AppTypography.small.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_back_ios_rounded,
+                    size: 12,
+                    color: AppColors.primary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          AppSpacing.gapVerticalLG,
+
+          // Login Button
+          AppPrimaryButton(
+            text: 'تسجيل الدخول',
+            onPressed: _handleLogin,
+            isLoading: _isLoading,
+            icon: Icons.login_rounded,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============= LABELED TEXT FIELD =============
+  Widget _buildLabeledTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    bool isPassword = false,
+    TextInputType? keyboardType,
+    TextInputAction? textInputAction,
+    String? Function(String?)? validator,
+    Function(String)? onSubmitted,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Label outside - على اليمين
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, right: 4),
+          child: Text(
+            label,
+            style: AppTypography.body.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
+        ),
+        // Input field
+        TextFormField(
+          controller: controller,
+          obscureText: isPassword ? _obscurePassword : false,
+          keyboardType: keyboardType,
+          textInputAction: textInputAction,
+          textAlign: TextAlign.right,
+          textDirection: isPassword ? null : TextDirection.ltr,
+          validator: validator,
+          onFieldSubmitted: onSubmitted,
+          style: AppTypography.body.copyWith(color: AppColors.textDark),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: AppTypography.body.copyWith(color: AppColors.textGrey),
+            filled: true,
+            fillColor: AppColors.background,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.greyBorder, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.error, width: 1),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.error, width: 2),
+            ),
+            // أيقونة على الشمال (بعد النص في RTL)
+            suffixIcon:
+                isPassword
+                    ? IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                        color: AppColors.textGrey,
+                        size: 22,
+                      ),
+                      onPressed: () {
+                        setState(() => _obscurePassword = !_obscurePassword);
+                      },
+                    )
+                    : Icon(icon, color: AppColors.textGrey, size: 22),
+            // أيقونة القفل على اليمين للباسورد
+            prefixIcon:
+                isPassword
+                    ? Icon(icon, color: AppColors.textGrey, size: 22)
+                    : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============= DIVIDER =============
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(child: Container(height: 1, color: AppColors.greyBorder)),
+        Padding(
+          padding: AppSpacing.paddingHorizontalMD,
+          child: Text(
+            'أو',
+            style: AppTypography.body.copyWith(color: AppColors.textLight),
+          ),
+        ),
+        Expanded(child: Container(height: 1, color: AppColors.greyBorder)),
+      ],
+    );
+  }
+
+  // ============= SOCIAL LOGIN =============
+  Widget _buildSocialLogin() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _handleGoogleSignIn,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.greyBorder),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'المتابعة بحساب جوجل',
+                style: AppTypography.body.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Image.asset(
+                'assets/img/googleIcon.png',
+                width: 24,
+                height: 24,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(Icons.g_mobiledata, size: 24, color: Colors.red);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============= SIGN UP LINK =============
+  Widget _buildSignUpLink() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        TextButton(
+          onPressed: () => context.push('/register'),
+          child: Text(
+            'إنشاء حساب جديد',
+            style: AppTypography.body.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        Text(
+          'ليس لديك حساب؟',
+          style: AppTypography.body.copyWith(color: AppColors.textLight),
+        ),
+      ],
+    );
+  }
+
+  // ============= HANDLE LOGIN =============
+  Future<void> _handleLogin() async {
+    FocusScope.of(context).unfocus();
+
+    if (!_formKey.currentState!.validate()) {
+      HapticFeedback.mediumImpact();
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    HapticFeedback.lightImpact();
 
     try {
-      // Call API (normalize email to lowercase)
       final result = await ApiService.login(
         email: AlNoranValidators.normalizeEmail(_emailController.text),
         password: _passwordController.text.trim(),
       );
 
-      // Hide loading
-      if (mounted) {
-        AlNoranPopups.hideLoading(context);
-      }
+      if (!mounted) return;
 
-      if (result['success']) {
-        // نجح تسجيل الدخول
-        if (mounted) {
-          // Debug: Print the response data
-          print('🔐 [Login] Full response: $result');
-          print('🔐 [Login] User data: ${result['data']?['user']}');
-          print(
-            '🔐 [Login] ClientDetails: ${result['data']?['user']?['clientDetails']}',
-          );
+      if (result['success'] == true) {
+        await UserCacheService().initialize(forceRefresh: true);
 
-          // Save token and user data in parallel for faster performance
-          if (result['data'] != null) {
-            await Future.wait([
-              if (result['data']['token'] != null)
-                ApiService.saveToken(result['data']['token']),
-              if (result['data']['user'] != null)
-                ApiService.saveUserData(result['data']['user']),
-            ]);
-            print('✅ [Login] Token and user data saved to storage');
-
-            // Initialize user cache after login
-            await UserCacheService().initialize(forceRefresh: true);
-            print('✅ [Login] User cache initialized');
-
-            // Initialize Firebase Push Notifications (after login)
-            try {
-              await FirebasePushService().initialize();
-              print('✅ [Login] Firebase Push Service initialized');
-            } catch (e) {
-              print('⚠️ [Login] Firebase init error: $e');
-            }
-
-            // Initialize Notification Service to get unread count
-            try {
-              await NotificationService().initialize(forceRefresh: true);
-              print('✅ [Login] Notification Service initialized');
-            } catch (e) {
-              print('⚠️ [Login] Notification Service error: $e');
-            }
-          }
-
-          // الحصول على اسم المستخدم والبريد الإلكتروني من البيانات
-          String userName = 'مستخدم';
-          String userEmail = _emailController.text.trim();
-
-          if (result['data'] != null && result['data']['user'] != null) {
-            userName =
-                result['data']['user']['fullname'] ??
-                result['data']['user']['username'] ??
-                'مستخدم';
-            userEmail = result['data']['user']['email'] ?? userEmail;
-          }
-
-          // الانتقال للصفحة الرئيسية
-          context.go(
-            '/home',
-            extra: {'userName': userName, 'userEmail': userEmail},
-          );
+        try {
+          await FirebasePushService().initialize();
+          await NotificationService().initialize(forceRefresh: true);
+        } catch (e) {
+          print('⚠️ Service init error: $e');
         }
-      } else {
-        // فشل تسجيل الدخول
-        if (mounted) {
-          AlNoranPopups.showError(
-            context: context,
-            message: result['message'] ?? 'فشل تسجيل الدخول',
-          );
-        }
-      }
-    } catch (e) {
-      // Hide loading
-      if (mounted) {
-        AlNoranPopups.hideLoading(context);
-      }
 
-      if (mounted) {
-        AlNoranPopups.showError(
+        if (!mounted) return;
+
+        final userData = result['data']?['user'];
+        String userName =
+            userData?['fullname'] ?? userData?['username'] ?? 'مستخدم';
+        String userEmail = userData?['email'] ?? '';
+
+        HapticFeedback.heavyImpact();
+        EnhancedPopups.showSuccess(
           context: context,
-          title: 'خطأ في الاتصال',
+          title: 'تم بنجاح',
+          message: 'مرحباً بك $userName',
+        );
+
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (!mounted) return;
+
+        context.go(
+          '/home',
+          extra: {'userName': userName, 'userEmail': userEmail},
+        );
+      } else {
+        setState(() => _isLoading = false);
+        HapticFeedback.mediumImpact();
+
+        EnhancedPopups.showError(
+          context: context,
+          title: 'فشل تسجيل الدخول',
           message:
-              'حدث خطأ غير متوقع. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.',
+              result['message'] ?? 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
         );
       }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+      HapticFeedback.mediumImpact();
+
+      EnhancedPopups.showError(
+        context: context,
+        title: 'خطأ',
+        message: 'حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى',
+      );
     }
   }
 
-  /// Handle Google Sign In
+  // ============= GOOGLE SIGN IN =============
   Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    HapticFeedback.lightImpact();
+
     try {
-      print('🔐 [Login] Starting Google Sign In...');
-
-      // Show loading
-      AlNoranPopups.showLoading(
-        context: context,
-        message: 'جاري تسجيل الدخول...',
-      );
-
-      // Sign in with Google
-      print('🔐 [Login] Calling GoogleSignInService.signIn()...');
       final googleUser = await GoogleSignInService.signIn();
-      print('🔐 [Login] GoogleSignInService returned: $googleUser');
 
       if (googleUser == null) {
-        // User cancelled
-        print('🔐 [Login] User cancelled Google Sign In');
-        if (mounted) {
-          AlNoranPopups.hideLoading(context);
-        }
+        setState(() => _isLoading = false);
         return;
       }
-
-      print('🔐 [Login] Google user data received successfully');
-
-      // Call API to verify/register
-      print('🔐 [Login] Calling API googleSignIn...');
-      print('🔐 [Login] Email: ${googleUser['email']}');
-      print('🔐 [Login] Display Name: ${googleUser['displayName']}');
-      print('🔐 [Login] Google ID: ${googleUser['id']}');
 
       final result = await ApiService.googleSignIn(
         email: googleUser['email'] ?? '',
@@ -518,89 +582,68 @@ class _LoginPageState extends State<LoginPage> {
         accessToken: googleUser['accessToken'],
       );
 
-      print('🔐 [Login] API response: $result');
-
-      // Hide loading
-      if (mounted) {
-        AlNoranPopups.hideLoading(context);
-      }
+      if (!mounted) return;
 
       if (result['success'] == true) {
-        print('🔐 [Login] API call successful');
-        print('🔐 [Login] Is new user: ${result['isNewUser']}');
-
         if (result['isNewUser'] == true) {
-          // New user - redirect to registration with pre-filled data
-          print('🔐 [Login] New user - redirecting to registration');
-          if (mounted) {
-            context.push(
-              '/register',
-              extra: {'googleData': result['data']['googleData']},
-            );
-          }
+          setState(() => _isLoading = false);
+          context.push(
+            '/register',
+            extra: {'googleData': result['data']['googleData']},
+          );
         } else {
-          // Existing user - login successful
-          print('🔐 [Login] Existing user - logging in');
-          if (mounted) {
-            AlNoranPopups.showSuccess(
-              context: context,
-              message: 'تم تسجيل الدخول بنجاح',
-            );
-          }
-
-          // Initialize services
           await UserCacheService().initialize(forceRefresh: true);
+
           try {
             await FirebasePushService().initialize();
-          } catch (e) {
-            print('⚠️ [GoogleSignIn] Firebase init error: $e');
-          }
-          try {
             await NotificationService().initialize(forceRefresh: true);
           } catch (e) {
-            print('⚠️ [GoogleSignIn] Notification Service error: $e');
+            print('⚠️ Service init error: $e');
           }
 
-          // Get user info
+          if (!mounted) return;
+
           final userData = result['data']?['user'];
           String userName =
               userData?['fullname'] ?? userData?['username'] ?? 'مستخدم';
           String userEmail = userData?['email'] ?? '';
 
-          // Navigate to home
-          if (mounted) {
-            context.go(
-              '/home',
-              extra: {'userName': userName, 'userEmail': userEmail},
-            );
-          }
-        }
-      } else {
-        print('🔐 [Login] API call failed: ${result['message']}');
-        if (mounted) {
-          AlNoranPopups.showError(
+          HapticFeedback.heavyImpact();
+          EnhancedPopups.showSuccess(
             context: context,
-            message: result['message'] ?? 'فشل تسجيل الدخول بجوجل',
+            title: 'تم بنجاح',
+            message: 'مرحباً بك $userName',
+          );
+
+          await Future.delayed(const Duration(milliseconds: 1500));
+          if (!mounted) return;
+
+          context.go(
+            '/home',
+            extra: {'userName': userName, 'userEmail': userEmail},
           );
         }
-      }
-    } catch (e, stackTrace) {
-      print('❌ [Login GoogleSignIn] Error: $e');
-      print('❌ [Login GoogleSignIn] Stack trace: $stackTrace');
-      if (mounted) {
-        AlNoranPopups.hideLoading(context);
-        AlNoranPopups.showError(
+      } else {
+        setState(() => _isLoading = false);
+        HapticFeedback.mediumImpact();
+
+        EnhancedPopups.showError(
           context: context,
-          message: 'حدث خطأ أثناء تسجيل الدخول بجوجل: $e',
+          title: 'فشل تسجيل الدخول',
+          message: result['message'] ?? 'فشل تسجيل الدخول بجوجل',
         );
       }
-    }
-  }
+    } catch (e) {
+      if (!mounted) return;
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
+      setState(() => _isLoading = false);
+      HapticFeedback.mediumImpact();
+
+      EnhancedPopups.showError(
+        context: context,
+        title: 'خطأ',
+        message: 'حدث خطأ أثناء تسجيل الدخول بجوجل',
+      );
+    }
   }
 }

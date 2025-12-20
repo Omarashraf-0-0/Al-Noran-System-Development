@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
-import '../../Pop-ups/al_noran_popups.dart';
+import '../../core/widgets/widgets.dart';
+import '../../theme/theme.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;
@@ -12,230 +14,115 @@ class ResetPasswordPage extends StatefulWidget {
   State<ResetPasswordPage> createState() => _ResetPasswordPageState();
 }
 
-class _ResetPasswordPageState extends State<ResetPasswordPage> {
+class _ResetPasswordPageState extends State<ResetPasswordPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          automaticallyImplyLeading: false, // إخفاء زر الرجوع
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.primary.withValues(alpha: 0.08),
+              AppColors.background,
+              AppColors.background,
+            ],
+            stops: const [0.0, 0.3, 1.0],
+          ),
         ),
-        body: SafeArea(
+        child: SafeArea(
           child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                children: [
-                  const SizedBox(height: 40),
+            physics: const BouncingScrollPhysics(),
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Padding(
+                  padding: AppSpacing.paddingHorizontalLG,
+                  child: Column(
+                    children: [
+                      AppSpacing.gapVerticalSM,
 
-                  // Icon
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF690000).withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.lock_open,
-                      size: 60,
-                      color: Color(0xFF690000),
-                    ),
+                      // Back Button - على الشمال ويبص للشمال
+                      _buildBackButton(),
+
+                      AppSpacing.gapVerticalXL,
+
+                      // Icon
+                      _buildIcon(),
+
+                      AppSpacing.gapVerticalLG,
+
+                      // Title & Description
+                      _buildHeader(),
+
+                      AppSpacing.gapVerticalXL,
+
+                      // Form Card
+                      _buildFormCard(),
+
+                      AppSpacing.gapVerticalMD,
+
+                      // Password Requirements
+                      _buildPasswordRequirements(),
+
+                      AppSpacing.gapVerticalXL,
+                    ],
                   ),
-
-                  const SizedBox(height: 40),
-
-                  // Title
-                  const Text(
-                    'إنشاء كلمة مرور جديدة',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF690000),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Subtitle
-                  const Text(
-                    'أدخل كلمة المرور الجديدة لحسابك',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: Color(0xFF757575)),
-                  ),
-
-                  const SizedBox(height: 50),
-
-                  // Password Field
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE0E0E0)),
-                    ),
-                    child: TextField(
-                      controller: _passwordController,
-                      obscureText: !_isPasswordVisible,
-                      textAlign: TextAlign.right,
-                      decoration: InputDecoration(
-                        hintText: 'كلمة المرور الجديدة',
-                        hintStyle: const TextStyle(color: Color(0xFFBDBDBD)),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 18,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.lock_outline,
-                          color: Color(0xFF690000),
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _isPasswordVisible
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: const Color(0xFFBDBDBD),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _isPasswordVisible = !_isPasswordVisible;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Confirm Password Field
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE0E0E0)),
-                    ),
-                    child: TextField(
-                      controller: _confirmPasswordController,
-                      obscureText: !_isConfirmPasswordVisible,
-                      textAlign: TextAlign.right,
-                      decoration: InputDecoration(
-                        hintText: 'تأكيد كلمة المرور',
-                        hintStyle: const TextStyle(color: Color(0xFFBDBDBD)),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 18,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.lock_outline,
-                          color: Color(0xFF690000),
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _isConfirmPasswordVisible
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: const Color(0xFFBDBDBD),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _isConfirmPasswordVisible =
-                                  !_isConfirmPasswordVisible;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Password Requirements
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE0E0E0)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: const [
-                            Icon(
-                              Icons.info_outline,
-                              size: 18,
-                              color: Color(0xFF690000),
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'متطلبات كلمة المرور:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF690000),
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        _buildRequirement('6 أحرف على الأقل'),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // Reset Password Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleResetPassword,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF690000),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
-                      ),
-                      child:
-                          _isLoading
-                              ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                              : const Text(
-                                'تغيير كلمة المرور',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
             ),
           ),
@@ -244,100 +131,384 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     );
   }
 
-  Widget _buildRequirement(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.check_circle_outline,
-            size: 16,
-            color: Color(0xFF690000),
+  // ============= BACK BUTTON =============
+  Widget _buildBackButton() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.pop(),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.arrow_back_rounded,
+              color: AppColors.primary,
+              size: 24,
+            ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF757575)),
+        ),
+      ),
+    );
+  }
+
+  // ============= ICON =============
+  Widget _buildIcon() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.elasticOut,
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: value,
+          child: Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  blurRadius: 30,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.lock_reset_rounded,
+              size: 60,
+              color: AppColors.primary,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ============= HEADER =============
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        Text(
+          'تعيين كلمة مرور جديدة',
+          style: AppTypography.h1.copyWith(
+            color: AppColors.primary,
+            fontSize: 28,
+          ),
+        ),
+        AppSpacing.gapVerticalXS,
+        Text(
+          'أدخل كلمة مرور قوية لحسابك',
+          style: AppTypography.body.copyWith(color: AppColors.textLight),
+        ),
+      ],
+    );
+  }
+
+  // ============= FORM CARD =============
+  Widget _buildFormCard() {
+    return Container(
+      padding: AppSpacing.paddingLG,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: AppSpacing.borderRadiusLG,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Password Field
+          _buildLabeledTextField(
+            label: 'كلمة المرور الجديدة',
+            controller: _passwordController,
+            isPassword: true,
+            obscureText: _obscurePassword,
+            onToggleVisibility: () {
+              setState(() => _obscurePassword = !_obscurePassword);
+              HapticFeedback.selectionClick();
+            },
+            prefixIcon: Icons.lock_rounded,
+          ),
+
+          AppSpacing.gapVerticalMD,
+
+          // Confirm Password Field
+          _buildLabeledTextField(
+            label: 'تأكيد كلمة المرور',
+            controller: _confirmPasswordController,
+            isPassword: true,
+            obscureText: _obscureConfirmPassword,
+            onToggleVisibility: () {
+              setState(
+                () => _obscureConfirmPassword = !_obscureConfirmPassword,
+              );
+              HapticFeedback.selectionClick();
+            },
+            prefixIcon: Icons.lock_rounded,
+          ),
+
+          AppSpacing.gapVerticalLG,
+
+          // Submit Button
+          AppPrimaryButton(
+            text: 'تأكيد',
+            onPressed: _resetPassword,
+            isLoading: _isLoading,
+            icon: Icons.check_circle_rounded,
           ),
         ],
       ),
     );
   }
 
-  Future<void> _handleResetPassword() async {
-    // Validation
-    if (_passwordController.text.trim().isEmpty) {
-      AlNoranPopups.showError(
+  // ============= LABELED TEXT FIELD =============
+  Widget _buildLabeledTextField({
+    required String label,
+    required TextEditingController controller,
+    bool isPassword = false,
+    bool obscureText = false,
+    VoidCallback? onToggleVisibility,
+    IconData? prefixIcon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // Label خارج الـ TextField
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, right: 4),
+          child: Text(
+            label,
+            style: AppTypography.body.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
+        ),
+
+        // TextField
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: AppSpacing.borderRadiusMD,
+            border: Border.all(
+              color:
+                  controller.text.isNotEmpty
+                      ? AppColors.primary.withValues(alpha: 0.3)
+                      : AppColors.greyBorder,
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            obscureText: isPassword ? obscureText : false,
+            style: AppTypography.body.copyWith(color: AppColors.textDark),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
+              // Icon على اليمين في RTL (قبل النص)
+              prefixIcon:
+                  prefixIcon != null
+                      ? Icon(prefixIcon, color: AppColors.primary, size: 22)
+                      : null,
+              // Toggle visibility على الشمال في RTL (بعد النص)
+              suffixIcon:
+                  isPassword
+                      ? IconButton(
+                        icon: Icon(
+                          obscureText
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                          color: AppColors.textGrey,
+                          size: 22,
+                        ),
+                        onPressed: onToggleVisibility,
+                      )
+                      : null,
+            ),
+            onChanged: (value) => setState(() {}),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============= PASSWORD REQUIREMENTS =============
+  Widget _buildPasswordRequirements() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                'متطلبات كلمة المرور',
+                style: AppTypography.body.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.info_outline_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildRequirement(
+            '6 أرقام على الأقل',
+            _passwordController.text.length >= 6,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequirement(String text, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text(
+            text,
+            style: AppTypography.small.copyWith(
+              color: isMet ? Colors.green : AppColors.textGrey,
+              fontWeight: isMet ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Icon(
+            isMet ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: isMet ? Colors.green : AppColors.greyBorder,
+            size: 18,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============= PASSWORD VALIDATION =============
+  bool _isPasswordValid(String password) {
+    return password.length >= 6 && RegExp(r'^\d{6,}$').hasMatch(password);
+  }
+
+  // ============= RESET PASSWORD =============
+  Future<void> _resetPassword() async {
+    FocusScope.of(context).unfocus();
+
+    String password = _passwordController.text.trim();
+    String confirmPassword = _confirmPasswordController.text.trim();
+
+    if (password.isEmpty || confirmPassword.isEmpty) {
+      HapticFeedback.mediumImpact();
+      EnhancedPopups.showWarning(
         context: context,
-        message: 'من فضلك أدخل كلمة المرور الجديدة',
+        title: 'تنبيه',
+        message: 'الرجاء إدخال كلمة المرور وتأكيدها',
       );
       return;
     }
 
-    if (_passwordController.text.length < 6) {
-      AlNoranPopups.showError(
+    if (!_isPasswordValid(password)) {
+      HapticFeedback.mediumImpact();
+      EnhancedPopups.showWarning(
         context: context,
-        message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
+        title: 'كلمة مرور غير صحيحة',
+        message: 'كلمة المرور يجب أن تكون 6 أرقام على الأقل',
       );
       return;
     }
 
-    if (_confirmPasswordController.text != _passwordController.text) {
-      AlNoranPopups.showError(
+    if (password != confirmPassword) {
+      HapticFeedback.mediumImpact();
+      EnhancedPopups.showError(
         context: context,
+        title: 'خطأ',
         message: 'كلمة المرور غير متطابقة',
       );
       return;
     }
 
     setState(() => _isLoading = true);
+    HapticFeedback.lightImpact();
 
     try {
       final result = await ApiService.resetPassword(
         email: widget.email,
-        newPassword: _passwordController.text.trim(),
+        newPassword: password,
       );
 
       setState(() => _isLoading = false);
 
-      if (result['success']) {
-        if (mounted) {
-          await AlNoranPopups.showSuccess(
-            context: context,
-            title: 'تم بنجاح!',
-            message: 'تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول',
-            buttonText: 'تسجيل الدخول',
-            onPressed: () {
-              // العودة لصفحة Login
-              context.go('/login');
-            },
-          );
-        }
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        HapticFeedback.heavyImpact();
+        EnhancedPopups.showSuccess(
+          context: context,
+          title: 'تم بنجاح',
+          message: 'تم تغيير كلمة المرور بنجاح',
+        );
+
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (!mounted) return;
+
+        context.go('/login');
       } else {
-        if (mounted) {
-          AlNoranPopups.showError(
-            context: context,
-            message: result['message'] ?? 'فشل تغيير كلمة المرور',
-          );
-        }
+        HapticFeedback.mediumImpact();
+        EnhancedPopups.showError(
+          context: context,
+          title: 'خطأ',
+          message: result['message'] ?? 'فشل تغيير كلمة المرور',
+        );
       }
     } catch (e) {
       setState(() => _isLoading = false);
+      HapticFeedback.mediumImpact();
 
       if (mounted) {
-        AlNoranPopups.showError(
+        EnhancedPopups.showError(
           context: context,
           title: 'خطأ',
-          message: 'حدث خطأ غير متوقع. حاول مرة أخرى',
+          message: 'حدث خطأ في الاتصال بالسيرفر',
         );
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
   }
 }

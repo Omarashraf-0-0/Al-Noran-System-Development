@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import '../../Pop-ups/al_noran_popups.dart';
+import '../../core/widgets/widgets.dart';
+import '../../theme/theme.dart';
 import '../../util/validators.dart';
 import '../../core/network/api_service.dart';
 import '../../core/services/google_sign_in_service.dart';
-import '../../core/services/user_cache_service.dart';
-import '../../core/services/firebase_push_service.dart';
-import '../../core/services/notification_service.dart';
-import 'personalRegistration.dart';
-import 'commercialRegistration.dart';
-import 'factoryRegistration.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -18,7 +14,8 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState extends State<RegisterPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -27,673 +24,44 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
+  final _formKey = GlobalKey<FormState>();
   bool _agreeToTerms = false;
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   String _selectedAccountType = 'personal'; // personal, commercial, factory
 
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
   @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              children: [
-                const SizedBox(height: 50),
+  void initState() {
+    super.initState();
 
-                // زرار الرجوع في أعلى الشمال
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_forward,
-                        color: Color(0xFF690000),
-                        size: 28,
-                      ),
-                      onPressed: () => context.go('/login'),
-                    ),
-                    const Spacer(),
-                  ],
-                ),
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
 
-                const SizedBox(height: 10),
-
-                // Logo
-                Image.asset(
-                  'assets/img/logo.png',
-                  width: 150,
-                  height: 150,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.flight_takeoff_rounded,
-                      size: 100,
-                      color: Color(0xFF690000),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 30),
-
-                // Title
-                const Text(
-                  'إنشاء حساب جديد',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF690000),
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                // Subtitle
-                const Text(
-                  'انضم إلى عائلة النوران',
-                  style: TextStyle(fontSize: 16, color: Color(0xFFa40000)),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Name Field
-                _buildTextField(
-                  controller: _nameController,
-                  hint: 'الاسم بالكامل',
-                  icon: Icons.person_outline,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Username Field
-                _buildTextField(
-                  controller: _usernameController,
-                  hint: 'اسم المستخدم',
-                  icon: Icons.alternate_email,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Email Field
-                _buildTextField(
-                  controller: _emailController,
-                  hint: 'البريد الإلكتروني',
-                  icon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Phone Field
-                _buildTextField(
-                  controller: _phoneController,
-                  hint: 'رقم الهاتف',
-                  icon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Account Type Selector
-                _buildAccountTypeSelector(),
-
-                const SizedBox(height: 16),
-
-                // Password Field
-                _buildTextField(
-                  controller: _passwordController,
-                  hint: 'كلمة المرور',
-                  icon: Icons.lock_outline,
-                  isPassword: true,
-                  isPasswordVisible: _isPasswordVisible,
-                  onTogglePassword: () {
-                    setState(() {
-                      _isPasswordVisible = !_isPasswordVisible;
-                    });
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                // Confirm Password Field
-                _buildTextField(
-                  controller: _confirmPasswordController,
-                  hint: 'تأكيد كلمة المرور',
-                  icon: Icons.lock_outline,
-                  isPassword: true,
-                  isPasswordVisible: _isConfirmPasswordVisible,
-                  onTogglePassword: () {
-                    setState(() {
-                      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-                    });
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Terms and Conditions Checkbox
-                _buildTermsCheckbox(),
-
-                const SizedBox(height: 30),
-
-                // Register Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _handleRegister,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF690000),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 2,
-                    ),
-                    child: const Text(
-                      'إنشاء الحساب',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Login Link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'لديك حساب بالفعل؟',
-                      style: TextStyle(color: Color(0xFF757575)),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        context.pop();
-                      },
-                      child: const Text(
-                        'تسجيل الدخول',
-                        style: TextStyle(
-                          color: Color(0xFF690000),
-                          fontWeight: FontWeight.bold,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                // Divider with text
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: Colors.grey[300])),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'أو التسجيل باستخدام',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF757575),
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: Colors.grey[300])),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // Google Sign Up Button
-                InkWell(
-                  onTap: _handleGoogleSignUp,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: double.infinity,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE0E0E0)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          'assets/img/googleIcon.png',
-                          width: 24,
-                          height: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'التسجيل بحساب جوجل',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Cairo',
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-              ], // Column children
-            ), // Column
-          ), // Padding
-        ), // SingleChildScrollView
-      ), // Scaffold body
-    ); // Directionality child - Scaffold
-  } // build method
-
-  // Handle Registration
-  Future<void> _handleRegister() async {
-    // Validation
-    if (_nameController.text.trim().isEmpty) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'من فضلك أدخل الاسم بالكامل',
-      );
-      return;
-    }
-
-    if (_usernameController.text.trim().isEmpty) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'من فضلك أدخل اسم المستخدم',
-      );
-      return;
-    }
-
-    // Username validation (no spaces allowed)
-    if (_usernameController.text.contains(' ')) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'اسم المستخدم لا يجب أن يحتوي على مسافات',
-      );
-      return;
-    }
-
-    if (_emailController.text.trim().isEmpty) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'من فضلك أدخل البريد الإلكتروني',
-      );
-      return;
-    }
-
-    // Email validation (case-insensitive)
-    if (!AlNoranValidators.isValidEmail(_emailController.text)) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'البريد الإلكتروني غير صحيح',
-      );
-      return;
-    }
-
-    if (_phoneController.text.trim().isEmpty) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'من فضلك أدخل رقم الهاتف',
-      );
-      return;
-    }
-
-    // Egyptian Phone validation
-    if (!AlNoranValidators.isValidEgyptianPhone(_phoneController.text)) {
-      AlNoranPopups.showError(
-        context: context,
-        message: AlNoranValidators.getPhoneErrorMessage(_phoneController.text),
-      );
-      return;
-    }
-
-    if (_passwordController.text.trim().isEmpty) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'من فضلك أدخل كلمة المرور',
-      );
-      return;
-    }
-
-    if (_passwordController.text.length < 6) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
-      );
-      return;
-    }
-
-    if (_confirmPasswordController.text != _passwordController.text) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'كلمة المرور غير متطابقة',
-      );
-      return;
-    }
-
-    // Terms and Conditions validation
-    if (!_agreeToTerms) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'يجب الموافقة على الشروط والأحكام',
-      );
-      return;
-    }
-
-    // ✅ التحقق من توفر اسم المستخدم والبريد الإلكتروني قبل المتابعة
-    print('🔍 جاري التحقق من توفر البيانات...');
-
-    // Show loading
-    if (mounted) {
-      AlNoranPopups.showLoading(
-        context: context,
-        message: 'جاري التحقق من البيانات...',
-      );
-    }
-
-    try {
-      final checkResult = await ApiService.checkAvailability(
-        username: _usernameController.text.trim(),
-        email: AlNoranValidators.normalizeEmail(_emailController.text),
-      );
-
-      // Dismiss loading
-      if (mounted) {
-        context.pop();
-      }
-
-      print('📨 Response: $checkResult');
-
-      if (!checkResult['success']) {
-        // خطأ في الاتصال
-        if (mounted) {
-          AlNoranPopups.showError(
-            context: context,
-            message: checkResult['message'] ?? 'خطأ في الاتصال بالسيرفر',
-          );
-        }
-        return;
-      }
-
-      if (!checkResult['available']) {
-        // البيانات مستخدمة بالفعل
-        String fieldName =
-            checkResult['field'] == 'username'
-                ? 'اسم المستخدم'
-                : 'البريد الإلكتروني';
-
-        if (mounted) {
-          AlNoranPopups.showError(
-            context: context,
-            message: '$fieldName مستخدم بالفعل. من فضلك اختر $fieldName آخر',
-          );
-        }
-        return;
-      }
-
-      // ✅ البيانات متاحة - يمكن المتابعة
-      print('✅ البيانات متاحة - الانتقال لصفحة رفع المستندات');
-    } catch (e) {
-      // Dismiss loading if still showing
-      if (mounted && Navigator.canPop(context)) {
-        context.pop();
-      }
-
-      print('❌ Exception during validation: $e');
-
-      if (mounted) {
-        AlNoranPopups.showError(
-          context: context,
-          message: 'حدث خطأ أثناء التحقق. تأكد من اتصالك بالإنترنت',
-        );
-      }
-      return;
-    }
-
-    // Instead of creating account here, navigate to appropriate page based on account type
-    final userData = {
-      'name': _nameController.text.trim(),
-      'username': _usernameController.text.trim(),
-      'email': AlNoranValidators.normalizeEmail(_emailController.text),
-      'phone': _phoneController.text.trim(),
-      'password': _passwordController.text.trim(),
-    };
-
-    if (mounted) {
-      // Navigate to appropriate registration page based on account type
-      switch (_selectedAccountType) {
-        case 'personal':
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => PersonalRegistrationPage(userData: userData),
-            ),
-          );
-          break;
-        case 'commercial':
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => CommercialRegistrationPage(userData: userData),
-            ),
-          );
-          break;
-        case 'factory':
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => FactoryRegistrationPage(userData: userData),
-            ),
-          );
-          break;
-      }
-    }
-  }
-
-  // Account Type Selector
-  Widget _buildAccountTypeSelector() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.business_center, color: Color(0xFF690000)),
-              const SizedBox(width: 12),
-              const Text(
-                'نوع الحساب',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF690000),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildAccountTypeOption(
-                  title: 'شخصي',
-                  value: 'personal',
-                  icon: Icons.person,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildAccountTypeOption(
-                  title: 'تجاري',
-                  value: 'commercial',
-                  icon: Icons.store,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildAccountTypeOption(
-                  title: 'مصنع',
-                  value: 'factory',
-                  icon: Icons.factory,
-                ),
-              ),
-            ],
-          ),
-        ],
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
       ),
     );
-  }
 
-  Widget _buildAccountTypeOption({
-    required String title,
-    required String value,
-    required IconData icon,
-  }) {
-    final isSelected = _selectedAccountType == value;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedAccountType = value;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF690000) : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color:
-                isSelected ? const Color(0xFF690000) : const Color(0xFFE0E0E0),
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? Colors.white : const Color(0xFF690000),
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : const Color(0xFF690000),
-              ),
-            ),
-          ],
-        ),
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
       ),
     );
-  }
 
-  // Terms and Conditions Checkbox
-  Widget _buildTermsCheckbox() {
-    return Row(
-      children: [
-        Checkbox(
-          value: _agreeToTerms,
-          onChanged: (value) {
-            setState(() {
-              _agreeToTerms = value ?? false;
-            });
-          },
-          activeColor: const Color(0xFF690000),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-        ),
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _agreeToTerms = !_agreeToTerms;
-              });
-            },
-            child: RichText(
-              textAlign: TextAlign.right,
-              text: const TextSpan(
-                style: TextStyle(fontSize: 14, color: Color(0xFF757575)),
-                children: [
-                  TextSpan(text: 'أوافق على '),
-                  TextSpan(
-                    text: 'الشروط والأحكام',
-                    style: TextStyle(
-                      color: Color(0xFF690000),
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                  TextSpan(text: ' وسياسة الخصوصية'),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    bool isPassword = false,
-    bool isPasswordVisible = false,
-    VoidCallback? onTogglePassword,
-    TextInputType? keyboardType,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: isPassword && !isPasswordVisible,
-        textAlign: TextAlign.right,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(color: Color(0xFFBDBDBD)),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 18,
-          ),
-          prefixIcon: Icon(icon, color: const Color(0xFF690000)),
-          suffixIcon:
-              isPassword
-                  ? IconButton(
-                    icon: Icon(
-                      isPasswordVisible
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      color: const Color(0xFFBDBDBD),
-                    ),
-                    onPressed: onTogglePassword,
-                  )
-                  : null,
-        ),
-      ),
-    );
+    _animationController.forward();
   }
 
   @override
@@ -704,135 +72,812 @@ class _RegisterPageState extends State<RegisterPage> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
-  /// Handle Google Sign Up
-  Future<void> _handleGoogleSignUp() async {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.primary.withValues(alpha: 0.08),
+              AppColors.background,
+              AppColors.background,
+            ],
+            stops: const [0.0, 0.3, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Padding(
+                  padding: AppSpacing.paddingHorizontalLG,
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        AppSpacing.gapVerticalSM,
+
+                        // Back Button - على الشمال ويبص للشمال
+                        _buildBackButton(),
+
+                        // Logo
+                        _buildAnimatedLogo(),
+
+                        AppSpacing.gapVerticalLG,
+
+                        // Title & Subtitle
+                        _buildHeader(),
+
+                        AppSpacing.gapVerticalLG,
+
+                        // Form Card
+                        _buildFormCard(),
+
+                        AppSpacing.gapVerticalLG,
+
+                        // Login Link
+                        _buildLoginLink(),
+
+                        AppSpacing.gapVerticalLG,
+
+                        // Divider
+                        _buildDivider(),
+
+                        AppSpacing.gapVerticalLG,
+
+                        // Social Registration
+                        _buildSocialRegistration(),
+
+                        AppSpacing.gapVerticalXL,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============= BACK BUTTON - على الشمال ويبص للشمال =============
+  Widget _buildBackButton() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.pop(),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.arrow_forward_rounded,
+              color: AppColors.primary,
+              size: 24,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============= FORM CARD =============
+  Widget _buildFormCard() {
+    return Container(
+      padding: AppSpacing.paddingLG,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: AppSpacing.borderRadiusLG,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Name Field
+          _buildLabeledTextField(
+            controller: _nameController,
+            label: 'الاسم بالكامل',
+            hint: 'أدخل اسمك الكامل',
+            icon: Icons.person_rounded,
+            textInputAction: TextInputAction.next,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'من فضلك أدخل الاسم';
+              }
+              if (value.length < 3) {
+                return 'الاسم يجب أن يكون 3 أحرف على الأقل';
+              }
+              return null;
+            },
+          ),
+
+          AppSpacing.gapVerticalMD,
+
+          // Username Field
+          _buildLabeledTextField(
+            controller: _usernameController,
+            label: 'اسم المستخدم',
+            hint: 'أدخل اسم المستخدم',
+            icon: Icons.alternate_email_rounded,
+            textInputAction: TextInputAction.next,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'من فضلك أدخل اسم المستخدم';
+              }
+              if (value.length < 3) {
+                return 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل';
+              }
+              return null;
+            },
+          ),
+
+          AppSpacing.gapVerticalMD,
+
+          // Email Field
+          _buildLabeledTextField(
+            controller: _emailController,
+            label: 'البريد الإلكتروني',
+            hint: 'example@email.com',
+            icon: Icons.email_rounded,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            textDirection: TextDirection.ltr,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'من فضلك أدخل البريد الإلكتروني';
+              }
+              if (!AlNoranValidators.isValidEmail(value)) {
+                return 'البريد الإلكتروني غير صحيح';
+              }
+              return null;
+            },
+          ),
+
+          AppSpacing.gapVerticalMD,
+
+          // Phone Field
+          _buildLabeledTextField(
+            controller: _phoneController,
+            label: 'رقم الهاتف',
+            hint: '01xxxxxxxxx',
+            icon: Icons.phone_rounded,
+            keyboardType: TextInputType.phone,
+            textInputAction: TextInputAction.next,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'من فضلك أدخل رقم الهاتف';
+              }
+              if (value.length < 10) {
+                return 'رقم الهاتف غير صحيح';
+              }
+              return null;
+            },
+          ),
+
+          AppSpacing.gapVerticalMD,
+
+          // Account Type Selector
+          _buildAccountTypeSelector(),
+
+          AppSpacing.gapVerticalMD,
+
+          // Password Field
+          _buildLabeledTextField(
+            controller: _passwordController,
+            label: 'كلمة المرور',
+            hint: '••••••••',
+            icon: Icons.lock_rounded,
+            isPassword: true,
+            obscureText: _obscurePassword,
+            onToggleObscure:
+                () => setState(() => _obscurePassword = !_obscurePassword),
+            textInputAction: TextInputAction.next,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'من فضلك أدخل كلمة المرور';
+              }
+              if (value.length < 6) {
+                return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+              }
+              return null;
+            },
+          ),
+
+          AppSpacing.gapVerticalMD,
+
+          // Confirm Password Field
+          _buildLabeledTextField(
+            controller: _confirmPasswordController,
+            label: 'تأكيد كلمة المرور',
+            hint: '••••••••',
+            icon: Icons.lock_outline_rounded,
+            isPassword: true,
+            obscureText: _obscureConfirmPassword,
+            onToggleObscure:
+                () => setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                ),
+            textInputAction: TextInputAction.done,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'من فضلك أعد إدخال كلمة المرور';
+              }
+              if (value != _passwordController.text) {
+                return 'كلمتا المرور غير متطابقتين';
+              }
+              return null;
+            },
+            onSubmitted: (_) => _handleRegister(),
+          ),
+
+          AppSpacing.gapVerticalMD,
+
+          // Terms Checkbox
+          _buildTermsCheckbox(),
+
+          AppSpacing.gapVerticalLG,
+
+          // Register Button
+          AppPrimaryButton(
+            text: 'إنشاء الحساب',
+            onPressed: _handleRegister,
+            isLoading: _isLoading,
+            icon: Icons.person_add_rounded,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============= LABELED TEXT FIELD =============
+  Widget _buildLabeledTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    bool isPassword = false,
+    bool obscureText = false,
+    VoidCallback? onToggleObscure,
+    TextInputType? keyboardType,
+    TextInputAction? textInputAction,
+    TextDirection? textDirection,
+    String? Function(String?)? validator,
+    Function(String)? onSubmitted,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Label outside - على اليمين
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, right: 4),
+          child: Text(
+            label,
+            style: AppTypography.body.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
+        ),
+        // Input field
+        TextFormField(
+          controller: controller,
+          obscureText: isPassword ? obscureText : false,
+          keyboardType: keyboardType,
+          textInputAction: textInputAction,
+          textAlign: TextAlign.right,
+          textDirection: textDirection,
+          validator: validator,
+          onFieldSubmitted: onSubmitted,
+          style: AppTypography.body.copyWith(color: AppColors.textDark),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: AppTypography.body.copyWith(color: AppColors.textGrey),
+            filled: true,
+            fillColor: AppColors.background,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.greyBorder, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.error, width: 1),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.error, width: 2),
+            ),
+            // أيقونة على الشمال (بعد النص في RTL)
+            suffixIcon:
+                isPassword
+                    ? IconButton(
+                      icon: Icon(
+                        obscureText
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                        color: AppColors.textGrey,
+                        size: 22,
+                      ),
+                      onPressed: onToggleObscure,
+                    )
+                    : Icon(icon, color: AppColors.textGrey, size: 22),
+            // أيقونة القفل على اليمين للباسورد
+            prefixIcon:
+                isPassword
+                    ? Icon(icon, color: AppColors.textGrey, size: 22)
+                    : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============= ANIMATED LOGO =============
+  Widget _buildAnimatedLogo() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.elasticOut,
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: value,
+          child: Container(
+            width: 120,
+            height: 120,
+            padding: AppSpacing.paddingMD,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  blurRadius: 25,
+                  spreadRadius: 3,
+                ),
+              ],
+            ),
+            child: Image.asset(
+              'assets/img/logo.png',
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(
+                  Icons.local_shipping_rounded,
+                  size: 60,
+                  color: AppColors.primary,
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ============= HEADER =============
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        Text(
+          'إنشاء حساب جديد',
+          style: AppTypography.h1.copyWith(color: AppColors.primary),
+        ),
+        AppSpacing.gapVerticalSM,
+        Text(
+          'انضم إلى عائلة النوران للخدمات اللوجستية',
+          style: AppTypography.body.copyWith(color: AppColors.textLight),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  // ============= ACCOUNT TYPE SELECTOR =============
+  Widget _buildAccountTypeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'نوع الحساب',
+          style: AppTypography.body.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textDark,
+          ),
+        ),
+        AppSpacing.gapVerticalSM,
+        Container(
+          padding: AppSpacing.paddingXS,
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: AppSpacing.borderRadiusMD,
+            border: Border.all(color: AppColors.greyBorder),
+          ),
+          child: Row(
+            children: [
+              _buildAccountTypeButton('شخصي', 'personal', Icons.person_rounded),
+              AppSpacing.gapHorizontalXS,
+              _buildAccountTypeButton(
+                'تجاري',
+                'commercial',
+                Icons.business_rounded,
+              ),
+              AppSpacing.gapHorizontalXS,
+              _buildAccountTypeButton('مصنع', 'factory', Icons.factory_rounded),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccountTypeButton(String label, String value, IconData icon) {
+    final isSelected = _selectedAccountType == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _selectedAccountType = value);
+          HapticFeedback.selectionClick();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          padding: AppSpacing.paddingSM,
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : Colors.transparent,
+            borderRadius: AppSpacing.borderRadiusSM,
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? Colors.white : AppColors.textLight,
+                size: 24,
+              ),
+              AppSpacing.gapVerticalXS,
+              Text(
+                label,
+                style: AppTypography.small.copyWith(
+                  color: isSelected ? Colors.white : AppColors.textLight,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============= TERMS CHECKBOX =============
+  Widget _buildTermsCheckbox() {
+    return InkWell(
+      onTap: () {
+        setState(() => _agreeToTerms = !_agreeToTerms);
+        HapticFeedback.selectionClick();
+      },
+      borderRadius: AppSpacing.borderRadiusSM,
+      child: Container(
+        padding: AppSpacing.paddingSM,
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: AppSpacing.borderRadiusSM,
+          border: Border.all(
+            color: _agreeToTerms ? AppColors.primary : AppColors.greyBorder,
+            width: _agreeToTerms ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _agreeToTerms ? AppColors.primary : Colors.transparent,
+                borderRadius: AppSpacing.borderRadiusXS,
+                border: Border.all(
+                  color:
+                      _agreeToTerms ? AppColors.primary : AppColors.greyBorder,
+                  width: 2,
+                ),
+              ),
+              child:
+                  _agreeToTerms
+                      ? const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      )
+                      : null,
+            ),
+            AppSpacing.gapHorizontalSM,
+            Expanded(
+              child: Text(
+                'أوافق على الشروط والأحكام وسياسة الخصوصية',
+                style: AppTypography.small.copyWith(color: AppColors.textDark),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============= LOGIN LINK =============
+  Widget _buildLoginLink() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        TextButton(
+          onPressed: () => context.pop(),
+          child: Text(
+            'تسجيل الدخول',
+            style: AppTypography.body.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        Text(
+          'لديك حساب بالفعل؟',
+          style: AppTypography.body.copyWith(color: AppColors.textLight),
+        ),
+      ],
+    );
+  }
+
+  // ============= DIVIDER =============
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.transparent, AppColors.greyBorder],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: AppSpacing.paddingHorizontalMD,
+          child: Text(
+            'أو التسجيل باستخدام',
+            style: AppTypography.small.copyWith(color: AppColors.textLight),
+          ),
+        ),
+        Expanded(
+          child: Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.greyBorder, Colors.transparent],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============= SOCIAL REGISTRATION =============
+  Widget _buildSocialRegistration() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _handleGoogleSignUp,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.greyBorder),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'التسجيل بحساب جوجل',
+                style: AppTypography.body.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Image.asset(
+                'assets/img/googleIcon.png',
+                width: 24,
+                height: 24,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(Icons.g_mobiledata, size: 24, color: Colors.red);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============= HANDLE REGISTER =============
+  Future<void> _handleRegister() async {
+    // Dismiss keyboard
+    FocusScope.of(context).unfocus();
+
+    // Validate form
+    if (!_formKey.currentState!.validate()) {
+      HapticFeedback.mediumImpact();
+      return;
+    }
+
+    // Check terms
+    if (!_agreeToTerms) {
+      HapticFeedback.mediumImpact();
+      EnhancedPopups.showWarning(
+        context: context,
+        title: 'تنبيه',
+        message: 'يجب الموافقة على الشروط والأحكام للمتابعة',
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    HapticFeedback.lightImpact();
+
     try {
-      print('📝 [Register] Starting Google Sign Up...');
+      // Check availability first
+      final checkResult = await ApiService.checkAvailability(
+        username: _usernameController.text.trim(),
+        email: AlNoranValidators.normalizeEmail(_emailController.text),
+      );
 
-      // Show loading
-      AlNoranPopups.showLoading(context: context, message: 'جاري التسجيل...');
+      if (!mounted) return;
 
-      // Sign in with Google
-      print('📝 [Register] Calling GoogleSignInService.signIn()...');
-      final googleUser = await GoogleSignInService.signIn();
-      print('📝 [Register] GoogleSignInService returned: $googleUser');
+      if (!checkResult['success']) {
+        setState(() => _isLoading = false);
+        HapticFeedback.mediumImpact();
 
-      if (googleUser == null) {
-        // User cancelled
-        print('📝 [Register] User cancelled Google Sign In');
-        if (mounted) {
-          AlNoranPopups.hideLoading(context);
-        }
+        EnhancedPopups.showError(
+          context: context,
+          title: 'خطأ',
+          message: checkResult['message'] ?? 'خطأ في الاتصال بالسيرفر',
+        );
         return;
       }
 
-      print('📝 [Register] Google user data received successfully');
+      if (!checkResult['available']) {
+        setState(() => _isLoading = false);
+        HapticFeedback.mediumImpact();
 
-      // Call API to check if user exists
-      print('📝 [Register] Calling API googleSignIn...');
-      print('📝 [Register] Email: ${googleUser['email']}');
-      print('📝 [Register] Display Name: ${googleUser['displayName']}');
-      print('📝 [Register] Google ID: ${googleUser['id']}');
+        String fieldName =
+            checkResult['field'] == 'username'
+                ? 'اسم المستخدم'
+                : 'البريد الإلكتروني';
 
-      final result = await ApiService.googleSignIn(
-        email: googleUser['email'] ?? '',
-        displayName: googleUser['displayName'] ?? '',
-        googleId: googleUser['id'] ?? '',
-        idToken: googleUser['idToken'],
-        accessToken: googleUser['accessToken'],
-      );
-
-      print('📝 [Register] API response: $result');
-
-      // Hide loading
-      if (mounted) {
-        AlNoranPopups.hideLoading(context);
-      }
-
-      if (result['success'] == true) {
-        print('📝 [Register] API call successful');
-        print('📝 [Register] Is new user: ${result['isNewUser']}');
-
-        if (result['isNewUser'] == true) {
-          // New user - pre-fill the registration form with Google data
-          print('📝 [Register] New user - pre-filling form');
-          final googleData = result['data']['googleData'];
-          print('📝 [Register] Google data: $googleData');
-
-          if (mounted) {
-            setState(() {
-              _nameController.text = googleData['displayName'] ?? '';
-              _emailController.text = googleData['email'] ?? '';
-            });
-
-            print('📝 [Register] Form fields updated:');
-            print('📝 [Register] Name: ${_nameController.text}');
-            print('📝 [Register] Email: ${_emailController.text}');
-
-            AlNoranPopups.showSuccess(
-              context: context,
-              message: 'تم جلب بياناتك من جوجل. أكمل بقية البيانات للتسجيل',
-            );
-          }
-        } else {
-          // Existing user - login successful
-          print('📝 [Register] Existing user - logging in');
-          if (mounted) {
-            AlNoranPopups.showSuccess(
-              context: context,
-              message: 'لديك حساب بالفعل! تم تسجيل الدخول بنجاح',
-            );
-          }
-
-          // Initialize services
-          await UserCacheService().initialize(forceRefresh: true);
-          try {
-            await FirebasePushService().initialize();
-          } catch (e) {
-            print('⚠️ [GoogleSignUp] Firebase init error: $e');
-          }
-          try {
-            await NotificationService().initialize(forceRefresh: true);
-          } catch (e) {
-            print('⚠️ [GoogleSignUp] Notification Service error: $e');
-          }
-
-          // Get user info
-          final userData = result['data']?['user'];
-          String userName =
-              userData?['fullname'] ?? userData?['username'] ?? 'مستخدم';
-          String userEmail = userData?['email'] ?? '';
-
-          // Navigate to home
-          if (mounted) {
-            context.go(
-              '/home',
-              extra: {'userName': userName, 'userEmail': userEmail},
-            );
-          }
-        }
-      } else {
-        print('📝 [Register] API call failed: ${result['message']}');
-        if (mounted) {
-          AlNoranPopups.showError(
-            context: context,
-            message: result['message'] ?? 'فشل التسجيل بجوجل',
-          );
-        }
-      }
-    } catch (e, stackTrace) {
-      print('❌ [GoogleSignUp] Error: $e');
-      print('❌ [GoogleSignUp] Stack trace: $stackTrace');
-      if (mounted) {
-        AlNoranPopups.hideLoading(context);
-        AlNoranPopups.showError(
+        EnhancedPopups.showError(
           context: context,
-          message: 'حدث خطأ أثناء التسجيل بجوجل: $e',
+          title: 'غير متاح',
+          message: '$fieldName مستخدم بالفعل. من فضلك اختر $fieldName آخر',
         );
+        return;
       }
+
+      // Prepare user data
+      final userData = {
+        'fullname': _nameController.text.trim(),
+        'username': _usernameController.text.trim(),
+        'email': AlNoranValidators.normalizeEmail(_emailController.text),
+        'phone': _phoneController.text.trim(),
+        'password': _passwordController.text.trim(),
+        'accountType': _selectedAccountType,
+      };
+
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      // Navigate to appropriate registration page
+      switch (_selectedAccountType) {
+        case 'personal':
+          context.push('/personal-registration', extra: userData);
+          break;
+        case 'commercial':
+          context.push('/commercial-registration', extra: userData);
+          break;
+        case 'factory':
+          context.push('/factory-registration', extra: userData);
+          break;
+      }
+
+      HapticFeedback.lightImpact();
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+      HapticFeedback.mediumImpact();
+
+      EnhancedPopups.showError(
+        context: context,
+        title: 'خطأ',
+        message: 'حدث خطأ غير متوقع. تأكد من اتصالك بالإنترنت',
+      );
+    }
+  }
+
+  // ============= GOOGLE SIGN UP =============
+  Future<void> _handleGoogleSignUp() async {
+    setState(() => _isLoading = true);
+    HapticFeedback.lightImpact();
+
+    try {
+      final googleUser = await GoogleSignInService.signIn();
+
+      if (googleUser == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      // Navigate to registration with pre-filled data
+      context.push('/register', extra: {'googleData': googleUser});
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+      HapticFeedback.mediumImpact();
+
+      EnhancedPopups.showError(
+        context: context,
+        title: 'خطأ',
+        message: 'حدث خطأ أثناء التسجيل بجوجل',
+      );
     }
   }
 }

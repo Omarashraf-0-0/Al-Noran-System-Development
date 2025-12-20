@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -184,7 +185,7 @@ class _PaymentsPageState extends State<PaymentsPage>
         ),
         floatingActionButton: _buildUploadReceiptButton(),
         floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-        bottomNavigationBar: _buildBottomNavigationBar(),
+        bottomNavigationBar: _buildPremiumBottomNav(),
       ),
     );
   }
@@ -2065,129 +2066,134 @@ class _PaymentsPageState extends State<PaymentsPage>
     }
   }
 
-  Widget _buildBottomNavigationBar() {
+  void _handleNavigationTap(int index) {
+    switch (index) {
+      case 0:
+        // الرئيسية - navigate to home
+        setState(() => _selectedIndex = index);
+        context.go(
+          '/home',
+          extra: {'userName': widget.userName, 'userEmail': widget.userEmail},
+        );
+        break;
+      case 1:
+        // الوارد - Navigate to incoming shipments
+        setState(() => _selectedIndex = index);
+        context.go(
+          '/shipments',
+          extra: {
+            'userName': widget.userName,
+            'userEmail': widget.userEmail,
+            'type': 'incoming',
+          },
+        );
+        break;
+      case 2:
+        // الصادر - Navigate to exports page
+        setState(() => _selectedIndex = index);
+        context.go(
+          '/exports',
+          extra: {'userName': widget.userName, 'userEmail': widget.userEmail},
+        );
+        break;
+      case 3:
+        // الفواتير - Navigate to payments page (already here)
+        if (_selectedIndex != 3) {
+          setState(() => _selectedIndex = 3);
+        }
+        break;
+    }
+  }
+
+  // ==================== PREMIUM BOTTOM NAVIGATION ====================
+  Widget _buildPremiumBottomNav() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF690000),
+        color: Colors.white,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(25),
-          topRight: Radius.circular(25),
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 15,
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
             offset: const Offset(0, -5),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(25),
-          topRight: Radius.circular(25),
-        ),
-        child: SafeArea(
-          child: SizedBox(
-            height: 65,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(0, Icons.home_rounded, 'الرئيسية'),
-                _buildNavItem(1, Icons.flight_land_rounded, 'الوارد'),
-                _buildNavItem(2, Icons.flight_takeoff_rounded, 'الصادر'),
-                _buildNavItem(3, Icons.receipt_long_rounded, 'الفواتير'),
-              ],
-            ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildPremiumNavItem(0, Icons.home_rounded, 'الرئيسية'),
+              _buildPremiumNavItem(1, Icons.flight_land_rounded, 'الوارد'),
+              _buildPremiumNavItem(2, Icons.flight_takeoff_rounded, 'الصادر'),
+              _buildPremiumNavItem(3, Icons.receipt_long_rounded, 'الفواتير'),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
+  Widget _buildPremiumNavItem(int index, IconData icon, String label) {
     final isSelected = _selectedIndex == index;
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          if (index == 0) {
-            context.go(
-              '/home',
-              extra: {
-                'userName': widget.userName,
-                'userEmail': widget.userEmail,
-              },
-            );
-          } else if (index == 1) {
-            context.go(
-              '/shipments',
-              extra: {
-                'userName': widget.userName,
-                'userEmail': widget.userEmail,
-              },
-            );
-          } else if (index == 2) {
-            context.go(
-              '/exports',
-              extra: {
-                'userName': widget.userName,
-                'userEmail': widget.userEmail,
-              },
-            );
-          } else if (index == 3) {
-            // Already here
-            if (_selectedIndex != 3) {
-              setState(() => _selectedIndex = 3);
-            }
-          }
-        },
-        borderRadius: BorderRadius.circular(15),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color:
-                      isSelected
-                          ? const Color(0xFF1ba3b6)
-                          : Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow:
-                      isSelected
-                          ? [
-                            BoxShadow(
-                              color: const Color(0xFF1ba3b6).withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                          : [],
-                ),
-                child: Icon(
-                  icon,
-                  color: isSelected ? Colors.white : Colors.white70,
-                  size: 23,
-                ),
-              ),
-              const SizedBox(height: 3),
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _handleNavigationTap(index);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 20 : 16,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          gradient:
+              isSelected
+                  ? const LinearGradient(
+                    colors: [Color(0xFF690000), Color(0xFF8B0000)],
+                  )
+                  : null,
+          color: isSelected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: const Color(0xFF690000).withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                  : [],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey[500],
+              size: 22,
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 10.5,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
                   fontFamily: 'Cairo',
-                  color: isSelected ? Colors.white : Colors.white70,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                  height: 1.1,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
-          ),
+          ],
         ),
       ),
     );

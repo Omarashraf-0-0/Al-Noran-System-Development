@@ -6,6 +6,9 @@ import '../features/auth/register_page.dart';
 import '../features/auth/ForgotPasswordPage.dart';
 import '../features/auth/OtpVerificationPage.dart';
 import '../features/auth/reset_password_page.dart';
+import '../features/auth/personalRegistration.dart';
+import '../features/auth/commercialRegistration.dart';
+import '../features/auth/factoryRegistration.dart';
 import '../features/home/homePage.dart';
 import '../features/home/myShipments.dart';
 import '../features/home/myExports.dart';
@@ -47,6 +50,36 @@ class AppRouter {
         path: '/register',
         name: 'register',
         builder: (context, state) => const RegisterPage(),
+      ),
+
+      // Personal Registration
+      GoRoute(
+        path: '/personal-registration',
+        name: 'personal-registration',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return PersonalRegistrationPage(userData: extra ?? {});
+        },
+      ),
+
+      // Commercial Registration
+      GoRoute(
+        path: '/commercial-registration',
+        name: 'commercial-registration',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return CommercialRegistrationPage(userData: extra ?? {});
+        },
+      ),
+
+      // Factory Registration
+      GoRoute(
+        path: '/factory-registration',
+        name: 'factory-registration',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return FactoryRegistrationPage(userData: extra ?? {});
+        },
       ),
 
       // Forgot Password
