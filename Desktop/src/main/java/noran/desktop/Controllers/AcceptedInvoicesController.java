@@ -1,5 +1,7 @@
 package noran.desktop.Controllers;
 
+import noran.desktop.Utils.AlertUtils;
+
 import com.ibm.icu.text.ArabicShaping;
 import com.ibm.icu.text.ArabicShapingException;
 import com.ibm.icu.text.Bidi;
@@ -34,6 +36,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.scene.layout.VBox;
 import noran.desktop.AppSession;
 import noran.desktop.Database.MongoConnection;
 import org.bson.Document;
@@ -48,15 +51,25 @@ import java.util.List;
 
 public class AcceptedInvoicesController {
 
-    @FXML private TableView<AcceptedInvoiceModel> acceptedInvoicesTable;
-    @FXML private TableColumn<AcceptedInvoiceModel, String> colInvoiceNumber;
-    @FXML private TableColumn<AcceptedInvoiceModel, String> colClientName;
-    @FXML private TableColumn<AcceptedInvoiceModel, String> colTotalAmount;
-    @FXML private TableColumn<AcceptedInvoiceModel, String> colDate;
-    @FXML private TableColumn<AcceptedInvoiceModel, Void> colActions;
+    @FXML
+    private TableView<AcceptedInvoiceModel> acceptedInvoicesTable;
+    @FXML
+    private TableColumn<AcceptedInvoiceModel, String> colInvoiceNumber;
+    @FXML
+    private TableColumn<AcceptedInvoiceModel, String> colClientName;
+    @FXML
+    private TableColumn<AcceptedInvoiceModel, String> colTotalAmount;
+    @FXML
+    private TableColumn<AcceptedInvoiceModel, String> colDate;
+    @FXML
+    private TableColumn<AcceptedInvoiceModel, Void> colActions;
 
-    @FXML private SidebarController sidebarController;
-    @FXML private TopBarController topBarController;
+    @FXML
+    private SidebarController sidebarController;
+    @FXML
+    private VBox sidebar;
+    @FXML
+    private TopBarController topBarController;
 
     private final ObservableList<AcceptedInvoiceModel> invoiceList = FXCollections.observableArrayList();
 
@@ -67,8 +80,10 @@ public class AcceptedInvoicesController {
 
         if (topBarController != null) {
             topBarController.setPageTitle("الفواتير المقبولة");
+            topBarController.setSidebar(sidebar);
             User u = AppSession.getInstance().getCurrentUser();
-            if(u != null) topBarController.setUserData(u.getName(), "ID: " + u.getId());
+            if (u != null)
+                topBarController.setUserData(u.getName(), u.getEmail() != null ? u.getEmail() : "");
         }
     }
 
@@ -81,9 +96,11 @@ public class AcceptedInvoicesController {
         colActions.setCellFactory(param -> new TableCell<>() {
             private final Button viewBtn = new Button("عرض PDF");
             {
-                viewBtn.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-background-radius: 6; -fx-font-weight: bold;");
+                viewBtn.setStyle(
+                        "-fx-background-color: #28a745; -fx-text-fill: white; -fx-background-radius: 6; -fx-font-weight: bold;");
                 viewBtn.setCursor(javafx.scene.Cursor.HAND);
             }
+
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
@@ -101,6 +118,9 @@ public class AcceptedInvoicesController {
     }
 
     private void loadAcceptedInvoices() {
+        // Show loading indicator
+        acceptedInvoicesTable.setPlaceholder(new javafx.scene.control.Label("جاري تحميل البيانات..."));
+
         invoiceList.clear();
         try {
             MongoDatabase db = MongoConnection.getDatabase();
@@ -130,14 +150,19 @@ public class AcceptedInvoicesController {
                 if (items != null) {
                     for (Document item : items) {
                         double price = getDoubleSafe(item, "itemPrice");
-                        if ("USD".equalsIgnoreCase(item.getString("currencyType"))) sumUSD += price;
-                        else sumEGP += price;
+                        if ("USD".equalsIgnoreCase(item.getString("currencyType")))
+                            sumUSD += price;
+                        else
+                            sumEGP += price;
                     }
                 }
                 StringBuilder totalStr = new StringBuilder();
-                if (sumEGP > 0) totalStr.append(String.format("%.2f EGP", sumEGP));
-                if (sumEGP > 0 && sumUSD > 0) totalStr.append(" + ");
-                if (sumUSD > 0) totalStr.append(String.format("%.2f USD", sumUSD));
+                if (sumEGP > 0)
+                    totalStr.append(String.format("%.2f EGP", sumEGP));
+                if (sumEGP > 0 && sumUSD > 0)
+                    totalStr.append(" + ");
+                if (sumUSD > 0)
+                    totalStr.append(String.format("%.2f USD", sumUSD));
 
                 invoiceList.add(new AcceptedInvoiceModel(invNum, clientName, totalStr.toString(), dateStr, doc));
             }
@@ -153,7 +178,8 @@ public class AcceptedInvoicesController {
         chooser.setInitialFileName("فاتورة_" + invoice.getInvoiceNumber() + ".pdf");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
         File file = chooser.showSaveDialog(null);
-        if (file == null) return;
+        if (file == null)
+            return;
 
         try {
             PdfWriter writer = new PdfWriter(file);
@@ -166,19 +192,23 @@ public class AcceptedInvoicesController {
             String fontPath = "C:/Windows/Fonts/arial.ttf";
             PdfFont font = PdfFontFactory.createFont(fontPath, PdfEncodings.IDENTITY_H);
 
-            document.add(new Paragraph(shapeArabic("فاتورة رسمية")).setFont(font).setFontSize(24).setBold().setTextAlignment(TextAlignment.CENTER));
+            document.add(new Paragraph(shapeArabic("فاتورة رسمية")).setFont(font).setFontSize(24).setBold()
+                    .setTextAlignment(TextAlignment.CENTER));
             document.add(new Paragraph("\n"));
             document.add(new Paragraph(shapeArabic("رقم الفاتورة: " + invoice.getInvoiceNumber())).setFont(font));
             document.add(new Paragraph(shapeArabic("العميل: " + invoice.getClientName())).setFont(font));
             document.add(new Paragraph("\n"));
 
-            Table table = new Table(UnitValue.createPercentArray(new float[]{4, 2, 2})).useAllAvailableWidth();
+            Table table = new Table(UnitValue.createPercentArray(new float[] { 4, 2, 2 })).useAllAvailableWidth();
             table.setTextAlignment(TextAlignment.RIGHT);
             table.setProperty(Property.BASE_DIRECTION, BaseDirection.RIGHT_TO_LEFT);
 
-            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("البند")).setFont(font).setBold().setBackgroundColor(ColorConstants.LIGHT_GRAY)));
-            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("السعر")).setFont(font).setBold().setBackgroundColor(ColorConstants.LIGHT_GRAY)));
-            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("العملة")).setFont(font).setBold().setBackgroundColor(ColorConstants.LIGHT_GRAY)));
+            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("البند")).setFont(font).setBold()
+                    .setBackgroundColor(ColorConstants.LIGHT_GRAY)));
+            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("السعر")).setFont(font).setBold()
+                    .setBackgroundColor(ColorConstants.LIGHT_GRAY)));
+            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("العملة")).setFont(font).setBold()
+                    .setBackgroundColor(ColorConstants.LIGHT_GRAY)));
 
             List<Document> items = invoice.getSourceDoc().getList("invoiceItems", Document.class);
             if (items != null) {
@@ -198,11 +228,11 @@ public class AcceptedInvoicesController {
                     .setFont(font).setFontSize(16).setBold().setTextAlignment(TextAlignment.RIGHT));
 
             document.close();
-            new Alert(Alert.AlertType.INFORMATION, "تم حفظ PDF بنجاح").show();
+            AlertUtils.showSuccess("تم بنجاح", "تم حفظ PDF بنجاح");
 
         } catch (Exception e) {
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "فشل إنشاء PDF: " + e.getMessage()).show();
+            AlertUtils.showError("خطأ", "فشل إنشاء PDF: " + e.getMessage());
         }
     }
 
@@ -215,7 +245,8 @@ public class AcceptedInvoicesController {
     }
 
     private String shapeArabic(String text) {
-        if (text == null) return "";
+        if (text == null)
+            return "";
         try {
             ArabicShaping shaper = new ArabicShaping(ArabicShaping.LETTERS_SHAPE);
             String shaped = shaper.shape(text);
@@ -226,14 +257,16 @@ public class AcceptedInvoicesController {
         }
     }
 
-    @FXML public void goBack(ActionEvent e) throws IOException { navigate(e, "/noran/desktop/client-data-invoice.fxml"); }
+    @FXML
+    public void goBack(ActionEvent e) throws IOException {
+        navigate(e, "/noran/desktop/client-data-invoice.fxml");
+    }
 
     private void navigate(ActionEvent event, String fxml) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
         Parent root = loader.load();
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(new Scene(root));
-        stage.show();
+        stage.getScene().setRoot(root);
     }
 
     public static class AcceptedInvoiceModel {
@@ -243,7 +276,8 @@ public class AcceptedInvoicesController {
         private final String createdAt;
         private final Document sourceDoc;
 
-        public AcceptedInvoiceModel(String invoiceNumber, String clientName, String totalAmount, String createdAt, Document sourceDoc) {
+        public AcceptedInvoiceModel(String invoiceNumber, String clientName, String totalAmount, String createdAt,
+                Document sourceDoc) {
             this.invoiceNumber = invoiceNumber;
             this.clientName = clientName;
             this.totalAmount = totalAmount;
@@ -251,10 +285,29 @@ public class AcceptedInvoicesController {
             this.sourceDoc = sourceDoc;
         }
 
-        public String getInvoiceNumber() { return invoiceNumber; }
-        public String getClientName() { return clientName; }
-        public String getTotalAmount() { return totalAmount; }
-        public String getCreatedAt() { return createdAt; }
-        public Document getSourceDoc() { return sourceDoc; }
+        public String getInvoiceNumber() {
+            return invoiceNumber;
+        }
+
+        public String getClientName() {
+            return clientName;
+        }
+
+        public String getTotalAmount() {
+            return totalAmount;
+        }
+
+        public String getCreatedAt() {
+            return createdAt;
+        }
+
+        public Document getSourceDoc() {
+            return sourceDoc;
+        }
+    }
+
+    @FXML
+    public void refresh(ActionEvent e) {
+        loadAcceptedInvoices();
     }
 }

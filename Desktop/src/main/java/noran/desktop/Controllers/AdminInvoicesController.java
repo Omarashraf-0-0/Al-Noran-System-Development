@@ -1,5 +1,7 @@
 package noran.desktop.Controllers;
 
+import noran.desktop.Utils.AlertUtils;
+
 // JavaFX Imports
 import com.itextpdf.layout.element.Cell;
 import javafx.beans.property.SimpleStringProperty;
@@ -63,19 +65,33 @@ import java.util.List;
 
 public class AdminInvoicesController {
 
-    @FXML private TableView<InvoiceAdminModel> adminInvoicesTable;
-    @FXML private TableColumn<InvoiceAdminModel, String> colInvoiceNumber;
-    @FXML private TableColumn<InvoiceAdminModel, String> colClientName;
-    @FXML private TableColumn<InvoiceAdminModel, String> colTotal;
-    @FXML private TableColumn<InvoiceAdminModel, String> colDate;
-    @FXML private TableColumn<InvoiceAdminModel, String> colStatus;
-    @FXML private TableColumn<InvoiceAdminModel, Void> colActions;
-    @FXML private ComboBox<String> statusFilter;
+    @FXML
+    private TableView<InvoiceAdminModel> adminInvoicesTable;
+    @FXML
+    private TableColumn<InvoiceAdminModel, String> colInvoiceNumber;
+    @FXML
+    private TableColumn<InvoiceAdminModel, String> colClientName;
+    @FXML
+    private TableColumn<InvoiceAdminModel, String> colTotal;
+    @FXML
+    private TableColumn<InvoiceAdminModel, String> colDate;
+    @FXML
+    private TableColumn<InvoiceAdminModel, String> colStatus;
+    @FXML
+    private TableColumn<InvoiceAdminModel, Void> colActions;
+    @FXML
+    private ComboBox<String> statusFilter;
 
-    @FXML private SidebarController sidebarController;
-    @FXML private TopBarController topBarController;
+    @FXML
+    private SidebarController sidebarController;
+    @FXML
+    private VBox sidebar;
+    @FXML
+    private TopBarController topBarController;
 
     private final ObservableList<InvoiceAdminModel> invoicesList = FXCollections.observableArrayList();
+    private javafx.collections.transformation.FilteredList<InvoiceAdminModel> filteredData;
+    private String currentSearchText = "";
 
     @FXML
     private void initialize() {
@@ -84,19 +100,100 @@ public class AdminInvoicesController {
         statusFilter.setValue("الكل");
         statusFilter.setItems(FXCollections.observableArrayList("الكل", "في انتظار الموافقة", "مقبولة", "مرفوضة"));
         statusFilter.valueProperty().addListener((obs, old, newVal) -> refreshTable());
+        styleComboBox(statusFilter);
+
+        // Setup filtered list for search
+        filteredData = new javafx.collections.transformation.FilteredList<>(invoicesList, p -> true);
+        javafx.collections.transformation.SortedList<InvoiceAdminModel> sortedData = new javafx.collections.transformation.SortedList<>(
+                filteredData);
+        sortedData.comparatorProperty().bind(adminInvoicesTable.comparatorProperty());
+        adminInvoicesTable.setItems(sortedData);
 
         refreshTable();
 
-        if (sidebarController != null) sidebarController.setActivePage("invoice completion");
+        if (sidebarController != null)
+            sidebarController.setActivePage("invoice completion");
         setupTopBar();
+    }
+
+    // Helper method to style ComboBox with modern look
+    private void styleComboBox(ComboBox<?> comboBox) {
+        String defaultStyle = "-fx-background-color: white; " +
+                "-fx-border-color: #d1d5db; " +
+                "-fx-border-radius: 8; " +
+                "-fx-background-radius: 8; " +
+                "-fx-padding: 6 12; " +
+                "-fx-font-size: 14px; " +
+                "-fx-cursor: hand;";
+
+        String focusedStyle = "-fx-background-color: white; " +
+                "-fx-border-color: #1ba3b6; " +
+                "-fx-border-width: 2; " +
+                "-fx-border-radius: 8; " +
+                "-fx-background-radius: 8; " +
+                "-fx-padding: 6 12; " +
+                "-fx-font-size: 14px; " +
+                "-fx-cursor: hand; " +
+                "-fx-effect: dropshadow(gaussian, rgba(27, 163, 182, 0.25), 8, 0, 0, 2);";
+
+        comboBox.setStyle(defaultStyle);
+
+        comboBox.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            comboBox.setStyle(isFocused ? focusedStyle : defaultStyle);
+        });
+
+        comboBox.setOnMouseEntered(e -> {
+            if (!comboBox.isFocused()) {
+                comboBox.setStyle(
+                        "-fx-background-color: white; " +
+                                "-fx-border-color: #1ba3b6; " +
+                                "-fx-border-radius: 8; " +
+                                "-fx-background-radius: 8; " +
+                                "-fx-padding: 6 12; " +
+                                "-fx-font-size: 14px; " +
+                                "-fx-cursor: hand;");
+            }
+        });
+
+        comboBox.setOnMouseExited(e -> {
+            if (!comboBox.isFocused()) {
+                comboBox.setStyle(defaultStyle);
+            }
+        });
     }
 
     private void setupTopBar() {
         if (topBarController != null) {
             topBarController.setPageTitle("تخليص الفواتير");
+            topBarController.setSidebar(sidebar);
+            topBarController.setSearchPlaceholder("البحث برقم الفاتورة، اسم العميل، أو التاريخ...");
             User u = AppSession.getInstance().getCurrentUser();
-            if(u != null) topBarController.setUserData(u.getName(), "ID: " + u.getId());
+            if (u != null)
+                topBarController.setUserData(u.getName(), u.getEmail() != null ? u.getEmail() : "");
+
+            // Connect search
+            topBarController.setOnSearchAction(searchText -> {
+                currentSearchText = searchText;
+                applySearchFilter();
+            });
         }
+    }
+
+    private void applySearchFilter() {
+        filteredData.setPredicate(invoice -> {
+            if (currentSearchText == null || currentSearchText.isEmpty()) {
+                return true;
+            }
+            String lower = currentSearchText.toLowerCase();
+            // Search by invoice number, client name, or date
+            boolean matchesInvoice = invoice.getInvoiceNumber() != null &&
+                    invoice.getInvoiceNumber().toLowerCase().contains(lower);
+            boolean matchesClient = invoice.getClientName() != null &&
+                    invoice.getClientName().toLowerCase().contains(lower);
+            boolean matchesDate = invoice.getDate() != null &&
+                    invoice.getDate().contains(lower);
+            return matchesInvoice || matchesClient || matchesDate;
+        });
     }
 
     private void setupColumns() {
@@ -110,7 +207,8 @@ public class AdminInvoicesController {
             private final Button actionBtn = new Button("عرض / اتخاذ إجراء");
 
             {
-                actionBtn.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-padding: 6 12; -fx-background-radius: 5; -fx-font-weight: bold;");
+                actionBtn.setStyle(
+                        "-fx-background-color: #007bff; -fx-text-fill: white; -fx-padding: 6 12; -fx-background-radius: 5; -fx-font-weight: bold;");
                 actionBtn.setCursor(javafx.scene.Cursor.HAND);
             }
 
@@ -126,74 +224,103 @@ public class AdminInvoicesController {
                 }
             }
         });
-
-        adminInvoicesTable.setItems(invoicesList);
     }
 
     @FXML
     private void refreshTable() {
+        // Show loading indicator
+        adminInvoicesTable.setPlaceholder(new javafx.scene.control.Label("جاري تحميل البيانات..."));
         invoicesList.clear();
+
         String filterStatus = statusFilter.getValue();
 
-        try {
-            MongoDatabase db = MongoConnection.getDatabase();
-            MongoCollection<Document> collection = db.getCollection("invoices");
+        javafx.concurrent.Task<List<InvoiceAdminModel>> loadTask = new javafx.concurrent.Task<>() {
+            @Override
+            protected List<InvoiceAdminModel> call() {
+                List<InvoiceAdminModel> loadedList = new java.util.ArrayList<>();
+                try {
+                    MongoDatabase db = MongoConnection.getDatabase();
+                    MongoCollection<Document> collection = db.getCollection("invoices");
 
-            List<Bson> pipeline = new ArrayList<>();
+                    List<Bson> pipeline = new ArrayList<>();
 
-            // 1. Join with Users
-            pipeline.add(Aggregates.lookup("users", "userId", "_id", "userDetails"));
+                    // 1. Join with Users
+                    pipeline.add(Aggregates.lookup("users", "userId", "_id", "userDetails"));
 
-            // 2. Filter Status
-            if (filterStatus != null && !"الكل".equals(filterStatus)) {
-                pipeline.add(Aggregates.match(Filters.eq("status", filterStatus)));
-            }
-
-            // 3. Sort
-            pipeline.add(Aggregates.sort(Sorts.descending("createdAt")));
-
-            for (Document doc : collection.aggregate(pipeline)) {
-                String invNum = doc.getString("invoiceNumber");
-                String status = doc.getString("status");
-
-                Date dateObj = doc.getDate("createdAt");
-                String dateStr = dateObj != null ? new SimpleDateFormat("dd/MM/yyyy").format(dateObj) : "N/A";
-
-                String clientName = "غير معروف";
-                List<Document> users = doc.getList("userDetails", Document.class);
-                if (users != null && !users.isEmpty()) {
-                    Document user = users.get(0);
-                    clientName = user.getString("fullname");
-                    if (clientName == null) clientName = user.getString("username");
-                }
-
-                // Calculate Totals form Items Array
-                List<Document> items = doc.getList("invoiceItems", Document.class);
-                double sumEGP = 0;
-                double sumUSD = 0;
-
-                if (items != null) {
-                    for (Document item : items) {
-                        double price = getDoubleSafe(item, "itemPrice");
-                        String curr = item.getString("currencyType");
-                        if ("USD".equalsIgnoreCase(curr)) sumUSD += price;
-                        else sumEGP += price;
+                    // 2. Filter Status
+                    if (filterStatus != null && !"الكل".equals(filterStatus)) {
+                        pipeline.add(Aggregates.match(Filters.eq("status", filterStatus)));
                     }
+
+                    // 3. Sort
+                    pipeline.add(Aggregates.sort(Sorts.descending("createdAt")));
+
+                    for (Document doc : collection.aggregate(pipeline)) {
+                        String invNum = doc.getString("invoiceNumber");
+                        String status = doc.getString("status");
+
+                        Date dateObj = doc.getDate("createdAt");
+                        String dateStr = dateObj != null ? new SimpleDateFormat("dd/MM/yyyy").format(dateObj) : "N/A";
+
+                        String clientName = "غير معروف";
+                        List<Document> users = doc.getList("userDetails", Document.class);
+                        if (users != null && !users.isEmpty()) {
+                            Document user = users.get(0);
+                            clientName = user.getString("fullname");
+                            if (clientName == null)
+                                clientName = user.getString("username");
+                        }
+
+                        // Calculate Totals from Items Array
+                        List<Document> items = doc.getList("invoiceItems", Document.class);
+                        double sumEGP = 0;
+                        double sumUSD = 0;
+
+                        if (items != null) {
+                            for (Document item : items) {
+                                double price = getDoubleSafe(item, "itemPrice");
+                                String curr = item.getString("currencyType");
+                                if ("USD".equalsIgnoreCase(curr))
+                                    sumUSD += price;
+                                else
+                                    sumEGP += price;
+                            }
+                        }
+
+                        StringBuilder totalStr = new StringBuilder();
+                        if (sumEGP > 0)
+                            totalStr.append(String.format("%.2f EGP", sumEGP));
+                        if (sumEGP > 0 && sumUSD > 0)
+                            totalStr.append(" + ");
+                        if (sumUSD > 0)
+                            totalStr.append(String.format("%.2f USD", sumUSD));
+                        if (totalStr.length() == 0)
+                            totalStr.append("0.00");
+
+                        loadedList.add(
+                                new InvoiceAdminModel(invNum, clientName, totalStr.toString(), dateStr, status, doc));
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    javafx.application.Platform.runLater(
+                            () -> AlertUtils.showError("خطأ", "خطأ في تحميل البيانات: " + e.getMessage()));
                 }
-
-                StringBuilder totalStr = new StringBuilder();
-                if (sumEGP > 0) totalStr.append(String.format("%.2f EGP", sumEGP));
-                if (sumEGP > 0 && sumUSD > 0) totalStr.append(" + ");
-                if (sumUSD > 0) totalStr.append(String.format("%.2f USD", sumUSD));
-                if (totalStr.length() == 0) totalStr.append("0.00");
-
-                invoicesList.add(new InvoiceAdminModel(invNum, clientName, totalStr.toString(), dateStr, status, doc));
+                return loadedList;
             }
+        };
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "خطأ في تحميل البيانات: " + e.getMessage()).show();
-        }
+        loadTask.setOnSucceeded(event -> {
+            invoicesList.setAll(loadTask.getValue());
+            if (invoicesList.isEmpty()) {
+                adminInvoicesTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بيانات"));
+            }
+        });
+
+        loadTask.setOnFailed(event -> {
+            adminInvoicesTable.setPlaceholder(new javafx.scene.control.Label("خطأ في تحميل البيانات"));
+        });
+
+        new Thread(loadTask).start();
     }
 
     private void showInvoiceDetailsDialog(InvoiceAdminModel invoice) {
@@ -226,7 +353,8 @@ public class AdminInvoicesController {
         itemsTable.getColumns().addAll(colItem, colPrice);
 
         List<Document> items = invoice.getSourceDoc().getList("invoiceItems", Document.class);
-        if (items != null) itemsTable.setItems(FXCollections.observableArrayList(items));
+        if (items != null)
+            itemsTable.setItems(FXCollections.observableArrayList(items));
 
         content.getChildren().addAll(new Label("بنود الفاتورة:"), itemsTable);
 
@@ -273,15 +401,14 @@ public class AdminInvoicesController {
 
             collection.updateOne(
                     Filters.eq("invoiceNumber", invoice.getInvoiceNumber()),
-                    Updates.set("status", newStatus)
-            );
+                    Updates.set("status", newStatus));
 
-            new Alert(Alert.AlertType.INFORMATION, "تم تحديث الحالة إلى: " + newStatus).show();
+            AlertUtils.showSuccess("تم بنجاح", "تم تحديث الحالة إلى: " + newStatus);
             refreshTable();
 
         } catch (Exception e) {
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "فشل التحديث: " + e.getMessage()).show();
+            AlertUtils.showError("خطأ", "فشل التحديث: " + e.getMessage());
         }
     }
 
@@ -290,7 +417,8 @@ public class AdminInvoicesController {
         chooser.setInitialFileName("فاتورة_" + invoice.getInvoiceNumber() + ".pdf");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
         File file = chooser.showSaveDialog(null);
-        if (file == null) return;
+        if (file == null)
+            return;
 
         try {
             PdfWriter writer = new PdfWriter(file);
@@ -305,7 +433,8 @@ public class AdminInvoicesController {
             PdfFont font = PdfFontFactory.createFont(fontPath, PdfEncodings.IDENTITY_H);
 
             // Header
-            document.add(new Paragraph(shapeArabic("فاتورة رسمية")).setFont(font).setFontSize(24).setBold().setTextAlignment(TextAlignment.CENTER));
+            document.add(new Paragraph(shapeArabic("فاتورة رسمية")).setFont(font).setFontSize(24).setBold()
+                    .setTextAlignment(TextAlignment.CENTER));
             document.add(new Paragraph("\n"));
             document.add(new Paragraph(shapeArabic("رقم الفاتورة: " + invoice.getInvoiceNumber())).setFont(font));
             document.add(new Paragraph(shapeArabic("العميل: " + invoice.getClientName())).setFont(font));
@@ -313,13 +442,16 @@ public class AdminInvoicesController {
             document.add(new Paragraph("\n"));
 
             // Table
-            Table table = new Table(UnitValue.createPercentArray(new float[]{4, 2, 2})).useAllAvailableWidth();
+            Table table = new Table(UnitValue.createPercentArray(new float[] { 4, 2, 2 })).useAllAvailableWidth();
             table.setTextAlignment(TextAlignment.RIGHT);
             table.setProperty(Property.BASE_DIRECTION, BaseDirection.RIGHT_TO_LEFT);
 
-            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("البند")).setFont(font).setBold().setBackgroundColor(ColorConstants.LIGHT_GRAY)));
-            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("السعر")).setFont(font).setBold().setBackgroundColor(ColorConstants.LIGHT_GRAY)));
-            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("العملة")).setFont(font).setBold().setBackgroundColor(ColorConstants.LIGHT_GRAY)));
+            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("البند")).setFont(font).setBold()
+                    .setBackgroundColor(ColorConstants.LIGHT_GRAY)));
+            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("السعر")).setFont(font).setBold()
+                    .setBackgroundColor(ColorConstants.LIGHT_GRAY)));
+            table.addHeaderCell(new Cell().add(new Paragraph(shapeArabic("العملة")).setFont(font).setBold()
+                    .setBackgroundColor(ColorConstants.LIGHT_GRAY)));
 
             List<Document> items = invoice.getSourceDoc().getList("invoiceItems", Document.class);
             if (items != null) {
@@ -342,11 +474,11 @@ public class AdminInvoicesController {
                     .setTextAlignment(TextAlignment.RIGHT));
 
             document.close();
-            new Alert(Alert.AlertType.INFORMATION, "تم حفظ PDF بنجاح").show();
+            AlertUtils.showSuccess("تم بنجاح", "تم حفظ PDF بنجاح");
 
         } catch (Exception e) {
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "فشل إنشاء PDF: " + e.getMessage()).show();
+            AlertUtils.showError("خطأ", "فشل إنشاء PDF: " + e.getMessage());
         }
     }
 
@@ -360,7 +492,8 @@ public class AdminInvoicesController {
     }
 
     private String shapeArabic(String text) {
-        if (text == null) return "";
+        if (text == null)
+            return "";
         try {
             ArabicShaping shaper = new ArabicShaping(ArabicShaping.LETTERS_SHAPE);
             String shaped = shaper.shape(text);
@@ -389,22 +522,45 @@ public class AdminInvoicesController {
             this.sourceDoc = source;
         }
 
-        public String getInvoiceNumber() { return invoiceNumber; }
-        public String getClientName() { return clientName; }
-        public String getTotalDisplay() { return totalDisplay; }
-        public String getDate() { return date; }
-        public String getStatus() { return status; }
-        public Document getSourceDoc() { return sourceDoc; }
+        public String getInvoiceNumber() {
+            return invoiceNumber;
+        }
+
+        public String getClientName() {
+            return clientName;
+        }
+
+        public String getTotalDisplay() {
+            return totalDisplay;
+        }
+
+        public String getDate() {
+            return date;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public Document getSourceDoc() {
+            return sourceDoc;
+        }
     }
 
-    @FXML public void onDashboardClick(ActionEvent e) throws IOException { navigate(e, "/noran/desktop/dashboard.fxml"); }
-    @FXML public void refresh(ActionEvent e) { refreshTable(); }
+    @FXML
+    public void onDashboardClick(ActionEvent e) throws IOException {
+        navigate(e, "/noran/desktop/dashboard.fxml");
+    }
+
+    @FXML
+    public void refresh(ActionEvent e) {
+        refreshTable();
+    }
 
     private void navigate(ActionEvent event, String fxml) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
         Parent root = loader.load();
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        stage.setScene(new Scene(root));
-        stage.show();
+        stage.getScene().setRoot(root);
     }
 }

@@ -3,47 +3,39 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox fx:id="sidebar" alignment="TOP_RIGHT" prefWidth="260" spacing="14"
-      style="-fx-background-color: white; -fx-padding: 18;"
-      xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="noran.desktop.Controllers.SidebarController">
+<VBox fx:id="sidebar" alignment="TOP_RIGHT" prefWidth="260" spacing="14" style="-fx-background-color: white; -fx-padding: 18;" stylesheets="@sidebar.css" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.SidebarController">
 
-    <VBox alignment="TOP_RIGHT" spacing="16">
-        <Button fx:id="dashboardBtn" maxWidth="Infinity" onAction="#navigateToDashboard"
-                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12; -fx-background-radius: 8;"
-                text="لوحة التحكم" textAlignment="RIGHT" />
+    <VBox alignment="TOP_RIGHT" spacing="8">
+        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
+            <Button fx:id="dashboardBtn" maxWidth="Infinity" onAction="#navigateToDashboard" styleClass="sidebar-button" text="لوحة التحكم" HBox.hgrow="ALWAYS" />
+        </HBox>
 
-<!--        <Button fx:id="currentOpsBtn" maxWidth="Infinity"-->
-<!--                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"-->
-<!--                text="العمليات الحالية" textAlignment="RIGHT" />-->
+        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
+            <Button fx:id="invoiceCompletionBtn" maxWidth="Infinity" onAction="#navigateToTa5lees" styleClass="sidebar-button" text="تخليص الفواتير" HBox.hgrow="ALWAYS" />
+        </HBox>
 
-        <Button fx:id="invoiceCompletionBtn" maxWidth="Infinity" onAction="#navigateToTa5lees"
-                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
-                text="تخليص الفواتير " />
+        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
+            <Button fx:id="clientsBtn" maxWidth="Infinity" onAction="#navigateToClients" styleClass="sidebar-button" text="إدارة العملاء" HBox.hgrow="ALWAYS" />
+        </HBox>
 
-        <Button fx:id="clientsBtn" maxWidth="Infinity" onAction="#navigateToClients"
-                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
-                text="إدارة العملاء" />
+        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
+            <Button fx:id="invoicesBtn" maxWidth="Infinity" onAction="#navigateToInvoices" styleClass="sidebar-button" text="إدارة الفواتير" HBox.hgrow="ALWAYS" />
+        </HBox>
 
-        <Button fx:id="invoicesBtn" maxWidth="Infinity" onAction="#navigateToInvoices"
-                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
-                text="إدارة الفواتير" />
+        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
+            <Button fx:id="addInvoicesBtn" maxWidth="Infinity" onAction="#navigateToAddInvoices" styleClass="sidebar-button" text="اضافه فاتورة جديدة" HBox.hgrow="ALWAYS" />
+        </HBox>
 
-        <Button fx:id="addInvoicesBtn" maxWidth="Infinity" onAction="#navigateToAddInvoices"
-                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
-                text="اضافه فاتورة جديدة" />
+        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
+            <Button fx:id="employeesBtn" maxWidth="Infinity" onAction="#navigateToEmployees" styleClass="sidebar-button" text="إدارة الصلاحيات" HBox.hgrow="ALWAYS" />
+        </HBox>
 
-        <Button fx:id="employeesBtn" maxWidth="Infinity" onAction="#navigateToEmployees"
-                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
-                text="إدارة الصلاحيات" />
+        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
+            <Button fx:id="shipmentsBtn" maxWidth="Infinity" onAction="#shipments_management" styleClass="sidebar-button" text="إدارة شحنات الاستيراد" HBox.hgrow="ALWAYS" />
+        </HBox>
 
-        <Button fx:id="shipmentsBtn" maxWidth="Infinity" onAction="#shipments_management"
-                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"
-                text="إدارة الشحنات" />
-
-
-<!--        <Button fx:id="archiveBtn" maxWidth="Infinity"-->
-<!--                style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-font-size: 13; -fx-alignment: CENTER_RIGHT; -fx-padding: 8 12;"-->
-<!--                text="أرشيف الملفات" />-->
+        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
+            <Button fx:id="exportShipmentsBtn" maxWidth="Infinity" onAction="#navigateToExportShipments" styleClass="sidebar-button" text="إدارة شحنات التصدير" HBox.hgrow="ALWAYS" />
+        </HBox>
     </VBox>
 </VBox>

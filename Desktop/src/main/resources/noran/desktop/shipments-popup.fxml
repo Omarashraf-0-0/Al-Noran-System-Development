@@ -8,6 +8,10 @@
 
 <VBox alignment="CENTER" prefHeight="520.0" prefWidth="397.0" spacing="12" style="-fx-padding: 18; -fx-background-color: #f7f7f7; -fx-background-radius: 20; -fx-border-radius: 20;" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.ShipmentPopupController">
 
+    <stylesheets>
+        <String fx:value="@combo-style.css" />
+    </stylesheets>
+
     <ImageView fitHeight="120.0" fitWidth="150.0" pickOnBounds="true" preserveRatio="true">
         <image>
             <Image url="@images/invoice-illustration.png" />

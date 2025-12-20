@@ -1,25 +1,17 @@
-package noran.desktop.Controllers;
+package noran.desktop.Utils;
 
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.model.Filters;
 import javafx.animation.FadeTransition;
 import javafx.animation.ScaleTransition;
-import javafx.event.ActionEvent;
-import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -27,113 +19,30 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
-import noran.desktop.Database.MongoConnection;
-import org.bson.Document;
 
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.regex.Pattern;
+/**
+ * Utility class for displaying modern styled alerts throughout the application.
+ * Provides consistent, animated alert dialogs with type-specific styling.
+ */
+public class AlertUtils {
 
-public class ForgotPasswordController {
-
-    @FXML
-    private TextField emailField;
-
-    private enum AlertType {
+    public enum AlertType {
         SUCCESS, ERROR, WARNING, INFO
     }
 
-    @FXML
-    private void onSendCodeClicked(ActionEvent event) {
-        String email = emailField.getText().trim();
-
-        if (email.isEmpty()) {
-            showCustomAlert("خطأ", "يرجى إدخال البريد الإلكتروني", AlertType.ERROR);
-            return;
-        }
-
-        if (!isValidEmail(email)) {
-            showCustomAlert("بريد غير صالح", "الرجاء إدخال بريد إلكتروني صالح", AlertType.WARNING);
-            return;
-        }
-
-        if (!isEmailInDatabase(email)) {
-            showCustomAlert("خطأ", "البريد الإلكتروني غير موجود", AlertType.ERROR);
-            return;
-        }
-
-        try {
-            boolean success = sendOtpRequest(email);
-            if (success) {
-                showCustomAlert("تم الإرسال ✅", "تم إرسال كود إعادة التعيين إلى البريد الإلكتروني", AlertType.SUCCESS);
-                goToOTPVerificationPage(event, email);
-            } else {
-                showCustomAlert("خطأ", "فشل في إرسال الكود. يرجى المحاولة لاحقًا.", AlertType.ERROR);
-            }
-        } catch (IOException e) {
-            showCustomAlert("خطأ في الاتصال", "تعذر الاتصال بخادم OTP. تأكد أن الخادم يعمل.", AlertType.ERROR);
-        }
-    }
-
-    private boolean isEmailInDatabase(String email) {
-        MongoCollection<Document> usersCollection = MongoConnection.getDatabase().getCollection("users");
-        Document user = usersCollection.find(Filters.eq("email", email)).first();
-        return user != null;
-    }
-
-    private boolean sendOtpRequest(String email) throws IOException {
-        URL url = new URL("http://localhost:3500/api/otp/forgotPassword");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-        conn.setDoOutput(true);
-
-        String json = "{\"email\":\"" + email + "\"}";
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(json.getBytes(StandardCharsets.UTF_8));
-        }
-
-        return conn.getResponseCode() == 200;
-    }
-
-    private void goToOTPVerificationPage(ActionEvent event, String email) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/OTPVerification.fxml"));
-            Parent root = loader.load();
-            OTPVerificationController controller = loader.getController();
-            controller.setUserEmail(email);
-            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.show();
-        } catch (IOException e) {
-            showCustomAlert("خطأ", "تعذر فتح صفحة رمز التحقق", AlertType.ERROR);
-        }
-    }
-
-    @FXML
-    private void onBackClicked(ActionEvent event) {
-        try {
-            Parent root = FXMLLoader.load(getClass().getResource("/noran/desktop/login-view-ar.fxml"));
-            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.show();
-        } catch (IOException e) {
-            showCustomAlert("خطأ", "تعذر الرجوع إلى صفحة تسجيل الدخول", AlertType.ERROR);
-        }
-    }
-
-    private boolean isValidEmail(String email) {
-        String regex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
-        return Pattern.matches(regex, email);
-    }
-
-    private void showCustomAlert(String title, String message, AlertType type) {
+    /**
+     * Show a modern styled alert dialog.
+     * 
+     * @param title   The alert title
+     * @param message The alert message
+     * @param type    The type of alert (SUCCESS, ERROR, WARNING, INFO)
+     */
+    public static void show(String title, String message, AlertType type) {
         Stage alertStage = new Stage();
         alertStage.initModality(Modality.APPLICATION_MODAL);
         alertStage.initStyle(StageStyle.TRANSPARENT);
 
+        // Main container with FIXED SIZE for consistency
         VBox container = new VBox(24);
         container.setAlignment(Pos.CENTER);
         container.setPadding(new Insets(40, 50, 40, 50));
@@ -143,12 +52,14 @@ public class ForgotPasswordController {
         container.setMaxWidth(380);
         container.setMinHeight(300);
 
+        // Add shadow effect
         DropShadow shadow = new DropShadow();
         shadow.setColor(Color.rgb(0, 0, 0, 0.35));
         shadow.setRadius(30);
         shadow.setSpread(0.15);
         container.setEffect(shadow);
 
+        // Icon circle with symbol - larger for visibility
         Circle iconCircle = new Circle(50);
         iconCircle.setFill(getIconColor(type));
         iconCircle.setEffect(new DropShadow(15, getIconColor(type).darker()));
@@ -159,10 +70,12 @@ public class ForgotPasswordController {
 
         StackPane iconPane = new StackPane(iconCircle, iconLabel);
 
+        // Title label - larger font
         Label titleLabel = new Label(title);
         titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
         titleLabel.setTextFill(getTitleColor(type));
 
+        // Message label - larger and centered
         Label messageLabel = new Label(message);
         messageLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 18));
         messageLabel.setTextFill(Color.web("#444444"));
@@ -171,6 +84,7 @@ public class ForgotPasswordController {
         messageLabel.setMaxWidth(320);
         messageLabel.setStyle("-fx-text-alignment: center;");
 
+        // OK Button - larger
         Button okBtn = new Button("حسناً");
         okBtn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
         okBtn.setPrefWidth(160);
@@ -188,6 +102,7 @@ public class ForgotPasswordController {
         scene.setFill(Color.TRANSPARENT);
         alertStage.setScene(scene);
 
+        // Animate entrance
         container.setScaleX(0.7);
         container.setScaleY(0.7);
         container.setOpacity(0);
@@ -204,12 +119,29 @@ public class ForgotPasswordController {
         fade.play();
     }
 
-    private String getContainerStyle(AlertType type) {
+    // Convenience methods for each type
+    public static void showSuccess(String title, String message) {
+        show(title, message, AlertType.SUCCESS);
+    }
+
+    public static void showError(String title, String message) {
+        show(title, message, AlertType.ERROR);
+    }
+
+    public static void showWarning(String title, String message) {
+        show(title, message, AlertType.WARNING);
+    }
+
+    public static void showInfo(String title, String message) {
+        show(title, message, AlertType.INFO);
+    }
+
+    private static String getContainerStyle(AlertType type) {
         String borderColor = switch (type) {
-            case SUCCESS -> "#10b981";
-            case ERROR -> "#ef4444";
-            case WARNING -> "#f59e0b";
-            case INFO -> "#3b82f6";
+            case SUCCESS -> "#10b981"; // Modern emerald green
+            case ERROR -> "#ef4444"; // Modern red
+            case WARNING -> "#f59e0b"; // Modern amber/gold yellow
+            case INFO -> "#3b82f6"; // Modern blue
         };
         return "-fx-background-color: linear-gradient(to bottom, #ffffff, #f8f9fa); " +
                 "-fx-background-radius: 24; " +
@@ -218,25 +150,25 @@ public class ForgotPasswordController {
                 "-fx-border-width: 4;";
     }
 
-    private Color getIconColor(AlertType type) {
+    private static Color getIconColor(AlertType type) {
         return switch (type) {
-            case SUCCESS -> Color.web("#10b981");
-            case ERROR -> Color.web("#ef4444");
-            case WARNING -> Color.web("#f59e0b");
-            case INFO -> Color.web("#3b82f6");
+            case SUCCESS -> Color.web("#10b981"); // Emerald
+            case ERROR -> Color.web("#ef4444"); // Red
+            case WARNING -> Color.web("#f59e0b"); // Amber
+            case INFO -> Color.web("#3b82f6"); // Blue
         };
     }
 
-    private Color getTitleColor(AlertType type) {
+    private static Color getTitleColor(AlertType type) {
         return switch (type) {
             case SUCCESS -> Color.web("#059669");
             case ERROR -> Color.web("#dc2626");
-            case WARNING -> Color.web("#d97706");
+            case WARNING -> Color.web("#d97706"); // Darker amber
             case INFO -> Color.web("#2563eb");
         };
     }
 
-    private String getIcon(AlertType type) {
+    private static String getIcon(AlertType type) {
         return switch (type) {
             case SUCCESS -> "✓";
             case ERROR -> "✕";
@@ -245,7 +177,7 @@ public class ForgotPasswordController {
         };
     }
 
-    private String getButtonStyle(AlertType type) {
+    private static String getButtonStyle(AlertType type) {
         String bgColor = switch (type) {
             case SUCCESS -> "#10b981";
             case ERROR -> "#ef4444";
@@ -259,7 +191,7 @@ public class ForgotPasswordController {
                 "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);";
     }
 
-    private String getButtonHoverStyle(AlertType type) {
+    private static String getButtonHoverStyle(AlertType type) {
         String bgColor = switch (type) {
             case SUCCESS -> "#059669";
             case ERROR -> "#dc2626";

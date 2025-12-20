@@ -15,10 +15,11 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="700" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.HelloController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.HelloController">
 
     <stylesheets>
         <String fx:value="@invoices-table.css" />
+        <String fx:value="@combo-style.css" />
     </stylesheets>
 
     <left>
@@ -32,16 +33,17 @@
     <!-- ======= Main Content ======= -->
     <center>
         <VBox spacing="18" style="-fx-padding: 18 24;">
-         <AnchorPane prefHeight="25.0" prefWidth="659.0">
-            <children>
-               <Button fx:id="updateClientBtn1" layoutX="23.0" layoutY="-1.0" onAction="#refresh" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
-               <ImageView fitHeight="47.0" fitWidth="61.0" layoutX="29.0" layoutY="3.0" pickOnBounds="true" preserveRatio="true">
-                  <image>
-                     <Image url="@images/cached.png" />
-                  </image>
-               </ImageView>
-            </children>
-         </AnchorPane>
+         <HBox alignment="CENTER_LEFT">
+            <Button fx:id="refreshBtn" onAction="#refresh" style="-fx-background-color: transparent; -fx-cursor: hand;">
+               <graphic>
+                  <ImageView fitHeight="47.0" fitWidth="61.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@images/cached.png" />
+                     </image>
+                  </ImageView>
+               </graphic>
+            </Button>
+         </HBox>
             <!-- Client Info -->
             <VBox spacing="8" style="-fx-background-color: white; -fx-padding: 18; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);">
                 <HBox spacing="25">

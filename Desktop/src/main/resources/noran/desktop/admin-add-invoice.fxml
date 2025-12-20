@@ -5,7 +5,7 @@
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Tahoma';" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.AdminAddInvoiceController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" style="-fx-font-family: 'Segoe UI', 'Tahoma';" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.AdminAddInvoiceController">
 
     <stylesheets>
         <String fx:value="@invoices-table.css" />
@@ -45,11 +45,11 @@
             <HBox alignment="CENTER_RIGHT" spacing="15">
                 <Button fx:id="addRowBtn" onAction="#addNewRow" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 10 20; -fx-background-radius: 8; -fx-font-weight: bold;" text="إضافة بند جديد +" />
 
-                <Button fx:id="deleteRowBtn" onAction="#deleteSelectedRow" style="-fx-background-color: #dc3545; -fx-text-fill: white; -fx-padding: 10 20; -fx-background-radius: 8;" text="مسح العنصر" />
+                <Button fx:id="deleteRowBtn" onAction="#deleteSelectedRow" style="-fx-background-color: #a40000; -fx-text-fill: white; -fx-padding: 10 20; -fx-background-radius: 8;" text="مسح العنصر" />
 
                 <Region HBox.hgrow="ALWAYS" />
 
-                <Label fx:id="totalLabel" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #d32f2f;" text="المجموع الكلي: 0.00 جنيه" />
+                <Label fx:id="totalLabel" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #a40000;" text="المجموع الكلي: 0.00 جنيه" />
             </HBox>
 
             <!-- Table -->
@@ -70,7 +70,7 @@
 
             <!-- Generate PDF Button -->
             <HBox alignment="CENTER" style="-fx-padding: 20 0 0 0;">
-                <Button onAction="#generatePdf" style="-fx-background-color: #28a745; -fx-text-fill: white; -fx-padding: 14 40; -fx-font-size: 18px;                                -fx-background-radius: 10; -fx-font-weight: bold;" text="إنشاء وتحميل PDF" />
+                <Button onAction="#generatePdf" style="-fx-background-color: #1ba3b6; -fx-text-fill: white; -fx-padding: 14 40; -fx-font-size: 18px;                                -fx-background-radius: 10; -fx-font-weight: bold;" text="إنشاء وتحميل PDF" />
             </HBox>
 
         </VBox>

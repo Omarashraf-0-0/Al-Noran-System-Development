@@ -1,5 +1,7 @@
 package noran.desktop.Controllers;
 
+import noran.desktop.Utils.AlertUtils;
+
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
@@ -21,6 +23,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.scene.layout.VBox;
 import noran.desktop.AppSession;
 import noran.desktop.Database.MongoConnection;
 import noran.desktop.models.Employee;
@@ -35,18 +38,35 @@ import java.util.List;
 
 public class EmployeeManagementController {
 
-    @FXML private TableView<Employee> clientTable;
-    @FXML private TableColumn<Employee, String> colName;
-    @FXML private TableColumn<Employee, String> colEmail;
-    @FXML private TableColumn<Employee, String> colPhone;
-    @FXML private TableColumn<Employee, String> colType;
-    @FXML private TableColumn<Employee, String> colRank;
+    @FXML
+    private TableView<Employee> clientTable;
+    @FXML
+    private TableColumn<Employee, String> colName;
+    @FXML
+    private TableColumn<Employee, String> colEmail;
+    @FXML
+    private TableColumn<Employee, String> colPhone;
+    @FXML
+    private TableColumn<Employee, String> colType;
+    @FXML
+    private TableColumn<Employee, String> colRank;
+    @FXML
+    private javafx.scene.control.ComboBox<String> employeeTypeFilter;
+    @FXML
+    private javafx.scene.control.ComboBox<String> employeeStatusFilter;
 
     private final ObservableList<Employee> employees = FXCollections.observableArrayList();
     private FilteredList<Employee> filteredData;
 
-    @FXML private SidebarController sidebarController;
-    @FXML private TopBarController topBarController;
+    // Track current search text for combined filtering
+    private String currentSearchText = "";
+
+    @FXML
+    private SidebarController sidebarController;
+    @FXML
+    private VBox sidebar;
+    @FXML
+    private TopBarController topBarController;
 
     @FXML
     public void initialize() {
@@ -57,25 +77,133 @@ public class EmployeeManagementController {
         colType.setCellValueFactory(data -> data.getValue().jobTypeProperty());
 
         // Display "Active" or "Frozen" based on boolean
-        colRank.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(data.getValue().isActive() ? "نشط" : "مجمد")
-        );
+        colRank.setCellValueFactory(
+                data -> new javafx.beans.property.SimpleStringProperty(data.getValue().isActive() ? "نشط" : "مجمد"));
 
-        // 2. Wrap List
+        // 2. Setup Filter ComboBoxes
+        setupFilters();
+
+        // 3. Wrap List
         filteredData = new FilteredList<>(employees, p -> true);
         SortedList<Employee> sortedData = new SortedList<>(filteredData);
         sortedData.comparatorProperty().bind(clientTable.comparatorProperty());
         clientTable.setItems(sortedData);
 
-        // 3. Load Data
+        // 4. Load Data
         loadEmployeesFromMongo();
 
-        if (sidebarController != null) sidebarController.setActivePage("employees");
+        if (sidebarController != null)
+            sidebarController.setActivePage("employees");
         setupTopBar();
+    }
+
+    private void setupFilters() {
+        // Initialize Employee Type Filter
+        if (employeeTypeFilter != null) {
+            employeeTypeFilter.setItems(FXCollections.observableArrayList(
+                    "الكل", "مدخل بيانات", "موظف عمليات", "موظف مالي", "مسؤول"));
+            employeeTypeFilter.setValue("الكل");
+            employeeTypeFilter.valueProperty().addListener((obs, old, newVal) -> applyFilters());
+            styleComboBox(employeeTypeFilter);
+        }
+
+        // Initialize Employee Status Filter
+        if (employeeStatusFilter != null) {
+            employeeStatusFilter.setItems(FXCollections.observableArrayList("الكل", "نشط", "مجمد"));
+            employeeStatusFilter.setValue("الكل");
+            employeeStatusFilter.valueProperty().addListener((obs, old, newVal) -> applyFilters());
+            styleComboBox(employeeStatusFilter);
+        }
+    }
+
+    // Helper method to style ComboBox with modern look
+    private void styleComboBox(javafx.scene.control.ComboBox<?> comboBox) {
+        String defaultStyle = "-fx-background-color: white; " +
+                "-fx-border-color: #d1d5db; " +
+                "-fx-border-radius: 8; " +
+                "-fx-background-radius: 8; " +
+                "-fx-padding: 6 12; " +
+                "-fx-font-size: 14px; " +
+                "-fx-cursor: hand;";
+
+        String focusedStyle = "-fx-background-color: white; " +
+                "-fx-border-color: #1ba3b6; " +
+                "-fx-border-width: 2; " +
+                "-fx-border-radius: 8; " +
+                "-fx-background-radius: 8; " +
+                "-fx-padding: 6 12; " +
+                "-fx-font-size: 14px; " +
+                "-fx-cursor: hand; " +
+                "-fx-effect: dropshadow(gaussian, rgba(27, 163, 182, 0.25), 8, 0, 0, 2);";
+
+        comboBox.setStyle(defaultStyle);
+
+        comboBox.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            comboBox.setStyle(isFocused ? focusedStyle : defaultStyle);
+        });
+
+        // Also style on hover
+        comboBox.setOnMouseEntered(e -> {
+            if (!comboBox.isFocused()) {
+                comboBox.setStyle(
+                        "-fx-background-color: white; " +
+                                "-fx-border-color: #1ba3b6; " +
+                                "-fx-border-radius: 8; " +
+                                "-fx-background-radius: 8; " +
+                                "-fx-padding: 6 12; " +
+                                "-fx-font-size: 14px; " +
+                                "-fx-cursor: hand;");
+            }
+        });
+
+        comboBox.setOnMouseExited(e -> {
+            if (!comboBox.isFocused()) {
+                comboBox.setStyle(defaultStyle);
+            }
+        });
+    }
+
+    private void applyFilters() {
+        filteredData.setPredicate(employee -> {
+            // 1. Type Filter
+            String typeFilter = employeeTypeFilter != null ? employeeTypeFilter.getValue() : "الكل";
+            if (typeFilter != null && !"الكل".equals(typeFilter)) {
+                if (employee.getJobType() == null || !employee.getJobType().equals(typeFilter)) {
+                    return false;
+                }
+            }
+
+            // 2. Status Filter
+            String statusFilter = employeeStatusFilter != null ? employeeStatusFilter.getValue() : "الكل";
+            if (statusFilter != null && !"الكل".equals(statusFilter)) {
+                boolean isActive = employee.isActive();
+                if ("نشط".equals(statusFilter) && !isActive)
+                    return false;
+                if ("مجمد".equals(statusFilter) && isActive)
+                    return false;
+            }
+
+            // 3. Search Filter
+            if (currentSearchText != null && !currentSearchText.isEmpty()) {
+                String lower = currentSearchText.toLowerCase();
+                boolean matchesName = employee.getFullname() != null
+                        && employee.getFullname().toLowerCase().contains(lower);
+                boolean matchesPhone = employee.getPhone() != null && employee.getPhone().contains(lower);
+                boolean matchesEmail = employee.getEmail() != null && employee.getEmail().toLowerCase().contains(lower);
+                if (!matchesName && !matchesPhone && !matchesEmail) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
     }
 
     // ✅ 1. LOAD FROM MONGODB (Matching JSON Structure)
     public void loadEmployeesFromMongo() {
+        // Show loading indicator
+        clientTable.setPlaceholder(new javafx.scene.control.Label("جاري تحميل البيانات..."));
+
         Task<List<Employee>> task = new Task<>() {
             @Override
             protected List<Employee> call() {
@@ -117,6 +245,13 @@ public class EmployeeManagementController {
         task.setOnSucceeded(e -> {
             employees.setAll(task.getValue());
             clientTable.refresh();
+            if (employees.isEmpty()) {
+                clientTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بيانات"));
+            }
+        });
+
+        task.setOnFailed(e -> {
+            clientTable.setPlaceholder(new javafx.scene.control.Label("خطأ في تحميل البيانات"));
         });
 
         new Thread(task).start();
@@ -156,6 +291,8 @@ public class EmployeeManagementController {
 
             Stage stage = new Stage();
             stage.initModality(Modality.APPLICATION_MODAL);
+            stage.getIcons().add(
+                    new javafx.scene.image.Image(getClass().getResourceAsStream("/noran/desktop/images/Logo.png")));
             stage.setScene(new Scene(root));
             stage.setTitle(employee.getId().isBlank() ? "Add Employee" : "Edit Employee");
             stage.showAndWait();
@@ -219,8 +356,7 @@ public class EmployeeManagementController {
                 doc.append("updatedAt", new Date());
                 users.updateOne(
                         Filters.eq("_id", new ObjectId(emp.getId())),
-                        new Document("$set", doc)
-                );
+                        new Document("$set", doc));
                 System.out.println("✔ Updated employee: " + emp.getId());
             }
 
@@ -250,6 +386,7 @@ public class EmployeeManagementController {
             return false; // ❌ Fail
         }
     }
+
     // ✅ 3. DELETE
     @FXML
     public void deleteEmployee(ActionEvent event) {
@@ -287,8 +424,7 @@ public class EmployeeManagementController {
             MongoDatabase db = MongoConnection.getDatabase();
             db.getCollection("users").updateOne(
                     Filters.eq("_id", new ObjectId(selected.getId())),
-                    Updates.set("active", newStatus)
-            );
+                    Updates.set("active", newStatus));
 
             selected.setActive(newStatus);
             clientTable.refresh();
@@ -301,10 +437,7 @@ public class EmployeeManagementController {
     }
 
     private void showAlert(String msg) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setHeaderText(null);
-        alert.setContentText(msg);
-        alert.showAndWait();
+        AlertUtils.showInfo("إشعار", msg);
     }
 
     public void refresh(ActionEvent event) {
@@ -316,22 +449,19 @@ public class EmployeeManagementController {
         User currentUser = AppSession.getInstance().getCurrentUser();
         if (topBarController != null) {
             topBarController.setPageTitle("إدارة الصلاحيات");
+            topBarController.setSidebar(sidebar);
+            topBarController.setSearchPlaceholder("البحث بالاسم، الهاتف، أو الإيميل...");
             if (currentUser != null) {
                 String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
-                String id = currentUser.getId() != null ? "ID: " + currentUser.getId() : "";
-                topBarController.setUserData(name, id);
+                String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
+                topBarController.setUserData(name, email);
             }
 
             topBarController.setOnSearchAction(searchText -> {
-                filteredData.setPredicate(employee -> {
-                    if (searchText == null || searchText.isEmpty()) return true;
-                    String lower = searchText.toLowerCase();
-                    return (employee.getFullname() != null && employee.getFullname().toLowerCase().contains(lower)) ||
-                            (employee.getPhone() != null && employee.getPhone().contains(lower));
-                });
+                currentSearchText = searchText;
+                applyFilters();
             });
         }
     }
-
 
 }

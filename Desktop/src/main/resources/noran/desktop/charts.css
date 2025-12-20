@@ -3,6 +3,7 @@
     -fx-padding: 8px;
     -fx-background-color: transparent;
 }
+
 .chart-content {
     -fx-padding: 10px;
 }
@@ -12,24 +13,44 @@
     -fx-background-color: transparent;
     -fx-padding: 12px;
 }
+
 .chart-legend-item-symbol {
-    -fx-background-radius: 4px; /* Make the little colored squares rounded */
+    -fx-background-radius: 4px;
+    /* Make the little colored squares rounded */
 }
+
 .chart-legend-item {
-    -fx-text-fill: #555; /* Darker grey text */
+    -fx-text-fill: #555;
+    /* Darker grey text */
     -fx-font-size: 8px;
     -fx-font-weight: bold;
 }
 
 /* Style the pie slices */
-.default-color0.chart-pie { -fx-pie-color: #690000; } /* Green */
-.default-color1.chart-pie { -fx-pie-color: #1BA3B6; } /* Yellow */
-.default-color2.chart-pie { -fx-pie-color: #dc3545; } /* Red */
-.default-color3.chart-pie { -fx-pie-color: #0078d4; } /* Blue */
+.default-color0.chart-pie {
+    -fx-pie-color: #690000;
+}
+
+/* Green */
+.default-color1.chart-pie {
+    -fx-pie-color: #1BA3B6;
+}
+
+/* Yellow */
+.default-color2.chart-pie {
+    -fx-pie-color: #a40000;
+}
+
+/* Primary Red */
+.default-color3.chart-pie {
+    -fx-pie-color: #1ba3b6;
+}
+
+/* Teal */
 
 /* Optional: Add a hover effect to slices */
 .chart-pie:hover {
     -fx-scale-x: 1.05;
     -fx-scale-y: 1.05;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 10, 0, 0, 0);
 }

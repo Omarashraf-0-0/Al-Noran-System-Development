@@ -1,5 +1,7 @@
 package noran.desktop.Controllers;
 
+import noran.desktop.Utils.AlertUtils;
+
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
@@ -20,6 +22,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.scene.layout.VBox;
 import noran.desktop.AppSession;
 import noran.desktop.Database.MongoConnection;
 import noran.desktop.models.Client;
@@ -34,25 +37,36 @@ import java.util.List;
 
 public class ClientDataController {
 
-    @FXML private TableView<Client> clientTable;
-    @FXML private TableColumn<Client, String> colName;
-    @FXML private TableColumn<Client, String> colEmail;
-    @FXML private TableColumn<Client, String> colSSN;
-    @FXML private TableColumn<Client, String> colPhone;
-    @FXML private TableColumn<Client, String> colType;
+    @FXML
+    private TableView<Client> clientTable;
+    @FXML
+    private TableColumn<Client, String> colName;
+    @FXML
+    private TableColumn<Client, String> colEmail;
+    @FXML
+    private TableColumn<Client, String> colSSN;
+    @FXML
+    private TableColumn<Client, String> colPhone;
+    @FXML
+    private TableColumn<Client, String> colType;
 
     private final ObservableList<Client> clients = FXCollections.observableArrayList();
     private FilteredList<Client> filteredData;
 
-    @FXML private SidebarController sidebarController;
-    @FXML private TopBarController topBarController;
+    @FXML
+    private SidebarController sidebarController;
+    @FXML
+    private VBox sidebar;
+    @FXML
+    private TopBarController topBarController;
 
     @FXML
     public void initialize() {
         setupTable();
         loadClientsFromMongo();
 
-        if (sidebarController != null) sidebarController.setActivePage("clients");
+        if (sidebarController != null)
+            sidebarController.setActivePage("clients");
         setupTopBar();
     }
 
@@ -71,6 +85,9 @@ public class ClientDataController {
 
     // ✅ 1. LOAD FROM MONGODB
     public void loadClientsFromMongo() {
+        // Show loading indicator
+        clientTable.setPlaceholder(new javafx.scene.control.Label("جاري تحميل البيانات..."));
+
         Task<List<Client>> loadTask = new Task<>() {
             @Override
             protected List<Client> call() {
@@ -95,13 +112,17 @@ public class ClientDataController {
                             clientType = clientDetails.getString("clientType");
                         } else {
                             ssn = doc.getString("ssn");
-                            if (ssn == null) ssn = doc.getString("taxNumber");
+                            if (ssn == null)
+                                ssn = doc.getString("taxNumber");
                             clientType = doc.getString("clientType");
                         }
 
-                        if (name == null) name = doc.getString("username");
-                        if (ssn == null) ssn = "-";
-                        if (clientType == null) clientType = "Personal";
+                        if (name == null)
+                            name = doc.getString("username");
+                        if (ssn == null)
+                            ssn = "-";
+                        if (clientType == null)
+                            clientType = "Personal";
 
                         loadedList.add(new Client(id, name, email, ssn, phone, clientType, password));
                     }
@@ -116,6 +137,13 @@ public class ClientDataController {
         loadTask.setOnSucceeded(e -> {
             clients.setAll(loadTask.getValue());
             clientTable.refresh();
+            if (clients.isEmpty()) {
+                clientTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بيانات"));
+            }
+        });
+
+        loadTask.setOnFailed(e -> {
+            clientTable.setPlaceholder(new javafx.scene.control.Label("خطأ في تحميل البيانات"));
         });
 
         new Thread(loadTask).start();
@@ -150,8 +178,11 @@ public class ClientDataController {
 
             Stage stage = new Stage();
             stage.initModality(Modality.APPLICATION_MODAL);
+            stage.getIcons().add(
+                    new javafx.scene.image.Image(getClass().getResourceAsStream("/noran/desktop/images/Logo.png")));
             stage.setScene(new Scene(root));
-            stage.setTitle(clientToEdit.getId() == null || clientToEdit.getId().isEmpty() ? "Add Client" : "Edit Client");
+            stage.setTitle(
+                    clientToEdit.getId() == null || clientToEdit.getId().isEmpty() ? "Add Client" : "Edit Client");
             stage.showAndWait();
 
         } catch (Exception e) {
@@ -161,7 +192,7 @@ public class ClientDataController {
     }
 
     // ✅ 2. SAVE TO MONGODB (Return Boolean + Handle Duplicates)
-// ✅ 2. SAVE TO MONGODB (With Password Hashing)
+    // ✅ 2. SAVE TO MONGODB (With Password Hashing)
     private boolean saveClientToMongo(Client client) {
         try {
             MongoDatabase db = MongoConnection.getDatabase();
@@ -212,8 +243,7 @@ public class ClientDataController {
                 doc.append("updatedAt", new Date());
                 usersCol.updateOne(
                         Filters.eq("_id", new ObjectId(client.getId())),
-                        new Document("$set", doc)
-                );
+                        new Document("$set", doc));
                 System.out.println("✔ Updated client: " + client.getId());
             }
 
@@ -243,6 +273,7 @@ public class ClientDataController {
             return false; // ❌ Fail
         }
     }
+
     // ✅ 3. DELETE
     @FXML
     private void deleteClient() {
@@ -271,13 +302,17 @@ public class ClientDataController {
         User currentUser = AppSession.getInstance().getCurrentUser();
         if (topBarController != null) {
             topBarController.setPageTitle("إدارة العملاء");
+            topBarController.setSidebar(sidebar);
+            topBarController.setSearchPlaceholder("البحث بالاسم، الهاتف، الإيميل، أو الرقم الضريبي...");
             if (currentUser != null) {
-                topBarController.setUserData(currentUser.getName(), "ID: " + currentUser.getId());
+                topBarController.setUserData(currentUser.getName(),
+                        currentUser.getEmail() != null ? currentUser.getEmail() : "");
             }
 
             topBarController.setOnSearchAction(searchText -> {
                 filteredData.setPredicate(client -> {
-                    if (searchText == null || searchText.isEmpty()) return true;
+                    if (searchText == null || searchText.isEmpty())
+                        return true;
                     String lower = searchText.toLowerCase();
                     return (client.getFullname() != null && client.getFullname().toLowerCase().contains(lower)) ||
                             (client.getPhone() != null && client.getPhone().contains(lower)) ||
@@ -289,15 +324,11 @@ public class ClientDataController {
     }
 
     private void showAlert(String msg) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setHeaderText(null);
-        alert.setContentText(msg);
-        alert.showAndWait();
+        AlertUtils.showInfo("إشعار", msg);
     }
 
     public void refresh(ActionEvent event) {
         loadClientsFromMongo();
     }
-
 
 }
