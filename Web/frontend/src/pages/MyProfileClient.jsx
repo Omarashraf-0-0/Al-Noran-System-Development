@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import Cropper from "react-easy-crop";
 import Header from "../components/Header";
 
-const EmployeeProfilePage = () => {
+const MyProfileClient = () => {
 	const navigate = useNavigate();
 	const [user, setUser] = useState(null);
 	const [loading, setLoading] = useState(true);
@@ -43,7 +43,6 @@ const EmployeeProfilePage = () => {
 		phone: "",
 		email: "",
 	});
-	const [isVisible, setIsVisible] = useState(false);
 	const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
 	const handleDeletePhoto = () => {
@@ -53,46 +52,46 @@ const EmployeeProfilePage = () => {
 
 	// Theme State with localStorage persistence
 	const [isDarkMode, setIsDarkMode] = useState(() => {
-		const savedTheme = localStorage.getItem("employeeProfileTheme");
-		return savedTheme ? savedTheme === "dark" : false; // Default to light
+		const savedTheme = localStorage.getItem("profileTheme");
+		return savedTheme ? savedTheme === "dark" : true; // Default to dark for premium feel
 	});
 
+	// Sync theme to localStorage
 	useEffect(() => {
-		localStorage.setItem("employeeProfileTheme", isDarkMode ? "dark" : "light");
+		localStorage.setItem("profileTheme", isDarkMode ? "dark" : "light");
 	}, [isDarkMode]);
 
 	const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-	// Theme classes - TURQUOISE THEME (Employee)
+	// Theme classes - RED THEME (Client)
 	const theme = {
 		pageBg: isDarkMode 
-			? "bg-gradient-to-br from-[#0a1a1a] via-[#0d2d2d] to-[#1a0a0a]" 
-			: "bg-gradient-to-br from-[#F0FEFF] via-[#E0F7FA] to-[#F0FEFF]",
+			? "bg-gradient-to-br from-[#1a0a0a] via-[#2d0d0d] to-[#0a1a1a]" 
+			: "bg-gradient-to-br from-[#FFF5F5] via-[#FFF0F0] to-[#FFF5F5]",
 		card: isDarkMode 
-			? "bg-white/5 backdrop-blur-md border-white/10" 
-			: "bg-white shadow-xl border-cyan-50",
+			? "bg-white/10 backdrop-blur-md border-white/10" 
+			: "bg-white shadow-xl border-red-50",
 		cardHover: isDarkMode 
-			? "hover:bg-white/10 hover:border-[#1ba3b6]/30" 
-			: "hover:bg-cyan-50 hover:border-cyan-200",
+			? "hover:bg-white/15 hover:border-[#690000]/50" 
+			: "hover:bg-red-50 hover:border-red-200",
 		textPrimary: isDarkMode ? "text-white" : "text-gray-900",
 		textSecondary: isDarkMode ? "text-white/70" : "text-gray-600",
 		textMuted: isDarkMode ? "text-white/50" : "text-gray-400",
 		input: isDarkMode 
 			? "bg-white/5 border-white/10 text-white placeholder-white/30" 
-			: "bg-cyan-50/50 border-cyan-100 text-gray-900 placeholder-gray-400",
+			: "bg-red-50/50 border-red-100 text-gray-900 placeholder-gray-400",
 		inputFocus: isDarkMode 
-			? "focus:border-[#1ba3b6] focus:ring-[#1ba3b6]/20" 
-			: "focus:border-[#1ba3b6] focus:ring-[#1ba3b6]/10",
-		headerGradient: "bg-gradient-to-l from-[#1ba3b6] to-[#158A9A]",
-		blob1: isDarkMode ? "bg-[#1ba3b6]/20" : "bg-[#1ba3b6]/10",
-		blob2: isDarkMode ? "bg-[#158A9A]/15" : "bg-[#158A9A]/10",
+			? "focus:border-[#690000] focus:ring-[#690000]/20" 
+			: "focus:border-[#690000] focus:ring-[#690000]/10",
+		headerGradient: "bg-gradient-to-l from-[#690000] to-[#8B0000]",
+		blob1: isDarkMode ? "bg-[#690000]/20" : "bg-[#690000]/10",
+		blob2: isDarkMode ? "bg-[#1ba3b6]/15" : "bg-[#1ba3b6]/10",
 		modalBg: isDarkMode ? "bg-black/80" : "bg-white",
 		modalOverlay: isDarkMode ? "bg-black/60" : "bg-black/40",
 	};
 
 	useEffect(() => {
 		fetchUserProfile();
-		setIsVisible(true);
 	}, []);
 
 	useEffect(() => {
@@ -129,7 +128,7 @@ const EmployeeProfilePage = () => {
 			setFormData(userData);
 			setOriginalFormData(userData);
 			setHasUnsavedChanges(false);
-			
+
 			if (response.data.user.profilePhoto) {
 				const photo = response.data.user.profilePhoto;
 				if (photo.startsWith("http") || photo.startsWith("/uploads")) {
@@ -141,7 +140,7 @@ const EmployeeProfilePage = () => {
 							{ headers: { Authorization: `Bearer ${token}` } }
 						);
 						setProfilePhoto(photoResponse.data.url);
-					} catch (err) {
+					} catch {
 						setProfilePhoto(null);
 					}
 				}
@@ -267,6 +266,12 @@ const EmployeeProfilePage = () => {
 
 	const handleCropConfirm = async () => {
 		if (!selectedImage || !croppedAreaPixels) return;
+		
+		console.log("📸 [Frontend] Starting crop confirm...");
+		console.log("👤 [Frontend] Current User State:", user);
+		console.log("🏭 [Frontend] Client Details:", user?.clientDetails);
+		console.log("🏷️ [Frontend] Client Type:", user?.clientDetails?.clientType);
+
 		setUploadingPhoto(true);
 		setShowCropModal(false);
 		try {
@@ -275,6 +280,12 @@ const EmployeeProfilePage = () => {
 			formDataUpload.append("file", croppedBlob, "profile-photo.jpg");
 			formDataUpload.append("category", "registration");
 			formDataUpload.append("documentType", "profilePhoto");
+			
+			// Append clientType if available (required for client registration uploads)
+			if (user?.clientDetails?.clientType) {
+				formDataUpload.append("clientType", user.clientDetails.clientType);
+			}
+
 			const token = localStorage.getItem("token");
 			
 			// 1. Upload the file
@@ -312,7 +323,7 @@ const EmployeeProfilePage = () => {
 			}
 		} catch (error) {
 			console.error("Photo upload error:", error);
-			toast.error("فشل تحميل الصورة");
+			toast.error(error.response?.data?.message || "فشل تحميل الصورة");
 		} finally {
 			setUploadingPhoto(false);
 		}
@@ -338,25 +349,21 @@ const EmployeeProfilePage = () => {
 		}
 	};
 
-	const getUserType = () => {
-		if (user?.type === "client") {
-			const clientType = user?.clientDetails?.clientType;
-			if (clientType === "factory") return "مصنع";
-			if (clientType === "commercial") return "تجاري";
-			return "فردي";
-		}
-		if (user?.type === "employee") {
-			return user?.employeeDetails?.employeeType || "موظف";
-		}
-		return "مستخدم";
+	const getClientType = () => {
+		const clientType = user?.clientDetails?.clientType;
+		if (clientType === "factory") return { label: "مصنع", icon: "🏭", color: "bg-orange-500" };
+		if (clientType === "commercial") return { label: "تجاري", icon: "🏪", color: "bg-blue-500" };
+		return { label: "فردي", icon: "👤", color: "bg-purple-500" };
 	};
+
+	const isVerified = user?.clientDetails?.documentsVerified;
 
 	if (loading) {
 		return (
-			<div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+			<div className="min-h-screen bg-gradient-to-br from-[#690000] to-[#4a0000] flex items-center justify-center">
 				<div className="text-center">
-					<div className="animate-spin rounded-full h-16 w-16 border-4 border-[#1ba3b6] border-t-transparent mx-auto mb-4"></div>
-					<p className="text-gray-600">جاري تحميل البيانات...</p>
+					<div className="animate-spin rounded-full h-14 w-14 border-4 border-white border-t-transparent mx-auto mb-4"></div>
+					<p className="text-white/80">جاري تحميل البيانات...</p>
 				</div>
 			</div>
 		);
@@ -381,19 +388,19 @@ const EmployeeProfilePage = () => {
 			<div className="fixed inset-0 pointer-events-none overflow-hidden">
 				{isDarkMode ? (
 					<>
-						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/20 rounded-full filter blur-[150px] animate-pulse-glow"></div>
-						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#158A9A]/20 rounded-full filter blur-[180px] animate-float-slow"></div>
-						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#008B8B]/20 rounded-full filter blur-[120px] animate-float-reverse"></div>
-						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#1ba3b6]/20 rounded-xl animate-float rotate-45"></div>
-						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#158A9A]/20 rounded-full animate-float-reverse"></div>
+						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#690000]/20 rounded-full filter blur-[150px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#1ba3b6]/20 rounded-full filter blur-[180px] animate-float-slow"></div>
+						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#8B0000]/20 rounded-full filter blur-[120px] animate-float-reverse"></div>
+						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#690000]/20 rounded-xl animate-float rotate-45"></div>
+						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#1ba3b6]/20 rounded-full animate-float-reverse"></div>
 					</>
 				) : (
 					<>
-						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[150px] animate-pulse-glow"></div>
-						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#E0F7FA]/40 rounded-full filter blur-[180px] animate-float-slow"></div>
-						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#1ba3b6]/5 rounded-full filter blur-[120px] animate-float-reverse"></div>
-						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#1ba3b6]/20 rounded-xl animate-float rotate-45"></div>
-						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#158A9A]/20 rounded-full animate-float-reverse"></div>
+						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#FFB6C1]/30 rounded-full filter blur-[150px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#87CEEB]/20 rounded-full filter blur-[180px] animate-float-slow"></div>
+						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#FFDAB9]/30 rounded-full filter blur-[120px] animate-float-reverse"></div>
+						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#690000]/10 rounded-xl animate-float rotate-45"></div>
+						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#1ba3b6]/10 rounded-full animate-float-reverse"></div>
 					</>
 				)}
 			</div>
@@ -417,13 +424,11 @@ const EmployeeProfilePage = () => {
 									) : profilePhoto ? (
 										<img src={profilePhoto} alt="Profile" className="w-full h-full object-cover rounded-full" />
 									) : (
-										<svg className="w-12 h-12 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-										</svg>
+										<span className="text-4xl text-white">{getClientType().icon}</span>
 									)}
 								</div>
 							</div>
-							<label htmlFor="photo-upload" className="absolute bottom-1 right-1 bg-[#1ba3b6] hover:bg-[#158A9A] w-9 h-9 rounded-full flex items-center justify-center cursor-pointer shadow-lg border-2 border-white transition-transform hover:scale-110">
+							<label htmlFor="photo-upload" className="absolute bottom-1 right-1 bg-[#1ba3b6] hover:bg-[#158A9A] w-9 h-9 rounded-full flex items-center justify-center cursor-pointer shadow-lg border-2 border-[#690000] transition-transform hover:scale-110">
 								<svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -434,15 +439,18 @@ const EmployeeProfilePage = () => {
 
 						{/* User Info */}
 						<div className="text-center md:text-right flex-1">
-							<h1 className="text-3xl font-bold text-white mb-2">{user?.fullname || "الموظف"}</h1>
+							<h1 className="text-3xl font-bold text-white mb-2">{user?.fullname}</h1>
 							<div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-2">
 								<p className="text-white/70 text-sm">@{user?.username}</p>
 								<span className="text-white/20">|</span>
 								<p className="text-white/70 text-sm" dir="ltr">{user?.email}</p>
 							</div>
 							<div className="flex flex-wrap justify-center md:justify-start gap-2">
-								<span className="bg-[#1ba3b6] text-white text-xs px-3 py-1 rounded-full font-bold shadow bg-opacity-90">
-									{getUserType()}
+								<span className={`${getClientType().color} text-white text-xs px-3 py-1 rounded-full font-bold shadow bg-opacity-80`}>
+									{getClientType().icon} {getClientType().label}
+								</span>
+								<span className={`${isVerified ? "bg-green-500" : "bg-amber-500"} text-white text-xs px-3 py-1 rounded-full font-bold shadow bg-opacity-80`}>
+									{isVerified ? "✓ موثق" : "⏳ قيد التحقق"}
 								</span>
 							</div>
 						</div>
@@ -465,35 +473,35 @@ const EmployeeProfilePage = () => {
 					</div>
 				</div>
 
-				{/* Row 2: Stats / Navigation Grid */}
+				{/* Row 2: Stats Cards */}
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-					<Link to="#" className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} transition-all group flex items-center justify-between`}>
+					<Link to="/client-shipments" className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} transition-all group flex items-center justify-between`}>
 						<div>
-							<p className={`${theme.textMuted} text-xs mb-1`}>أعمالي</p>
-							<p className={`text-lg font-bold ${theme.textPrimary}`}>لوحة التحكم</p>
+							<p className={`${theme.textMuted} text-xs mb-1`}>الشحنات النشطة</p>
+							<p className={`text-2xl font-bold ${theme.textPrimary}`}>12</p>
 						</div>
-						<div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform text-2xl text-blue-500 border border-blue-500/20">📊</div>
+						<div className="w-12 h-12 bg-[#690000]/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform text-2xl border border-[#690000]/20 text-[#690000]">📦</div>
 					</Link>
-					<Link to="#" className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} transition-all group flex items-center justify-between`}>
+					<Link to="/acid-requests" className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} transition-all group flex items-center justify-between`}>
 						<div>
-							<p className={`${theme.textMuted} text-xs mb-1`}>العمليات</p>
-							<p className={`text-lg font-bold ${theme.textPrimary}`}>المهام</p>
+							<p className={`${theme.textMuted} text-xs mb-1`}>طلبات ACID</p>
+							<p className={`text-2xl font-bold ${theme.textPrimary}`}>8</p>
 						</div>
-						<div className="w-12 h-12 bg-[#690000]/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform text-2xl text-[#690000] border border-[#690000]/20">📝</div>
+						<div className="w-12 h-12 bg-[#1ba3b6]/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform text-2xl border border-[#1ba3b6]/20 text-[#1ba3b6]">📄</div>
 					</Link>
-					<Link to="#" className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} transition-all group flex items-center justify-between`}>
+					<div className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} flex items-center justify-between`}>
 						<div>
-							<p className={`${theme.textMuted} text-xs mb-1`}>التتبع</p>
-							<p className={`text-lg font-bold ${theme.textPrimary}`}>الشحنات</p>
+							<p className={`${theme.textMuted} text-xs mb-1`}>المكتملة</p>
+							<p className={`text-2xl font-bold ${theme.textPrimary}`}>45</p>
 						</div>
-						<div className="w-12 h-12 bg-[#1ba3b6]/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform text-2xl text-[#1ba3b6] border border-[#1ba3b6]/20">📦</div>
-					</Link>
-					<Link to="#" className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} transition-all group flex items-center justify-between`}>
+						<div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center text-2xl border border-green-500/20 text-green-500">✅</div>
+					</div>
+					<Link to="/payments" className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} transition-all group flex items-center justify-between`}>
 						<div>
-							<p className={`${theme.textMuted} text-xs mb-1`}>الوقت</p>
-							<p className={`text-lg font-bold ${theme.textPrimary}`}>الجدول</p>
+							<p className={`${theme.textMuted} text-xs mb-1`}>المدفوعات</p>
+							<p className={`text-2xl font-bold ${theme.textPrimary}`}>3</p>
 						</div>
-						<div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform text-2xl text-amber-500 border border-amber-500/20">📅</div>
+						<div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform text-2xl border border-amber-500/20 text-amber-500">💳</div>
 					</Link>
 				</div>
 
@@ -504,7 +512,7 @@ const EmployeeProfilePage = () => {
 					<div className={`${theme.card} rounded-2xl border p-6 h-full flex flex-col`}>
 						<div className="flex items-center justify-between mb-6">
 							<h3 className={`text-lg font-bold ${theme.textPrimary} flex items-center gap-2`}>
-								<span className="w-8 h-8 bg-[#1ba3b6]/10 rounded-lg flex items-center justify-center text-[#1ba3b6] border border-[#1ba3b6]/20">👤</span>
+								<span className="w-8 h-8 bg-[#690000]/10 rounded-lg flex items-center justify-center text-[#690000] border border-[#690000]/20">👤</span>
 								البيانات الشخصية
 							</h3>
 						</div>
@@ -561,10 +569,9 @@ const EmployeeProfilePage = () => {
 
 					{/* Quick Actions */}
 					<div className="space-y-6">
-						{/* Action Buttons */}
 						<div className={`${theme.card} rounded-2xl border p-6`}>
 							<h3 className={`text-lg font-bold ${theme.textPrimary} mb-6 flex items-center gap-2`}>
-								<span className="w-8 h-8 bg-[#1ba3b6]/10 rounded-lg flex items-center justify-center text-[#1ba3b6] border border-[#1ba3b6]/20">⚡</span>
+								<span className="w-8 h-8 bg-[#690000]/10 rounded-lg flex items-center justify-center text-[#690000] border border-[#690000]/20">⚡</span>
 								إجراءات سريعة
 							</h3>
 							<div className="flex flex-col gap-3">
@@ -572,7 +579,7 @@ const EmployeeProfilePage = () => {
 									<div className="flex gap-3">
 										<button
 											onClick={handleSave}
-											className="flex-1 bg-[#1ba3b6] hover:bg-[#158A9A] text-white py-3 px-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-[#1ba3b6]/30 active:scale-95"
+											className="flex-1 bg-[#690000] hover:bg-[#8B0000] text-white py-3 px-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-[#690000]/30 active:scale-95"
 										>
 											حفظ التغييرات
 										</button>
@@ -592,8 +599,8 @@ const EmployeeProfilePage = () => {
 										onClick={() => setIsEditing(true)}
 										className={`w-full py-3 px-4 rounded-xl font-bold transition-all border ${
 											isDarkMode 
-												? "bg-[#1ba3b6]/10 text-[#1ba3b6] border-[#1ba3b6]/30 hover:bg-[#1ba3b6]/20" 
-												: "bg-cyan-50 text-[#1ba3b6] border-cyan-200 hover:bg-cyan-100"
+												? "bg-[#690000]/10 text-[#690000] border-[#690000]/30 hover:bg-[#690000]/20" 
+												: "bg-red-50 text-[#690000] border-red-200 hover:bg-red-100"
 										} active:scale-95 flex items-center justify-center gap-2`}
 									>
 										<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -616,7 +623,16 @@ const EmployeeProfilePage = () => {
 									</svg>
 									تغيير كلمة المرور
 								</button>
-								
+
+								{!isVerified && (
+									<Link to="/upload-documents" className={`w-full py-3 px-4 rounded-xl font-bold transition-all border ${isDarkMode ? "bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500/20" : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"} active:scale-95 flex items-center justify-center gap-2`}>
+										<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+										</svg>
+										رفع المستندات (التوثيق)
+									</Link>
+								)}
+
 								{profilePhoto && (
 									<button
 										onClick={handleDeletePhoto}
@@ -635,6 +651,13 @@ const EmployeeProfilePage = () => {
 										)}
 									</button>
 								)}
+								
+								<Link to="/chat" className={`w-full py-3 px-4 rounded-xl font-bold transition-all border ${isDarkMode ? "bg-[#1ba3b6]/10 text-[#1ba3b6] border-[#1ba3b6]/20 hover:bg-[#1ba3b6]/20" : "bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-100"} active:scale-95 flex items-center justify-center gap-2`}>
+									<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+									</svg>
+									الدعم الفني
+								</Link>
 							</div>
 						</div>
 					</div>
@@ -698,7 +721,7 @@ const EmployeeProfilePage = () => {
 							<button onClick={() => setShowCropModal(false)} className="px-4 py-2 text-white/70 hover:text-white transition-colors">
 								إلغاء
 							</button>
-							<button onClick={handleCropConfirm} className="px-6 py-2 bg-[#1ba3b6] hover:bg-[#158A9A] text-white rounded-lg font-bold transition-colors">
+							<button onClick={handleCropConfirm} className="px-6 py-2 bg-[#690000] hover:bg-[#8B0000] text-white rounded-lg font-bold transition-colors">
 								قص وحفظ
 							</button>
 						</div>
@@ -732,7 +755,7 @@ const EmployeeProfilePage = () => {
 									<button
 										type="button"
 										onClick={() => setShowPasswords(prev => ({ ...prev, currentPassword: !prev.currentPassword }))}
-										className="absolute left-3 top-3 text-gray-400 hover:text-[#1ba3b6]"
+										className="absolute left-3 top-3 text-gray-400 hover:text-[#690000]"
 									>
 										{showPasswords.currentPassword ? "👁️" : "👁️‍🗨️"}
 									</button>
@@ -752,7 +775,7 @@ const EmployeeProfilePage = () => {
 									<button
 										type="button"
 										onClick={() => setShowPasswords(prev => ({ ...prev, newPassword: !prev.newPassword }))}
-										className="absolute left-3 top-3 text-gray-400 hover:text-[#1ba3b6]"
+										className="absolute left-3 top-3 text-gray-400 hover:text-[#690000]"
 									>
 										{showPasswords.newPassword ? "👁️" : "👁️‍🗨️"}
 									</button>
@@ -772,7 +795,7 @@ const EmployeeProfilePage = () => {
 									<button
 										type="button"
 										onClick={() => setShowPasswords(prev => ({ ...prev, confirmPassword: !prev.confirmPassword }))}
-										className="absolute left-3 top-3 text-gray-400 hover:text-[#1ba3b6]"
+										className="absolute left-3 top-3 text-gray-400 hover:text-[#690000]"
 									>
 										{showPasswords.confirmPassword ? "👁️" : "👁️‍🗨️"}
 									</button>
@@ -788,7 +811,7 @@ const EmployeeProfilePage = () => {
 								</button>
 								<button
 									onClick={handleChangePasswordSubmit}
-									className="flex-1 bg-[#1ba3b6] hover:bg-[#158A9A] text-white py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-[#1ba3b6]/30"
+									className="flex-1 bg-[#690000] hover:bg-[#8B0000] text-white py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-[#690000]/30"
 								>
 									حفظ
 								</button>
@@ -801,4 +824,4 @@ const EmployeeProfilePage = () => {
 	);
 };
 
-export default EmployeeProfilePage;
+export default MyProfileClient;
