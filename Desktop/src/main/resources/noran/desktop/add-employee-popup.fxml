@@ -7,6 +7,9 @@
 <?import javafx.scene.layout.*?>
 
 <VBox alignment="CENTER" prefHeight="494.0" spacing="15" style="-fx-padding: 25; -fx-background-color: #f5f5f5; -fx-pref-width: 400;" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.EmployeePopupController">
+    <stylesheets>
+        <String fx:value="@combo-style.css" />
+    </stylesheets>
    <ImageView fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true">
 <image><Image url="@images/AVATAR 1.png" /></image>   </ImageView>
 

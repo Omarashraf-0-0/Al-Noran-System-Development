@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" style="-fx-font-family: 'Segoe UI', 'Tahoma';" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.AdminAddInvoiceController">
+
+    <stylesheets>
+        <String fx:value="@invoices-table.css" />
+    </stylesheets>
+
+    <!-- TOP BAR HERE -->
+    <top>
+        <fx:include fx:id="topBar" source="TopBar.fxml" />
+    </top>
+
+    <!-- SIDEBAR HERE -->
+    <left>
+        <fx:include fx:id="sidebar" source="Sidebar.fxml" />
+    </left>
+
+    <center>
+        <VBox spacing="20" style="-fx-padding: 0 40 30 40;">
+
+            <!-- Client Name -->
+            <HBox alignment="CENTER_LEFT" spacing="15">
+                <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="اسم العميل:" />
+                <TextField fx:id="clientNameField" prefWidth="400" promptText="أدخل اسم العميل" style="-fx-background-radius: 10;" />
+            </HBox>
+
+            <!-- Invoice Info -->
+            <HBox alignment="CENTER_LEFT" spacing="30">
+                <Label style="-fx-font-weight: bold;" text="رقم الفاتورة:" />
+                <Label fx:id="invoiceNumberLabel" style="-fx-font-size: 15px;" text="INV-XXXXXX" />
+
+                <Label style="-fx-font-weight: bold;" text="التاريخ:" />
+                <Label fx:id="invoiceDateLabel" style="-fx-font-size: 15px;" text="00/00/0000" />
+            </HBox>
+
+            <Separator />
+
+            <!-- Buttons + Total -->
+            <HBox alignment="CENTER_RIGHT" spacing="15">
+                <Button fx:id="addRowBtn" onAction="#addNewRow" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 10 20; -fx-background-radius: 8; -fx-font-weight: bold;" text="إضافة بند جديد +" />
+
+                <Button fx:id="deleteRowBtn" onAction="#deleteSelectedRow" style="-fx-background-color: #a40000; -fx-text-fill: white; -fx-padding: 10 20; -fx-background-radius: 8;" text="مسح العنصر" />
+
+                <Region HBox.hgrow="ALWAYS" />
+
+                <Label fx:id="totalLabel" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #a40000;" text="المجموع الكلي: 0.00 جنيه" />
+            </HBox>
+
+            <!-- Table -->
+            <StackPane>
+                <ImageView fitWidth="400" mouseTransparent="true" opacity="0.07" preserveRatio="true">
+                    <image>
+                        <Image url="@/noran/desktop/images/Logo.png" />
+                    </image>
+                </ImageView>
+
+                <TableView fx:id="invoiceTable" prefHeight="380" prefWidth="880" stylesheets="@invoices-table.css">
+                    <columns>
+                        <TableColumn fx:id="colDesc" prefWidth="580" text="الوصف" />
+                        <TableColumn fx:id="colPrice" prefWidth="200" text="السعر " />
+                    </columns>
+                </TableView>
+            </StackPane>
+
+            <!-- Generate PDF Button -->
+            <HBox alignment="CENTER" style="-fx-padding: 20 0 0 0;">
+                <Button onAction="#generatePdf" style="-fx-background-color: #1ba3b6; -fx-text-fill: white; -fx-padding: 14 40; -fx-font-size: 18px;                                -fx-background-radius: 10; -fx-font-weight: bold;" text="إنشاء وتحميل PDF" />
+            </HBox>
+
+        </VBox>
+    </center>
+</BorderPane>

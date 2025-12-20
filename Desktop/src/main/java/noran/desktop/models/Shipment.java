@@ -1,86 +1,153 @@
 package noran.desktop.models;
 
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
-import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.*;
 
 public class Shipment {
-    private  int id = 0;         // local Mongo _id or server id
-    private StringProperty acid = new SimpleStringProperty("");// unique acid identifier
+    private final StringProperty id;
+    private final StringProperty userId;
+    private final StringProperty customerName;
+    private final StringProperty acid;
     private final StringProperty portName;
-    private final IntegerProperty numOfContainers;
     private final StringProperty country;
     private final StringProperty status;
+    private final IntegerProperty numOfContainers;
     private final StringProperty policy;
-    private String typeOfContainersJson; // <- add this
+    private final StringProperty assignedToName; // Name of employee this shipment is assigned to
 
+    // Helper field for container types string from DB (if needed)
+    private String typeOfContainersJson;
 
-    public Shipment(int id, String acid, String portName, int numOfContainers, String country, String status, String policy) {
-        this.id = id;
-        this.acid = new SimpleStringProperty(acid == null ? "" : acid);
-        this.portName = new SimpleStringProperty(portName == null ? "" : portName);
-        this.numOfContainers = new SimpleIntegerProperty(numOfContainers);
-        this.country = new SimpleStringProperty(country == null ? "" : country);
-        this.status = new SimpleStringProperty(status == null ? "" : status);
-        this.policy = new SimpleStringProperty(policy == null ? "" : policy);
-    }
-    public Shipment(int id,  String portName, int numOfContainers, String country, String status, String policy) {
-        this.id = id;
-        this.portName = new SimpleStringProperty(portName == null ? "" : portName);
-        this.numOfContainers = new SimpleIntegerProperty(numOfContainers);
-        this.country = new SimpleStringProperty(country == null ? "" : country);
-        this.status = new SimpleStringProperty(status == null ? "" : status);
-        this.policy = new SimpleStringProperty(policy == null ? "" : policy);
-    }
-    public Shipment(int id, String portName, int numOfContainers, String status) {
-        this.id = id;
-        this.acid = new SimpleStringProperty("0000000000");
-        this.portName = new SimpleStringProperty(portName == null ? "" : portName);
-        this.numOfContainers = new SimpleIntegerProperty(numOfContainers);
-        this.country = new SimpleStringProperty("Egypt");
-        this.status = new SimpleStringProperty(status == null ? "" : status);
-        this.policy = new SimpleStringProperty("Policy 001");
+    public Shipment(String id, String userId, String customerName, String acid, String portName, String country,
+            String status, int numOfContainers, String policy) {
+        this(id, userId, customerName, acid, portName, country, status, numOfContainers, policy, "");
     }
 
-    // id
-    public int getId() { return id; }
-    public void setId(int v) { id=v; }
-    public int idProperty() { return id; }
+    public Shipment(String id, String userId, String customerName, String acid, String portName, String country,
+            String status, int numOfContainers, String policy, String assignedToName) {
+        this.id = new SimpleStringProperty(id);
+        this.userId = new SimpleStringProperty(userId);
+        this.customerName = new SimpleStringProperty(customerName);
+        this.acid = new SimpleStringProperty(acid);
+        this.portName = new SimpleStringProperty(portName);
+        this.country = new SimpleStringProperty(country);
+        this.status = new SimpleStringProperty(status);
+        this.numOfContainers = new SimpleIntegerProperty(numOfContainers);
+        this.policy = new SimpleStringProperty(policy);
+        this.assignedToName = new SimpleStringProperty(assignedToName);
+    }
 
-    // acid
-    public String getAcid() { return acid.get(); }
-    public void setAcid(String v) { acid.set(v); }
-    public StringProperty acidProperty() { return acid; }
+    // --- Getters & Setters --- (Keep existing ones)
 
-    // portName
-    public String getPortName() { return portName.get(); }
-    public void setPortName(String v) { portName.set(v); }
-    public StringProperty portNameProperty() { return portName; }
+    public String getId() {
+        return id.get();
+    }
 
-    // numOfContainers
-    public int getNumOfContainers() { return numOfContainers.get(); }
-    public void setNumOfContainers(int v) { numOfContainers.set(v); }
-    public IntegerProperty numOfContainersProperty() { return numOfContainers; }
+    public void setId(String id) {
+        this.id.set(id);
+    }
 
-    // country
-    public String getCountry() { return country.get(); }
-    public void setCountry(String v) { country.set(v); }
-    public StringProperty countryProperty() { return country; }
+    public String getUserId() {
+        return userId.get();
+    }
 
-    // status
-    public String getStatus() { return status.get(); }
-    public void setStatus(String v) { status.set(v); }
-    public StringProperty statusProperty() { return status; }
+    public void setUserId(String userId) {
+        this.userId.set(userId);
+    }
 
-    // policy
-    public String getPolicy() { return policy.get(); }
-    public void setPolicy(String v) { policy.set(v); }
-    public StringProperty policyProperty() { return policy; }
+    public String getCustomerName() {
+        return customerName.get();
+    }
 
-    @Override
-    public String toString() {
-        return "شحنة " + getAcid() + " - " + getPortName();
+    public void setCustomerName(String name) {
+        this.customerName.set(name);
+    }
+
+    public StringProperty customerNameProperty() {
+        return customerName;
+    }
+
+    public String getAcid() {
+        return acid.get();
+    }
+
+    public void setAcid(String acid) {
+        this.acid.set(acid);
+    }
+
+    public StringProperty acidProperty() {
+        return acid;
+    }
+
+    public String getPortName() {
+        return portName.get();
+    }
+
+    public void setPortName(String portName) {
+        this.portName.set(portName);
+    }
+
+    public StringProperty portNameProperty() {
+        return portName;
+    }
+
+    public String getCountry() {
+        return country.get();
+    }
+
+    public void setCountry(String country) {
+        this.country.set(country);
+    }
+
+    public StringProperty countryProperty() {
+        return country;
+    }
+
+    public String getStatus() {
+        return status.get();
+    }
+
+    public void setStatus(String status) {
+        this.status.set(status);
+    }
+
+    public StringProperty statusProperty() {
+        return status;
+    }
+
+    public int getNumOfContainers() {
+        return numOfContainers.get();
+    }
+
+    public void setNumOfContainers(int num) {
+        this.numOfContainers.set(num);
+    }
+
+    public IntegerProperty numOfContainersProperty() {
+        return numOfContainers;
+    }
+
+    public String getPolicy() {
+        return policy.get();
+    }
+
+    public void setPolicy(String policy) {
+        this.policy.set(policy);
+    }
+
+    public StringProperty policyProperty() {
+        return policy;
+    }
+
+    public String getAssignedToName() {
+        return assignedToName.get();
+    }
+
+    public void setAssignedToName(String name) {
+        this.assignedToName.set(name);
+    }
+
+    public StringProperty assignedToNameProperty() {
+        return assignedToName;
     }
 
     public String getTypeOfContainersJson() {
@@ -89,5 +156,15 @@ public class Shipment {
 
     public void setTypeOfContainersJson(String typeOfContainersJson) {
         this.typeOfContainersJson = typeOfContainersJson;
+    }
+
+    // ✅ FIX: Override toString to display ACID in ComboBox
+    @Override
+    public String toString() {
+        // You can customize this. E.g. return getAcid() + " (" + getPortName() + ")";
+        if (getAcid() == null || getAcid().isEmpty()) {
+            return "شحنة من ميناء (" + getPortName() + ")";
+        }
+        return getAcid();
     }
 }
