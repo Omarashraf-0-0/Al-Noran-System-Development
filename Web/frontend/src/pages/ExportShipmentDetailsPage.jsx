@@ -367,6 +367,12 @@ const ExportShipmentDetailsPage = () => {
 	// File Upload Handlers (for Client)
 	// =====================
 	const handleFileSelect = (docName, file) => {
+		// Validate file size (10MB max)
+		if (file.size > 10 * 1024 * 1024) {
+			toast.error("حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت");
+			return;
+		}
+		
 		setPendingFiles((prev) => ({
 			...prev,
 			[docName]: file,
@@ -569,6 +575,14 @@ const ExportShipmentDetailsPage = () => {
 
 					{/* Data Fields Section */}
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mt-8 mb-8">
+						{/* Client Name - Show to employees */}
+						{userType === "employee" && shipment.userId && (
+							<Datafield
+								label="اسم العميل"
+								value={shipment.userId.fullname || shipment.userId.name || "غير محدد"}
+								icon={<img src={contractIcon} alt="icon" className="w-5 h-5" />}
+							/>
+						)}
 						<Datafield
 							label="رقم الشحنة"
 							value={shipment.shipmentNumber || "—"}

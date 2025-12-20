@@ -825,7 +825,7 @@ const UCRRequestDetailsPage = () => {
 														{status !== "pending" && (
 															<button
 																onClick={() => openDocReviewModal(doc, "reset")}
-																className="bg-gray-600 text-white px-2 py-1 rounded text-xs hover:bg-gray-700 transition"
+																className="bg-orange-600 text-white px-2 py-1 rounded text-xs hover:bg-orange-700 transition"
 															>
 																🔄 إعادة تعيين
 															</button>
@@ -947,7 +947,7 @@ const UCRRequestDetailsPage = () => {
 									rel="noopener noreferrer"
 									className="text-blue-600 hover:text-blue-800 underline text-sm"
 								>
-									📄 عرض المستند في نافذة جديدة ↗
+									�️ عرض
 								</a>
 							</div>
 						)}
