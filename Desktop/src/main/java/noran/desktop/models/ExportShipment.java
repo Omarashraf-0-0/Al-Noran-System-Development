@@ -17,11 +17,20 @@ public class ExportShipment {
     private final DoubleProperty valueInEGP;
     private final DoubleProperty totalFees;
     private final BooleanProperty feePaid;
+    private final StringProperty assignedToName;
 
     public ExportShipment(String id, String userId, String customerName, String shipmentNumber,
             String ucrNumber, String destinationCountry, String destinationPort,
             String shippingMethod, String currentStatus, int containersCount,
             double totalWeight, double valueInEGP, double totalFees, boolean feePaid) {
+        this(id, userId, customerName, shipmentNumber, ucrNumber, destinationCountry, destinationPort,
+                shippingMethod, currentStatus, containersCount, totalWeight, valueInEGP, totalFees, feePaid, "");
+    }
+
+    public ExportShipment(String id, String userId, String customerName, String shipmentNumber,
+            String ucrNumber, String destinationCountry, String destinationPort,
+            String shippingMethod, String currentStatus, int containersCount,
+            double totalWeight, double valueInEGP, double totalFees, boolean feePaid, String assignedToName) {
         this.id = new SimpleStringProperty(id);
         this.userId = new SimpleStringProperty(userId);
         this.customerName = new SimpleStringProperty(customerName);
@@ -36,6 +45,7 @@ public class ExportShipment {
         this.valueInEGP = new SimpleDoubleProperty(valueInEGP);
         this.totalFees = new SimpleDoubleProperty(totalFees);
         this.feePaid = new SimpleBooleanProperty(feePaid);
+        this.assignedToName = new SimpleStringProperty(assignedToName);
     }
 
     // --- ID ---
@@ -218,6 +228,19 @@ public class ExportShipment {
 
     public BooleanProperty feePaidProperty() {
         return feePaid;
+    }
+
+    // --- Assigned To Name ---
+    public String getAssignedToName() {
+        return assignedToName.get();
+    }
+
+    public void setAssignedToName(String name) {
+        this.assignedToName.set(name);
+    }
+
+    public StringProperty assignedToNameProperty() {
+        return assignedToName;
     }
 
     @Override

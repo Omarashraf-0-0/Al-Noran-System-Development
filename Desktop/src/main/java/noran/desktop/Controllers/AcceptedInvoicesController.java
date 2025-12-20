@@ -116,6 +116,9 @@ public class AcceptedInvoicesController {
     }
 
     private void loadAcceptedInvoices() {
+        // Show loading indicator
+        acceptedInvoicesTable.setPlaceholder(new javafx.scene.control.Label("جاري تحميل البيانات..."));
+
         invoiceList.clear();
         try {
             MongoDatabase db = MongoConnection.getDatabase();

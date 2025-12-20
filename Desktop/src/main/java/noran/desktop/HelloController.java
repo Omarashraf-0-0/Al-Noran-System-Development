@@ -98,6 +98,9 @@ public class HelloController implements Initializable {
         colDate.setText("العملة");
         colDate.setCellValueFactory(new PropertyValueFactory<>("currency"));
 
+        // Set Arabic placeholder for empty table
+        invoicesTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بنود للعرض"));
+
         filteredData = new FilteredList<>(invoiceItems, p -> true);
         SortedList<InvoiceItem> sortedData = new SortedList<>(filteredData);
         sortedData.comparatorProperty().bind(invoicesTable.comparatorProperty());

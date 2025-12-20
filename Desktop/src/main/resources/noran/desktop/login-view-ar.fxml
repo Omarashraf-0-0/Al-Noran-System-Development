@@ -14,18 +14,20 @@
         </image>
     </ImageView>
 
-    <!-- Transparent Login Card - Always Centered -->
-    <VBox alignment="CENTER" maxHeight="500" maxWidth="386" minHeight="500" prefHeight="500.0" prefWidth="386.0" spacing="20" style="-fx-background-color: rgba(199,230,234,0.6); -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 5,0,0,3);" StackPane.alignment="CENTER">
+    <!-- Modern Login Card - Glass Effect -->
+    <VBox alignment="CENTER" maxHeight="480" maxWidth="400" minHeight="480" prefHeight="480.0" prefWidth="400.0" spacing="22" 
+        style="-fx-background-color: rgba(255,255,255,0.85); -fx-background-radius: 24; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 8);" 
+        StackPane.alignment="CENTER">
         <padding>
-            <Insets bottom="30" left="40" right="40" top="30" />
+            <Insets bottom="35" left="45" right="45" top="35" />
         </padding>
 
-        <!-- Title -->
-        <Label style="-fx-font-family: 'Poppins'; -fx-font-weight: 400; -fx-font-size: 22; -fx-text-fill: #690000;" text="تسجيل الدخول" />
-        <Label style="-fx-font-family: 'Poppins'; -fx-font-weight: 300; -fx-font-size: 18; -fx-text-fill: #690000;" text="اهلا بك في النوران" />
+        <!-- Title with Icon -->
+        <Label style="-fx-font-family: 'Segoe UI', 'Poppins'; -fx-font-weight: 700; -fx-font-size: 26; -fx-text-fill: #690000;" text="🔐 تسجيل الدخول" />
+        <Label style="-fx-font-family: 'Segoe UI', 'Poppins'; -fx-font-weight: 400; -fx-font-size: 16; -fx-text-fill: #666;" text="أهلاً بك في نظام النوران" />
 
         <!-- Fields -->
-        <GridPane hgap="10" nodeOrientation="RIGHT_TO_LEFT" vgap="20">
+        <GridPane hgap="10" nodeOrientation="RIGHT_TO_LEFT" vgap="16">
             <columnConstraints>
                 <ColumnConstraints />
             </columnConstraints>
@@ -37,32 +39,40 @@
             </rowConstraints>
 
             <!-- Username -->
-            <Label style="-fx-font-family: 'Poppins'; -fx-font-weight: 700; -fx-font-size: 14; -fx-text-fill: #690000; -fx-alignment: CENTER-RIGHT;" text="البريد الالكتروني" GridPane.rowIndex="0" />
+            <Label style="-fx-font-family: 'Segoe UI'; -fx-font-weight: 600; -fx-font-size: 14; -fx-text-fill: #444; -fx-alignment: CENTER-RIGHT;" text="📧 البريد الالكتروني" GridPane.rowIndex="0" />
 
-            <TextField fx:id="usernameField" nodeOrientation="LEFT_TO_RIGHT" prefHeight="26.0" prefWidth="266.0" promptText="البريد الالكتروني" style="-fx-font-family: 'Poppins'; -fx-font-weight: 400; -fx-font-size: 14; -fx-background-radius: 10; -fx-alignment: CENTER-RIGHT; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" GridPane.rowIndex="1" />
+            <TextField fx:id="usernameField" nodeOrientation="LEFT_TO_RIGHT" prefHeight="42.0" prefWidth="300.0" promptText="example@email.com" 
+                style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14; -fx-background-radius: 12; -fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 12; -fx-padding: 10 15;" 
+                GridPane.rowIndex="1" />
 
             <!-- Password -->
-            <Label style="-fx-font-family: 'Poppins'; -fx-font-weight: 700; -fx-font-size: 14; -fx-text-fill: #690000; -fx-alignment: CENTER-RIGHT;" text="كلمة المرور" GridPane.rowIndex="2" />
+            <Label style="-fx-font-family: 'Segoe UI'; -fx-font-weight: 600; -fx-font-size: 14; -fx-text-fill: #444; -fx-alignment: CENTER-RIGHT;" text="🔑 كلمة المرور" GridPane.rowIndex="2" />
 
-            <PasswordField fx:id="passwordField" nodeOrientation="LEFT_TO_RIGHT" promptText="*******" style="-fx-font-family: 'Poppins'; -fx-font-weight: 400; -fx-font-size: 14; -fx-background-radius: 10; -fx-alignment: CENTER-RIGHT; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" GridPane.rowIndex="3" />
+            <PasswordField fx:id="passwordField" nodeOrientation="LEFT_TO_RIGHT" prefHeight="42.0" promptText="••••••••" 
+                style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14; -fx-background-radius: 12; -fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 12; -fx-padding: 10 15;" 
+                GridPane.rowIndex="3" />
         </GridPane>
 
         <!-- Forgot Password -->
-        <Hyperlink fx:id="forgotPasswordLink" nodeOrientation="RIGHT_TO_LEFT" onAction="#onForgotPasswordClicked" style="-fx-font-family: 'Poppins'; -fx-font-weight: 400; -fx-font-size: 13; -fx-text-fill: #690000; -fx-underline: true;" text="نسيت كلمة المرور" />
+        <Hyperlink fx:id="forgotPasswordLink" nodeOrientation="RIGHT_TO_LEFT" onAction="#onForgotPasswordClicked" 
+            style="-fx-font-family: 'Segoe UI'; -fx-font-size: 13; -fx-text-fill: #888; -fx-underline: false;" text="نسيت كلمة المرور؟" />
 
-        <!-- Login Button -->
-        <Button fx:id="loginButton" onAction="#onLoginClicked" prefWidth="200" style="-fx-font-family: 'Poppins'; -fx-font-weight: 600; -fx-font-size: 14; -fx-background-color: #690000; -fx-background-radius: 8; -fx-text-fill: white;" text="تسجيل الدخول" />
+        <!-- Login Button with Gradient -->
+        <Button fx:id="loginButton" onAction="#onLoginClicked" prefWidth="220" prefHeight="48"
+            style="-fx-font-family: 'Segoe UI'; -fx-font-weight: 700; -fx-font-size: 16; -fx-background-color: linear-gradient(to bottom, #8B0000, #690000); -fx-background-radius: 14; -fx-text-fill: white; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 8, 0, 0, 3);" 
+            text="تسجيل الدخول" />
     </VBox>
 
     <!-- Logo Section - Top Left -->
-    <ImageView fitHeight="262.0" fitWidth="250.0" pickOnBounds="true" preserveRatio="true" StackPane.alignment="TOP_LEFT">
+    <ImageView fitHeight="240.0" fitWidth="230.0" pickOnBounds="true" preserveRatio="true" StackPane.alignment="TOP_LEFT">
         <image>
             <Image url="@images/Logo.png" />
         </image>
         <StackPane.margin>
-            <Insets top="-13" />
+            <Insets top="-10" />
         </StackPane.margin>
     </ImageView>
 
 </StackPane>
+
 

@@ -58,6 +58,33 @@ public class TopBarController implements Initializable {
 
         // Create the dropdown menu
         createUserMenu();
+
+        // Auto-load user data and profile photo from session
+        User currentUser = AppSession.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            if (userNameLabel != null) {
+                userNameLabel.setText(currentUser.getName() != null ? currentUser.getName() : "");
+            }
+            if (userEmailLabel != null) {
+                userEmailLabel.setText(currentUser.getEmail() != null ? currentUser.getEmail() : "");
+            }
+
+            // Check for cached profile image first
+            javafx.scene.image.Image cachedImage = AppSession.getInstance().getCachedProfileImage();
+            if (cachedImage != null && avatarImage != null) {
+                // Use cached image - no need to reload
+                avatarImage.setImage(cachedImage);
+                double size = Math.min(avatarImage.getFitWidth(), avatarImage.getFitHeight());
+                javafx.scene.shape.Circle clip = new javafx.scene.shape.Circle(size / 2, size / 2, size / 2);
+                avatarImage.setClip(clip);
+            } else {
+                // Load profile photo from session (will be cached after loading)
+                String profilePhoto = currentUser.getProfilePhoto();
+                if (profilePhoto != null && !profilePhoto.isEmpty()) {
+                    setProfilePhoto(profilePhoto);
+                }
+            }
+        }
     }
 
     /**
@@ -99,8 +126,18 @@ public class TopBarController implements Initializable {
     private void createUserMenu() {
         userMenu = new ContextMenu();
 
+        // Profile menu item
+        MenuItem profileItem = new MenuItem("الملف الشخصي");
+        profileItem.setStyle("-fx-text-fill: #333333;");
+        profileItem.setOnAction(e -> navigateToProfile());
+        userMenu.getItems().add(profileItem);
+
+        // Separator
+        userMenu.getItems().add(new SeparatorMenuItem());
+
         // Logout menu item
         MenuItem logoutItem = new MenuItem("تسجيل الخروج");
+        logoutItem.setStyle("-fx-text-fill: #c91e2b;");
         logoutItem.setOnAction(e -> handleLogout());
         userMenu.getItems().add(logoutItem);
 
@@ -111,6 +148,22 @@ public class TopBarController implements Initializable {
                         getClass().getResource("/noran/desktop/user-menu.css").toExternalForm());
             }
         });
+    }
+
+    private void navigateToProfile() {
+        try {
+            Stage stage = (Stage) userProfileArea.getScene().getWindow();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/noran/desktop/profile.fxml"));
+            Parent root = loader.load();
+            stage.getScene().setRoot(root);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("خطأ");
+            alert.setHeaderText(null);
+            alert.setContentText("حدث خطأ أثناء فتح الملف الشخصي: " + e.getMessage());
+            alert.showAndWait();
+        }
     }
 
     @FXML
@@ -152,6 +205,66 @@ public class TopBarController implements Initializable {
             userEmailLabel.setText(email);
     }
 
+    public void setProfilePhoto(String photoPath) {
+        System.out.println("[TopBarController] setProfilePhoto called with path: " + photoPath);
+
+        if (avatarImage == null || photoPath == null || photoPath.isEmpty()) {
+            System.out.println("[TopBarController] setProfilePhoto: avatarImage=" + (avatarImage != null)
+                    + ", photoPath=" + photoPath);
+            return;
+        }
+
+        // Run in background to avoid blocking UI
+        new Thread(() -> {
+            try {
+                String fullUrl;
+                if (photoPath.startsWith("http://") || photoPath.startsWith("https://")) {
+                    fullUrl = photoPath; // Already a full URL
+                    System.out.println("[TopBarController] Using direct URL: " + fullUrl);
+                } else {
+                    // S3 path - need to fetch presigned URL from backend
+                    System.out.println("[TopBarController] Fetching presigned URL for S3 path: " + photoPath);
+                    fullUrl = noran.desktop.Services.APIService.getPresignedUrl(photoPath);
+                    if (fullUrl == null) {
+                        System.err.println("[TopBarController] Failed to get presigned URL for: " + photoPath);
+                        return;
+                    }
+                    System.out.println("[TopBarController] Got presigned URL successfully");
+                }
+
+                // Load image on background thread
+                System.out.println("[TopBarController] Loading image from URL...");
+                javafx.scene.image.Image image = new javafx.scene.image.Image(fullUrl, true);
+
+                image.errorProperty().addListener((obs, oldVal, newVal) -> {
+                    if (newVal) {
+                        System.err.println("[TopBarController] Image loading ERROR: " + image.getException());
+                    }
+                });
+
+                image.progressProperty().addListener((obs, oldVal, newVal) -> {
+                    if (newVal.doubleValue() >= 1.0 && !image.isError()) {
+                        System.out.println("[TopBarController] Image loaded successfully - caching to session");
+                        // Cache the image in AppSession
+                        AppSession.getInstance().setCachedProfileImage(image);
+                        javafx.application.Platform.runLater(() -> {
+                            avatarImage.setImage(image);
+                            // Apply circular clip
+                            double size = Math.min(avatarImage.getFitWidth(), avatarImage.getFitHeight());
+                            javafx.scene.shape.Circle clip = new javafx.scene.shape.Circle(size / 2, size / 2,
+                                    size / 2);
+                            avatarImage.setClip(clip);
+                        });
+                    }
+                });
+            } catch (Exception e) {
+                // Keep default avatar
+                System.err.println("[TopBarController] Exception in setProfilePhoto: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
     public void setPageTitle(String title) {
         if (pageName != null)
             pageName.setText(title);
@@ -165,6 +278,15 @@ public class TopBarController implements Initializable {
         if (searchContainer != null) {
             searchContainer.setVisible(visible);
             searchContainer.setManaged(true);
+        }
+    }
+
+    /**
+     * Set the placeholder text for the search field to indicate what it searches.
+     */
+    public void setSearchPlaceholder(String placeholder) {
+        if (searchField != null) {
+            searchField.setPromptText(placeholder);
         }
     }
 }

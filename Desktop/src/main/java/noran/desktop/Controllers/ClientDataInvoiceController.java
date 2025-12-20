@@ -98,6 +98,7 @@ public class ClientDataInvoiceController implements Initializable {
         if (topBarController != null) {
             topBarController.setPageTitle("إدارة الفواتير");
             topBarController.setSidebar(sidebar);
+            topBarController.setSearchPlaceholder("البحث باسم العميل أو الرقم الضريبي...");
             if (currentUser != null) {
                 topBarController.setUserData(currentUser.getName(),
                         currentUser.getEmail() != null ? currentUser.getEmail() : "");
@@ -116,67 +117,88 @@ public class ClientDataInvoiceController implements Initializable {
         }
     }
 
-    // ✅ LOAD LOGIC: Only get users who actually have shipments
+    // ✅ LOAD LOGIC: Only get users who actually have shipments (ASYNC)
     private void loadUsersWithShipments() {
+        // Show loading indicator
+        invoicesTable.setPlaceholder(new javafx.scene.control.Label("جاري تحميل البيانات..."));
         userList.clear();
 
-        try {
-            MongoDatabase db = MongoConnection.getDatabase();
-            MongoCollection<Document> shipmentsCol = db.getCollection("shipments");
-            MongoCollection<Document> usersCol = db.getCollection("users");
+        javafx.concurrent.Task<java.util.List<UserRow>> loadTask = new javafx.concurrent.Task<>() {
+            @Override
+            protected java.util.List<UserRow> call() {
+                java.util.List<UserRow> loadedList = new java.util.ArrayList<>();
+                try {
+                    MongoDatabase db = MongoConnection.getDatabase();
+                    MongoCollection<Document> shipmentsCol = db.getCollection("shipments");
+                    MongoCollection<Document> usersCol = db.getCollection("users");
 
-            // 1. Find all distinct User IDs that exist in the 'shipments' collection
-            List<ObjectId> distinctUserIds = shipmentsCol.distinct("user_id", ObjectId.class)
-                    .into(new ArrayList<>());
+                    // 1. Find all distinct User IDs that exist in the 'shipments' collection
+                    List<ObjectId> distinctUserIds = shipmentsCol.distinct("user_id", ObjectId.class)
+                            .into(new ArrayList<>());
 
-            if (distinctUserIds.isEmpty()) {
-                System.out.println("No shipments found, list will be empty.");
-                return;
-            }
+                    if (distinctUserIds.isEmpty()) {
+                        System.out.println("No shipments found, list will be empty.");
+                        return loadedList;
+                    }
 
-            // 2. Find User details ONLY for those IDs
-            // Query: WHERE _id IN (id1, id2, id3...) AND active = true
-            List<Document> usersFound = usersCol.find(
-                    Filters.and(
-                            Filters.in("_id", distinctUserIds),
-                            Filters.eq("active", true) // Optional: Ensure user is active
+                    // 2. Find User details ONLY for those IDs
+                    // Query: WHERE _id IN (id1, id2, id3...) AND active = true
+                    List<Document> usersFound = usersCol.find(
+                            Filters.and(
+                                    Filters.in("_id", distinctUserIds),
+                                    Filters.eq("active", true) // Optional: Ensure user is active
                     )).into(new ArrayList<>());
 
-            for (Document doc : usersFound) {
-                String id = doc.getObjectId("_id").toString();
-                String fullname = doc.getString("fullname");
-                String taxNumber = doc.getString("taxNumber");
-                String clientType = doc.getString("clientType");
-                String rank = doc.getString("rank");
+                    for (Document doc : usersFound) {
+                        String id = doc.getObjectId("_id").toString();
+                        String fullname = doc.getString("fullname");
+                        String taxNumber = doc.getString("taxNumber");
+                        String clientType = doc.getString("clientType");
+                        String rank = doc.getString("rank");
 
-                // Normalize Data
-                if (fullname == null)
-                    fullname = doc.getString("username"); // Fallback
-                if (taxNumber == null)
-                    taxNumber = "-";
-                if (clientType == null)
-                    clientType = "عادي";
+                        // Normalize Data
+                        if (fullname == null)
+                            fullname = doc.getString("username"); // Fallback
+                        if (taxNumber == null)
+                            taxNumber = "-";
+                        if (clientType == null)
+                            clientType = "عادي";
 
-                // Rank Logic
-                if (rank == null || rank.trim().isEmpty()) {
-                    rank = "low";
-                } else {
-                    rank = rank.toLowerCase();
-                    if (rank.equals("rank1"))
-                        rank = "low";
-                    else if (rank.equals("rank2"))
-                        rank = "med";
-                    else if (rank.equals("rank3"))
-                        rank = "high";
+                        // Rank Logic
+                        if (rank == null || rank.trim().isEmpty()) {
+                            rank = "low";
+                        } else {
+                            rank = rank.toLowerCase();
+                            if (rank.equals("rank1"))
+                                rank = "low";
+                            else if (rank.equals("rank2"))
+                                rank = "med";
+                            else if (rank.equals("rank3"))
+                                rank = "high";
+                        }
+
+                        loadedList.add(new UserRow(fullname, clientType, taxNumber, rank, id));
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-
-                userList.add(new UserRow(fullname, clientType, taxNumber, rank, id));
+                return loadedList;
             }
+        };
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("خطأ", "فشل تحميل بيانات العملاء: " + e.getMessage());
-        }
+        loadTask.setOnSucceeded(event -> {
+            userList.setAll(loadTask.getValue());
+            if (userList.isEmpty()) {
+                invoicesTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بيانات"));
+            }
+        });
+
+        loadTask.setOnFailed(event -> {
+            invoicesTable.setPlaceholder(new javafx.scene.control.Label("خطأ في تحميل البيانات"));
+        });
+
+        new Thread(loadTask).start();
     }
 
     // --- Navigation ---

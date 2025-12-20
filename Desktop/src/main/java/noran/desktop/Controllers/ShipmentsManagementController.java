@@ -48,6 +48,8 @@ public class ShipmentsManagementController {
     private TableColumn<Shipment, String> colCountry;
     @FXML
     private TableColumn<Shipment, String> colShipmentStatus;
+    @FXML
+    private TableColumn<Shipment, String> colAssignedTo;
 
     private final ObservableList<Shipment> shipments = FXCollections.observableArrayList();
     private FilteredList<Shipment> filteredData;
@@ -68,6 +70,14 @@ public class ShipmentsManagementController {
         colCountry.setCellValueFactory(data -> data.getValue().countryProperty());
         colShipmentStatus.setCellValueFactory(data -> data.getValue().statusProperty());
 
+        // Setup Assigned To column (visible for admin only)
+        if (colAssignedTo != null) {
+            colAssignedTo.setCellValueFactory(data -> data.getValue().assignedToNameProperty());
+            User currentUser = AppSession.getInstance().getCurrentUser();
+            boolean isAdmin = currentUser != null && currentUser.isAdmin();
+            colAssignedTo.setVisible(isAdmin);
+        }
+
         // Setup Sorting and Filtering
         filteredData = new FilteredList<>(shipments, p -> true);
         SortedList<Shipment> sortedData = new SortedList<>(filteredData);
@@ -83,6 +93,9 @@ public class ShipmentsManagementController {
     }
 
     public void loadShipmentsFromMongo() {
+        // Show loading indicator
+        clientTable.setPlaceholder(new javafx.scene.control.Label("جاري تحميل البيانات..."));
+
         // Create a background task to fetch data so UI doesn't freeze
         Task<List<Shipment>> fetchDataTask = new Task<>() {
             @Override
@@ -93,17 +106,37 @@ public class ShipmentsManagementController {
                     MongoDatabase db = MongoConnection.getDatabase();
                     MongoCollection<Document> collection = db.getCollection("shipments");
 
+                    // Get current user info for filtering
+                    User currentUser = AppSession.getInstance().getCurrentUser();
+                    String currentUserId = currentUser != null ? currentUser.getId() : "";
+                    boolean isAdmin = currentUser != null && currentUser.isAdmin();
+
+                    // Build aggregation pipeline
+                    List<Bson> pipelineStages = new ArrayList<>();
+
+                    // Filter by employee_id for non-admin users
+                    if (!isAdmin && !currentUserId.isEmpty()) {
+                        pipelineStages.add(Aggregates.match(
+                                com.mongodb.client.model.Filters.eq("employee_id", new ObjectId(currentUserId))));
+                    }
+
                     // Join shipments.user_id == users._id to get Customer Name
-                    List<Bson> pipeline = Arrays.asList(
-                            Aggregates.lookup("users", "user_id", "_id", "userDetails"),
+                    pipelineStages.add(Aggregates.lookup("users", "user_id", "_id", "userDetails"));
+                    pipelineStages.add(
                             Aggregates.unwind("$userDetails", new UnwindOptions().preserveNullAndEmptyArrays(true)));
 
-                    for (Document doc : collection.aggregate(pipeline)) {
+                    // For admin: also lookup assigned employee name
+                    if (isAdmin) {
+                        pipelineStages.add(Aggregates.lookup("users", "employee_id", "_id", "assignedDetails"));
+                        pipelineStages.add(Aggregates.unwind("$assignedDetails",
+                                new UnwindOptions().preserveNullAndEmptyArrays(true)));
+                    }
 
+                    for (Document doc : collection.aggregate(pipelineStages)) {
                         // 1. Extract Shipment ID
                         String id = doc.getObjectId("_id").toString();
 
-                        // 2. Extract User ID (Required for the 9-argument constructor)
+                        // 2. Extract User ID
                         String userId = "";
                         if (doc.get("user_id") != null) {
                             userId = doc.getObjectId("user_id").toString();
@@ -124,9 +157,17 @@ public class ShipmentsManagementController {
                         int containers = doc.getInteger("num_of_containers", 0);
                         String policy = doc.getString("policy") != null ? doc.getString("policy") : "";
 
-                        // ✅ FIX: Pass 'userId' as the 2nd argument (Total 9 arguments)
+                        // 5. Extract assigned employee name (for admin)
+                        String assignedToName = "";
+                        if (isAdmin) {
+                            Document assignedDetails = (Document) doc.get("assignedDetails");
+                            if (assignedDetails != null && assignedDetails.getString("fullname") != null) {
+                                assignedToName = assignedDetails.getString("fullname");
+                            }
+                        }
+
                         loadedList.add(new Shipment(id, userId, customerName, acid, portName, country, status,
-                                containers, policy));
+                                containers, policy, assignedToName));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -139,6 +180,13 @@ public class ShipmentsManagementController {
         // When task finishes successfully
         fetchDataTask.setOnSucceeded(event -> {
             shipments.setAll(fetchDataTask.getValue());
+            if (shipments.isEmpty()) {
+                clientTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بيانات"));
+            }
+        });
+
+        fetchDataTask.setOnFailed(event -> {
+            clientTable.setPlaceholder(new javafx.scene.control.Label("خطأ في تحميل البيانات"));
         });
 
         // Run the task
@@ -181,6 +229,7 @@ public class ShipmentsManagementController {
         if (topBarController != null) {
             topBarController.setPageTitle("إدارة الشحنات");
             topBarController.setSidebar(sidebar);
+            topBarController.setSearchPlaceholder("البحث بالميناء، اسم العميل، أو ACID...");
             // Search Logic
             topBarController.setOnSearchAction(searchText -> {
                 filteredData.setPredicate(shipment -> {

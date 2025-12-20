@@ -48,9 +48,16 @@ public class EmployeeManagementController {
     private TableColumn<Employee, String> colType;
     @FXML
     private TableColumn<Employee, String> colRank;
+    @FXML
+    private javafx.scene.control.ComboBox<String> employeeTypeFilter;
+    @FXML
+    private javafx.scene.control.ComboBox<String> employeeStatusFilter;
 
     private final ObservableList<Employee> employees = FXCollections.observableArrayList();
     private FilteredList<Employee> filteredData;
+
+    // Track current search text for combined filtering
+    private String currentSearchText = "";
 
     @FXML
     private SidebarController sidebarController;
@@ -71,13 +78,16 @@ public class EmployeeManagementController {
         colRank.setCellValueFactory(
                 data -> new javafx.beans.property.SimpleStringProperty(data.getValue().isActive() ? "نشط" : "مجمد"));
 
-        // 2. Wrap List
+        // 2. Setup Filter ComboBoxes
+        setupFilters();
+
+        // 3. Wrap List
         filteredData = new FilteredList<>(employees, p -> true);
         SortedList<Employee> sortedData = new SortedList<>(filteredData);
         sortedData.comparatorProperty().bind(clientTable.comparatorProperty());
         clientTable.setItems(sortedData);
 
-        // 3. Load Data
+        // 4. Load Data
         loadEmployeesFromMongo();
 
         if (sidebarController != null)
@@ -85,8 +95,64 @@ public class EmployeeManagementController {
         setupTopBar();
     }
 
+    private void setupFilters() {
+        // Initialize Employee Type Filter
+        if (employeeTypeFilter != null) {
+            employeeTypeFilter.setItems(FXCollections.observableArrayList(
+                    "الكل", "مدخل بيانات", "موظف عمليات", "موظف مالي", "مسؤول"));
+            employeeTypeFilter.setValue("الكل");
+            employeeTypeFilter.valueProperty().addListener((obs, old, newVal) -> applyFilters());
+        }
+
+        // Initialize Employee Status Filter
+        if (employeeStatusFilter != null) {
+            employeeStatusFilter.setItems(FXCollections.observableArrayList("الكل", "نشط", "مجمد"));
+            employeeStatusFilter.setValue("الكل");
+            employeeStatusFilter.valueProperty().addListener((obs, old, newVal) -> applyFilters());
+        }
+    }
+
+    private void applyFilters() {
+        filteredData.setPredicate(employee -> {
+            // 1. Type Filter
+            String typeFilter = employeeTypeFilter != null ? employeeTypeFilter.getValue() : "الكل";
+            if (typeFilter != null && !"الكل".equals(typeFilter)) {
+                if (employee.getJobType() == null || !employee.getJobType().equals(typeFilter)) {
+                    return false;
+                }
+            }
+
+            // 2. Status Filter
+            String statusFilter = employeeStatusFilter != null ? employeeStatusFilter.getValue() : "الكل";
+            if (statusFilter != null && !"الكل".equals(statusFilter)) {
+                boolean isActive = employee.isActive();
+                if ("نشط".equals(statusFilter) && !isActive)
+                    return false;
+                if ("مجمد".equals(statusFilter) && isActive)
+                    return false;
+            }
+
+            // 3. Search Filter
+            if (currentSearchText != null && !currentSearchText.isEmpty()) {
+                String lower = currentSearchText.toLowerCase();
+                boolean matchesName = employee.getFullname() != null
+                        && employee.getFullname().toLowerCase().contains(lower);
+                boolean matchesPhone = employee.getPhone() != null && employee.getPhone().contains(lower);
+                boolean matchesEmail = employee.getEmail() != null && employee.getEmail().toLowerCase().contains(lower);
+                if (!matchesName && !matchesPhone && !matchesEmail) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }
+
     // ✅ 1. LOAD FROM MONGODB (Matching JSON Structure)
     public void loadEmployeesFromMongo() {
+        // Show loading indicator
+        clientTable.setPlaceholder(new javafx.scene.control.Label("جاري تحميل البيانات..."));
+
         Task<List<Employee>> task = new Task<>() {
             @Override
             protected List<Employee> call() {
@@ -128,6 +194,13 @@ public class EmployeeManagementController {
         task.setOnSucceeded(e -> {
             employees.setAll(task.getValue());
             clientTable.refresh();
+            if (employees.isEmpty()) {
+                clientTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بيانات"));
+            }
+        });
+
+        task.setOnFailed(e -> {
+            clientTable.setPlaceholder(new javafx.scene.control.Label("خطأ في تحميل البيانات"));
         });
 
         new Thread(task).start();
@@ -329,6 +402,7 @@ public class EmployeeManagementController {
         if (topBarController != null) {
             topBarController.setPageTitle("إدارة الصلاحيات");
             topBarController.setSidebar(sidebar);
+            topBarController.setSearchPlaceholder("البحث بالاسم، الهاتف، أو الإيميل...");
             if (currentUser != null) {
                 String name = currentUser.getName() != null ? currentUser.getName() : "مدير النظام";
                 String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
@@ -336,13 +410,8 @@ public class EmployeeManagementController {
             }
 
             topBarController.setOnSearchAction(searchText -> {
-                filteredData.setPredicate(employee -> {
-                    if (searchText == null || searchText.isEmpty())
-                        return true;
-                    String lower = searchText.toLowerCase();
-                    return (employee.getFullname() != null && employee.getFullname().toLowerCase().contains(lower)) ||
-                            (employee.getPhone() != null && employee.getPhone().contains(lower));
-                });
+                currentSearchText = searchText;
+                applyFilters();
             });
         }
     }

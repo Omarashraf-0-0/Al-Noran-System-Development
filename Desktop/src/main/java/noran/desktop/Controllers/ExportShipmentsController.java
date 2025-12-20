@@ -42,6 +42,8 @@ public class ExportShipmentsController {
     private TableColumn<ExportShipment, String> colDestinationPort;
     @FXML
     private TableColumn<ExportShipment, String> colStatus;
+    @FXML
+    private TableColumn<ExportShipment, String> colAssignedTo;
 
     private final ObservableList<ExportShipment> exports = FXCollections.observableArrayList();
     private FilteredList<ExportShipment> filteredData;
@@ -63,6 +65,14 @@ public class ExportShipmentsController {
         colDestinationPort.setCellValueFactory(data -> data.getValue().destinationPortProperty());
         colStatus.setCellValueFactory(data -> data.getValue().currentStatusProperty());
 
+        // Setup Assigned To column (visible for admin only)
+        if (colAssignedTo != null) {
+            colAssignedTo.setCellValueFactory(data -> data.getValue().assignedToNameProperty());
+            User currentUser = AppSession.getInstance().getCurrentUser();
+            boolean isAdmin = currentUser != null && currentUser.isAdmin();
+            colAssignedTo.setVisible(isAdmin);
+        }
+
         // Setup Sorting and Filtering
         filteredData = new FilteredList<>(exports, p -> true);
         SortedList<ExportShipment> sortedData = new SortedList<>(filteredData);
@@ -78,6 +88,9 @@ public class ExportShipmentsController {
     }
 
     public void loadExportsFromMongo() {
+        // Show loading indicator
+        exportsTable.setPlaceholder(new javafx.scene.control.Label("جاري تحميل البيانات..."));
+
         Task<List<ExportShipment>> fetchDataTask = new Task<>() {
             @Override
             protected List<ExportShipment> call() {
@@ -87,54 +100,86 @@ public class ExportShipmentsController {
                     MongoDatabase db = MongoConnection.getDatabase();
                     MongoCollection<Document> collection = db.getCollection("exportshipments");
 
+                    // Get current user info for filtering
+                    User currentUser = AppSession.getInstance().getCurrentUser();
+                    String currentUserId = currentUser != null ? currentUser.getId() : "";
+                    boolean isAdmin = currentUser != null && currentUser.isAdmin();
+
+                    // Build aggregation pipeline
+                    List<Bson> pipelineStages = new ArrayList<>();
+
+                    // Filter by assignedEmployee for non-admin users
+                    if (!isAdmin && !currentUserId.isEmpty()) {
+                        pipelineStages.add(Aggregates.match(
+                                com.mongodb.client.model.Filters.eq("assignedEmployee", new ObjectId(currentUserId))));
+                    }
+
                     // Join exportshipments.userId == users._id to get Customer Name
-                    List<Bson> pipeline = Arrays.asList(
-                            Aggregates.lookup("users", "userId", "_id", "userDetails"),
+                    pipelineStages.add(Aggregates.lookup("users", "userId", "_id", "userDetails"));
+                    pipelineStages.add(
                             Aggregates.unwind("$userDetails", new UnwindOptions().preserveNullAndEmptyArrays(true)));
 
-                    for (Document doc : collection.aggregate(pipeline)) {
+                    // For admin: also lookup assigned employee name
+                    if (isAdmin) {
+                        pipelineStages.add(Aggregates.lookup("users", "assignedEmployee", "_id", "assignedDetails"));
+                        pipelineStages.add(Aggregates.unwind("$assignedDetails",
+                                new UnwindOptions().preserveNullAndEmptyArrays(true)));
+                    }
+
+                    for (Document doc : collection.aggregate(pipelineStages)) {
 
                         // Extract Shipment ID
                         String id = doc.getObjectId("_id").toString();
 
                         // Extract User ID
                         String userId = "";
-                        if (doc.get("userId") != null) {
-                            userId = doc.getObjectId("userId").toString();
+                        Object userIdObj = doc.get("userId");
+                        if (userIdObj != null) {
+                            if (userIdObj instanceof ObjectId) {
+                                userId = ((ObjectId) userIdObj).toString();
+                            } else {
+                                userId = userIdObj.toString();
+                            }
                         }
 
-                        // Extract Customer Name
-                        String customerName = "غير معروف";
-                        Document userDetails = (Document) doc.get("userDetails");
-                        if (userDetails != null && userDetails.getString("fullname") != null) {
-                            customerName = userDetails.getString("fullname");
+                        // Extract Customer Name from joined data
+                        String customerName = "";
+                        Document userDetails = doc.get("userDetails", Document.class);
+                        if (userDetails != null) {
+                            customerName = userDetails.getString("username");
+                            if (customerName == null || customerName.isEmpty()) {
+                                customerName = userDetails.getString("name");
+                            }
                         }
 
-                        // Extract fields
-                        String shipmentNumber = doc.getString("shipmentNumber") != null
-                                ? doc.getString("shipmentNumber")
-                                : "";
-                        String ucrNumber = doc.getString("ucrNumber") != null ? doc.getString("ucrNumber") : "";
-                        String destinationCountry = doc.getString("destinationCountry") != null
-                                ? doc.getString("destinationCountry")
-                                : "";
-                        String destinationPort = doc.getString("destinationPort") != null
-                                ? doc.getString("destinationPort")
-                                : "";
-                        String shippingMethod = doc.getString("shippingMethod") != null
-                                ? doc.getString("shippingMethod")
-                                : "";
-                        String currentStatus = doc.getString("currentStatus") != null ? doc.getString("currentStatus")
-                                : "pending";
+                        // Extract other fields with null-safety
+                        String shipmentNumber = doc.getString("shipmentNumber");
+                        String ucrNumber = doc.getString("ucrNumber");
+                        String destinationCountry = doc.getString("destinationCountry");
+                        String destinationPort = doc.getString("destinationPort");
+                        String shippingMethod = doc.getString("shippingMethod");
+                        String currentStatus = doc.getString("currentStatus");
                         int containersCount = doc.getInteger("containersCount", 0);
                         double totalWeight = getDoubleValue(doc, "totalWeight");
                         double valueInEGP = getDoubleValue(doc, "valueInEGP");
                         double totalFees = getDoubleValue(doc, "totalFees");
                         boolean feePaid = doc.getBoolean("feePaid", false);
 
+                        // Extract assigned employee name (for admin)
+                        String assignedToName = "";
+                        if (isAdmin) {
+                            Document assignedDetails = doc.get("assignedDetails", Document.class);
+                            if (assignedDetails != null) {
+                                assignedToName = assignedDetails.getString("fullname");
+                                if (assignedToName == null) {
+                                    assignedToName = assignedDetails.getString("username");
+                                }
+                            }
+                        }
+
                         loadedList.add(new ExportShipment(id, userId, customerName, shipmentNumber, ucrNumber,
                                 destinationCountry, destinationPort, shippingMethod, currentStatus,
-                                containersCount, totalWeight, valueInEGP, totalFees, feePaid));
+                                containersCount, totalWeight, valueInEGP, totalFees, feePaid, assignedToName));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -146,6 +191,14 @@ public class ExportShipmentsController {
 
         fetchDataTask.setOnSucceeded(event -> {
             exports.setAll(fetchDataTask.getValue());
+            // Reset placeholder to default when data is loaded
+            if (exports.isEmpty()) {
+                exportsTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بيانات"));
+            }
+        });
+
+        fetchDataTask.setOnFailed(event -> {
+            exportsTable.setPlaceholder(new javafx.scene.control.Label("خطأ في تحميل البيانات"));
         });
 
         new Thread(fetchDataTask).start();
@@ -285,6 +338,7 @@ public class ExportShipmentsController {
         if (topBarController != null) {
             topBarController.setPageTitle("إدارة شحنات التصدير");
             topBarController.setSidebar(sidebar);
+            topBarController.setSearchPlaceholder("البحث باسم العميل، رقم الشحنة، UCR، أو الدولة...");
             if (currentUser != null) {
                 topBarController.setUserData(currentUser.getName(),
                         currentUser.getEmail() != null ? currentUser.getEmail() : "");

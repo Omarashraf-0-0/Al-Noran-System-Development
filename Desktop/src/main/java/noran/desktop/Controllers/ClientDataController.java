@@ -83,6 +83,9 @@ public class ClientDataController {
 
     // ✅ 1. LOAD FROM MONGODB
     public void loadClientsFromMongo() {
+        // Show loading indicator
+        clientTable.setPlaceholder(new javafx.scene.control.Label("جاري تحميل البيانات..."));
+
         Task<List<Client>> loadTask = new Task<>() {
             @Override
             protected List<Client> call() {
@@ -132,6 +135,13 @@ public class ClientDataController {
         loadTask.setOnSucceeded(e -> {
             clients.setAll(loadTask.getValue());
             clientTable.refresh();
+            if (clients.isEmpty()) {
+                clientTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بيانات"));
+            }
+        });
+
+        loadTask.setOnFailed(e -> {
+            clientTable.setPlaceholder(new javafx.scene.control.Label("خطأ في تحميل البيانات"));
         });
 
         new Thread(loadTask).start();
@@ -291,6 +301,7 @@ public class ClientDataController {
         if (topBarController != null) {
             topBarController.setPageTitle("إدارة العملاء");
             topBarController.setSidebar(sidebar);
+            topBarController.setSearchPlaceholder("البحث بالاسم، الهاتف، الإيميل، أو الرقم الضريبي...");
             if (currentUser != null) {
                 topBarController.setUserData(currentUser.getName(),
                         currentUser.getEmail() != null ? currentUser.getEmail() : "");

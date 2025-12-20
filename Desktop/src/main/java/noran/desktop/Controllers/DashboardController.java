@@ -92,6 +92,14 @@ public class DashboardController implements Initializable {
             String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
             topBarController.setUserData(name, email);
             topBarController.setSidebar(sidebar); // Pass sidebar for toggle
+            // Load profile photo
+            String profilePhoto = currentUser.getProfilePhoto();
+            System.out.println("[DashboardController] Profile photo from user: '" + profilePhoto + "'");
+            if (profilePhoto != null && !profilePhoto.isEmpty()) {
+                topBarController.setProfilePhoto(profilePhoto);
+            } else {
+                System.out.println("[DashboardController] No profile photo set for user");
+            }
         }
         topBarController.setSearchBarVisible(false);
 

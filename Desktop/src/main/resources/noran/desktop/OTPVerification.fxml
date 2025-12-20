@@ -7,12 +7,11 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.StackPane?>
 
-<AnchorPane style="-fx-background-image: url('noran/desktop/images/background.png');
+<StackPane style="-fx-background-image: url('noran/desktop/images/background.png');
                    -fx-background-size: cover;
                    -fx-background-position: center center;
                    -fx-background-repeat: no-repeat;"
@@ -21,73 +20,79 @@
             fx:controller="noran.desktop.Controllers.OTPVerificationController">
 
     <!-- Background -->
-    <ImageView fitHeight="768.0" fitWidth="1366.0" pickOnBounds="true" preserveRatio="false">
+    <ImageView fitHeight="768.0" fitWidth="1366.0" pickOnBounds="true" preserveRatio="false" StackPane.alignment="CENTER">
         <image>
             <Image url="@images/background.png" />
         </image>
     </ImageView>
 
-    <!-- Main Card -->
-    <VBox layoutX="400.0" layoutY="160.0"
-          prefWidth="500.0" prefHeight="300.0" spacing="25"
+    <!-- Modern Glass Card -->
+    <VBox maxWidth="440" maxHeight="420" prefWidth="440" prefHeight="420" spacing="22"
           alignment="CENTER"
-          style="-fx-background-color: rgba(255, 255, 255, 0.8);
-                 -fx-background-radius: 20;
-                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 5,0,0,3);"
-          nodeOrientation="RIGHT_TO_LEFT">
+          style="-fx-background-color: rgba(255,255,255,0.9);
+                 -fx-background-radius: 24;
+                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 8);"
+          nodeOrientation="RIGHT_TO_LEFT"
+          StackPane.alignment="CENTER">
 
         <padding>
-            <Insets top="30" right="40" bottom="30" left="40"/>
+            <Insets top="35" right="45" bottom="35" left="45"/>
         </padding>
 
         <!-- Back Link -->
-        <HBox alignment="BOTTOM_RIGHT" prefWidth="500">
-            <Hyperlink text="الرجوع" onAction="#onBackClicked"
-                       style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
-                              -fx-font-size: 13; -fx-text-fill: #690000;
-                              -fx-underline: true;" />
+        <HBox alignment="TOP_LEFT" prefWidth="380">
+            <Hyperlink text="⬅️ الرجوع" onAction="#onBackClicked"
+                       style="-fx-font-family: 'Segoe UI'; -fx-font-size: 13; -fx-text-fill: #888; -fx-underline: false;" />
         </HBox>
 
-        <!-- Title -->
-        <Label text="رمز التحقق (OTP)"
-               style="-fx-font-family: 'Poppins'; -fx-font-weight: 700;
-                      -fx-font-size: 20; -fx-text-fill: #690000;" />
+        <!-- Icon + Title -->
+        <Label text="🔢 رمز التحقق (OTP)"
+               style="-fx-font-family: 'Segoe UI', 'Poppins'; -fx-font-weight: 700;
+                      -fx-font-size: 24; -fx-text-fill: #690000;" />
+        
+        <Label text="أدخل الرمز المرسل إلى بريدك الإلكتروني"
+               style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14; -fx-text-fill: #666;" />
 
-        <!-- OTP Fields -->
-        <HBox spacing="10" alignment="CENTER">
-            <TextField fx:id="otp5" prefWidth="40" prefHeight="40"
-                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
-            <TextField fx:id="otp4" prefWidth="40" prefHeight="40"
-                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
-            <TextField fx:id="otp3" prefWidth="40" prefHeight="40"
-                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
-            <TextField fx:id="otp2" prefWidth="40" prefHeight="40"
-                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
-            <TextField fx:id="otp1" prefWidth="40" prefHeight="40"
-                       style="-fx-background-radius: 10; -fx-font-size: 18; -fx-alignment: center;" />
+        <!-- OTP Fields - Left to Right Input -->
+        <HBox spacing="12" alignment="CENTER" nodeOrientation="LEFT_TO_RIGHT">
+            <TextField fx:id="otp1" prefWidth="52" prefHeight="52"
+                       style="-fx-background-radius: 14; -fx-font-size: 22; -fx-font-weight: bold; -fx-alignment: center; -fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 14;" />
+            <TextField fx:id="otp2" prefWidth="52" prefHeight="52"
+                       style="-fx-background-radius: 14; -fx-font-size: 22; -fx-font-weight: bold; -fx-alignment: center; -fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 14;" />
+            <TextField fx:id="otp3" prefWidth="52" prefHeight="52"
+                       style="-fx-background-radius: 14; -fx-font-size: 22; -fx-font-weight: bold; -fx-alignment: center; -fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 14;" />
+            <TextField fx:id="otp4" prefWidth="52" prefHeight="52"
+                       style="-fx-background-radius: 14; -fx-font-size: 22; -fx-font-weight: bold; -fx-alignment: center; -fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 14;" />
+            <TextField fx:id="otp5" prefWidth="52" prefHeight="52"
+                       style="-fx-background-radius: 14; -fx-font-size: 22; -fx-font-weight: bold; -fx-alignment: center; -fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-radius: 14;" />
         </HBox>
 
         <!-- Resend Link -->
-        <Hyperlink text="إعادة إرسال الكود" onAction="#onResendClicked"
-                   style="-fx-font-family: 'Poppins'; -fx-font-size: 13;
-                          -fx-text-fill: #690000; -fx-underline: true;" />
+        <Hyperlink text="🔄 إعادة إرسال الكود" onAction="#onResendClicked"
+                   style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14;
+                          -fx-text-fill: #3b82f6; -fx-underline: false;" />
 
-        <!-- Confirm Button -->
-        <Button fx:id="confirmButton" text="تأكيد الكود" onAction="#onConfirmClicked"
-                prefWidth="200" prefHeight="35"
-                style="-fx-font-family: 'Poppins'; -fx-font-weight: 600;
-                       -fx-font-size: 14; -fx-background-color: #690000;
-                       -fx-background-radius: 8; -fx-text-fill: white;" />
+        <!-- Confirm Button with Gradient -->
+        <Button fx:id="confirmButton" text="✅ تأكيد الكود" onAction="#onConfirmClicked"
+                prefWidth="220" prefHeight="48"
+                style="-fx-font-family: 'Segoe UI'; -fx-font-weight: 700;
+                       -fx-font-size: 16; -fx-background-color: linear-gradient(to bottom, #8B0000, #690000);
+                       -fx-background-radius: 14; -fx-text-fill: white;
+                       -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 8, 0, 0, 3);" />
 
     </VBox>
 
     <!-- Logo -->
-    <ImageView fitHeight="120.0" fitWidth="180.0"
-               layoutX="40.0" layoutY="20.0"
-               preserveRatio="true" pickOnBounds="true">
+    <ImageView fitHeight="240.0" fitWidth="230.0"
+               preserveRatio="true" pickOnBounds="true"
+               StackPane.alignment="TOP_LEFT">
         <image>
             <Image url="@images/Logo.png" />
         </image>
+        <StackPane.margin>
+            <Insets top="-10" />
+        </StackPane.margin>
     </ImageView>
 
-</AnchorPane>
+</StackPane>
+

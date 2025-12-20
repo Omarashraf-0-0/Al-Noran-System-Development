@@ -1,6 +1,7 @@
 package noran.desktop.Controllers;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.Objects;
 
 public class User implements Serializable {
@@ -11,6 +12,17 @@ public class User implements Serializable {
     private String name;
     private String role;
     private String email;
+
+    // Additional employee fields for caching
+    private String phone;
+    private String fullname;
+    private String username;
+    private String employeeType;
+    private boolean verified;
+    private boolean active;
+    private Date createdAt;
+    private Date updatedAt;
+    private String profilePhoto;
 
     public User() {
     }
@@ -65,6 +77,88 @@ public class User implements Serializable {
         this.email = email;
     }
 
+    // Additional getters and setters
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getFullname() {
+        return fullname;
+    }
+
+    public void setFullname(String fullname) {
+        this.fullname = fullname;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getEmployeeType() {
+        return employeeType;
+    }
+
+    public void setEmployeeType(String employeeType) {
+        this.employeeType = employeeType;
+    }
+
+    public boolean isVerified() {
+        return verified;
+    }
+
+    public void setVerified(boolean verified) {
+        this.verified = verified;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public Date getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Date createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Date getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Date updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getProfilePhoto() {
+        return profilePhoto;
+    }
+
+    public void setProfilePhoto(String profilePhoto) {
+        this.profilePhoto = profilePhoto;
+    }
+
+    /**
+     * Check if this user has admin role
+     * 
+     * @return true if role is "admin" (case-insensitive)
+     */
+    public boolean isAdmin() {
+        return role != null && role.equalsIgnoreCase("admin");
+    }
+
     @Override
     public String toString() {
         return "User{" +
@@ -72,6 +166,7 @@ public class User implements Serializable {
                 ", name='" + name + '\'' +
                 ", role='" + role + '\'' +
                 ", email='" + email + '\'' +
+                ", profilePhoto='" + profilePhoto + '\'' +
                 '}';
     }
 
