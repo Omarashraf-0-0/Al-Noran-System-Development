@@ -36,6 +36,8 @@ import EmployeeProfilePage from "./pages/EmployeeProfilePage";
 import AdminProfilePage from "./pages/AdminProfilePage";
 import PaymentsManagementPage from "./pages/PaymentsManagementPage";
 import ClientPaymentsPage from "./pages/ClientPaymentsPage";
+import NotificationPage from "./pages/NotificationPage";
+import AllNotificationsPage from "./pages/AllNotificationsPage";
 
 // Export System Pages
 import UCRRequestPage from "./pages/UCRRequestPage";
@@ -190,6 +192,22 @@ const App = () => {
 					element={
 						<AuthRoute>
 							<ProfileRoute />
+						</AuthRoute>
+					}
+				/>
+				<Route
+					path="/notification/:id"
+					element={
+						<AuthRoute>
+							<NotificationPage />
+						</AuthRoute>
+					}
+				/>
+				<Route
+					path="/notifications"
+					element={
+						<AuthRoute>
+							<AllNotificationsPage />
 						</AuthRoute>
 					}
 				/>

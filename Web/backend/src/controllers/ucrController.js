@@ -526,6 +526,27 @@ const lockUCRRequest = async (req, res) => {
 			console.error("Failed to send UCR review notification:", notifError.message);
 		}
 
+		// 📬 Notify employee about assigned UCR request
+		try {
+			await notificationService.createNotification({
+				userId: employeeId,
+				type: "ucr_created",
+				title: "تم تعيين طلب UCR جديد لك",
+				message: `تم تعيين طلب UCR ${request.requestNumber} لك للمراجعة`,
+				data: {
+					ucrRequestId: request._id,
+					requestNumber: request.requestNumber,
+					clientId: request.userId,
+					actionUrl: `/employee/ucr-requests/${request._id}`,
+				},
+				sendPush: true,
+				priority: "high",
+			});
+			console.log(`📬 Employee ${employeeId} notified about UCR assignment`);
+		} catch (notifError) {
+			console.error("Failed to send employee UCR assignment notification:", notifError.message);
+		}
+
 		res.json({
 			success: true,
 			message: "تم قفل الطلب للمراجعة",
@@ -692,6 +713,30 @@ const issueUCRNumber = async (req, res) => {
 			console.log(`📬 UCR issued notification sent to user: ${request.userId}`);
 		} catch (notifError) {
 			console.error("Failed to send UCR issued notification:", notifError.message);
+		}
+
+		// 📬 Notify assigned employee about the new export shipment
+		if (exportShipment && employeeId) {
+			try {
+				await notificationService.createNotification({
+					userId: employeeId,
+					type: "ucr_approved",
+					title: "تم تعيين شحنة تصدير جديدة لك",
+					message: `تم تعيين شحنة تصدير UCR ${ucrNumber} لك`,
+					data: {
+						shipmentId: exportShipment._id,
+						ucrNumber: ucrNumber,
+						requestNumber: request.requestNumber,
+						clientId: request.userId,
+						actionUrl: `/employee/export-shipments/${exportShipment._id}`,
+					},
+					sendPush: true,
+					priority: "high",
+				});
+				console.log(`📬 Employee ${employeeId} notified about UCR shipment assignment`);
+			} catch (notifError) {
+				console.error("Failed to send employee UCR assignment notification:", notifError.message);
+			}
 		}
 	} catch (error) {
 		console.error("Error issuing UCR number:", error);

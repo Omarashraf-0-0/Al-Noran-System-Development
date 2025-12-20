@@ -14,3 +14,11 @@ Web/frontend/.env
 **/firebase-service-account.json
 **/firebase-adminsdk*.json
 Web/backend/src/config/firebase-service-account.json
+Mobile Application/pubspec.lock
+Mobile Application/macos/Flutter/GeneratedPluginRegistrant.swift
+Mobile Application/linux/flutter/generated_plugins.cmake
+Mobile Application/linux/flutter/generated_plugin_registrant.cc
+Mobile Application/linux/flutter/generated_plugin_registrant.cc
+/Mobile Application/linux
+/Mobile Application/macos
+Mobile Application/pubspec.lock

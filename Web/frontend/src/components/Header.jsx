@@ -2,25 +2,20 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import account_circle from "../assets/images/account_circle.png";
-import notifications_unread from "../assets/images/notifications_unread.png";
 import coloredLogo from "../assets/images/coloredLogo.png";
 import dehaze from "../assets/images/dehaze.png";
 import cancelpreset from "../assets/images/cancel_presentation.png";
-import folderCheck from "../assets/images/folder_check.png";
-import pdfPic from "../assets/images/picture_as_pdf.png";
+import NotificationBell from "./NotificationBell";
 
 const Header = () => {
 	const [user, setUser] = useState(null);
 	const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-	const [notifications, setNotifications] = useState([]);
-	const [showNotifications, setShowNotifications] = useState(false);
 	const [openDropdown, setOpenDropdown] = useState(null); // For navigation dropdowns
 
 	const navigate = useNavigate();
 	const location = useLocation();
 	const profileMenuRef = useRef(null);
-	const notificationRef = useRef(null);
 	const dropdownRef = useRef(null);
 
 	const primaryColor = "#690000";
@@ -37,49 +32,6 @@ const Header = () => {
 		}
 	}, []);
 
-	// Load notifications
-	useEffect(() => {
-		const loadNotifications = async () => {
-			try {
-				// TODO: Replace with real API call
-				// const res = await fetch("/api/notifications");
-				// const data = await res.json();
-				// setNotifications(data);
-
-				setNotifications([
-					{
-						id: 1,
-						title: "تم رفع مستند من العميل : ياسمين",
-						category: "فاتورة مبدائية",
-						date: "تاريخ الجمعة 29 أكتوبر",
-						actions: true,
-						icon: pdfPic,
-					},
-					{
-						id: 2,
-						title: "الموظف : اسم أعتمد مستند لشحنة رقم : AIR-005",
-						category: "فاتورة مبدائية",
-						date: "تاريخ الجمعة 29 أكتوبر",
-						actions: false,
-						icon: pdfPic,
-					},
-					{
-						id: 3,
-						title: "تم تسجيل عميل جديد اسمه نوع العميل",
-						category: "",
-						date: "تاريخ الجمعة 29 أكتوبر",
-						actions: false,
-						icon: pdfPic,
-					},
-				]);
-			} catch (err) {
-				console.error("Error loading notifications:", err);
-			}
-		};
-
-		loadNotifications();
-	}, []);
-
 	// Close dropdowns when clicking outside
 	useEffect(() => {
 		const handleClickOutside = (event) => {
@@ -88,12 +40,6 @@ const Header = () => {
 				!profileMenuRef.current.contains(event.target)
 			) {
 				setIsProfileMenuOpen(false);
-			}
-			if (
-				notificationRef.current &&
-				!notificationRef.current.contains(event.target)
-			) {
-				setShowNotifications(false);
 			}
 			if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
 				setOpenDropdown(null);
@@ -372,56 +318,8 @@ const Header = () => {
 					<div className="flex items-center gap-3 md:gap-4">
 						{user ? (
 							<>
-								{/* Notifications */}
-								<div className="relative" ref={notificationRef}>
-									<button
-										onClick={() => setShowNotifications(!showNotifications)}
-										className="p-1 rounded-full hover:opacity-80 focus:outline-none relative"
-									>
-										<img
-											src={notifications_unread}
-											alt="Notifications"
-											className="h-8 w-8 object-contain"
-										/>
-										{notifications.length > 0 && (
-											<span className="absolute top-0 right-0 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-												{notifications.length}
-											</span>
-										)}
-									</button>
-
-									{/* Notifications Dropdown */}
-									{showNotifications && (
-										<div className="absolute left-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
-											<div className="p-4 border-b border-gray-200">
-												<h3 className="text-lg font-bold text-gray-800">
-													الإشعارات
-												</h3>
-											</div>
-											<div className="max-h-96 overflow-y-auto">
-												{notifications.length === 0 ? (
-													<div className="p-8 text-center text-gray-500">
-														<p>لا توجد إشعارات جديدة</p>
-													</div>
-												) : (
-													notifications.map((notification, index) => (
-														<div
-															key={index}
-															className="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
-														>
-															<p className="text-sm text-gray-800">
-																{notification.message}
-															</p>
-															<p className="text-xs text-gray-500 mt-1">
-																{notification.time}
-															</p>
-														</div>
-													))
-												)}
-											</div>
-										</div>
-									)}
-								</div>
+								{/* Notifications - Using NotificationBell Component */}
+								<NotificationBell />
 
 								{/* User Profile */}
 								<div className="relative" ref={profileMenuRef}>

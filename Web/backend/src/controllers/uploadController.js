@@ -87,6 +87,35 @@ const uploadSingleFile = async (req, res) => {
 			}
 		}
 
+		// 📬 Send notification to employee if client uploads shipment document
+		if (uploadType === "shipments" && req.body.shipmentId && additionalData.uploadedBy) {
+			try {
+				const Shipment = require("../models/shipment");
+				const shipment = await Shipment.findById(req.body.shipmentId);
+				
+				if (shipment && shipment.employee_id && shipment.user_id.toString() === additionalData.uploadedBy.toString()) {
+					await notificationService.createNotification({
+						userId: shipment.employee_id,
+						type: "document_uploaded",
+						title: "العميل قام برفع مستند",
+						message: `قام العميل برفع مستند جديد للشحنة ${shipment.acid}`,
+						data: {
+							uploadId: uploadRecord._id,
+							shipmentId: shipment._id,
+							shipmentAcid: shipment.acid,
+							documentType: req.body.documentType || "document",
+							actionUrl: `/employee/shipments/${shipment._id}`,
+						},
+						sendPush: true,
+						priority: "medium",
+					});
+					console.log(`📬 Employee notified about client document upload for shipment: ${shipment.acid}`);
+				}
+			} catch (notifError) {
+				console.error("Failed to send employee document notification:", notifError.message);
+			}
+		}
+
 		res.status(200).json({
 			message: "File uploaded successfully",
 			file: {
