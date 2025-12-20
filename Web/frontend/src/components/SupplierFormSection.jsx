@@ -43,6 +43,7 @@ const SupplierFormSection = ({ supplierData, onInputChange }) => {
 					placeholder="ادخل البريد الألكترونى"
 					value={supplierData.email}
 					onChange={onInputChange("supplier.email")}
+					required
 				/>
 			</FieldRow>
 
@@ -53,9 +54,12 @@ const SupplierFormSection = ({ supplierData, onInputChange }) => {
 					id="supplier.mobileNum"
 					type="tel"
 					label="رقم الهاتف"
-					placeholder="ادخل رقم الهاتف"
+					placeholder="مثال: +201234567890"
 					value={supplierData.mobileNum}
 					onChange={onInputChange("supplier.mobileNum")}
+					pattern="[+]?[0-9]+"
+					title="يُسمح فقط بالأرقام وعلامة + في البداية"
+					required
 				/>
 			</FieldRow>
 		</>

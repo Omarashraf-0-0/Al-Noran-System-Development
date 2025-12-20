@@ -270,9 +270,9 @@ const getAllShipments = async (req, res) => {
 			.populate("user_id", "username fullname email")
 			.populate("employee_id", "username fullname email")
 			.sort({ createdAt: -1 });
-		
+
 		console.log(`📦 [getAllShipments] Found ${shipments.length} shipments for userType: ${userType}`);
-		
+
 		res.json(shipments);
 	} catch (error) {
 		console.error(`❌ [getAllShipments] Error:`, error);
@@ -414,7 +414,7 @@ const updateShipmentStatus = async (req, res) => {
 		if (shipment.employee_id && req.user && req.user.type === "client") {
 			try {
 				const updateFields = [];
-				
+
 				// Check what client updated
 				if (updateData.claimNumber && updateData.claimNumber !== existingShipment.claimNumber) {
 					updateFields.push("رقم المطالبة");
@@ -657,7 +657,7 @@ const updateShipmentStatusById = async (req, res) => {
 		// First, get the old status before updating
 		const existingShipment = await Shipment.findById(shipmentId);
 		const oldStatus = existingShipment?.status;
-		
+
 		const shipment = await Shipment.findByIdAndUpdate(shipmentId, updateData, {
 			new: true,
 			runValidators: true,
@@ -1048,10 +1048,10 @@ const resetUploadedDocument = async (req, res) => {
 		res.json({
 			success: true,
 			message: "تم حذف المستند بنجاح.",
-	});
-} catch (error) {
-	console.error("Error resetting document:", error);
-	res.status(500).json({ success: false, message: error.message });
+		});
+	} catch (error) {
+		console.error("Error resetting document:", error);
+		res.status(500).json({ success: false, message: error.message });
 	}
 };
 
