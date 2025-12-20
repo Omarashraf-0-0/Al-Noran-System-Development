@@ -1452,8 +1452,8 @@ const UCRRequestPage = () => {
 												</p>
 											</div>
 
-											{isUploaded ? (
-												/* Uploaded State */
+											{isUploaded && !needsRevision ? (
+												/* Uploaded State (Approved or Pending) */
 												<div className="text-center">
 													<div className="mb-2">
 														<span className="text-2xl">📄</span>
@@ -1480,6 +1480,100 @@ const UCRRequestPage = () => {
 														</button>
 													</div>
 												</div>
+											) : needsRevision ? (
+												/* Needs Revision State - Show current doc + reupload option */
+												<div className="text-center">
+													<div className="mb-2">
+														<span className="text-2xl">⚠️</span>
+													</div>
+													<p className="text-sm text-orange-700 font-medium truncate mb-2" title={uploadedDoc?.name}>
+														{uploadedDoc?.name || "المستند الحالي"}
+													</p>
+													{uploadedDoc?.url && (
+														<button
+															type="button"
+															onClick={() => window.open(uploadedDoc.url, "_blank")}
+															className="px-3 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 mb-3"
+														>
+															👁️ عرض المستند الحالي
+														</button>
+													)}
+													<div className="border-t border-orange-300 pt-3 mt-2">
+														<p className="text-xs text-orange-600 mb-2">📤 ارفع المستند المعدّل:</p>
+														<label className="cursor-pointer block">
+															<input
+																type="file"
+																onChange={(e) => {
+																	const file = e.target.files[0];
+																	if (file) {
+																		// Validate file size (10MB max)
+																		if (file.size > 10 * 1024 * 1024) {
+																			toast.error("حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت");
+																			e.target.value = "";
+																			return;
+																		}
+																		setSelectedFile(file);
+																		// Auto upload replacement
+																		const uploadReplacementFile = async () => {
+																			setUploading(true);
+																			try {
+																				// First delete the old document
+																				if (uploadedDoc?.id) {
+																					await removeDocument(uploadedDoc.id);
+																				}
+																				
+																				const uploadFormData = new FormData();
+																				uploadFormData.append("file", file);
+																				uploadFormData.append("category", "ucr_request");
+																				uploadFormData.append("userType", "client");
+																				uploadFormData.append("documentType", docType);
+
+																				const token = localStorage.getItem("token");
+																				const response = await axios.post(
+																					`${import.meta.env.VITE_API_URL}/api/uploads`,
+																					uploadFormData,
+																					{
+																						headers: {
+																							Authorization: `Bearer ${token}`,
+																							"Content-Type": "multipart/form-data",
+																						},
+																					}
+																				);
+
+																				if (response.data.success) {
+																					setUploadedDocuments((prev) => [
+																						...prev.filter((d) => d.type !== docType),
+																						{
+																							id: response.data.upload.id || response.data.upload._id,
+																							type: docType,
+																							name: file.name,
+																							url: response.data.upload.url || response.data.upload.publicUrl,
+																							key: response.data.upload.key,
+																						},
+																					]);
+																					toast.success(`تم رفع المستند المعدّل بنجاح`);
+																				}
+																			} catch (error) {
+																				console.error("Upload error:", error);
+																				toast.error("فشل رفع الملف: " + (error.response?.data?.message || error.message));
+																			} finally {
+																				setUploading(false);
+																				setSelectedFile(null);
+																			}
+																		};
+																		uploadReplacementFile();
+																	}
+																	e.target.value = "";
+																}}
+																accept=".pdf,.jpg,.jpeg,.png"
+																className="hidden"
+															/>
+															<span className="inline-block px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors">
+																{uploading ? "جاري الرفع..." : "📎 اختر ملف جديد"}
+															</span>
+														</label>
+													</div>
+												</div>
 											) : (
 												/* Upload State */
 												<div className="text-center">
@@ -1495,6 +1589,12 @@ const UCRRequestPage = () => {
 															onChange={(e) => {
 																const file = e.target.files[0];
 																if (file) {
+																	// Validate file size (10MB max)
+																	if (file.size > 10 * 1024 * 1024) {
+																		toast.error("حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت");
+																		e.target.value = "";
+																		return;
+																	}
 																	setSelectedFile(file);
 																	// Auto upload
 																	const uploadSelectedFile = async () => {

@@ -14,6 +14,9 @@ const GoodsFormSection = ({ goodsData, onInputChange }) => {
 					placeholder="50"
 					value={goodsData.weight}
 					onChange={onInputChange("goods.weight")}
+					min="0.01"
+					step="0.01"
+					required
 				/>
 				<InputField
 					id="goods.customsItem"
