@@ -63,7 +63,7 @@ export default function ShipmentsList() {
 
 				const formattedShipments = (response.data || []).map((shipment) => ({
 					id: shipment._id,
-					clientName: shipment.employerName || "Unknown Client",
+					clientName: shipment.importerName || "غير محدد",
 					shipmentNo: shipment.number46 || shipment.shipmentNumber || "N/A",
 					status: shipment.status || "pending",
 					acid: shipment.acid,
