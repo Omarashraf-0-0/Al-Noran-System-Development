@@ -24,7 +24,7 @@
             <VBox spacing="28" style="-fx-padding: 32 48;">
 
                 <!-- HEADER CARD - Hero Section with Gradient -->
-                <StackPane style="-fx-background-color: linear-gradient(to left, #690000, #c91e2b, #ff4757); 
+                <StackPane style="-fx-background-color: #a40000; 
                                   -fx-background-radius: 24; 
                                   -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 25, 0, 0, 8);">
                     <VBox alignment="CENTER" spacing="16" style="-fx-padding: 40;">
@@ -63,7 +63,7 @@
 
                         <!-- Status Badge -->
                         <HBox alignment="CENTER" spacing="8">
-                            <Circle fx:id="statusIndicator" radius="5" style="-fx-fill: #10b981;" />
+                            <Circle fx:id="statusIndicator" radius="5" style="-fx-fill: #22c55e;" />
                             <Label fx:id="statusLabel" text="نشط" 
                                 style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 14;" />
                         </HBox>
@@ -82,11 +82,13 @@
                                             -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 20, 0, 0, 6);" 
                           GridPane.columnIndex="1" GridPane.rowIndex="0">
                         <!-- Card Header -->
-                        <HBox alignment="CENTER_RIGHT" spacing="10" 
-                            style="-fx-background-color: linear-gradient(to left, #fff5f5, #fee2e2); -fx-background-radius: 20 20 0 0; -fx-padding: 18 24;">
-                            <Label text="👤" style="-fx-font-size: 22;" />
+                        <HBox alignment="CENTER_LEFT" spacing="12" 
+                            style="-fx-background-color: #a40000; -fx-background-radius: 20 20 0 0; -fx-padding: 16 24;">
+                            <StackPane style="-fx-background-color: rgba(255,255,255,0.2); -fx-background-radius: 10; -fx-padding: 8;">
+                                <Label text="👤" style="-fx-font-size: 20;" />
+                            </StackPane>
                             <Label text="المعلومات الشخصية" 
-                                style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #c91e2b;" />
+                                style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: white;" />
                         </HBox>
                         
                         <!-- Card Content -->
@@ -124,9 +126,9 @@
                                 <VBox alignment="TOP_RIGHT" spacing="2" HBox.hgrow="ALWAYS">
                                     <Label text="نوع الحساب" style="-fx-text-fill: #888; -fx-font-size: 12;" />
                                     <Label fx:id="employeeTypeLabel" text="System Admin" 
-                                        style="-fx-font-size: 16; -fx-font-weight: 600; -fx-text-fill: #c91e2b;" />
+                                        style="-fx-font-size: 16; -fx-font-weight: 600; -fx-text-fill: #a40000;" />
                                 </VBox>
-                                <StackPane style="-fx-background-color: #c91e2b; -fx-background-radius: 12; -fx-padding: 12;">
+                                <StackPane style="-fx-background-color: #a40000; -fx-background-radius: 12; -fx-padding: 12;">
                                     <Label text="👔" style="-fx-font-size: 20;" />
                                 </StackPane>
                             </HBox>
@@ -138,11 +140,13 @@
                                             -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 20, 0, 0, 6);" 
                           GridPane.columnIndex="0" GridPane.rowIndex="0">
                         <!-- Card Header -->
-                        <HBox alignment="CENTER_RIGHT" spacing="10" 
-                            style="-fx-background-color: linear-gradient(to left, #ecfdf5, #d1fae5); -fx-background-radius: 20 20 0 0; -fx-padding: 18 24;">
-                            <Label text="📞" style="-fx-font-size: 22;" />
+                        <HBox alignment="CENTER_LEFT" spacing="12" 
+                            style="-fx-background-color: #1ba3b6; -fx-background-radius: 20 20 0 0; -fx-padding: 16 24;">
+                            <StackPane style="-fx-background-color: rgba(255,255,255,0.2); -fx-background-radius: 10; -fx-padding: 8;">
+                                <Label text="📞" style="-fx-font-size: 20;" />
+                            </StackPane>
                             <Label text="معلومات الاتصال" 
-                                style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #059669;" />
+                                style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: white;" />
                         </HBox>
                         
                         <!-- Card Content -->
@@ -194,11 +198,13 @@
                 <VBox spacing="0" style="-fx-background-color: white; -fx-background-radius: 20; 
                                         -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 20, 0, 0, 6);">
                     <!-- Card Header -->
-                    <HBox alignment="CENTER_RIGHT" spacing="10" 
-                        style="-fx-background-color: linear-gradient(to left, #f0f9ff, #dbeafe); -fx-background-radius: 20 20 0 0; -fx-padding: 18 24;">
-                        <Label text="📊" style="-fx-font-size: 22;" />
+                    <HBox alignment="CENTER_LEFT" spacing="12" 
+                        style="-fx-background-color: #690000; -fx-background-radius: 20 20 0 0; -fx-padding: 16 24;">
+                        <StackPane style="-fx-background-color: rgba(255,255,255,0.2); -fx-background-radius: 10; -fx-padding: 8;">
+                            <Label text="📊" style="-fx-font-size: 20;" />
+                        </StackPane>
                         <Label text="معلومات الحساب" 
-                            style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2563eb;" />
+                            style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: white;" />
                     </HBox>
                     
                     <!-- Card Content - Horizontal Layout -->
@@ -206,7 +212,7 @@
                         <!-- Created At -->
                         <VBox alignment="CENTER" spacing="10" HBox.hgrow="ALWAYS" 
                             style="-fx-border-color: transparent #e5e7eb transparent transparent; -fx-border-width: 0 2 0 0; -fx-padding: 0 20 0 0;">
-                            <StackPane style="-fx-background-color: linear-gradient(to bottom, #3b82f6, #2563eb); -fx-background-radius: 16; -fx-padding: 16;">
+                            <StackPane style="-fx-background-color: #3b82f6; -fx-background-radius: 16; -fx-padding: 16;">
                                 <Label text="🗓" style="-fx-font-size: 28;" />
                             </StackPane>
                             <Label text="تاريخ الإنشاء" style="-fx-text-fill: #6b7280; -fx-font-size: 14; -fx-font-weight: 500;" />
@@ -217,7 +223,7 @@
                         <!-- Last Update -->
                         <VBox alignment="CENTER" spacing="10" HBox.hgrow="ALWAYS"
                             style="-fx-border-color: transparent #e5e7eb transparent transparent; -fx-border-width: 0 2 0 0; -fx-padding: 0 20;">
-                            <StackPane style="-fx-background-color: linear-gradient(to bottom, #f59e0b, #d97706); -fx-background-radius: 16; -fx-padding: 16;">
+                            <StackPane style="-fx-background-color: #f59e0b; -fx-background-radius: 16; -fx-padding: 16;">
                                 <Label text="🕐" style="-fx-font-size: 28;" />
                             </StackPane>
                             <Label text="آخر تحديث" style="-fx-text-fill: #6b7280; -fx-font-size: 14; -fx-font-weight: 500;" />
@@ -227,7 +233,7 @@
 
                         <!-- Account Status -->
                         <VBox alignment="CENTER" spacing="10" HBox.hgrow="ALWAYS" style="-fx-padding: 0 0 0 20;">
-                            <StackPane style="-fx-background-color: linear-gradient(to bottom, #10b981, #059669); -fx-background-radius: 16; -fx-padding: 16;">
+                            <StackPane style="-fx-background-color: #10b981; -fx-background-radius: 16; -fx-padding: 16;">
                                 <Label text="⚡" style="-fx-font-size: 28;" />
                             </StackPane>
                             <Label text="حالة الحساب" style="-fx-text-fill: #6b7280; -fx-font-size: 14; -fx-font-weight: 500;" />

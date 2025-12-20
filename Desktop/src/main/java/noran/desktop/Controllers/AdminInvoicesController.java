@@ -1,5 +1,7 @@
 package noran.desktop.Controllers;
 
+import noran.desktop.Utils.AlertUtils;
+
 // JavaFX Imports
 import com.itextpdf.layout.element.Cell;
 import javafx.beans.property.SimpleStringProperty;
@@ -98,6 +100,7 @@ public class AdminInvoicesController {
         statusFilter.setValue("الكل");
         statusFilter.setItems(FXCollections.observableArrayList("الكل", "في انتظار الموافقة", "مقبولة", "مرفوضة"));
         statusFilter.valueProperty().addListener((obs, old, newVal) -> refreshTable());
+        styleComboBox(statusFilter);
 
         // Setup filtered list for search
         filteredData = new javafx.collections.transformation.FilteredList<>(invoicesList, p -> true);
@@ -111,6 +114,52 @@ public class AdminInvoicesController {
         if (sidebarController != null)
             sidebarController.setActivePage("invoice completion");
         setupTopBar();
+    }
+
+    // Helper method to style ComboBox with modern look
+    private void styleComboBox(ComboBox<?> comboBox) {
+        String defaultStyle = "-fx-background-color: white; " +
+                "-fx-border-color: #d1d5db; " +
+                "-fx-border-radius: 8; " +
+                "-fx-background-radius: 8; " +
+                "-fx-padding: 6 12; " +
+                "-fx-font-size: 14px; " +
+                "-fx-cursor: hand;";
+
+        String focusedStyle = "-fx-background-color: white; " +
+                "-fx-border-color: #1ba3b6; " +
+                "-fx-border-width: 2; " +
+                "-fx-border-radius: 8; " +
+                "-fx-background-radius: 8; " +
+                "-fx-padding: 6 12; " +
+                "-fx-font-size: 14px; " +
+                "-fx-cursor: hand; " +
+                "-fx-effect: dropshadow(gaussian, rgba(27, 163, 182, 0.25), 8, 0, 0, 2);";
+
+        comboBox.setStyle(defaultStyle);
+
+        comboBox.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            comboBox.setStyle(isFocused ? focusedStyle : defaultStyle);
+        });
+
+        comboBox.setOnMouseEntered(e -> {
+            if (!comboBox.isFocused()) {
+                comboBox.setStyle(
+                        "-fx-background-color: white; " +
+                                "-fx-border-color: #1ba3b6; " +
+                                "-fx-border-radius: 8; " +
+                                "-fx-background-radius: 8; " +
+                                "-fx-padding: 6 12; " +
+                                "-fx-font-size: 14px; " +
+                                "-fx-cursor: hand;");
+            }
+        });
+
+        comboBox.setOnMouseExited(e -> {
+            if (!comboBox.isFocused()) {
+                comboBox.setStyle(defaultStyle);
+            }
+        });
     }
 
     private void setupTopBar() {
@@ -254,7 +303,7 @@ public class AdminInvoicesController {
                 } catch (Exception e) {
                     e.printStackTrace();
                     javafx.application.Platform.runLater(
-                            () -> new Alert(Alert.AlertType.ERROR, "خطأ في تحميل البيانات: " + e.getMessage()).show());
+                            () -> AlertUtils.showError("خطأ", "خطأ في تحميل البيانات: " + e.getMessage()));
                 }
                 return loadedList;
             }
@@ -354,12 +403,12 @@ public class AdminInvoicesController {
                     Filters.eq("invoiceNumber", invoice.getInvoiceNumber()),
                     Updates.set("status", newStatus));
 
-            new Alert(Alert.AlertType.INFORMATION, "تم تحديث الحالة إلى: " + newStatus).show();
+            AlertUtils.showSuccess("تم بنجاح", "تم تحديث الحالة إلى: " + newStatus);
             refreshTable();
 
         } catch (Exception e) {
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "فشل التحديث: " + e.getMessage()).show();
+            AlertUtils.showError("خطأ", "فشل التحديث: " + e.getMessage());
         }
     }
 
@@ -425,11 +474,11 @@ public class AdminInvoicesController {
                     .setTextAlignment(TextAlignment.RIGHT));
 
             document.close();
-            new Alert(Alert.AlertType.INFORMATION, "تم حفظ PDF بنجاح").show();
+            AlertUtils.showSuccess("تم بنجاح", "تم حفظ PDF بنجاح");
 
         } catch (Exception e) {
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "فشل إنشاء PDF: " + e.getMessage()).show();
+            AlertUtils.showError("خطأ", "فشل إنشاء PDF: " + e.getMessage());
         }
     }
 

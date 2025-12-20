@@ -19,6 +19,7 @@
 
     <stylesheets>
         <String fx:value="@invoices-table.css" />
+        <String fx:value="@combo-style.css" />
     </stylesheets>
 
     <left>

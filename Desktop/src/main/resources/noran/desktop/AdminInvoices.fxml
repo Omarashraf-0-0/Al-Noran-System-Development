@@ -17,6 +17,10 @@
 
 <BorderPane nodeOrientation="RIGHT_TO_LEFT" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui; -fx-background-color: #f8f9fa;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.AdminInvoicesController">
 
+    <stylesheets>
+        <String fx:value="@combo-style.css" />
+    </stylesheets>
+
     <left>
         <fx:include fx:id="sidebar" source="Sidebar.fxml" />
     </left>

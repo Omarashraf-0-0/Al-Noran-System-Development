@@ -1,5 +1,7 @@
 package noran.desktop.Controllers;
 
+import noran.desktop.Utils.AlertUtils;
+
 import com.ibm.icu.text.ArabicShaping;
 import com.ibm.icu.text.ArabicShapingException;
 import com.ibm.icu.text.Bidi;
@@ -26,7 +28,6 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import noran.desktop.AppSession;
@@ -146,55 +147,252 @@ public class AdminAddInvoiceController {
 
     @FXML
     private void addNewRow() {
-
+        // Create modern styled dialog
         Dialog<InvoiceRow> dialog = new Dialog<>();
-        dialog.setTitle("إضافة بند جديد");
+        dialog.setTitle("إضافة بند للفاتورة");
+        dialog.setHeaderText(null);
 
+        // Set dialog window icon when shown (scene is null before show)
+        dialog.setOnShown(event -> {
+            try {
+                javafx.stage.Stage dialogStage = (javafx.stage.Stage) dialog.getDialogPane().getScene().getWindow();
+                if (dialogStage != null) {
+                    dialogStage.getIcons().add(new javafx.scene.image.Image(
+                            getClass().getResourceAsStream("/noran/desktop/images/Logo.png")));
+                }
+            } catch (Exception e) {
+                System.out.println("Could not set dialog icon: " + e.getMessage());
+            }
+        });
+
+        // Get the dialog pane and style it
+        DialogPane dialogPane = dialog.getDialogPane();
+        dialogPane.setStyle(
+                "-fx-background-color: #f8f9fa; " +
+                        "-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;");
+        dialogPane.setPrefWidth(450);
+
+        // Create custom button types
         ButtonType addBtn = new ButtonType("إضافة", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(addBtn, ButtonType.CANCEL);
+        dialogPane.getButtonTypes().addAll(addBtn, ButtonType.CANCEL);
 
-        TextField descField = new TextField();
-        TextField priceField = new TextField();
+        // Style the buttons
+        javafx.scene.Node addButton = dialogPane.lookupButton(addBtn);
+        addButton.setStyle(
+                "-fx-background-color: linear-gradient(to bottom, #a40000, #690000); " +
+                        "-fx-text-fill: white; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-font-size: 14px; " +
+                        "-fx-padding: 10 30; " +
+                        "-fx-background-radius: 8; " +
+                        "-fx-cursor: hand;");
 
-        ChoiceBox<String> currencyBox = new ChoiceBox<>();
+        javafx.scene.Node cancelButton = dialogPane.lookupButton(ButtonType.CANCEL);
+        cancelButton.setStyle(
+                "-fx-background-color: #e5e7eb; " +
+                        "-fx-text-fill: #374151; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-font-size: 14px; " +
+                        "-fx-padding: 10 30; " +
+                        "-fx-background-radius: 8; " +
+                        "-fx-cursor: hand;");
+
+        // Main container
+        VBox mainContainer = new VBox(18);
+        mainContainer.setStyle("-fx-padding: 25; -fx-background-color: white; -fx-background-radius: 16;");
+        mainContainer.setAlignment(javafx.geometry.Pos.CENTER);
+
+        // Logo Image
+        javafx.scene.image.ImageView logoView = new javafx.scene.image.ImageView();
+        try {
+            javafx.scene.image.Image logo = new javafx.scene.image.Image(
+                    getClass().getResourceAsStream("/noran/desktop/images/Logo.png"));
+            logoView.setImage(logo);
+            logoView.setFitWidth(120);
+            logoView.setPreserveRatio(true);
+        } catch (Exception e) {
+            System.out.println("Could not load logo: " + e.getMessage());
+        }
+
+        // Header with title
+        Label titleLabel = new Label("أدخل تفاصيل البند");
+        titleLabel.setStyle(
+                "-fx-font-size: 20; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-text-fill: #a40000;");
+
+        // Create styled text fields
+        TextField descField = createStyledTextField("اسم البند / الخدمة", "📦");
+        TextField priceField = createStyledTextField("السعر", "💰");
+
+        // Currency ComboBox with modern style
+        ComboBox<String> currencyBox = new ComboBox<>();
         currencyBox.getItems().addAll("EGP", "USD");
         currencyBox.setValue("EGP");
+        currencyBox.setPrefWidth(Double.MAX_VALUE);
+        currencyBox.setPrefHeight(45);
+        currencyBox.setStyle(
+                "-fx-background-color: white; " +
+                        "-fx-border-color: #d1d5db; " +
+                        "-fx-border-radius: 10; " +
+                        "-fx-background-radius: 10; " +
+                        "-fx-padding: 8 12; " +
+                        "-fx-font-size: 14px; " +
+                        "-fx-cursor: hand;");
 
+        // Add focus styling for ComboBox
+        currencyBox.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            if (isFocused) {
+                currencyBox.setStyle(
+                        "-fx-background-color: white; " +
+                                "-fx-border-color: #1ba3b6; " +
+                                "-fx-border-width: 2; " +
+                                "-fx-border-radius: 10; " +
+                                "-fx-background-radius: 10; " +
+                                "-fx-padding: 8 12; " +
+                                "-fx-font-size: 14px; " +
+                                "-fx-cursor: hand; " +
+                                "-fx-effect: dropshadow(gaussian, rgba(27, 163, 182, 0.25), 8, 0, 0, 2);");
+            } else {
+                currencyBox.setStyle(
+                        "-fx-background-color: white; " +
+                                "-fx-border-color: #d1d5db; " +
+                                "-fx-border-radius: 10; " +
+                                "-fx-background-radius: 10; " +
+                                "-fx-padding: 8 12; " +
+                                "-fx-font-size: 14px; " +
+                                "-fx-cursor: hand;");
+            }
+        });
+
+        // Currency container with label
+        VBox currencyContainer = new VBox(8);
+        javafx.scene.layout.HBox currencyLabelBox = new javafx.scene.layout.HBox(8);
+        currencyLabelBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
+        Label currencyIcon = new Label("💵");
+        currencyIcon.setStyle("-fx-font-size: 16;");
+        Label currencyLabel = new Label("العملة");
+        currencyLabel.setStyle("-fx-font-size: 14; -fx-text-fill: #6b7280; -fx-font-weight: 600;");
+        currencyLabelBox.getChildren().addAll(currencyLabel, currencyIcon);
+        currencyContainer.getChildren().addAll(currencyLabelBox, currencyBox);
+
+        // Keyboard navigation
         descField.setOnAction(e -> priceField.requestFocus());
         priceField.setOnAction(e -> currencyBox.requestFocus());
 
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
+        // Info tip
+        Label tipLabel = new Label("💡 اضغط Enter للانتقال بين الحقول");
+        tipLabel.setStyle(
+                "-fx-font-size: 12; " +
+                        "-fx-text-fill: #9ca3af; " +
+                        "-fx-padding: 10 0 0 0;");
 
-        grid.add(new Label("اسم البند:"), 0, 0);
-        grid.add(descField, 1, 0);
+        // Add all components
+        mainContainer.getChildren().addAll(
+                logoView,
+                titleLabel,
+                new javafx.scene.control.Separator(),
+                descField,
+                priceField,
+                currencyContainer,
+                tipLabel);
 
-        grid.add(new Label("السعر:"), 0, 1);
-        grid.add(priceField, 1, 1);
+        dialogPane.setContent(mainContainer);
 
-        grid.add(new Label("العملة:"), 0, 2);
-        grid.add(currencyBox, 1, 2);
-
-        dialog.getDialogPane().setContent(grid);
-
-        Platform.runLater(descField::requestFocus);
+        // Focus on description field
+        Platform.runLater(() -> {
+            // Get the actual TextField from the styled container
+            if (descField.getParent() instanceof VBox) {
+                descField.requestFocus();
+            }
+        });
 
         dialog.setResultConverter(btn -> {
             if (btn == addBtn) {
                 try {
+                    String desc = descField.getText().trim();
+                    String priceText = priceField.getText().trim();
+
+                    if (desc.isEmpty() || priceText.isEmpty()) {
+                        showStyledAlert("تنبيه", "يرجى ملء جميع الحقول", "#f59e0b");
+                        return null;
+                    }
+
                     return new InvoiceRow(
-                            descField.getText().trim(),
-                            Double.parseDouble(priceField.getText().trim()),
+                            desc,
+                            Double.parseDouble(priceText),
                             currencyBox.getValue());
-                } catch (Exception e) {
-                    new Alert(Alert.AlertType.ERROR, "بيانات غير صحيحة").show();
+                } catch (NumberFormatException e) {
+                    showStyledAlert("خطأ", "السعر يجب أن يكون رقماً صحيحاً", "#a40000");
                 }
             }
             return null;
         });
 
         dialog.showAndWait().ifPresent(items::add);
+    }
+
+    // Helper method to create styled text field
+    private TextField createStyledTextField(String prompt, String icon) {
+        TextField field = new TextField();
+        field.setPromptText(prompt);
+        field.setStyle(
+                "-fx-background-color: white; " +
+                        "-fx-border-color: #d1d5db; " +
+                        "-fx-border-radius: 10; " +
+                        "-fx-background-radius: 10; " +
+                        "-fx-padding: 12 16; " +
+                        "-fx-font-size: 14px; " +
+                        "-fx-prompt-text-fill: #9ca3af;");
+        field.setPrefWidth(350);
+
+        // Add focus styling
+        field.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            if (isFocused) {
+                field.setStyle(
+                        "-fx-background-color: white; " +
+                                "-fx-border-color: #1ba3b6; " +
+                                "-fx-border-width: 2; " +
+                                "-fx-border-radius: 10; " +
+                                "-fx-background-radius: 10; " +
+                                "-fx-padding: 12 16; " +
+                                "-fx-font-size: 14px; " +
+                                "-fx-effect: dropshadow(gaussian, rgba(27, 163, 182, 0.25), 8, 0, 0, 2);");
+            } else {
+                field.setStyle(
+                        "-fx-background-color: white; " +
+                                "-fx-border-color: #d1d5db; " +
+                                "-fx-border-radius: 10; " +
+                                "-fx-background-radius: 10; " +
+                                "-fx-padding: 12 16; " +
+                                "-fx-font-size: 14px; " +
+                                "-fx-prompt-text-fill: #9ca3af;");
+            }
+        });
+
+        return field;
+    }
+
+    // Helper method to show styled alert
+    private void showStyledAlert(String title, String message, String color) {
+        Alert alert = new Alert(Alert.AlertType.NONE);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.getDialogPane().getButtonTypes().add(ButtonType.OK);
+        alert.getDialogPane().setStyle(
+                "-fx-background-color: white; " +
+                        "-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;");
+
+        javafx.scene.Node okButton = alert.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.setStyle(
+                "-fx-background-color: " + color + "; " +
+                        "-fx-text-fill: white; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-padding: 8 24; " +
+                        "-fx-background-radius: 8;");
+
+        alert.showAndWait();
     }
 
     // ================= DELETE =================
@@ -223,12 +421,12 @@ public class AdminAddInvoiceController {
 
         String clientName = clientNameField.getText().trim();
         if (clientName.isEmpty()) {
-            new Alert(Alert.AlertType.ERROR, "يرجى إدخال اسم العميل").show();
+            AlertUtils.showError("خطأ", "يرجى إدخال اسم العميل");
             return;
         }
 
         if (items.isEmpty() || items.stream().allMatch(i -> i.getPrice() <= 0)) {
-            new Alert(Alert.AlertType.WARNING, "أضف على الأقل بند واحد بقيمة أكبر من صفر").show();
+            AlertUtils.showWarning("تنبيه", "أضف على الأقل بند واحد بقيمة أكبر من صفر");
             return;
         }
 
@@ -303,12 +501,12 @@ public class AdminAddInvoiceController {
 
             saveInvoiceToMongo(clientName);
 
-            new Alert(Alert.AlertType.INFORMATION,
-                    "تم إنشاء الفاتورة بنجاح وحفظها في قاعدة البيانات").show();
+            AlertUtils.showSuccess("تم بنجاح",
+                    "تم إنشاء الفاتورة بنجاح وحفظها في قاعدة البيانات");
 
         } catch (Exception e) {
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "فشل في إنشاء PDF:\n" + e.getMessage()).show();
+            AlertUtils.showError("خطأ", "فشل في إنشاء PDF:\n" + e.getMessage());
         }
     }
 

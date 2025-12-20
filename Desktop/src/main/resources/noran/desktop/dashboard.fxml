@@ -28,35 +28,35 @@
                 </columnConstraints>
 
                 <!-- Card 1: إجمالي الإيرادات -->
-                <StackPane style="-fx-background-color: white; -fx-background-radius: 16; -fx-padding: 22; -fx-border-color: #1fb5b5 transparent transparent transparent; -fx-border-width: 4 0 0 0; -fx-border-radius: 16 16 0 0; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 12, 0, 0, 4);" GridPane.columnIndex="0">
+                <StackPane style="-fx-background-color: white; -fx-background-radius: 16; -fx-padding: 22; -fx-border-color: #1ba3b6 transparent transparent transparent; -fx-border-width: 4 0 0 0; -fx-border-radius: 16 16 0 0; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 12, 0, 0, 4);" GridPane.columnIndex="0">
                     <VBox alignment="TOP_LEFT" spacing="10">
                         <Label style="-fx-text-fill: #666; -fx-font-size: 14;" text="💰 إجمالي الإيرادات" />
-                        <Label fx:id="totalRevenueLabel" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #1fb5b5;" text="0.00" />
+                        <Label fx:id="totalRevenueLabel" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #1ba3b6;" text="0.00" />
                         <Label style="-fx-text-fill: #999; -fx-font-size: 12;" text="جنيه مصري" />
                     </VBox>
                 </StackPane>
 
                 <!-- Card 2: الفواتير المعلقة -->
-                <StackPane style="-fx-background-color: white; -fx-background-radius: 16; -fx-padding: 22; -fx-border-color: #f59e0b transparent transparent transparent; -fx-border-width: 4 0 0 0; -fx-border-radius: 16 16 0 0; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 12, 0, 0, 4);" GridPane.columnIndex="1">
+                <StackPane style="-fx-background-color: white; -fx-background-radius: 16; -fx-padding: 22; -fx-border-color: #a40000 transparent transparent transparent; -fx-border-width: 4 0 0 0; -fx-border-radius: 16 16 0 0; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 12, 0, 0, 4);" GridPane.columnIndex="1">
                     <VBox alignment="TOP_LEFT" spacing="10">
                         <Label style="-fx-text-fill: #666; -fx-font-size: 14;" text="⏳ عدد الفواتير المعلقة" />
-                        <Label fx:id="pendingInvoicesLabel" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #f59e0b;" text="0" />
+                        <Label fx:id="pendingInvoicesLabel" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #a40000;" text="0" />
                     </VBox>
                 </StackPane>
 
                 <!-- Card 3: الشهادات المكتملة (الفواتير المقبولة) -->
-                <StackPane style="-fx-background-color: white; -fx-background-radius: 16; -fx-padding: 22; -fx-border-color: #10b981 transparent transparent transparent; -fx-border-width: 4 0 0 0; -fx-border-radius: 16 16 0 0; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 12, 0, 0, 4);" GridPane.columnIndex="2">
+                <StackPane style="-fx-background-color: white; -fx-background-radius: 16; -fx-padding: 22; -fx-border-color: #690000 transparent transparent transparent; -fx-border-width: 4 0 0 0; -fx-border-radius: 16 16 0 0; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 12, 0, 0, 4);" GridPane.columnIndex="2">
                     <VBox alignment="TOP_LEFT" spacing="10">
                         <Label style="-fx-text-fill: #666; -fx-font-size: 14;" text="✅ عدد الشهادات المكتملة" />
-                        <Label fx:id="completedInvoicesLabel" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #10b981;" text="0" />
+                        <Label fx:id="completedInvoicesLabel" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #690000;" text="0" />
                     </VBox>
                 </StackPane>
 
                 <!-- Card 4: الشحنات الجارية -->
-                <StackPane style="-fx-background-color: white; -fx-background-radius: 16; -fx-padding: 22; -fx-border-color: #3b82f6 transparent transparent transparent; -fx-border-width: 4 0 0 0; -fx-border-radius: 16 16 0 0; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 12, 0, 0, 4);" GridPane.columnIndex="3">
+                <StackPane style="-fx-background-color: white; -fx-background-radius: 16; -fx-padding: 22; -fx-border-color: #1ba3b6 transparent transparent transparent; -fx-border-width: 4 0 0 0; -fx-border-radius: 16 16 0 0; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 12, 0, 0, 4);" GridPane.columnIndex="3">
                     <VBox alignment="TOP_LEFT" spacing="10">
                         <Label style="-fx-text-fill: #666; -fx-font-size: 14;" text="🚚 عدد الشهادات الجارية" />
-                        <Label fx:id="ongoingShipmentsLabel" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #3b82f6;" text="0" />
+                        <Label fx:id="ongoingShipmentsLabel" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: #1ba3b6;" text="0" />
                     </VBox>
                 </StackPane>
             <rowConstraints>
@@ -90,7 +90,7 @@
                     </HBox>
                     
                     <Button fx:id="downloadReportBtn" onAction="#downloadDashboardReport" 
-                        style="-fx-background-color: linear-gradient(to bottom, #8B0000, #690000); -fx-text-fill: white; -fx-font-size: 15; -fx-font-weight: bold; -fx-padding: 14 36; -fx-background-radius: 12; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 3);" 
+                        style="-fx-background-color: linear-gradient(to bottom, #a40000, #690000); -fx-text-fill: white; -fx-font-size: 15; -fx-font-weight: bold; -fx-padding: 14 36; -fx-background-radius: 12; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 3);" 
                         text="📥 تحميل تقرير الإحصائيات كـ PDF" />
                 </VBox>
             </StackPane>

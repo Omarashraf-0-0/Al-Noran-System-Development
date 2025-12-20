@@ -1,5 +1,7 @@
 package noran.desktop.Controllers;
 
+import noran.desktop.Utils.AlertUtils;
+
 import com.ibm.icu.text.ArabicShaping;
 import com.ibm.icu.text.ArabicShapingException;
 import com.ibm.icu.text.Bidi;
@@ -328,12 +330,16 @@ public class DashboardController implements Initializable {
         }
     }
 
-    private void showAlert(Alert.AlertType type, String title, String msg) {
-        Alert a = new Alert(type);
-        a.setTitle(title);
-        a.setHeaderText(null);
-        a.setContentText(msg);
-        a.showAndWait();
+    private void showAlert(javafx.scene.control.Alert.AlertType type, String title, String msg) {
+        if (type == javafx.scene.control.Alert.AlertType.ERROR) {
+            AlertUtils.showError(title, msg);
+        } else if (type == javafx.scene.control.Alert.AlertType.WARNING) {
+            AlertUtils.showWarning(title, msg);
+        } else if (type == javafx.scene.control.Alert.AlertType.INFORMATION) {
+            AlertUtils.showSuccess(title, msg);
+        } else {
+            AlertUtils.showInfo(title, msg);
+        }
     }
 
     // Navigation

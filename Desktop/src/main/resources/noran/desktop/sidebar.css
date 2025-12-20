@@ -18,7 +18,7 @@
 
 /* Active button state */
 .sidebar-button-active.button {
-    -fx-background-color: #c91e2b;
+    -fx-background-color: #a40000;
     -fx-background-insets: 0;
     -fx-background-radius: 8;
     -fx-padding: 8 12;

@@ -1,5 +1,7 @@
 package noran.desktop.Controllers;
 
+import noran.desktop.Utils.AlertUtils;
+
 import com.ibm.icu.text.ArabicShaping;
 import com.ibm.icu.text.ArabicShapingException;
 import com.ibm.icu.text.Bidi;
@@ -226,11 +228,11 @@ public class AcceptedInvoicesController {
                     .setFont(font).setFontSize(16).setBold().setTextAlignment(TextAlignment.RIGHT));
 
             document.close();
-            new Alert(Alert.AlertType.INFORMATION, "تم حفظ PDF بنجاح").show();
+            AlertUtils.showSuccess("تم بنجاح", "تم حفظ PDF بنجاح");
 
         } catch (Exception e) {
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "فشل إنشاء PDF: " + e.getMessage()).show();
+            AlertUtils.showError("خطأ", "فشل إنشاء PDF: " + e.getMessage());
         }
     }
 
