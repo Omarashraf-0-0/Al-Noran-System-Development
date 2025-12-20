@@ -422,18 +422,59 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
         backgroundColor: bgColor,
         body: Stack(
           children: [
-            // Background Gradient
+            // Premium Background with Multiple Gradient Layers
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              height: 300,
+              height: 350,
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [primaryDark.withValues(alpha: 0.05), bgColor],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      primaryDark.withOpacity(0.08),
+                      primaryLight.withOpacity(0.04),
+                      accentColor.withOpacity(0.02),
+                      bgColor,
+                    ],
+                    stops: const [0.0, 0.3, 0.6, 1.0],
+                  ),
+                ),
+              ),
+            ),
+            // Decorative Circles
+            Positioned(
+              top: -50,
+              right: -50,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      primaryDark.withOpacity(0.08),
+                      primaryDark.withOpacity(0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 100,
+              left: -30,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      accentColor.withOpacity(0.1),
+                      accentColor.withOpacity(0.0),
+                    ],
                   ),
                 ),
               ),
@@ -447,35 +488,14 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                     top: false,
                     child: Column(
                       children: [
-                        _buildSearchBar(),
-                        const SizedBox(height: 12),
-                        _buildTabs(),
+                        _buildPremiumSearchBar(),
+                        const SizedBox(height: 16),
+                        _buildPremiumTabs(),
                         const SizedBox(height: 16),
                         Expanded(
                           child:
                               _isLoading
-                                  ? Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        CircularProgressIndicator(
-                                          color: primaryDark,
-                                          strokeWidth: 3,
-                                        ),
-                                        const SizedBox(height: 20),
-                                        const Text(
-                                          'جاري تحميل الشحنات...',
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            fontFamily: 'Cairo',
-                                            color: Color(0xFF757575),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
+                                  ? _buildPremiumLoadingState()
                                   : TabBarView(
                                     controller: _tabController,
                                     children: [
@@ -499,14 +519,65 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
             ),
           ],
         ),
-        floatingActionButton: _buildFloatingActionButton(),
+        floatingActionButton: _buildPremiumFloatingActionButton(),
         floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
         bottomNavigationBar: _buildPremiumBottomNav(),
       ),
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildPremiumLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: primaryDark.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: SizedBox(
+              width: 50,
+              height: 50,
+              child: CircularProgressIndicator(
+                color: primaryDark,
+                strokeWidth: 3,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'جاري تحميل الشحنات...',
+            style: TextStyle(
+              fontSize: 16,
+              fontFamily: 'Cairo',
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'يرجى الانتظار',
+            style: TextStyle(
+              fontSize: 13,
+              fontFamily: 'Cairo',
+              color: Colors.grey[400],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumSearchBar() {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -612,64 +683,82 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     );
   }
 
-  Widget _buildTabs() {
+  Widget _buildPremiumTabs() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(5),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
+            color: primaryDark.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
+          BoxShadow(color: Colors.white, blurRadius: 0, spreadRadius: 0),
         ],
+        border: Border.all(color: primaryDark.withOpacity(0.05), width: 1),
       ),
       child: TabBar(
         controller: _tabController,
         labelColor: Colors.white,
-        unselectedLabelColor: primaryDark,
+        unselectedLabelColor: primaryDark.withOpacity(0.7),
+        dividerColor: Colors.transparent,
         indicator: BoxDecoration(
-          gradient: LinearGradient(colors: [primaryDark, primaryLight]),
-          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [primaryDark, primaryLight],
+          ),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: primaryDark.withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: primaryDark.withOpacity(0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         labelStyle: const TextStyle(
           fontFamily: 'Cairo',
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: FontWeight.bold,
         ),
         unselectedLabelStyle: const TextStyle(
           fontFamily: 'Cairo',
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
-        tabs: const [
+        splashBorderRadius: BorderRadius.circular(18),
+        overlayColor: WidgetStateProperty.all(primaryDark.withOpacity(0.05)),
+        tabs: [
           Tab(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.pending_actions_rounded, size: 16),
-                SizedBox(width: 6),
+                SizedBox(width: 4),
                 Text('الجارية'),
+                if (_currentShipments.isNotEmpty) ...[
+                  SizedBox(width: 3),
+                  Text(
+                    '(${_currentShipments.length})',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                ],
               ],
             ),
           ),
           Tab(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.check_circle_rounded, size: 16),
-                SizedBox(width: 6),
+                SizedBox(width: 4),
                 Text('المكتملة'),
               ],
             ),
@@ -677,10 +766,11 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
           Tab(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.receipt_long_rounded, size: 16),
-                SizedBox(width: 6),
-                Flexible(child: Text('طلبات ACID')),
+                SizedBox(width: 4),
+                Text('ACID'),
               ],
             ),
           ),
@@ -942,301 +1032,486 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     // Get status color
     final statusColor = _getStatusColor(shipment['status']);
 
-    return InkWell(
-      onTap: () async {
-        // Save to recent shipments before navigating
-        await RecentShipmentsService.addRecentShipment(shipment);
-        // Navigate to shipment details page
-        if (mounted) {
-          context.push('/shipment-details/${shipment['id']}');
-        }
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Row - Shipment Code and Type Badge
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      // Shipment Code Badge (if available)
-                      if (shipment['shipmentCode']?.toString().isNotEmpty ==
-                          true) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF690000),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            shipment['shipmentCode'],
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo',
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: typeColor.withOpacity(0.15), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withOpacity(0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+          BoxShadow(
+            color: typeColor.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () async {
+            HapticFeedback.lightImpact();
+            await RecentShipmentsService.addRecentShipment(shipment);
+            if (mounted) {
+              context.push('/shipment-details/${shipment['id']}');
+            }
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Column(
+            children: [
+              // Premium Header with Gradient
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      typeColor.withOpacity(0.08),
+                      typeColor.withOpacity(0.03),
+                    ],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          // Shipment Code Badge
+                          if (shipment['shipmentCode']?.toString().isNotEmpty ==
+                              true) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [primaryDark, primaryLight],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: primaryDark.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                shipment['shipmentCode'],
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          // Type Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
                               color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: typeColor.withOpacity(0.3),
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: typeColor.withOpacity(0.15),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(typeIcon, size: 16, color: typeColor),
+                                const SizedBox(width: 5),
+                                Text(
+                                  typeText,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontFamily: 'Cairo',
+                                    fontWeight: FontWeight.bold,
+                                    color: typeColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          // Urgent Badge
+                          if (shipment['isUrgent']) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.red.shade600,
+                                    Colors.red.shade400,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withOpacity(0.3),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(
+                                    Icons.priority_high,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'عاجل',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Cairo',
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                        color: primaryDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Content Section
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ACID Number Row
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: primaryDark.withOpacity(0.08),
+                          width: 1,
                         ),
-                        const SizedBox(width: 8),
-                      ],
-                      // Type Badge
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  primaryDark.withOpacity(0.1),
+                                  primaryLight.withOpacity(0.05),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.qr_code_2_rounded,
+                              size: 22,
+                              color: primaryDark,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'رقم ACID',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontFamily: 'Cairo',
+                                    color: Colors.grey[500],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  shipment['id'],
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                    color: primaryDark,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Number 46 Row (if available)
+                    if (shipment['number46']?.toString().isNotEmpty ==
+                        true) ...[
+                      const SizedBox(height: 12),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: typeColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
+                          color: accentColor.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: accentColor.withOpacity(0.15),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(typeIcon, size: 14, color: typeColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              typeText,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontFamily: 'Cairo',
-                                fontWeight: FontWeight.bold,
-                                color: typeColor,
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: accentColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.description_outlined,
+                                size: 22,
+                                color: accentColor,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'رقم 46',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontFamily: 'Cairo',
+                                      color: Colors.grey[500],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    shipment['number46'],
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Cairo',
+                                      color: accentColor,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                      // Urgent Badge
-                      if (shipment['isUrgent']) ...[
-                        const SizedBox(width: 8),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // Status and Date Row
+                    Row(
+                      children: [
+                        // Status Badge
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: statusColor.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: statusColor,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: statusColor.withOpacity(0.4),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    shipment['status'],
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontFamily: 'Cairo',
+                                      fontWeight: FontWeight.bold,
+                                      color: statusColor,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Date Badge
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                            horizontal: 14,
+                            vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
+                            color: Colors.grey.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(
-                                Icons.priority_high,
+                                Icons.schedule_rounded,
                                 size: 14,
-                                color: Colors.red,
+                                color: Colors.grey[600],
                               ),
-                              SizedBox(width: 2),
+                              const SizedBox(width: 6),
                               Text(
-                                'عاجل',
+                                shipment['date'],
                                 style: TextStyle(
                                   fontSize: 11,
-                                  fontWeight: FontWeight.bold,
                                   fontFamily: 'Cairo',
-                                  color: Colors.red,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[700],
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey.withOpacity(0.4),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 14),
-
-            // ACID Number Row
-            Row(
-              children: [
-                Icon(Icons.qr_code_2_rounded, size: 18, color: primaryDark),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'رقم ACID',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'Cairo',
-                        color: Colors.grey[500],
-                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      shipment['id'],
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Cairo',
-                        color: Color(0xFF424242),
+
+                    const SizedBox(height: 16),
+
+                    // Premium View Details Button
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [primaryDark, primaryLight],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryDark.withOpacity(0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            context.push('/shipment-details/${shipment['id']}');
+                          },
+                          borderRadius: BorderRadius.circular(14),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Text(
+                                  'عرض تفاصيل الشحنة',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Icon(
+                                  Icons.visibility_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
-
-            // Number 46 Row (if available)
-            if (shipment['number46']?.toString().isNotEmpty == true) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Icon(
-                    Icons.description_outlined,
-                    size: 18,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'رقم 46',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontFamily: 'Cairo',
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        shipment['number46'],
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'Cairo',
-                          color: Color(0xFF424242),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ),
             ],
-
-            const SizedBox(height: 12),
-            const Divider(height: 1, thickness: 1),
-            const SizedBox(height: 12),
-
-            // Status and Date Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Status
-                Expanded(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Icon(
-                          Icons.info_outline,
-                          size: 14,
-                          color: statusColor,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          shipment['status'],
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'Cairo',
-                            fontWeight: FontWeight.w600,
-                            color: statusColor,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Last Update Date
-                Row(
-                  children: [
-                    Icon(Icons.update, size: 13, color: Colors.grey[500]),
-                    const SizedBox(width: 6),
-                    Text(
-                      shipment['date'],
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'Cairo',
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            // Always show view details button
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  context.push('/shipment-details/${shipment['id']}');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryDark,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  elevation: 0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Text(
-                      'عرض تفاصيل الشحنة',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Cairo',
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.visibility_rounded, size: 18),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1493,30 +1768,74 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     }
   }
 
-  Widget _buildFloatingActionButton() {
-    return FloatingActionButton.extended(
-      onPressed: () {
-        // Navigate directly to ACID request page
-        context.push(
-          '/acid-request',
-          extra: {'userName': widget.userName, 'userEmail': widget.userEmail},
-        );
-      },
-      backgroundColor: primaryDark,
-      elevation: 4,
-      label: const Text(
-        'طلب ACID',
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'Cairo',
-          color: Colors.white,
+  Widget _buildPremiumFloatingActionButton() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [primaryDark, primaryLight],
         ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: goldAccent.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      icon: const Icon(
-        Icons.receipt_long_rounded,
-        size: 24,
-        color: Colors.white,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            context.push(
+              '/acid-request',
+              extra: {
+                'userName': widget.userName,
+                'userEmail': widget.userEmail,
+              },
+            );
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'طلب ACID',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo',
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -215,6 +215,36 @@ class _UnifiedTopBarState extends State<UnifiedTopBar>
                             const SizedBox(width: 12),
                           if (widget.showNotification)
                             _buildNotificationButton(),
+                          // Show title in center when no welcome section
+                          if (!widget.showWelcome &&
+                              !widget.showProfilePhoto) ...[
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.title ?? '',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                                if (widget.subtitle != null &&
+                                    widget.subtitle!.isNotEmpty)
+                                  Text(
+                                    widget.subtitle!,
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.7,
+                                      ),
+                                      fontSize: 13,
+                                      fontFamily: 'Cairo',
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
 

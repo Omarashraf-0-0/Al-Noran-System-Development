@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/services/notification_service.dart';
-import '../../core/widgets/unified_top_bar.dart';
 import '../../theme/colors.dart';
 
 /// صفحة الإشعارات الرئيسية
@@ -18,6 +18,12 @@ class _NotificationsPageState extends State<NotificationsPage>
   final NotificationService _notificationService = NotificationService();
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
+
+  // Premium Colors
+  static const Color primaryDark = Color(0xFF690000);
+  static const Color primaryLight = Color(0xFF8B0000);
+  static const Color accentColor = Color(0xFF1BA3B6);
+  static const Color goldAccent = Color(0xFFD4AF37);
 
   StreamSubscription? _notificationsSubscription;
   StreamSubscription? _loadingSubscription;
@@ -84,7 +90,7 @@ class _NotificationsPageState extends State<NotificationsPage>
   }
 
   void _onTabChanged() {
-    if (_tabController.indexIsChanging) {
+    if (!_tabController.indexIsChanging) {
       setState(() {
         _selectedFilter = _filters[_tabController.index]['key'];
       });
@@ -212,11 +218,14 @@ class _NotificationsPageState extends State<NotificationsPage>
   void _showNotificationOptions() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder:
           (context) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
             padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -229,64 +238,125 @@ class _NotificationsPageState extends State<NotificationsPage>
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
+                const SizedBox(height: 24),
+                Text(
+                  'خيارات الإشعارات',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: primaryDark,
+                  ),
+                ),
                 const SizedBox(height: 20),
-                _buildOptionTile(
-                  icon: Icons.done_all,
+                _buildPremiumOptionTile(
+                  icon: Icons.done_all_rounded,
                   title: 'تحديد الكل كمقروء',
-                  color: AlNoranColors.info,
+                  subtitle: 'علّم جميع الإشعارات كمقروءة',
+                  color: accentColor,
                   onTap: () {
+                    HapticFeedback.lightImpact();
                     Navigator.pop(context);
                     _markAllAsRead();
                   },
                 ),
-                _buildOptionTile(
-                  icon: Icons.delete_sweep,
+                const SizedBox(height: 12),
+                _buildPremiumOptionTile(
+                  icon: Icons.delete_sweep_rounded,
                   title: 'حذف المقروءة',
-                  color: AlNoranColors.error,
+                  subtitle: 'احذف الإشعارات المقروءة فقط',
+                  color: Colors.red,
                   onTap: () {
+                    HapticFeedback.lightImpact();
                     Navigator.pop(context);
                     _clearReadNotifications();
                   },
                 ),
-                _buildOptionTile(
-                  icon: Icons.settings,
+                const SizedBox(height: 12),
+                _buildPremiumOptionTile(
+                  icon: Icons.settings_rounded,
                   title: 'إعدادات الإشعارات',
-                  color: AlNoranColors.primary,
+                  subtitle: 'تخصيص تفضيلات الإشعارات',
+                  color: goldAccent,
                   onTap: () {
+                    HapticFeedback.lightImpact();
                     Navigator.pop(context);
                     context.push('/notification-settings');
                   },
                 ),
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
               ],
             ),
           ),
     );
   }
 
-  Widget _buildOptionTile({
+  Widget _buildPremiumOptionTile({
     required IconData icon,
     required String title,
+    required String subtitle,
     required Color color,
     required VoidCallback onTap,
   }) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(10),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withOpacity(0.15)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: Colors.grey[400],
+              ),
+            ],
+          ),
         ),
-        child: Icon(icon, color: color),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontFamily: 'Cairo',
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
   }
 
@@ -295,77 +365,310 @@ class _NotificationsPageState extends State<NotificationsPage>
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AlNoranColors.greyBg,
+        backgroundColor: const Color(0xFFF8F9FA),
         body: Column(
           children: [
-            // Top Bar
-            UnifiedTopBar(
-              title: 'الإشعارات',
-              subtitle: '${_notificationService.unreadCount} غير مقروء',
-              showBackButton: true,
-              showNotification: false,
-              onBackPressed: () {
-                if (GoRouter.of(context).canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/home');
-                }
-              },
-            ),
+            // Premium Top Bar
+            _buildPremiumHeader(),
 
-            // Filter Tabs
-            Container(
-              color: Colors.white,
-              child: TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                labelColor: AlNoranColors.primary,
-                unselectedLabelColor: Colors.grey,
-                indicatorColor: AlNoranColors.primary,
-                indicatorWeight: 3,
-                labelStyle: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 13,
-                ),
-                tabs:
-                    _filters.map((f) {
-                      return Tab(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(f['icon'], size: 18),
-                            const SizedBox(width: 6),
-                            Text(f['label']),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-              ),
-            ),
+            // Premium Filter Tabs
+            _buildPremiumTabs(),
 
             // Notifications List
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _refreshNotifications,
-                color: AlNoranColors.primary,
+                color: primaryDark,
+                backgroundColor: Colors.white,
+                displacement: 40,
                 child: _buildNotificationsList(),
               ),
             ),
           ],
         ),
         floatingActionButton:
-            _notifications.isNotEmpty
-                ? FloatingActionButton(
-                  onPressed: _showNotificationOptions,
-                  backgroundColor: AlNoranColors.primary,
-                  child: const Icon(Icons.more_vert, color: Colors.white),
-                )
-                : null,
+            _notifications.isNotEmpty ? _buildPremiumFAB() : null,
+      ),
+    );
+  }
+
+  Widget _buildPremiumHeader() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [primaryDark, primaryLight],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: Row(
+            children: [
+              // Back Button
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                  color: Colors.white,
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    if (GoRouter.of(context).canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/home');
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              // Title & Subtitle
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'الإشعارات',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                _notificationService.unreadCount > 0
+                                    ? accentColor.withOpacity(0.3)
+                                    : Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_notificationService.unreadCount > 0) ...[
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: accentColor,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: accentColor.withOpacity(0.5),
+                                        blurRadius: 4,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              Text(
+                                _notificationService.unreadCount > 0
+                                    ? '${_notificationService.unreadCount} غير مقروء'
+                                    : 'لا توجد إشعارات جديدة',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withOpacity(0.95),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Settings Button
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.settings_rounded, size: 20),
+                  color: Colors.white,
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    context.push('/notification-settings');
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumTabs() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TabBar(
+        controller: _tabController,
+        isScrollable: true,
+        labelColor: primaryDark,
+        unselectedLabelColor: Colors.grey[500],
+        indicatorColor: primaryDark,
+        indicatorWeight: 3,
+        indicatorSize: TabBarIndicatorSize.label,
+        dividerColor: Colors.transparent,
+        splashFactory: NoSplash.splashFactory,
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
+        indicatorPadding: const EdgeInsets.symmetric(horizontal: 0),
+        labelStyle: const TextStyle(
+          fontFamily: 'Cairo',
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontFamily: 'Cairo',
+          fontSize: 13,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        onTap: (index) {
+          setState(() {
+            _selectedFilter = _filters[index]['key'];
+          });
+        },
+        tabs:
+            _filters.asMap().entries.map((entry) {
+              final index = entry.key;
+              final f = entry.value;
+              final isSelected = _tabController.index == index;
+              return Tab(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        isSelected
+                            ? primaryDark.withOpacity(0.1)
+                            : Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        f['icon'],
+                        size: 16,
+                        color: isSelected ? primaryDark : Colors.grey[400],
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        f['label'],
+                        style: TextStyle(
+                          color: isSelected ? primaryDark : Colors.grey[600],
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontFamily: 'Cairo',
+                          fontSize: 13,
+                        ),
+                      ),
+                      if (f['key'] == 'unread' &&
+                          _notificationService.unreadCount > 0) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: primaryDark,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${_notificationService.unreadCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildPremiumFAB() {
+    return FloatingActionButton(
+      onPressed: () {
+        HapticFeedback.lightImpact();
+        _showNotificationOptions();
+      },
+      backgroundColor: primaryDark,
+      elevation: 8,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [primaryDark, primaryLight],
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: primaryDark.withOpacity(0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.more_vert_rounded,
+          color: Colors.white,
+          size: 26,
+        ),
       ),
     );
   }
@@ -374,15 +677,37 @@ class _NotificationsPageState extends State<NotificationsPage>
     final filteredNotifications = _filteredNotifications;
 
     if (_isLoading && filteredNotifications.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: AlNoranColors.primary),
-            SizedBox(height: 16),
-            Text(
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    primaryDark.withOpacity(0.1),
+                    accentColor.withOpacity(0.1),
+                  ],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  color: primaryDark,
+                  strokeWidth: 3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
               'جاري تحميل الإشعارات...',
-              style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 16,
+                color: Colors.grey,
+              ),
             ),
           ],
         ),
@@ -399,19 +724,44 @@ class _NotificationsPageState extends State<NotificationsPage>
       itemCount: filteredNotifications.length + (_isLoading ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == filteredNotifications.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
+          return Padding(
+            padding: const EdgeInsets.all(16),
             child: Center(
-              child: CircularProgressIndicator(color: AlNoranColors.primary),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: primaryDark.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const CircularProgressIndicator(
+                  color: primaryDark,
+                  strokeWidth: 2,
+                ),
+              ),
             ),
           );
         }
 
         final notification = filteredNotifications[index];
-        return _NotificationCard(
-          notification: notification,
-          onTap: () => _onNotificationTap(notification),
-          onDismiss: () => _deleteNotification(notification),
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: Duration(milliseconds: 300 + (index * 50).clamp(0, 300)),
+          curve: Curves.easeOut,
+          builder: (context, value, child) {
+            return Transform.translate(
+              offset: Offset(0, 20 * (1 - value)),
+              child: Opacity(opacity: value, child: child),
+            );
+          },
+          child: _NotificationCard(
+            notification: notification,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              _onNotificationTap(notification);
+            },
+            onDismiss: () => _deleteNotification(notification),
+          ),
         );
       },
     );
@@ -956,27 +1306,84 @@ class _NotificationsPageState extends State<NotificationsPage>
       notification.id,
     );
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'تم حذف الإشعار',
-            style: TextStyle(fontFamily: 'Cairo'),
-          ),
-          backgroundColor: AlNoranColors.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          action: SnackBarAction(
-            label: 'تراجع',
-            textColor: Colors.white,
-            onPressed: () {
-              // Refresh to get notification back (if server supports it)
-              _refreshNotifications();
-            },
-          ),
-        ),
+      // Show success popup
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder:
+            (context) => Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.check_circle_rounded,
+                        color: Colors.green.shade400,
+                        size: 36,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'تم الحذف بنجاح',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'تم حذف الإشعار',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryDark,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'حسناً',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
       );
+      // Auto close after 2 seconds
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      });
     }
   }
 }
@@ -1145,53 +1552,123 @@ class _NotificationCard extends StatelessWidget {
       confirmDismiss: (direction) async {
         return await showDialog<bool>(
               context: context,
+              barrierColor: Colors.black54,
               builder:
-                  (context) => AlertDialog(
+                  (context) => Dialog(
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                    title: const Text(
-                      'حذف الإشعار',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontWeight: FontWeight.bold,
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Icon
+                          Container(
+                            width: 70,
+                            height: 70,
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.delete_forever_rounded,
+                              color: Colors.red.shade400,
+                              size: 40,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // Title
+                          const Text(
+                            'حذف الإشعار',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          // Content
+                          Text(
+                            'هل أنت متأكد من حذف هذا الإشعار؟\nلا يمكن التراجع عن هذا الإجراء.',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          // Buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed:
+                                      () => Navigator.pop(context, false),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    side: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'إلغاء',
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.delete_rounded,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'حذف',
+                                        style: TextStyle(
+                                          fontFamily: 'Cairo',
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                    content: const Text(
-                      'هل تريد حذف هذا الإشعار؟',
-                      style: TextStyle(fontFamily: 'Cairo'),
-                      textAlign: TextAlign.center,
-                    ),
-                    actionsAlignment: MainAxisAlignment.spaceEvenly,
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text(
-                          'إلغاء',
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'حذف',
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
             ) ??
             false;

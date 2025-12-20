@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_service.dart';
@@ -17,11 +18,18 @@ class ShipmentDetailsPage extends StatefulWidget {
   State<ShipmentDetailsPage> createState() => _ShipmentDetailsPageState();
 }
 
-class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
-  // Colors
+class _ShipmentDetailsPageState extends State<ShipmentDetailsPage>
+    with SingleTickerProviderStateMixin {
+  // Premium Colors
   static const Color primaryDark = Color(0xFF690000);
-  static const Color primaryLight = Color(0xFFA40000);
+  static const Color primaryLight = Color(0xFF8B0000);
   static const Color accent = Color(0xFF1BA3B6);
+  static const Color goldAccent = Color(0xFFD4AF37);
+  static const Color bgColor = Color(0xFFF8F9FA);
+
+  // Animation controller
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   // User cache service
   final UserCacheService _userCache = UserCacheService();
@@ -73,7 +81,20 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
     _initializeData();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeData() async {
@@ -107,6 +128,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
             _shipmentData = response['shipment'];
             _isLoading = false;
           });
+          _animationController.forward();
         }
         print('📦 [ShipmentDetails] Loaded: $_shipmentData');
       } else {
@@ -367,10 +389,9 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: bgColor,
         body: Column(
           children: [
-            // Using UnifiedTopBar for consistent UI and cached user data
             UnifiedTopBar(showBackButton: true, showMenu: false),
             Expanded(
               child: _isLoading ? _buildLoadingState() : _buildContent(),
@@ -378,37 +399,117 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
           ],
         ),
         floatingActionButton:
-            _shipmentData != null
-                ? FloatingActionButton.extended(
-                  onPressed: () {
-                    context.push(
-                      '/chat/${widget.shipmentId}',
-                      extra: {'employeeName': _userCache.userName},
-                    );
-                  },
-                  backgroundColor: primaryDark,
-                  icon: const Icon(Icons.chat_bubble, color: Colors.white),
-                  label: const Text(
-                    'تواصل مع الدعم',
-                    style: TextStyle(fontFamily: 'Cairo', color: Colors.white),
-                  ),
-                )
-                : null,
+            _shipmentData != null ? _buildPremiumChatButton() : null,
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }
 
+  Widget _buildPremiumChatButton() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            context.push(
+              '/chat/${widget.shipmentId}',
+              extra: {'employeeName': _userCache.userName},
+            );
+          },
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [primaryDark, primaryLight]),
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: primaryDark.withOpacity(0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.chat_bubble_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'تواصل مع الدعم',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: accent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildLoadingState() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(color: primaryDark),
-          SizedBox(height: 16),
-          Text(
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: primaryDark.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: const CircularProgressIndicator(
+              color: primaryDark,
+              strokeWidth: 3,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
             'جاري تحميل بيانات الشحنة...',
-            style: TextStyle(color: Colors.grey, fontSize: 16),
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              color: Colors.grey,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -421,86 +522,228 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                size: 60,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(height: 24),
             const Text(
               'لم يتم العثور على الشحنة',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              'الشحنة رقم: ${widget.shipmentId}',
-              style: TextStyle(color: Colors.grey[600]),
+              'رقم ACID: ${widget.shipmentId}',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
               onPressed: () => context.pop(),
+              icon: const Icon(Icons.arrow_back_rounded),
+              label: const Text(
+                'العودة',
+                style: TextStyle(fontFamily: 'Cairo'),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryDark,
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: const Text('العودة'),
             ),
           ],
         ),
       );
     }
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: RefreshIndicator(
+        onRefresh: _loadShipmentData,
+        color: primaryDark,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+
+              // Premium Header
+              _buildPremiumHeader(),
+
+              const SizedBox(height: 20),
+
+              // Quick Stats Row
+              _buildQuickStats(),
+
+              const SizedBox(height: 20),
+
+              // Expandable Sections
+              _buildExpandableSection(
+                title: 'تفاصيل الشحنة',
+                icon: Icons.inventory_2_rounded,
+                isExpanded: _isDetailsExpanded,
+                onTap:
+                    () => setState(
+                      () => _isDetailsExpanded = !_isDetailsExpanded,
+                    ),
+                child: _buildDetailsSection(),
+              ),
+
+              const SizedBox(height: 12),
+
+              _buildExpandableSection(
+                title: 'تتبع الشحنة',
+                icon: Icons.timeline_rounded,
+                isExpanded: _isTrackingExpanded,
+                onTap:
+                    () => setState(
+                      () => _isTrackingExpanded = !_isTrackingExpanded,
+                    ),
+                child: _buildTrackingSection(),
+              ),
+
+              const SizedBox(height: 12),
+
+              _buildExpandableSection(
+                title: 'المستندات',
+                icon: Icons.folder_rounded,
+                isExpanded: _isDocumentsExpanded,
+                onTap:
+                    () => setState(
+                      () => _isDocumentsExpanded = !_isDocumentsExpanded,
+                    ),
+                child: _buildDocumentsSection(),
+              ),
+
+              const SizedBox(height: 100),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickStats() {
+    final status = _shipmentData?['status'] ?? 'غير محدد';
+    final containersCount =
+        _shipmentData?['num_of_containers']?.toString() ?? '0';
+    final shipmentType = _shipmentData?['shipment_type']?.toString() ?? '';
+    final isSea =
+        shipmentType.contains('بحري') ||
+        shipmentType.toLowerCase().contains('sea');
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
         children: [
-          const SizedBox(height: 16),
-
-          // Header with shipment number
-          _buildHeader(),
-
-          const SizedBox(height: 16),
-
-          // Expandable Section 1: Shipment Details
-          _buildExpandableSection(
-            title: 'تفاصيل الشحنة',
-            icon: Icons.inventory_2_outlined,
-            isExpanded: _isDetailsExpanded,
-            onTap: () {
-              setState(() {
-                _isDetailsExpanded = !_isDetailsExpanded;
-              });
-            },
-            child: _buildDetailsSection(),
+          Expanded(
+            child: _buildStatCard(
+              icon: Icons.local_shipping_rounded,
+              label: 'الحالة',
+              value:
+                  status.length > 15 ? '${status.substring(0, 15)}...' : status,
+              color: _getStatusColor(status),
+            ),
           ),
-
-          const SizedBox(height: 12),
-
-          // Expandable Section 2: Tracking Timeline
-          _buildExpandableSection(
-            title: 'تتبع الشحنة',
-            icon: Icons.timeline_outlined,
-            isExpanded: _isTrackingExpanded,
-            onTap: () {
-              setState(() {
-                _isTrackingExpanded = !_isTrackingExpanded;
-              });
-            },
-            child: _buildTrackingSection(),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatCard(
+              icon: Icons.inventory_2_rounded,
+              label: 'الحاويات',
+              value: containersCount,
+              color: accent,
+            ),
           ),
-
-          const SizedBox(height: 12),
-
-          // Expandable Section 3: Required Documents
-          _buildExpandableSection(
-            title: 'المستندات المرفوعة',
-            icon: Icons.folder_outlined,
-            isExpanded: _isDocumentsExpanded,
-            onTap: () {
-              setState(() {
-                _isDocumentsExpanded = !_isDocumentsExpanded;
-              });
-            },
-            child: _buildDocumentsSection(),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatCard(
+              icon:
+                  isSea
+                      ? Icons.directions_boat_rounded
+                      : Icons.flight_takeoff_rounded,
+              label: 'النوع',
+              value: isSea ? 'بحري' : 'جوي',
+              color: goldAccent,
+            ),
           ),
+        ],
+      ),
+    );
+  }
 
-          const SizedBox(height: 80),
+  Widget _buildStatCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 11,
+              color: Colors.grey[500],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2D2D2D),
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
@@ -517,38 +760,50 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: primaryDark.withOpacity(0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       child: Column(
         children: [
           InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onTap();
+            },
+            borderRadius: BorderRadius.circular(20),
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: primaryDark.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        colors: [primaryDark, primaryLight],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryDark.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Icon(icon, color: primaryDark, size: 24),
+                    child: Icon(icon, color: Colors.white, size: 22),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Cairo',
                         color: Color(0xFF2C2C2C),
@@ -558,10 +813,17 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
                   AnimatedRotation(
                     turns: isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 300),
-                    child: Icon(
-                      Icons.keyboard_arrow_down,
-                      color: Colors.grey[600],
-                      size: 28,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: primaryDark,
+                        size: 22,
+                      ),
                     ),
                   ),
                 ],
@@ -572,8 +834,12 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
             firstChild: const SizedBox.shrink(),
             secondChild: Column(
               children: [
-                Divider(height: 1, thickness: 1, color: Colors.grey[200]),
-                Padding(padding: const EdgeInsets.all(16), child: child),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 18),
+                  height: 1,
+                  color: Colors.grey.withOpacity(0.1),
+                ),
+                Padding(padding: const EdgeInsets.all(18), child: child),
               ],
             ),
             crossFadeState:
@@ -587,163 +853,198 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildPremiumHeader() {
     final status = _shipmentData?['status'] ?? 'غير محدد';
     final statusColor = _getStatusColor(status);
     final shipmentCode = _shipmentData?['shipmentCode']?.toString() ?? '';
-
-    // Determine shipment type for icon
     final shipmentType =
         _shipmentData?['shipment_type']?.toString().toLowerCase() ?? '';
     final isSea = shipmentType.contains('بحري') || shipmentType.contains('sea');
     final typeIcon =
         isSea ? Icons.directions_boat_rounded : Icons.flight_takeoff_rounded;
-    final typeText = isSea ? 'بحري' : 'جوي';
-    final typeColor = isSea ? const Color(0xFF1ba3b6) : Colors.orange;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [primaryDark, primaryDark.withOpacity(0.8)],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [primaryDark, primaryLight, primaryDark.withOpacity(0.9)],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: primaryDark.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: primaryDark.withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          // Header Row with Icon and Shipment Info
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(typeIcon, color: Colors.white, size: 28),
+          // Decorative elements
+          Positioned(
+            top: -30,
+            right: -30,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+          Positioned(
+            bottom: -20,
+            left: -20,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+          ),
+
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    // Shipment Code (if available)
-                    if (shipmentCode.isNotEmpty) ...[
-                      Row(
+                    // Icon
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(typeIcon, color: Colors.white, size: 30),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              shipmentCode,
-                              style: TextStyle(
-                                color: primaryDark,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Cairo',
+                          if (shipmentCode.isNotEmpty) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                shipmentCode,
+                                style: TextStyle(
+                                  color: primaryDark,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                ),
                               ),
                             ),
+                            const SizedBox(height: 8),
+                          ],
+                          Text(
+                            'رقم ACID',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 12,
+                              fontFamily: 'Cairo',
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: typeColor.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(typeIcon, size: 12, color: Colors.white),
-                                const SizedBox(width: 4),
-                                Text(
-                                  typeText,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Cairo',
-                                  ),
-                                ),
-                              ],
+                          Text(
+                            widget.shipmentId,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                    ],
-                    // ACID Number
-                    const Text(
-                      'رقم ACID',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                        fontFamily: 'Cairo',
-                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      widget.shipmentId,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Cairo',
+                    // Type badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (isSea ? accent : goldAccent).withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(typeIcon, size: 14, color: Colors.white),
+                          const SizedBox(width: 4),
+                          Text(
+                            isSea ? 'بحري' : 'جوي',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Status Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.2),
-              border: Border.all(color: Colors.white.withOpacity(0.3)),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+                const SizedBox(height: 16),
+                // Status Badge
                 Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  status,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Cairo',
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: statusColor.withOpacity(0.5),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          status,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Cairo',
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -752,6 +1053,11 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildHeader() {
+    // Keep for backward compatibility - now redirects to premium header
+    return _buildPremiumHeader();
   }
 
   Color _getStatusColor(String status) {
@@ -856,20 +1162,23 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withOpacity(0.1)),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: accent.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              gradient: LinearGradient(
+                colors: [accent.withOpacity(0.1), accent.withOpacity(0.05)],
+              ),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: accent, size: 20),
+            child: Icon(icon, color: accent, size: 22),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -877,9 +1186,10 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                    fontSize: 11,
+                    color: Colors.grey[500],
                     fontFamily: 'Cairo',
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -887,8 +1197,9 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
                   value,
                   style: const TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                     fontFamily: 'Cairo',
+                    color: Color(0xFF2D2D2D),
                   ),
                 ),
               ],
@@ -903,21 +1214,153 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Timeline
         ...List.generate(_trackingSteps.length, (index) {
           final step = _trackingSteps[index];
           final isLast = index == _trackingSteps.length - 1;
           final isCurrent = index == _currentStatusIndex;
           final isCompleted = index <= _currentStatusIndex;
 
-          return _buildTimelineItem(
+          return _buildPremiumTimelineItem(
             title: step['title'],
             isCompleted: isCompleted,
             isCurrent: isCurrent,
             isLast: isLast,
+            index: index,
           );
         }),
       ],
+    );
+  }
+
+  Widget _buildPremiumTimelineItem({
+    required String title,
+    required bool isCompleted,
+    required bool isCurrent,
+    required bool isLast,
+    required int index,
+  }) {
+    final itemColor = isCompleted || isCurrent ? accent : Colors.grey[300]!;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Timeline indicator
+          Column(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient:
+                      isCompleted || isCurrent
+                          ? LinearGradient(
+                            colors: [accent, accent.withOpacity(0.7)],
+                          )
+                          : null,
+                  color: isCompleted || isCurrent ? null : Colors.grey[200],
+                  boxShadow:
+                      isCompleted || isCurrent
+                          ? [
+                            BoxShadow(
+                              color: accent.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                          : null,
+                ),
+                child: Center(
+                  child:
+                      isCompleted
+                          ? const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          )
+                          : Text(
+                            '${index + 1}',
+                            style: TextStyle(
+                              color:
+                                  isCurrent ? Colors.white : Colors.grey[500],
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                ),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 3,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(2),
+                      color: isCompleted ? accent : Colors.grey[200],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          // Content
+          Expanded(
+            child: Container(
+              margin: EdgeInsets.only(bottom: isLast ? 0 : 16),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isCurrent ? accent.withOpacity(0.1) : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                border:
+                    isCurrent
+                        ? Border.all(color: accent.withOpacity(0.3))
+                        : null,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight:
+                            isCurrent ? FontWeight.bold : FontWeight.w500,
+                        fontFamily: 'Cairo',
+                        color:
+                            isCompleted || isCurrent
+                                ? const Color(0xFF2D2D2D)
+                                : Colors.grey[500],
+                      ),
+                    ),
+                  ),
+                  if (isCurrent)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'الحالي',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -927,70 +1370,13 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage> {
     required bool isCurrent,
     required bool isLast,
   }) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Timeline indicator
-          Column(
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isCompleted || isCurrent ? accent : Colors.grey[300],
-                  border: Border.all(
-                    color:
-                        isCompleted || isCurrent ? accent : Colors.grey[400]!,
-                    width: 2,
-                  ),
-                ),
-                child:
-                    isCompleted
-                        ? const Icon(Icons.check, color: Colors.white, size: 14)
-                        : null,
-              ),
-              if (!isLast)
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        right: BorderSide(
-                          color: isCompleted ? accent : Colors.grey[300]!,
-                          width: 2,
-                          style: BorderStyle.solid,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-
-          const SizedBox(width: 16),
-
-          // Title
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                  color:
-                      isCompleted || isCurrent
-                          ? Colors.black
-                          : Colors.grey[600],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    // Redirect to premium version
+    return _buildPremiumTimelineItem(
+      title: title,
+      isCompleted: isCompleted,
+      isCurrent: isCurrent,
+      isLast: isLast,
+      index: 0,
     );
   }
 

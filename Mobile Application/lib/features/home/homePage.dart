@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -108,15 +106,15 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       setState(() => _isLoadingShipments = true);
 
-      print('🏠 [HomePage] Loading recently opened shipments...');
+      print('🏠 [HomePage] Loading shipments for current user...');
 
-      // Get last 3 opened shipments from RecentShipmentsService
-      var recentShipments = await RecentShipmentsService.getRecentShipments();
-
-      // Also load all shipments for statistics (imports)
+      // Load user's import shipments from cache (API already filters by user)
       final allImportShipments = await _shipmentsCache.getAllShipments();
+      print(
+        '🏠 [HomePage] Import shipments count: ${allImportShipments.length}',
+      );
 
-      // Load export shipments as well
+      // Load user's export shipments
       List<Map<String, dynamic>> allExportShipments = [];
       try {
         final exportResponse = await ApiService.getMyExportShipments();
@@ -124,22 +122,37 @@ class _HomePageState extends State<HomePage> {
           allExportShipments = List<Map<String, dynamic>>.from(
             exportResponse['data'] ?? [],
           );
+          print(
+            '🏠 [HomePage] Export shipments count: ${allExportShipments.length}',
+          );
         }
       } catch (e) {
         print('❌ [HomePage] Error loading export shipments: $e');
       }
 
-      // Fallback: If no recent shipments opened, show random 3 shipments from imports and exports
+      // Get last 3 opened shipments from RecentShipmentsService (now user-specific)
+      var recentShipments = await RecentShipmentsService.getRecentShipments();
+      print(
+        '🏠 [HomePage] Recent shipments from service: ${recentShipments.length}',
+      );
+
+      // If no recent shipments, show the 3 most recent from user's shipments
       if (recentShipments.isEmpty &&
           (allImportShipments.isNotEmpty || allExportShipments.isNotEmpty)) {
         print(
-          '🏠 [HomePage] No recent shipments, picking 3 random from imports/exports',
+          '🏠 [HomePage] No recent shipments, showing user\'s latest shipments',
         );
-        recentShipments = _getRandomShipments(
+        recentShipments = _getLatestUserShipments(
           allImportShipments,
           allExportShipments,
           3,
         );
+        // Debug: Show what type each shipment is
+        for (var s in recentShipments) {
+          print(
+            '🏠 [HomePage] Shipment: ${s['_sourceType']} - ${s['acid'] ?? s['ucrNumber'] ?? s['_id']}',
+          );
+        }
       }
 
       _processShipments(recentShipments, allImportShipments);
@@ -150,16 +163,13 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// اختيار شحنات عشوائية من الوارد والصادر
-  List<Map<String, dynamic>> _getRandomShipments(
+  /// اختيار أحدث شحنات المستخدم من الوارد والصادر
+  List<Map<String, dynamic>> _getLatestUserShipments(
     List<Map<String, dynamic>> importShipments,
     List<Map<String, dynamic>> exportShipments,
     int count,
   ) {
-    final random = Random();
-    final List<Map<String, dynamic>> result = [];
-
-    // جمع كل الشحنات (imports + exports) مع تحديد النوع
+    // جمع كل شحنات المستخدم (imports + exports) مع تحديد النوع
     final List<Map<String, dynamic>> allShipments = [];
 
     // إضافة شحنات الوارد
@@ -184,16 +194,14 @@ class _HomePageState extends State<HomePage> {
     // لو مافيش شحنات
     if (allShipments.isEmpty) return [];
 
-    // اختيار عشوائي
-    if (allShipments.length <= count) {
-      return allShipments;
-    }
+    // ترتيب حسب تاريخ التحديث (الأحدث أولاً)
+    allShipments.sort((a, b) {
+      final dateA = a['updatedAt'] ?? a['createdAt'] ?? '';
+      final dateB = b['updatedAt'] ?? b['createdAt'] ?? '';
+      return dateB.toString().compareTo(dateA.toString());
+    });
 
-    // خلط عشوائي
-    final shuffled = List<Map<String, dynamic>>.from(allShipments)
-      ..shuffle(random);
-
-    return shuffled.take(count).toList();
+    return allShipments.take(count).toList();
   }
 
   /// ترجمة حالات شحنات الصادر
@@ -237,17 +245,34 @@ class _HomePageState extends State<HomePage> {
           // Determine shipment type from shipment_type field
           final shipmentType =
               shipment['shipment_type']?.toString().toLowerCase() ?? '';
-          final isSea =
-              shipmentType.contains('بحري') || shipmentType.contains('sea');
+          // Fix: Air shipments contain 'جوي' or 'air', everything else is sea
+          final isAir =
+              shipmentType.contains('جوي') || shipmentType.contains('air');
+
+          // Check if this is an export shipment (multiple ways to detect)
+          final isExport =
+              shipment['_sourceType'] == 'export' ||
+              shipment['isExport'] == true ||
+              (shipment['ucrNumber'] != null && shipment['acid'] == null);
+          print(
+            '🏠 [_processShipments] Processing: _sourceType=${shipment['_sourceType']}, isExport=$isExport, ucrNumber=${shipment['ucrNumber']}',
+          );
 
           return {
-            'id': shipment['acid'] ?? shipment['id'] ?? 'N/A',
+            'id':
+                isExport
+                    ? (shipment['ucrNumber'] ??
+                        shipment['acid'] ??
+                        shipment['id'] ??
+                        'N/A')
+                    : (shipment['acid'] ?? shipment['id'] ?? 'N/A'),
+            'ucrNumber': shipment['ucrNumber'],
             'shipmentCode': shipment['shipmentCode'] ?? '',
             'name':
                 shipment['shipmentDescription'] ?? shipment['name'] ?? 'شحنة',
             'number46': shipment['number46'] ?? '',
             'shipment_type': shipment['shipment_type'] ?? 'بحري',
-            'type': isSea ? 'بحري' : 'جوي',
+            'type': isAir ? 'جوي' : 'بحري',
             'date': _formatDate(
               shipment['updatedAt'] ??
                   shipment['createdAt'] ??
@@ -255,6 +280,8 @@ class _HomePageState extends State<HomePage> {
             ),
             'status': shipment['status'] ?? 'غير محدد',
             'isUrgent': _isUrgent(shipment['status']),
+            'isExport': isExport,
+            '_sourceType': shipment['_sourceType'] ?? 'import',
             'rawData': shipment,
           };
         }).toList();
@@ -2341,204 +2368,235 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildPremiumShipmentCard(Map<String, dynamic> shipment, int index) {
+    // Check if this is an export shipment
+    final isExport =
+        shipment['isExport'] == true || shipment['_sourceType'] == 'export';
+
     final shipmentType =
         shipment['shipment_type']?.toString().toLowerCase() ?? '';
-    final isSea =
-        shipmentType.contains('بحري') ||
-        shipmentType.contains('sea') ||
-        shipment['type'] == 'بحري';
-    final typeText = isSea ? 'بحري' : 'جوي';
+    final isAir =
+        shipmentType.contains('جوي') ||
+        shipmentType.contains('air') ||
+        shipment['type'] == 'جوي';
+    final typeText = isAir ? 'جوي' : 'بحري';
     final typeIcon =
-        isSea ? Icons.directions_boat_rounded : Icons.flight_takeoff_rounded;
-    final typeColor = isSea ? accentColor : const Color(0xFFf59e0b);
+        isAir ? Icons.flight_takeoff_rounded : Icons.directions_boat_rounded;
+    final typeColor = isAir ? goldAccent : accentColor;
     final statusColor = _getStatusColor(shipment['status']);
 
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        _handleShipmentTap(shipment);
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Row - Shipment Code and Type Badge
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: typeColor.withOpacity(0.15), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withOpacity(0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            _handleShipmentTap(shipment);
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      // Shipment Code Badge (if available)
-                      if (shipment['shipmentCode']?.toString().isNotEmpty ==
-                          true) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: primaryDark,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            shipment['shipmentCode'],
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo',
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      // Type Badge
+                // Header Row - Shipment Code + Badges
+                Row(
+                  children: [
+                    // Shipment Code (if available)
+                    if (shipment['shipmentCode']?.toString().isNotEmpty ==
+                        true) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: typeColor.withOpacity(0.1),
+                          gradient: LinearGradient(
+                            colors: [primaryDark, primaryLight],
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          shipment['shipmentCode'],
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    // Type Badge (بحري/جوي)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: typeColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(typeIcon, size: 12, color: typeColor),
+                          const SizedBox(width: 3),
+                          Text(
+                            typeText,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontFamily: 'Cairo',
+                              fontWeight: FontWeight.bold,
+                              color: typeColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Import/Export Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            isExport
+                                ? Colors.green.withOpacity(0.1)
+                                : Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isExport ? 'تصدير' : 'استيراد',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cairo',
+                          color:
+                              isExport
+                                  ? Colors.green.shade700
+                                  : Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    // Urgent Badge
+                    if (shipment['isUrgent'] == true) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                        child: Text(
+                          'عاجل',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                      color: Colors.grey[400],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                // ACID/UCR Number Row
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.qr_code_2_rounded,
+                        size: 20,
+                        color: primaryDark,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(typeIcon, size: 14, color: typeColor),
-                            const SizedBox(width: 4),
                             Text(
-                              typeText,
+                              isExport ? 'رقم UCR' : 'رقم ACID',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 10,
                                 fontFamily: 'Cairo',
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              shipment['id'] ?? '',
+                              style: TextStyle(
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: typeColor,
+                                fontFamily: 'Cairo',
+                                color: primaryDark,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      // Urgent Badge
-                      if (shipment['isUrgent'] == true) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(
-                                Icons.priority_high,
-                                size: 14,
-                                color: Colors.red,
-                              ),
-                              SizedBox(width: 2),
-                              Text(
-                                'عاجل',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Cairo',
-                                  color: Colors.red,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey.withOpacity(0.4),
-                ),
-              ],
-            ),
 
-            const SizedBox(height: 14),
-
-            // ACID Number Row
-            Row(
-              children: [
-                Icon(Icons.qr_code_2_rounded, size: 18, color: primaryDark),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'رقم ACID',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'Cairo',
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      shipment['id'] ?? 'N/A',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Cairo',
-                        color: Color(0xFF424242),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-
-            // Number 46 Row (if available)
-            if (shipment['number46']?.toString().isNotEmpty == true) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Icon(
-                    Icons.description_outlined,
-                    size: 18,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                // Number 46 (only for imports)
+                if (!isExport &&
+                    shipment['number46']?.toString().isNotEmpty == true) ...[
+                  const SizedBox(height: 10),
+                  Row(
                     children: [
+                      Icon(
+                        Icons.description_outlined,
+                        size: 16,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 8),
                       Text(
-                        'رقم 46',
+                        'رقم 46: ',
                         style: TextStyle(
                           fontSize: 11,
                           fontFamily: 'Cairo',
                           color: Colors.grey[500],
                         ),
                       ),
-                      const SizedBox(height: 2),
                       Text(
                         shipment['number46'],
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           fontFamily: 'Cairo',
                           color: Color(0xFF424242),
@@ -2547,68 +2605,71 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ],
-              ),
-            ],
 
-            const SizedBox(height: 12),
-            const Divider(height: 1, thickness: 1),
-            const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-            // Status and Date Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Status
-                Expanded(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Icon(
-                          Icons.info_outline,
-                          size: 14,
-                          color: statusColor,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          shipment['status'] ?? 'غير محدد',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'Cairo',
-                            fontWeight: FontWeight.w600,
-                            color: statusColor,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Last Update Date
+                // Status and Date Row
                 Row(
                   children: [
-                    Icon(Icons.update, size: 13, color: Colors.grey[500]),
-                    const SizedBox(width: 6),
-                    Text(
-                      shipment['date'] ?? '',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'Cairo',
-                        color: Colors.grey[600],
+                    // Status
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
                       ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            shipment['status'] ?? '',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontFamily: 'Cairo',
+                              fontWeight: FontWeight.w600,
+                              color: statusColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    // Date
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.schedule_rounded,
+                          size: 12,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          shipment['date'] ?? '',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontFamily: 'Cairo',
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -2725,292 +2786,525 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildShipmentCard(Map<String, dynamic> shipment) {
-    // Get shipment type from shipment_type field
+    // Debug: Log shipment data
+    print(
+      '🎨 [_buildShipmentCard] shipment[isExport]=${shipment['isExport']}, _sourceType=${shipment['_sourceType']}, id=${shipment['id']}',
+    );
+
+    // Get shipment type from shipment_type field or pre-computed type
     final shipmentType =
         shipment['shipment_type']?.toString().toLowerCase() ?? '';
-    final isSea =
-        shipmentType.contains('بحري') ||
-        shipmentType.contains('sea') ||
-        shipment['type'] == 'بحري';
-    final typeText = isSea ? 'بحري' : 'جوي';
+    // Fix: Check for air first - if contains 'جوي' or 'air' it's air, otherwise sea
+    final isAir =
+        shipmentType.contains('جوي') ||
+        shipmentType.contains('air') ||
+        shipment['type'] == 'جوي';
+    final typeText = isAir ? 'جوي' : 'بحري';
     final typeIcon =
-        isSea ? Icons.directions_boat_rounded : Icons.flight_takeoff_rounded;
-    final typeColor = isSea ? const Color(0xFF1ba3b6) : Colors.orange[700]!;
+        isAir ? Icons.flight_takeoff_rounded : Icons.directions_boat_rounded;
+    final typeColor = isAir ? goldAccent : accentColor;
+
+    // Check if this is an export shipment
+    final isExport =
+        shipment['isExport'] == true || shipment['_sourceType'] == 'export';
+    print('🎨 [_buildShipmentCard] isExport=$isExport');
 
     // Get status color
     final statusColor = _getStatusColor(shipment['status']);
 
-    return InkWell(
-      onTap: () {
-        _handleShipmentTap(shipment);
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Row - Shipment Code and Type Badge
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      // Shipment Code Badge (if available)
-                      if (shipment['shipmentCode']?.toString().isNotEmpty ==
-                          true) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF690000),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            shipment['shipmentCode'],
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo',
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: typeColor.withOpacity(0.15), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withOpacity(0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+          BoxShadow(
+            color: typeColor.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            _handleShipmentTap(shipment);
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Column(
+            children: [
+              // Premium Header with Gradient
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      typeColor.withOpacity(0.08),
+                      typeColor.withOpacity(0.03),
+                    ],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          // Shipment Code Badge
+                          if (shipment['shipmentCode']?.toString().isNotEmpty ==
+                              true) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [primaryDark, primaryLight],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: primaryDark.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                shipment['shipmentCode'],
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          // Type Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
                               color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: typeColor.withOpacity(0.3),
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: typeColor.withOpacity(0.15),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(typeIcon, size: 16, color: typeColor),
+                                const SizedBox(width: 5),
+                                Text(
+                                  typeText,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontFamily: 'Cairo',
+                                    fontWeight: FontWeight.bold,
+                                    color: typeColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          // Urgent Badge
+                          if (shipment['isUrgent'] == true) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.red.shade600,
+                                    Colors.red.shade400,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withOpacity(0.3),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(
+                                    Icons.priority_high,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'عاجل',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Cairo',
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                        color: primaryDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Content Section
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ACID/UCR Number Row (based on shipment type)
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: primaryDark.withOpacity(0.08),
+                          width: 1,
                         ),
-                        const SizedBox(width: 8),
-                      ],
-                      // Type Badge
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  primaryDark.withOpacity(0.1),
+                                  primaryLight.withOpacity(0.05),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.qr_code_2_rounded,
+                              size: 22,
+                              color: primaryDark,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isExport ? 'رقم UCR' : 'رقم ACID',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontFamily: 'Cairo',
+                                    color: Colors.grey[500],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  shipment['id'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                    color: primaryDark,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Number 46 Row (if available)
+                    if (shipment['number46']?.toString().isNotEmpty ==
+                        true) ...[
+                      const SizedBox(height: 12),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: typeColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
+                          color: accentColor.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: accentColor.withOpacity(0.15),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(typeIcon, size: 14, color: typeColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              typeText,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontFamily: 'Cairo',
-                                fontWeight: FontWeight.bold,
-                                color: typeColor,
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: accentColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.description_outlined,
+                                size: 22,
+                                color: accentColor,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'رقم 46',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontFamily: 'Cairo',
+                                      color: Colors.grey[500],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    shipment['number46'],
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Cairo',
+                                      color: accentColor,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                      // Urgent Badge
-                      if (shipment['isUrgent']) ...[
-                        const SizedBox(width: 8),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // Status and Date Row
+                    Row(
+                      children: [
+                        // Status Badge
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: statusColor.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: statusColor,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: statusColor.withOpacity(0.4),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    shipment['status'] ?? '',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontFamily: 'Cairo',
+                                      fontWeight: FontWeight.bold,
+                                      color: statusColor,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Date Badge
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                            horizontal: 14,
+                            vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
+                            color: Colors.grey.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(
-                                Icons.priority_high,
+                                Icons.schedule_rounded,
                                 size: 14,
-                                color: Colors.red,
+                                color: Colors.grey[600],
                               ),
-                              SizedBox(width: 2),
+                              const SizedBox(width: 6),
                               Text(
-                                'عاجل',
+                                shipment['date'] ?? '',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  fontWeight: FontWeight.bold,
                                   fontFamily: 'Cairo',
-                                  color: Colors.red,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[700],
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey.withOpacity(0.4),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 14),
-
-            // ACID Number Row
-            Row(
-              children: [
-                Icon(
-                  Icons.qr_code_2_rounded,
-                  size: 18,
-                  color: const Color(0xFF690000),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'رقم ACID',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'Cairo',
-                        color: Colors.grey[500],
-                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      shipment['id'],
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Cairo',
-                        color: Color(0xFF424242),
+
+                    const SizedBox(height: 16),
+
+                    // Premium View Details Button
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [primaryDark, primaryLight],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryDark.withOpacity(0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            _handleShipmentTap(shipment);
+                          },
+                          borderRadius: BorderRadius.circular(14),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  isExport
+                                      ? 'عرض تفاصيل التصدير'
+                                      : 'عرض تفاصيل الشحنة',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                const Icon(
+                                  Icons.visibility_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
-
-            // Number 46 Row (if available)
-            if (shipment['number46']?.toString().isNotEmpty == true) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Icon(
-                    Icons.description_outlined,
-                    size: 18,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'رقم 46',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontFamily: 'Cairo',
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        shipment['number46'],
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'Cairo',
-                          color: Color(0xFF424242),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ),
             ],
-
-            const SizedBox(height: 12),
-
-            const Divider(height: 1, thickness: 1),
-
-            const SizedBox(height: 12),
-
-            // Status and Date Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Status
-                Expanded(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Icon(
-                          Icons.info_outline,
-                          size: 14,
-                          color: statusColor,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          shipment['status'],
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'Cairo',
-                            fontWeight: FontWeight.w600,
-                            color: statusColor,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                // Last Update Date
-                Row(
-                  children: [
-                    Icon(Icons.update, size: 13, color: Colors.grey[500]),
-                    const SizedBox(width: 6),
-                    Text(
-                      shipment['date'],
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'Cairo',
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   void _handleShipmentTap(Map<String, dynamic> shipment) {
-    context.push('/shipment-details/${shipment['id']}');
+    // Check if export shipment - navigate to export details
+    final isExport =
+        shipment['isExport'] == true || shipment['_sourceType'] == 'export';
+    if (isExport) {
+      context.push('/export-shipment-details/${shipment['id']}');
+    } else {
+      context.push('/shipment-details/${shipment['id']}');
+    }
   }
 
   // ==================== PREMIUM BOTTOM NAVIGATION ====================
