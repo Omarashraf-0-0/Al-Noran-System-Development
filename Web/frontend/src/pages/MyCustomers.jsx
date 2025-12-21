@@ -44,7 +44,7 @@ const MyCustomers = () => {
 		}
 	};
 
-	const handleOpenChat = async (customer, shipment) => {
+	const handleOpenChat = async (customer, item) => {
 		try {
 			console.log("Opening chat for shipment:", shipment._id);
 			
@@ -312,8 +312,7 @@ const MyCustomers = () => {
 													/>
 												</svg>
 											</div>
-										</div>
-									</div>
+										</button>
 
 									{/* Shipments List - Expandable */}
 									{expandedCustomer === customer._id && (

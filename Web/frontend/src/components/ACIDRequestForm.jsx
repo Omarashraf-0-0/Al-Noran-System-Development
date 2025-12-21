@@ -136,21 +136,22 @@ const ACIDRequestForm = ({
 				<Spacer size="md" />
 
 				{/* Supplier Information Section */}
+			<div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+				<p className="text-blue-800 font-semibold mb-4 text-sm">
+					ℹ️ معلومات المورد (المستورد) - يرجى إدخال بيانات المورد وليس بيانات العميل
+				</p>
 				<SupplierFormSection
 					supplierData={formData.supplier}
 					onInputChange={handleInputChange}
 				/>
-
-				<Spacer size="md" />
-				<div className="flex items-center justify-center w-full">
-					<Button type="submit" size="full">
-						إرسال الطلب
-					</Button>
-				</div>
-				<Spacer size="md" />
-			</form>
-
+			</div>
 			<Spacer size="md" />
+			<div className="flex items-center justify-center w-full">
+				<Button type="submit" size="full">
+					إرسال الطلب
+				</Button>
+			</div>
+			</form>
 		</div>
 	);
 };

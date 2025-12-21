@@ -11,6 +11,11 @@ const InputField = ({
 	labelClassName = "",
 	inputClassName = "",
 	required = false,
+	min,
+	max,
+	step,
+	pattern,
+	title,
 }) => {
 	const defaultInputClass =
 		"shadow border rounded-2xl w-full py-2 px-3 text-sm sm:text-base leading-tight focus:outline-none focus:ring-2 focus:ring-[#690000]/50 focus:shadow-outline bg-white transition-all duration-200";
@@ -33,6 +38,11 @@ const InputField = ({
 				value={value}
 				onChange={onChange}
 				required={required}
+				min={min}
+				max={max}
+				step={step}
+				pattern={pattern}
+				title={title}
 				dir="rtl"
 			/>
 		</div>

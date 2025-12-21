@@ -94,6 +94,7 @@ app.use("/api/payments", require("./routes/paymentRoutes")); // Payment Routes
 // =====================================================
 app.use("/api/ucr", require("./routes/ucrRoutes")); // UCR (Export License) Routes
 app.use("/api/export-shipments", require("./routes/exportShipmentRoutes")); // Export Shipment Routes
+app.use("/api/vessel", require("./routes/vesselRoutes")); // Vessel Tracking Routes
 
 // =====================================================
 // NOTIFICATIONS ROUTES

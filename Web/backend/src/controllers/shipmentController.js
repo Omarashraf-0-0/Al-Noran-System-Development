@@ -270,9 +270,9 @@ const getAllShipments = async (req, res) => {
 			.populate("user_id", "username fullname email")
 			.populate("employee_id", "username fullname email")
 			.sort({ createdAt: -1 });
-		
+
 		console.log(`📦 [getAllShipments] Found ${shipments.length} shipments for userType: ${userType}`);
-		
+
 		res.json(shipments);
 	} catch (error) {
 		console.error(`❌ [getAllShipments] Error:`, error);
@@ -414,7 +414,7 @@ const updateShipmentStatus = async (req, res) => {
 		if (shipment.employee_id && req.user && req.user.type === "client") {
 			try {
 				const updateFields = [];
-				
+
 				// Check what client updated
 				if (updateData.claimNumber && updateData.claimNumber !== existingShipment.claimNumber) {
 					updateFields.push("رقم المطالبة");
@@ -501,9 +501,11 @@ const getShipmentrelatedToEmployee = async (req, res) => {
 		const employeeId = req.params.employeeId;
 		console.log("Fetching shipments for employee:", employeeId);
 
-		const shipments = await Shipment.find({ employee_id: employeeId }).sort({
-			createdAt: -1,
-		});
+		const shipments = await Shipment.find({ employee_id: employeeId })
+			.populate('user_id', 'fullname username email phone')
+			.sort({
+				createdAt: -1,
+			});
 
 		console.log(
 			`Found ${shipments.length} shipments for employee ${employeeId}`
@@ -655,7 +657,7 @@ const updateShipmentStatusById = async (req, res) => {
 		// First, get the old status before updating
 		const existingShipment = await Shipment.findById(shipmentId);
 		const oldStatus = existingShipment?.status;
-		
+
 		const shipment = await Shipment.findByIdAndUpdate(shipmentId, updateData, {
 			new: true,
 			runValidators: true,
@@ -1007,7 +1009,7 @@ const resetUploadedDocument = async (req, res) => {
 	try {
 		const { shipmentId, documentId } = req.params;
 
-		console.log("🗑️ Resetting uploaded document:", {
+		console.log("🗑️ Deleting document completely:", {
 			shipmentId,
 			documentId,
 		});
@@ -1024,38 +1026,32 @@ const resetUploadedDocument = async (req, res) => {
 			return res.status(404).json({ message: "Document not found" });
 		}
 
-		// Reset document to pending state
-		document.uploaded = false;
-		document.uploadedAt = null;
-		document.fileId = null;
+		const documentName = document.name;
+
+		// COMPLETELY REMOVE the document from the array
+		shipment.requiredDocuments.pull(documentId);
 
 		await shipment.save();
 
-		console.log("✅ Document reset successfully:", document.name);
+		console.log("✅ Document removed completely:", documentName);
 
 		// Emit socket event
 		if (req.io) {
-			req.io.to(shipment.acid).emit("documentReset", {
+			req.io.to(shipment.acid).emit("documentDeleted", {
 				shipmentId: shipment._id,
 				acid: shipment.acid,
 				documentId: documentId,
-				documentName: document.name,
+				documentName: documentName,
 			});
 		}
 
 		res.json({
 			success: true,
-			message: "تم حذف المستند بنجاح. يمكن للعميل إعادة رفعه.",
-			data: {
-				_id: document._id,
-				name: document.name,
-				uploaded: document.uploaded,
-				requestedAt: document.requestedAt,
-			},
+			message: "تم حذف المستند بنجاح.",
 		});
 	} catch (error) {
 		console.error("Error resetting document:", error);
-		res.status(500).json({ message: error.message });
+		res.status(500).json({ success: false, message: error.message });
 	}
 };
 

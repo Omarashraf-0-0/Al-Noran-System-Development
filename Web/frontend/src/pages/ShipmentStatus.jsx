@@ -282,9 +282,9 @@ const ShipmentStatus = () => {
 							{/*  Input fields section - Display real shipment data */}
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mt-12 mb-12">
 								<Datafield
-									label="اسم العميل"
+									label="اسم المورد"
 									value={
-										shipment.importerName || shipment.employerName || "غير محدد"
+										shipment.importerName || "غير محدد"
 									}
 									icon={
 										<img src={contractIcon} alt="icon" className="w-5 h-5" />
@@ -356,19 +356,21 @@ const ShipmentStatus = () => {
 									}
 								/>
 								<Datafield
-									label="الاتفاقية رقم"
+									label="البوليصة (اختياري)"
 									value={shipment.policy || "غير محدد"}
 									icon={
 										<img src={contractIcon} alt="icon" className="w-5 h-5" />
 									}
 								/>
 								<Datafield
-									label="تاريخ الوصول المتوقع"
+									label="تاريخ إصدار الـ ACID"
 									value={
-										shipment.arrivalDate
-											? new Date(shipment.arrivalDate).toLocaleDateString(
+										shipment.acid_request_id?.createdAt
+											? new Date(shipment.acid_request_id.createdAt).toLocaleDateString(
 													"ar-EG"
 											  )
+											: shipment.createdAt
+											? new Date(shipment.createdAt).toLocaleDateString("ar-EG")
 											: "غير محدد"
 									}
 									icon={
@@ -794,22 +796,18 @@ const ShipmentStatus = () => {
 									const handleFileSelect = (e) => {
 										const file = e.target.files[0];
 										if (!file) return;
+										
+										// Validate file size (10MB max)
+										if (file.size > 10 * 1024 * 1024) {
+											toast.error("حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت");
+											e.target.value = "";
+											return;
+										}
+										
 										setPendingFiles(prev => ({
 											...prev,
 											[doc._id]: file
 										}));
-									};
-									
-									// Handler to cancel/delete selected file
-									const handleCancelFile = () => {
-										setPendingFiles(prev => {
-											const updated = { ...prev };
-											delete updated[doc._id];
-											return updated;
-										});
-										// Reset file input
-										const fileInput = document.getElementById(`file-${doc._id}`);
-										if (fileInput) fileInput.value = '';
 									};
 									
 									// Handler to save/upload the file
