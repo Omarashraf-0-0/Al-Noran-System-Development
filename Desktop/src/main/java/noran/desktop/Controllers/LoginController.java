@@ -38,8 +38,8 @@ public class LoginController {
     @FXML
     private PasswordField passwordField;
 
-    // ✅ Match your backend login endpoint
-    private static final String LOGIN_URL = "http://localhost:3500/api/users/login";
+    // Use centralized config for API URL
+    private static final String LOGIN_URL = noran.desktop.AppConfig.API_LOGIN;
 
     @FXML
     private void onLoginClicked(ActionEvent event) {
@@ -130,7 +130,7 @@ public class LoginController {
 
                     // Fetch full profile to get profilePhoto (login response doesn't include it)
                     String profileResponse = noran.desktop.Services.APIService
-                            .get("http://localhost:3500/api/users/profile");
+                            .get(noran.desktop.AppConfig.API_PROFILE);
                     if (profileResponse != null && !profileResponse.isEmpty()) {
                         try {
                             JSONObject profileJson = new JSONObject(profileResponse);

@@ -116,7 +116,7 @@ public class OTPVerificationController {
     }
 
     private boolean resendOtp(String email) throws IOException {
-        URL url = new URL("http://localhost:3500/api/otp/forgotPassword");
+        URL url = new URL(noran.desktop.AppConfig.API_FORGOT_PASSWORD);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
@@ -162,7 +162,7 @@ public class OTPVerificationController {
     }
 
     private boolean verifyOtp(String email, String otp) throws IOException {
-        URL url = new URL("http://localhost:3500/api/otp/verifyOTP");
+        URL url = new URL(noran.desktop.AppConfig.API_VERIFY_OTP);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
@@ -229,7 +229,7 @@ public class OTPVerificationController {
     }
 
     public boolean resetPassword(String email, String newPassword) {
-        String url = "http://localhost:3500/api/otp/resetPassword";
+        String url = noran.desktop.AppConfig.API_RESET_PASSWORD;
 
         try (CloseableHttpClient client = HttpClients.createDefault()) {
             HttpPatch patchRequest = new HttpPatch(url);

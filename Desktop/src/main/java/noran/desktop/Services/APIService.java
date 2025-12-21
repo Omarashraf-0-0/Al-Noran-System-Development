@@ -96,7 +96,7 @@ public class APIService {
 
         try {
             String encodedKey = java.net.URLEncoder.encode(s3Key, StandardCharsets.UTF_8);
-            String url = "http://localhost:3500/api/uploads/presigned-url/" + encodedKey;
+            String url = noran.desktop.AppConfig.API_PRESIGNED_URL + encodedKey;
             System.out.println("[APIService] getPresignedUrl: Calling URL: " + url);
 
             String response = get(url);
