@@ -8,10 +8,6 @@ Web/backend/package-lock.json
 *.env.local
 *.env.production
 *.env.development
-*/.env
-*/.env.*
-*/*/.env
-*/*/.env.*
 **/.env
 **/.env.*
 
