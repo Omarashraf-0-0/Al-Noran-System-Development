@@ -216,7 +216,6 @@ const DocumentApprovalSection = () => {
 			personal_id_of_representative: "بطاقة ممثل",
 			import_export_card: "بطاقة استيراد/تصدير",
 			trade_certificates: "شهادات تجارية",
-			trade_certificates: "شهادات تجارية",
 			personal_id: "البطاقة الشخصية",
 			passport: "جواز السفر",
 		};

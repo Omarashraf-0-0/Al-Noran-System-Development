@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) => {
 	const [scrolled, setScrolled] = useState(false);
+	const [user, setUser] = useState(null);
 
 	// Handle scroll effect
 	useEffect(() => {
@@ -15,6 +16,18 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 		return () => window.removeEventListener("scroll", handleScroll);
 	}, []);
 
+	// Load user from localStorage
+	useEffect(() => {
+		const storedUser = localStorage.getItem("user");
+		if (storedUser) {
+			try {
+				setUser(JSON.parse(storedUser));
+			} catch (error) {
+				console.error("Error parsing user data:", error);
+			}
+		}
+	}, []);
+
 	const handleSearchClick = () => {
 		if (onSearchClick) {
 			onSearchClick();
@@ -24,6 +37,13 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 				searchSection.scrollIntoView({ behavior: "smooth" });
 			}
 		}
+	};
+
+	// Determine dashboard path based on user type
+	const getDashboardPath = () => {
+		if (!user) return "/login";
+		if (user.type === "employee") return "/employeedashboard";
+		return "/home"; // Default for clients
 	};
 
 	return (
@@ -115,14 +135,21 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 
 					{showAuth && (
 						<Link
-							to="/login"
+							to={user ? getDashboardPath() : "/login"}
 							className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all duration-300 transform hover:-translate-y-0.5 hover:scale-105 ${
 								scrolled
 									? "bg-[#690000] text-white hover:bg-[#8B0000] shadow-lg hover:shadow-[#690000]/30"
 									: "bg-white text-[#690000] hover:bg-gray-50 shadow-xl hover:shadow-2xl"
 							}`}
 						>
-							تسجيل الدخول
+							{user ? (
+								<span className="flex items-center gap-2">
+									<span>👤</span>
+									<span>لوحة التحكم</span>
+								</span>
+							) : (
+								<span>تسجيل الدخول</span>
+							)}
 						</Link>
 					)}
 				</div>

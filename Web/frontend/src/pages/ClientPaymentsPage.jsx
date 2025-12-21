@@ -48,10 +48,27 @@ const ClientPaymentsPage = () => {
                 }
             );
 
-            const invoicesData = response.data.invoices || response.data || [];
+            let invoicesData = response.data.invoices || response.data || [];
+            if (!Array.isArray(invoicesData)) invoicesData = [];
             console.log("Fetched Invoices:", invoicesData);
-            setInvoices(invoicesData);
-            calculateTotal(invoicesData);
+
+            // ===========================================
+            // FILTERING LOGIC / منطق تصفية الفواتير
+            // ===========================================
+            // بناءً على طلب العميل، نقوم بتصفية الفواتير لعرض الفواتير المطلوبة فقط.
+            // نقوم باستبعاد الفواتير التي حالتها "في انتظار الموافقة" لأنها لم تعتمد بعد.
+            // نقوم أيضاً باستبعاد الفواتير "المرفوضة" لأنها لا تتطلب دافعاً.
+            //
+            // We filter out invoices that are "Pending Approval" or "Rejected".
+            // - "Pending Approval" (في انتظار الموافقة): Not ready for payment yet.
+            // - "Rejected" (مرفوض): Should not be displayed to the user.
+            // ===========================================
+            const filteredInvoices = invoicesData.filter(inv =>
+                inv.status !== "في انتظار الموافقة" && inv.status !== "مرفوض"
+            );
+
+            setInvoices(filteredInvoices);
+            calculateTotal(filteredInvoices);
             setLoading(false);
         } catch (error) {
             console.error("Error fetching invoices:", error);
@@ -122,6 +139,38 @@ const ClientPaymentsPage = () => {
             total += price;
         });
         return total;
+    };
+
+    /**
+     * =======================================================
+     *  HELPER FUNCTION: GET STATUS TEXT / دالة جلب نص الحالة
+     * =======================================================
+     * This function determines what text to display to the user based on the database status.
+     * The goal is to show user-friendly messages that urge action.
+     * 
+     * هذه الدالة تحدد النص الذي سيتم عرضه للمستخدم بناءً على حالة الفاتورة في قاعدة البيانات.
+     * الهدف هو عرض رسائل سهلة للمستخدم تحثه على اتخاذ إجراء.
+     */
+    const getStatusText = (status) => {
+        // ------------------------------------------------------------------
+        // Case 1: The invoice is "Approved" in the database.
+        // الحالة 1: الفاتورة "تمت الموافقة عليها" في قاعدة البيانات.
+        // ------------------------------------------------------------------
+        // Although the admin approved it, the client still needs to pay.
+        // Therefore, we MUST display "Waiting for Payment" instead of "Approved".
+        // على الرغم من موافقة المسؤول، إلا أن العميل لا يزال بحاجة للدفع.
+        // لذلك، يجب أن نعرض "فى انتظار الدفع" بدلاً من "تمت الموافقة".
+        if (status === 'مقبولة') {
+            return 'فى انتظار الدفع';
+        }
+
+        // ------------------------------------------------------------------
+        // Case 2: Other Statuses (e.g., "Paid").
+        // الحالة 2: الحالات الأخرى (مثل "تم الدفع").
+        // ------------------------------------------------------------------
+        // Display the status exactly as it is in the database.
+        // عرض الحالة كما هي مسجلة في قاعدة البيانات.
+        return status;
     };
 
     // ... Return JSX ...
@@ -296,10 +345,14 @@ const ClientPaymentsPage = () => {
                                             </td>
                                             <td className="py-3 px-6 align-top">
                                                 <span className={`px-2 py-1 rounded text-xs font-bold ${inv.status === 'تم الدفع' ? 'bg-green-100 text-green-800' :
-                                                        inv.status === 'مرفوض' ? 'bg-red-100 text-red-800' :
-                                                            'bg-yellow-100 text-yellow-800'
+                                                    inv.status === 'مرفوض' ? 'bg-red-100 text-red-800' :
+                                                        'bg-yellow-100 text-yellow-800'
                                                     }`}>
-                                                    {inv.status}
+                                                    {/* 
+                                                        Display the formatted status text using our helper function.
+                                                        استخدام الدالة المساعدة لعرض نص الحالة المنسق.
+                                                     */}
+                                                    {getStatusText(inv.status)}
                                                 </span>
                                             </td>
                                             <td className="py-3 px-6 align-top">

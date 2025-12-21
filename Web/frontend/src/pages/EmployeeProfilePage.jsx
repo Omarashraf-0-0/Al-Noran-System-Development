@@ -400,7 +400,7 @@ const EmployeeProfilePage = () => {
 
 			<Header />
 
-			<main className="w-full max-w-[98%] mx-auto p-4 md:p-6 relative z-10 space-y-6">
+			<main className="w-full max-w-[98%] mx-auto p-4 md:p-6 pt-24 relative z-10 space-y-6">
 				
 				{/* Row 1: Profile Header Card */}
 				<div className={`${theme.headerGradient} rounded-2xl p-6 relative overflow-hidden shadow-2xl border border-white/10`}>

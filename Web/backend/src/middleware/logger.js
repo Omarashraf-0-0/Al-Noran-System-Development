@@ -13,12 +13,15 @@ const logEvents = async (message, logFileName) => {
     const dateTime = `${format(new Date(), 'yyyyMMdd\tHH:mm:ss')}`;
     const logItem = `${dateTime}\t${uuid()}\t${message}\n`;
     try {
-        if (!fs.existsSync(path.join(__dirname, '..', 'logs'))) {
-            await fsPromises.mkdir(path.join(__dirname, '..', 'logs'));
-        }
-        await fsPromises.appendFile(path.join(__dirname, '..', 'logs', logFileName), logItem);
+        const logsDir = path.join(__dirname, '..', 'logs');
+        // Use recursive: true to avoid EEXIST error if directory exists
+        await fsPromises.mkdir(logsDir, { recursive: true });
+        await fsPromises.appendFile(path.join(logsDir, logFileName), logItem);
     } catch (err) {
-        console.log(err);
+        // Only log non-EEXIST errors
+        if (err.code !== 'EEXIST') {
+            console.log(err);
+        }
     }
 }
 
