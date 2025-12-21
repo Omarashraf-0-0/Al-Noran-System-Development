@@ -68,70 +68,124 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.primary.withValues(alpha: 0.08),
-              AppColors.background,
-              AppColors.background,
-            ],
-            stops: const [0.0, 0.3, 1.0],
+      body: Stack(
+        children: [
+          // ============= PREMIUM GRADIENT BACKGROUND =============
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF690000),
+                  Color(0xFF8B0000),
+                  Color(0xFF4A0000),
+                ],
+                stops: [0.0, 0.5, 1.0],
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Padding(
-                  padding: AppSpacing.paddingHorizontalLG,
-                  child: Column(
-                    children: [
-                      AppSpacing.gapVerticalSM,
 
-                      // Back Button - على الشمال ويبص للشمال
-                      _buildBackButton(),
+          // ============= DECORATIVE CIRCLES =============
+          Positioned(
+            top: -80,
+            right: -60,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -100,
+            left: -80,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
 
-                      AppSpacing.gapVerticalLG,
+          // ============= GOLDEN ACCENT LINE =============
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 3,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Color(0xFFD4AF37),
+                    Color(0xFFF5E7A3),
+                    Color(0xFFD4AF37),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
 
-                      // Icon
-                      _buildIcon(),
+          // ============= MAIN CONTENT =============
+          SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
 
-                      AppSpacing.gapVerticalLG,
+                        // Back Button
+                        _buildBackButton(),
 
-                      // Title & Subtitle
-                      _buildHeader(),
+                        const SizedBox(height: 24),
 
-                      AppSpacing.gapVerticalLG,
+                        // Icon
+                        _buildIcon(),
 
-                      // Form Card
-                      _buildFormCard(),
+                        const SizedBox(height: 20),
 
-                      AppSpacing.gapVerticalMD,
+                        // Title & Subtitle
+                        _buildHeader(),
 
-                      // Info Box
-                      _buildInfoBox(),
+                        const SizedBox(height: 28),
 
-                      AppSpacing.gapVerticalXL,
-                    ],
+                        // Form Card
+                        _buildFormCard(),
+
+                        const SizedBox(height: 16),
+
+                        // Info Box
+                        _buildInfoBox(),
+
+                        const SizedBox(height: 32),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  // ============= BACK BUTTON =============
+  // ============= PREMIUM BACK BUTTON =============
   Widget _buildBackButton() {
     return Align(
       alignment: Alignment.centerLeft,
@@ -139,23 +193,20 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
         color: Colors.transparent,
         child: InkWell(
           onTap: () => context.pop(),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           child: Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                width: 1.5,
+              ),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.arrow_forward_rounded,
-              color: AppColors.primary,
+              color: Colors.white,
               size: 24,
             ),
           ),
@@ -164,7 +215,7 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
     );
   }
 
-  // ============= ICON =============
+  // ============= PREMIUM ICON WITH GOLD RING =============
   Widget _buildIcon() {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
@@ -177,20 +228,35 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              color: Colors.white,
               shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFF5E7A3),
+                  Color(0xFFD4AF37),
+                ],
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  blurRadius: 25,
-                  spreadRadius: 3,
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                  blurRadius: 20,
+                  spreadRadius: 2,
                 ),
               ],
             ),
-            child: Icon(
-              Icons.person_rounded,
-              size: 50,
-              color: AppColors.primary,
+            child: Container(
+              margin: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF690000),
+              ),
+              child: const Icon(
+                Icons.person_rounded,
+                size: 48,
+                color: Color(0xFFD4AF37),
+              ),
             ),
           ),
         );
@@ -198,39 +264,60 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
     );
   }
 
-  // ============= HEADER =============
+  // ============= PREMIUM HEADER WITH GOLD TEXT =============
   Widget _buildHeader() {
     return Column(
       children: [
-        Text(
-          'حساب شخصي',
-          style: AppTypography.h1.copyWith(
-            color: AppColors.primary,
-            fontSize: 26,
+        ShaderMask(
+          shaderCallback:
+              (bounds) => const LinearGradient(
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFF5E7A3),
+                  Color(0xFFD4AF37),
+                ],
+              ).createShader(bounds),
+          child: const Text(
+            'حساب شخصي',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Cairo',
+              color: Colors.white,
+            ),
           ),
         ),
-        AppSpacing.gapVerticalXS,
+        const SizedBox(height: 8),
         Text(
           'أدخل الرقم القومي وارفق المستندات المطلوبة',
-          style: AppTypography.body.copyWith(color: AppColors.textLight),
+          style: TextStyle(
+            fontSize: 14,
+            fontFamily: 'Cairo',
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
           textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
-  // ============= FORM CARD =============
+  // ============= PREMIUM FORM CARD =============
   Widget _buildFormCard() {
     return Container(
-      padding: AppSpacing.paddingLG,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: AppSpacing.borderRadiusLG,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
+          BoxShadow(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
             blurRadius: 20,
-            offset: const Offset(0, 8),
+            offset: const Offset(0, -5),
           ),
         ],
       ),
@@ -246,7 +333,7 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
             keyboardType: TextInputType.number,
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 20),
 
           // National ID Card Upload
           _buildDocumentUpload(
@@ -257,7 +344,7 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
             onRemove: () => setState(() => _nationalIdCardFile = null),
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 20),
 
           // Power of Attorney Upload
           _buildDocumentUpload(
@@ -268,21 +355,76 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
             onRemove: () => setState(() => _powerOfAttorneyFile = null),
           ),
 
-          AppSpacing.gapVerticalLG,
+          const SizedBox(height: 28),
 
-          // Submit Button
-          AppPrimaryButton(
-            text: 'إتمام التسجيل',
-            onPressed: _handleSubmit,
-            isLoading: _isLoading,
-            icon: Icons.check_circle_rounded,
-          ),
+          // Premium Submit Button
+          _buildPremiumSubmitButton(),
         ],
       ),
     );
   }
 
-  // ============= LABELED TEXT FIELD =============
+  // ============= PREMIUM SUBMIT BUTTON =============
+  Widget _buildPremiumSubmitButton() {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF690000), Color(0xFF8B0000)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF690000).withValues(alpha: 0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isLoading ? null : _handleSubmit,
+          borderRadius: BorderRadius.circular(16),
+          child: Center(
+            child:
+                _isLoading
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                    : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.check_circle_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'إتمام التسجيل',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============= PREMIUM LABELED TEXT FIELD =============
   Widget _buildLabeledTextField({
     required TextEditingController controller,
     required String label,
@@ -294,49 +436,88 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 8, right: 4),
-          child: Text(
-            label,
-            style: AppTypography.body.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
+          padding: const EdgeInsets.only(bottom: 10, right: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF333333),
+                ),
+              ),
+            ],
           ),
         ),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          textAlign: TextAlign.right,
-          style: AppTypography.body.copyWith(color: AppColors.textDark),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: AppTypography.body.copyWith(color: AppColors.textGrey),
-            filled: true,
-            fillColor: AppColors.background,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF690000).withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 15,
+              fontFamily: 'Cairo',
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF333333),
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(
+                fontSize: 14,
+                fontFamily: 'Cairo',
+                color: Colors.grey[400],
+              ),
+              filled: true,
+              fillColor: const Color(0xFFF8F9FA),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 18,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: Color(0xFF690000),
+                  width: 2,
+                ),
+              ),
+              suffixIcon: Icon(icon, color: const Color(0xFF690000), size: 22),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.greyBorder, width: 1),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.primary, width: 2),
-            ),
-            suffixIcon: Icon(icon, color: AppColors.textGrey, size: 22),
           ),
         ),
       ],
     );
   }
 
-  // ============= DOCUMENT UPLOAD =============
+  // ============= PREMIUM DOCUMENT UPLOAD =============
   Widget _buildDocumentUpload({
     required String title,
     required String subtitle,
@@ -350,60 +531,90 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 8, right: 4),
-          child: Text(
-            title,
-            style: AppTypography.body.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
+          padding: const EdgeInsets.only(bottom: 10, right: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF333333),
+                ),
+              ),
+            ],
           ),
         ),
         Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFFF8F9FA),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color:
-                      hasFile ? const Color(0xFF1ba3b6) : AppColors.greyBorder,
-                  width: hasFile ? 2 : 1,
+                  color: hasFile ? const Color(0xFFD4AF37) : Colors.grey[200]!,
+                  width: hasFile ? 2 : 1.5,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        hasFile
+                            ? const Color(0xFFD4AF37).withValues(alpha: 0.1)
+                            : const Color(0xFF690000).withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color:
                           hasFile
-                              ? const Color(0xFF1ba3b6).withValues(alpha: 0.1)
-                              : AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
+                              ? const Color(0xFFD4AF37).withValues(alpha: 0.15)
+                              : const Color(0xFF690000).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       hasFile
                           ? Icons.check_circle_rounded
                           : Icons.upload_file_rounded,
                       color:
-                          hasFile ? const Color(0xFF1ba3b6) : AppColors.primary,
+                          hasFile
+                              ? const Color(0xFFD4AF37)
+                              : const Color(0xFF690000),
                       size: 24,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Text(
                       hasFile ? file.path.split('/').last : subtitle,
-                      style: AppTypography.body.copyWith(
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontFamily: 'Cairo',
                         color:
                             hasFile
-                                ? const Color(0xFF1ba3b6)
-                                : AppColors.textGrey,
+                                ? const Color(0xFFD4AF37)
+                                : Colors.grey[500],
+                        fontWeight:
+                            hasFile ? FontWeight.w600 : FontWeight.normal,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -411,17 +622,17 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
                   ),
                   if (hasFile)
                     IconButton(
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.close_rounded,
-                        color: AppColors.error,
+                        color: Color(0xFF690000),
                         size: 20,
                       ),
                       onPressed: onRemove,
                     )
                   else
                     Icon(
-                      Icons.arrow_back_ios_rounded,
-                      color: AppColors.textGrey,
+                      Icons.arrow_forward_ios_rounded,
+                      color: Colors.grey[400],
                       size: 16,
                     ),
                 ],
@@ -433,30 +644,39 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
     );
   }
 
-  // ============= INFO BOX =============
+  // ============= PREMIUM INFO BOX =============
   Widget _buildInfoBox() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1ba3b6).withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: const Color(0xFF1ba3b6).withValues(alpha: 0.3),
+          color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
         ),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.info_outline_rounded,
-            color: const Color(0xFF1ba3b6),
-            size: 24,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.info_outline_rounded,
+              color: Color(0xFFD4AF37),
+              size: 22,
+            ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
+          const SizedBox(width: 14),
+          const Expanded(
             child: Text(
               'سيتم مراجعة المستندات المرفوعة وتفعيل حسابك خلال 24 ساعة',
-              style: AppTypography.small.copyWith(
-                color: const Color(0xFF1ba3b6),
+              style: TextStyle(
+                fontSize: 13,
+                fontFamily: 'Cairo',
+                color: Colors.white,
               ),
             ),
           ),

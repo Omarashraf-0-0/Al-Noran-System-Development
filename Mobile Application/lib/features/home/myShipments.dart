@@ -2366,7 +2366,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                 ),
               ),
             ),
-            Icon(Icons.arrow_back_ios, size: 16, color: Colors.grey[400]),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
           ],
         ),
       ),

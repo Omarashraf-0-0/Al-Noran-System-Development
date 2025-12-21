@@ -70,75 +70,129 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.primary.withValues(alpha: 0.08),
-              AppColors.background,
-              AppColors.background,
-            ],
-            stops: const [0.0, 0.3, 1.0],
+      body: Stack(
+        children: [
+          // ============= PREMIUM GRADIENT BACKGROUND =============
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF690000),
+                  Color(0xFF8B0000),
+                  Color(0xFF4A0000),
+                ],
+                stops: [0.0, 0.5, 1.0],
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Padding(
-                  padding: AppSpacing.paddingHorizontalLG,
-                  child: Column(
-                    children: [
-                      AppSpacing.gapVerticalSM,
 
-                      // Back Button
-                      _buildBackButton(),
+          // ============= DECORATIVE CIRCLES =============
+          Positioned(
+            top: -80,
+            right: -60,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -100,
+            left: -80,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
 
-                      AppSpacing.gapVerticalLG,
+          // ============= GOLDEN ACCENT LINE =============
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 3,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Color(0xFFD4AF37),
+                    Color(0xFFF5E7A3),
+                    Color(0xFFD4AF37),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
 
-                      // Icon
-                      _buildIcon(),
+          // ============= MAIN CONTENT =============
+          SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
 
-                      AppSpacing.gapVerticalLG,
+                        // Back Button
+                        _buildBackButton(),
 
-                      // Title & Subtitle
-                      _buildHeader(),
+                        const SizedBox(height: 24),
 
-                      AppSpacing.gapVerticalLG,
+                        // Icon
+                        _buildIcon(),
 
-                      // Form Card - Required Documents
-                      _buildRequiredDocsCard(),
+                        const SizedBox(height: 20),
 
-                      AppSpacing.gapVerticalMD,
+                        // Title & Subtitle
+                        _buildHeader(),
 
-                      // Optional Documents Card
-                      _buildOptionalDocsCard(),
+                        const SizedBox(height: 28),
 
-                      AppSpacing.gapVerticalMD,
+                        // Form Card - Required Documents
+                        _buildRequiredDocsCard(),
 
-                      // Info Box
-                      _buildInfoBox(),
+                        const SizedBox(height: 16),
 
-                      AppSpacing.gapVerticalXL,
-                    ],
+                        // Optional Documents Card
+                        _buildOptionalDocsCard(),
+
+                        const SizedBox(height: 16),
+
+                        // Info Box
+                        _buildInfoBox(),
+
+                        const SizedBox(height: 32),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  // ============= BACK BUTTON =============
+  // ============= PREMIUM BACK BUTTON =============
   Widget _buildBackButton() {
     return Align(
       alignment: Alignment.centerLeft,
@@ -146,23 +200,20 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
         color: Colors.transparent,
         child: InkWell(
           onTap: () => context.pop(),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           child: Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                width: 1.5,
+              ),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.arrow_forward_rounded,
-              color: AppColors.primary,
+              color: Colors.white,
               size: 24,
             ),
           ),
@@ -171,7 +222,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
     );
   }
 
-  // ============= ICON =============
+  // ============= PREMIUM ICON WITH GOLD RING =============
   Widget _buildIcon() {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
@@ -184,20 +235,35 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              color: Colors.white,
               shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFF5E7A3),
+                  Color(0xFFD4AF37),
+                ],
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  blurRadius: 25,
-                  spreadRadius: 3,
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                  blurRadius: 20,
+                  spreadRadius: 2,
                 ),
               ],
             ),
-            child: Icon(
-              Icons.business_rounded,
-              size: 50,
-              color: AppColors.primary,
+            child: Container(
+              margin: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF690000),
+              ),
+              child: const Icon(
+                Icons.business_rounded,
+                size: 48,
+                color: Color(0xFFD4AF37),
+              ),
             ),
           ),
         );
@@ -205,55 +271,90 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
     );
   }
 
-  // ============= HEADER =============
+  // ============= PREMIUM HEADER WITH GOLD TEXT =============
   Widget _buildHeader() {
     return Column(
       children: [
-        Text(
-          'حساب تجاري',
-          style: AppTypography.h1.copyWith(
-            color: AppColors.primary,
-            fontSize: 26,
+        ShaderMask(
+          shaderCallback:
+              (bounds) => const LinearGradient(
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFF5E7A3),
+                  Color(0xFFD4AF37),
+                ],
+              ).createShader(bounds),
+          child: const Text(
+            'حساب تجاري',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Cairo',
+              color: Colors.white,
+            ),
           ),
         ),
-        AppSpacing.gapVerticalXS,
+        const SizedBox(height: 8),
         Text(
           'ارفق المستندات المطلوبة لإتمام التسجيل',
-          style: AppTypography.body.copyWith(color: AppColors.textLight),
+          style: TextStyle(
+            fontSize: 14,
+            fontFamily: 'Cairo',
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
           textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
-  // ============= REQUIRED DOCS CARD =============
+  // ============= PREMIUM REQUIRED DOCS CARD =============
   Widget _buildRequiredDocsCard() {
     return Container(
-      padding: AppSpacing.paddingLG,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: AppSpacing.borderRadiusLG,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
+          BoxShadow(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
             blurRadius: 20,
-            offset: const Offset(0, 8),
+            offset: const Offset(0, -5),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'المستندات المطلوبة',
-            style: AppTypography.body.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-              fontSize: 16,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'المستندات المطلوبة',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF690000),
+                  fontSize: 17,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ],
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 20),
 
           _buildDocumentUpload(
             title: 'العقد',
@@ -264,7 +365,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
             isRequired: true,
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 16),
 
           _buildDocumentUpload(
             title: 'البطاقة الضريبية',
@@ -275,7 +376,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
             isRequired: true,
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 16),
 
           _buildDocumentUpload(
             title: 'السجل التجاري',
@@ -286,7 +387,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
             isRequired: true,
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 16),
 
           _buildDocumentUpload(
             title: 'شهادة القيمة المضافة',
@@ -297,7 +398,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
             isRequired: true,
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 16),
 
           _buildDocumentUpload(
             title: 'الشهادة الاستيرادية',
@@ -308,48 +409,117 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
             isRequired: true,
           ),
 
-          AppSpacing.gapVerticalLG,
+          const SizedBox(height: 28),
 
-          // Submit Button
-          AppPrimaryButton(
-            text: 'إتمام التسجيل',
-            onPressed: _handleSubmit,
-            isLoading: _isLoading,
-            icon: Icons.check_circle_rounded,
-          ),
+          // Premium Submit Button
+          _buildPremiumSubmitButton(),
         ],
       ),
     );
   }
 
-  // ============= OPTIONAL DOCS CARD =============
-  Widget _buildOptionalDocsCard() {
+  // ============= PREMIUM SUBMIT BUTTON =============
+  Widget _buildPremiumSubmitButton() {
     return Container(
-      padding: AppSpacing.paddingLG,
+      width: double.infinity,
+      height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: AppSpacing.borderRadiusLG,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF690000), Color(0xFF8B0000)],
+        ),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.05),
+            color: const Color(0xFF690000).withValues(alpha: 0.4),
             blurRadius: 15,
-            offset: const Offset(0, 5),
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isLoading ? null : _handleSubmit,
+          borderRadius: BorderRadius.circular(16),
+          child: Center(
+            child:
+                _isLoading
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                    : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.check_circle_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'إتمام التسجيل',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============= PREMIUM OPTIONAL DOCS CARD =============
+  Widget _buildOptionalDocsCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'مستندات اختيارية',
-            style: AppTypography.body.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textLight,
-              fontSize: 16,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'مستندات اختيارية',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[600],
+                  fontSize: 17,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ],
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 20),
 
           _buildDocumentUpload(
             title: 'بطاقة التصدير',
@@ -364,7 +534,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
     );
   }
 
-  // ============= DOCUMENT UPLOAD =============
+  // ============= PREMIUM DOCUMENT UPLOAD =============
   Widget _buildDocumentUpload({
     required String title,
     required String subtitle,
@@ -379,16 +549,26 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.circular(12),
+            color: const Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: hasFile ? const Color(0xFF1ba3b6) : AppColors.greyBorder,
-              width: hasFile ? 2 : 1,
+              color: hasFile ? const Color(0xFFD4AF37) : Colors.grey[200]!,
+              width: hasFile ? 2 : 1.5,
             ),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    hasFile
+                        ? const Color(0xFFD4AF37).withValues(alpha: 0.1)
+                        : const Color(0xFF690000).withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -397,15 +577,18 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
                 decoration: BoxDecoration(
                   color:
                       hasFile
-                          ? const Color(0xFF1ba3b6).withValues(alpha: 0.1)
-                          : AppColors.primary.withValues(alpha: 0.1),
+                          ? const Color(0xFFD4AF37).withValues(alpha: 0.15)
+                          : const Color(0xFF690000).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   hasFile
                       ? Icons.check_circle_rounded
                       : Icons.upload_file_rounded,
-                  color: hasFile ? const Color(0xFF1ba3b6) : AppColors.primary,
+                  color:
+                      hasFile
+                          ? const Color(0xFFD4AF37)
+                          : const Color(0xFF690000),
                   size: 22,
                 ),
               ),
@@ -418,16 +601,18 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
                       children: [
                         Text(
                           title,
-                          style: AppTypography.body.copyWith(
+                          style: const TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: AppColors.textDark,
+                            color: Color(0xFF333333),
+                            fontSize: 14,
+                            fontFamily: 'Cairo',
                           ),
                         ),
                         if (isRequired)
-                          Text(
+                          const Text(
                             ' *',
                             style: TextStyle(
-                              color: AppColors.error,
+                              color: Color(0xFF690000),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -436,11 +621,15 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
                     const SizedBox(height: 2),
                     Text(
                       hasFile ? file.path.split('/').last : subtitle,
-                      style: AppTypography.small.copyWith(
+                      style: TextStyle(
                         color:
                             hasFile
-                                ? const Color(0xFF1ba3b6)
-                                : AppColors.textGrey,
+                                ? const Color(0xFFD4AF37)
+                                : Colors.grey[500],
+                        fontSize: 12,
+                        fontFamily: 'Cairo',
+                        fontWeight:
+                            hasFile ? FontWeight.w600 : FontWeight.normal,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -450,9 +639,9 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
               ),
               if (hasFile)
                 IconButton(
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.close_rounded,
-                    color: AppColors.error,
+                    color: Color(0xFF690000),
                     size: 20,
                   ),
                   onPressed: onRemove,
@@ -461,8 +650,8 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
                 )
               else
                 Icon(
-                  Icons.arrow_back_ios_rounded,
-                  color: AppColors.textGrey,
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.grey[400],
                   size: 14,
                 ),
             ],
@@ -472,30 +661,39 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
     );
   }
 
-  // ============= INFO BOX =============
+  // ============= PREMIUM INFO BOX =============
   Widget _buildInfoBox() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1ba3b6).withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: const Color(0xFF1ba3b6).withValues(alpha: 0.3),
+          color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
         ),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.info_outline_rounded,
-            color: const Color(0xFF1ba3b6),
-            size: 24,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.info_outline_rounded,
+              color: Color(0xFFD4AF37),
+              size: 22,
+            ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
+          const SizedBox(width: 14),
+          const Expanded(
             child: Text(
               'سيتم مراجعة المستندات المرفوعة وتفعيل حسابك خلال 24-48 ساعة',
-              style: AppTypography.small.copyWith(
-                color: const Color(0xFF1ba3b6),
+              style: TextStyle(
+                fontSize: 13,
+                fontFamily: 'Cairo',
+                color: Colors.white,
               ),
             ),
           ),

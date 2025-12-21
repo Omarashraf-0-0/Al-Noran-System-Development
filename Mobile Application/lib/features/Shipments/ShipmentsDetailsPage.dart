@@ -465,7 +465,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage>
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.arrow_back_rounded,
+                    Icons.arrow_forward_rounded,
                     color: Colors.white,
                     size: 14,
                   ),
@@ -555,7 +555,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage>
             const SizedBox(height: 32),
             ElevatedButton.icon(
               onPressed: () => context.pop(),
-              icon: const Icon(Icons.arrow_back_rounded),
+              icon: const Icon(Icons.arrow_forward_rounded),
               label: const Text(
                 'العودة',
                 style: TextStyle(fontFamily: 'Cairo'),

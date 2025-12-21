@@ -79,106 +79,163 @@ class _RegisterPageState extends State<RegisterPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.primary.withValues(alpha: 0.08),
-              AppColors.background,
-              AppColors.background,
-            ],
-            stops: const [0.0, 0.3, 1.0],
+      body: Stack(
+        children: [
+          // Premium Gradient Background
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF690000),
+                  Color(0xFF8B0000),
+                  Color(0xFF4A0000),
+                ],
+                stops: [0.0, 0.5, 1.0],
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Padding(
-                  padding: AppSpacing.paddingHorizontalLG,
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        AppSpacing.gapVerticalSM,
+          // Decorative Top Circle
+          Positioned(
+            top: -80,
+            right: -80,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
+            ),
+          ),
+          // Decorative Bottom Circle
+          Positioned(
+            bottom: -100,
+            left: -60,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
+          // Golden Accent Line
+          Positioned(
+            top: 120,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 2,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Main Content
+          SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 16),
 
-                        // Back Button - على الشمال ويبص للشمال
-                        _buildBackButton(),
+                          // Back Button
+                          _buildBackButton(),
 
-                        // Logo
-                        _buildAnimatedLogo(),
+                          const SizedBox(height: 16),
 
-                        AppSpacing.gapVerticalLG,
+                          // Premium Logo
+                          _buildAnimatedLogo(),
 
-                        // Title & Subtitle
-                        _buildHeader(),
+                          const SizedBox(height: 24),
 
-                        AppSpacing.gapVerticalLG,
+                          // Title & Subtitle
+                          _buildHeader(),
 
-                        // Form Card
-                        _buildFormCard(),
+                          const SizedBox(height: 28),
 
-                        AppSpacing.gapVerticalLG,
+                          // Form Card
+                          _buildFormCard(),
 
-                        // Login Link
-                        _buildLoginLink(),
+                          const SizedBox(height: 24),
 
-                        AppSpacing.gapVerticalLG,
+                          // Login Link
+                          _buildLoginLink(),
 
-                        // Divider
-                        _buildDivider(),
+                          const SizedBox(height: 24),
 
-                        AppSpacing.gapVerticalLG,
+                          // Divider
+                          _buildDivider(),
 
-                        // Social Registration
-                        _buildSocialRegistration(),
+                          const SizedBox(height: 24),
 
-                        AppSpacing.gapVerticalXL,
-                      ],
+                          // Social Registration
+                          _buildSocialRegistration(),
+
+                          const SizedBox(height: 32),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  // ============= BACK BUTTON - على الشمال ويبص للشمال =============
+  // ============= BACK BUTTON =============
   Widget _buildBackButton() {
     return Align(
       alignment: Alignment.centerLeft,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => context.pop(),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            child: Icon(
-              Icons.arrow_forward_rounded,
-              color: AppColors.primary,
-              size: 24,
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => context.pop(),
+            borderRadius: BorderRadius.circular(14),
+            child: const Padding(
+              padding: EdgeInsets.all(12),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
           ),
         ),
@@ -189,15 +246,20 @@ class _RegisterPageState extends State<RegisterPage>
   // ============= FORM CARD =============
   Widget _buildFormCard() {
     return Container(
-      padding: AppSpacing.paddingLG,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: AppSpacing.borderRadiusLG,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
+          BoxShadow(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
             blurRadius: 20,
-            offset: const Offset(0, 8),
+            offset: const Offset(0, -5),
           ),
         ],
       ),
@@ -222,7 +284,7 @@ class _RegisterPageState extends State<RegisterPage>
             },
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 18),
 
           // Username Field
           _buildLabeledTextField(
@@ -242,7 +304,7 @@ class _RegisterPageState extends State<RegisterPage>
             },
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 18),
 
           // Email Field
           _buildLabeledTextField(
@@ -264,7 +326,7 @@ class _RegisterPageState extends State<RegisterPage>
             },
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 18),
 
           // Phone Field
           _buildLabeledTextField(
@@ -285,12 +347,12 @@ class _RegisterPageState extends State<RegisterPage>
             },
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 18),
 
           // Account Type Selector
           _buildAccountTypeSelector(),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 18),
 
           // Password Field
           _buildLabeledTextField(
@@ -314,7 +376,7 @@ class _RegisterPageState extends State<RegisterPage>
             },
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 18),
 
           // Confirm Password Field
           _buildLabeledTextField(
@@ -341,21 +403,75 @@ class _RegisterPageState extends State<RegisterPage>
             onSubmitted: (_) => _handleRegister(),
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 18),
 
           // Terms Checkbox
           _buildTermsCheckbox(),
 
-          AppSpacing.gapVerticalLG,
+          const SizedBox(height: 24),
 
-          // Register Button
-          AppPrimaryButton(
-            text: 'إنشاء الحساب',
-            onPressed: _handleRegister,
-            isLoading: _isLoading,
-            icon: Icons.person_add_rounded,
+          // Premium Register Button
+          _buildPremiumRegisterButton(),
+        ],
+      ),
+    );
+  }
+
+  // ============= PREMIUM REGISTER BUTTON =============
+  Widget _buildPremiumRegisterButton() {
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF690000), Color(0xFF8B0000)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF690000).withValues(alpha: 0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isLoading ? null : _handleRegister,
+          borderRadius: BorderRadius.circular(16),
+          child: Center(
+            child:
+                _isLoading
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                    : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.person_add_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'إنشاء الحساب',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+          ),
+        ),
       ),
     );
   }
@@ -378,76 +494,105 @@ class _RegisterPageState extends State<RegisterPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label outside - على اليمين
+        // Label with premium style
         Padding(
-          padding: const EdgeInsets.only(bottom: 8, right: 4),
-          child: Text(
-            label,
-            style: AppTypography.body.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
+          padding: const EdgeInsets.only(bottom: 10, right: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: AppTypography.body.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF333333),
+                ),
+              ),
+            ],
           ),
         ),
-        // Input field
-        TextFormField(
-          controller: controller,
-          obscureText: isPassword ? obscureText : false,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          textAlign: TextAlign.right,
-          textDirection: textDirection,
-          validator: validator,
-          onFieldSubmitted: onSubmitted,
-          style: AppTypography.body.copyWith(color: AppColors.textDark),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: AppTypography.body.copyWith(color: AppColors.textGrey),
-            filled: true,
-            fillColor: AppColors.background,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
+        // Input field with premium styling
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF690000).withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            obscureText: isPassword ? obscureText : false,
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            textAlign: TextAlign.right,
+            textDirection: textDirection,
+            validator: validator,
+            onFieldSubmitted: onSubmitted,
+            style: AppTypography.body.copyWith(
+              color: const Color(0xFF333333),
+              fontWeight: FontWeight.w500,
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: AppTypography.body.copyWith(color: Colors.grey[400]),
+              filled: true,
+              fillColor: const Color(0xFFF8F9FA),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 16,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: Color(0xFF690000),
+                  width: 2,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Colors.red, width: 1.5),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Colors.red, width: 2),
+              ),
+              suffixIcon:
+                  isPassword
+                      ? IconButton(
+                        icon: Icon(
+                          obscureText
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                          color: Colors.grey[500],
+                          size: 22,
+                        ),
+                        onPressed: onToggleObscure,
+                      )
+                      : Icon(icon, color: const Color(0xFF690000), size: 22),
+              prefixIcon:
+                  isPassword
+                      ? Icon(icon, color: const Color(0xFF690000), size: 22)
+                      : null,
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.greyBorder, width: 1),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.primary, width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.error, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.error, width: 2),
-            ),
-            // أيقونة على الشمال (بعد النص في RTL)
-            suffixIcon:
-                isPassword
-                    ? IconButton(
-                      icon: Icon(
-                        obscureText
-                            ? Icons.visibility_off_rounded
-                            : Icons.visibility_rounded,
-                        color: AppColors.textGrey,
-                        size: 22,
-                      ),
-                      onPressed: onToggleObscure,
-                    )
-                    : Icon(icon, color: AppColors.textGrey, size: 22),
-            // أيقونة القفل على اليمين للباسورد
-            prefixIcon:
-                isPassword
-                    ? Icon(icon, color: AppColors.textGrey, size: 22)
-                    : null,
           ),
         ),
       ],
@@ -463,32 +608,69 @@ class _RegisterPageState extends State<RegisterPage>
       builder: (context, value, child) {
         return Transform.scale(
           scale: value,
-          child: Container(
-            width: 120,
-            height: 120,
-            padding: AppSpacing.paddingMD,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                  blurRadius: 25,
-                  spreadRadius: 3,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer Glow Ring
+              Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                      Colors.transparent,
+                    ],
+                  ),
                 ),
-              ],
-            ),
-            child: Image.asset(
-              'assets/img/logo.png',
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return Icon(
-                  Icons.local_shipping_rounded,
-                  size: 60,
-                  color: AppColors.primary,
-                );
-              },
-            ),
+              ),
+              // Gold Ring
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFD4AF37),
+                      Color(0xFFF5E7A3),
+                      Color(0xFFD4AF37),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFF690000),
+                    ),
+                    padding: const EdgeInsets.all(18),
+                    child: Image.asset(
+                      'assets/img/logo.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.local_shipping_rounded,
+                          size: 50,
+                          color: Colors.white,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -499,14 +681,38 @@ class _RegisterPageState extends State<RegisterPage>
   Widget _buildHeader() {
     return Column(
       children: [
+        // App Name with Premium Style
+        ShaderMask(
+          shaderCallback:
+              (bounds) => const LinearGradient(
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFF5E7A3),
+                  Color(0xFFD4AF37),
+                ],
+              ).createShader(bounds),
+          child: const Text(
+            'Al Noran',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Cairo',
+              color: Colors.white,
+              letterSpacing: 2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
         Text(
           'إنشاء حساب جديد',
-          style: AppTypography.h1.copyWith(color: AppColors.primary),
+          style: AppTypography.h1.copyWith(color: Colors.white, fontSize: 24),
         ),
-        AppSpacing.gapVerticalSM,
+        const SizedBox(height: 8),
         Text(
           'انضم إلى عائلة النوران للخدمات اللوجستية',
-          style: AppTypography.body.copyWith(color: AppColors.textLight),
+          style: AppTypography.body.copyWith(
+            color: Colors.white.withValues(alpha: 0.8),
+          ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -518,31 +724,53 @@ class _RegisterPageState extends State<RegisterPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'نوع الحساب',
-          style: AppTypography.body.copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppColors.textDark,
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10, right: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'نوع الحساب',
+                style: AppTypography.body.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF333333),
+                ),
+              ),
+            ],
           ),
         ),
-        AppSpacing.gapVerticalSM,
         Container(
-          padding: AppSpacing.paddingXS,
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: AppSpacing.borderRadiusMD,
-            border: Border.all(color: AppColors.greyBorder),
+            color: const Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[200]!, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF690000).withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Row(
             children: [
               _buildAccountTypeButton('شخصي', 'personal', Icons.person_rounded),
-              AppSpacing.gapHorizontalXS,
+              const SizedBox(width: 6),
               _buildAccountTypeButton(
                 'تجاري',
                 'commercial',
                 Icons.business_rounded,
               ),
-              AppSpacing.gapHorizontalXS,
+              const SizedBox(width: 6),
               _buildAccountTypeButton('مصنع', 'factory', Icons.factory_rounded),
             ],
           ),
@@ -562,24 +790,42 @@ class _RegisterPageState extends State<RegisterPage>
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          padding: AppSpacing.paddingSM,
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : Colors.transparent,
-            borderRadius: AppSpacing.borderRadiusSM,
+            gradient:
+                isSelected
+                    ? const LinearGradient(
+                      colors: [Color(0xFF690000), Color(0xFF8B0000)],
+                    )
+                    : null,
+            color: isSelected ? null : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow:
+                isSelected
+                    ? [
+                      BoxShadow(
+                        color: const Color(0xFF690000).withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                    : null,
           ),
           child: Column(
             children: [
               Icon(
                 icon,
-                color: isSelected ? Colors.white : AppColors.textLight,
+                color: isSelected ? Colors.white : Colors.grey[500],
                 size: 24,
               ),
-              AppSpacing.gapVerticalXS,
+              const SizedBox(height: 6),
               Text(
                 label,
-                style: AppTypography.small.copyWith(
-                  color: isSelected ? Colors.white : AppColors.textLight,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 13,
+                  color: isSelected ? Colors.white : Colors.grey[600],
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ],
@@ -591,34 +837,44 @@ class _RegisterPageState extends State<RegisterPage>
 
   // ============= TERMS CHECKBOX =============
   Widget _buildTermsCheckbox() {
-    return InkWell(
+    return GestureDetector(
       onTap: () {
         setState(() => _agreeToTerms = !_agreeToTerms);
         HapticFeedback.selectionClick();
       },
-      borderRadius: AppSpacing.borderRadiusSM,
       child: Container(
-        padding: AppSpacing.paddingSM,
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: AppSpacing.borderRadiusSM,
+          color:
+              _agreeToTerms
+                  ? const Color(0xFF690000).withValues(alpha: 0.08)
+                  : const Color(0xFFF8F9FA),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: _agreeToTerms ? AppColors.primary : AppColors.greyBorder,
-            width: _agreeToTerms ? 2 : 1,
+            color: _agreeToTerms ? const Color(0xFF690000) : Colors.grey[200]!,
+            width: _agreeToTerms ? 2 : 1.5,
           ),
         ),
         child: Row(
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: 24,
-              height: 24,
+              width: 26,
+              height: 26,
               decoration: BoxDecoration(
-                color: _agreeToTerms ? AppColors.primary : Colors.transparent,
-                borderRadius: AppSpacing.borderRadiusXS,
+                gradient:
+                    _agreeToTerms
+                        ? const LinearGradient(
+                          colors: [Color(0xFF690000), Color(0xFF8B0000)],
+                        )
+                        : null,
+                color: _agreeToTerms ? null : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color:
-                      _agreeToTerms ? AppColors.primary : AppColors.greyBorder,
+                      _agreeToTerms
+                          ? const Color(0xFF690000)
+                          : Colors.grey[400]!,
                   width: 2,
                 ),
               ),
@@ -627,15 +883,20 @@ class _RegisterPageState extends State<RegisterPage>
                       ? const Icon(
                         Icons.check_rounded,
                         color: Colors.white,
-                        size: 16,
+                        size: 18,
                       )
                       : null,
             ),
-            AppSpacing.gapHorizontalSM,
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'أوافق على الشروط والأحكام وسياسة الخصوصية',
-                style: AppTypography.small.copyWith(color: AppColors.textDark),
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 13,
+                  color: const Color(0xFF333333),
+                  fontWeight: _agreeToTerms ? FontWeight.w600 : FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -646,24 +907,39 @@ class _RegisterPageState extends State<RegisterPage>
 
   // ============= LOGIN LINK =============
   Widget _buildLoginLink() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        TextButton(
-          onPressed: () => context.pop(),
-          child: Text(
-            'تسجيل الدخول',
-            style: AppTypography.body.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.bold,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => context.pop(),
+            child: const Text(
+              'تسجيل الدخول',
+              style: TextStyle(
+                color: Color(0xFFD4AF37),
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Cairo',
+                fontSize: 15,
+              ),
             ),
           ),
-        ),
-        Text(
-          'لديك حساب بالفعل؟',
-          style: AppTypography.body.copyWith(color: AppColors.textLight),
-        ),
-      ],
+          const SizedBox(width: 8),
+          Text(
+            'لديك حساب بالفعل؟',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontFamily: 'Cairo',
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -676,16 +952,32 @@ class _RegisterPageState extends State<RegisterPage>
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.transparent, AppColors.greyBorder],
+                colors: [
+                  Colors.transparent,
+                  Colors.white.withValues(alpha: 0.5),
+                ],
               ),
             ),
           ),
         ),
-        Padding(
-          padding: AppSpacing.paddingHorizontalMD,
-          child: Text(
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+            ),
+          ),
+          child: const Text(
             'أو التسجيل باستخدام',
-            style: AppTypography.small.copyWith(color: AppColors.textLight),
+            style: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Cairo',
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         Expanded(
@@ -693,7 +985,10 @@ class _RegisterPageState extends State<RegisterPage>
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.greyBorder, Colors.transparent],
+                colors: [
+                  Colors.white.withValues(alpha: 0.5),
+                  Colors.transparent,
+                ],
               ),
             ),
           ),
@@ -704,39 +999,50 @@ class _RegisterPageState extends State<RegisterPage>
 
   // ============= SOCIAL REGISTRATION =============
   Widget _buildSocialRegistration() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _handleGoogleSignUp,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.greyBorder),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'التسجيل بحساب جوجل',
-                style: AppTypography.body.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textDark,
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _handleGoogleSignUp,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'التسجيل بحساب جوجل',
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF333333),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Image.asset(
-                'assets/img/googleIcon.png',
-                width: 24,
-                height: 24,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(Icons.g_mobiledata, size: 24, color: Colors.red);
-                },
-              ),
-            ],
+                const SizedBox(width: 12),
+                Image.asset(
+                  'assets/img/googleIcon.png',
+                  width: 24,
+                  height: 24,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.g_mobiledata,
+                      size: 24,
+                      color: Colors.red,
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -154,7 +154,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
               ],
             ),
             child: Icon(
-              Icons.arrow_back_rounded,
+              Icons.arrow_forward_rounded,
               color: AppColors.primary,
               size: 24,
             ),

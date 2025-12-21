@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:url_launcher/url_launcher.dart';
@@ -20,11 +21,19 @@ class UcrRequestPage extends StatefulWidget {
   State<UcrRequestPage> createState() => _UcrRequestPageState();
 }
 
-class _UcrRequestPageState extends State<UcrRequestPage> {
-  // Colors
+class _UcrRequestPageState extends State<UcrRequestPage>
+    with SingleTickerProviderStateMixin {
+  // Premium Colors
   static const Color primaryDark = Color(0xFF690000);
-  static const Color primaryLight = Color(0xFFA40000);
+  static const Color primaryLight = Color(0xFF8B0000);
   static const Color accent = Color(0xFF1BA3B6);
+  static const Color bgColor = Color(0xFFF8F9FA);
+  static const Color cardColor = Colors.white;
+
+  // Animation controller
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   // Current step: 0 = اختيار نوع الشهادة, 1 = ملء البيانات
   int _currentStep = 0;
@@ -212,6 +221,21 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   @override
   void initState() {
     super.initState();
+    // Initialize animation controller
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
+    _animationController.forward();
     // Check document verification status
     _checkDocumentStatus();
   }
@@ -234,6 +258,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
 
   @override
   void dispose() {
+    _animationController.dispose();
     _destinationCountryController.dispose();
     _destinationPortController.dispose();
     _generalDescriptionController.dispose();
@@ -544,6 +569,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   String _getRegistrationDocumentDisplayName(String docType) {
     final names = {
       'personal_id': 'البطاقة الشخصية',
+      'passport': 'جواز السفر',
       'power_of_attorney': 'التوكيل',
       'contract': 'العقد',
       'tax_card': 'البطاقة الضريبية',
@@ -552,6 +578,8 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
       'import_export_card': 'بطاقة الاستيراد والتصدير',
       'production_supplies': 'مستلزمات الإنتاج',
       'industrial_register': 'السجل الصناعي',
+      'personal_id_of_representative': 'بطاقة المفوض',
+      'trade_certificates': 'شهادات المزاولة',
     };
     return names[docType] ?? docType;
   }
@@ -630,34 +658,51 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
       canPop: _currentStep == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
+        HapticFeedback.lightImpact();
         // If on step 1, go back to step 0
         setState(() {
           _currentStep = 0;
         });
+        _animationController.reset();
+        _animationController.forward();
       },
       child: Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
-          backgroundColor: const Color(0xFFF5F5F5),
+          backgroundColor: bgColor,
           body: Column(
             children: [
               UnifiedTopBar(
                 showBackButton: true,
                 showMenu: false,
+                title: 'طلب رقم UCR',
+                subtitle:
+                    _currentStep == 0 ? 'اختر نوع الشهادة' : 'ملء البيانات',
+                titleIcon: Icons.local_shipping_rounded,
+                showWelcome: false,
                 onBackPressed:
                     _currentStep == 0
                         ? null
                         : () {
+                          HapticFeedback.lightImpact();
                           setState(() {
                             _currentStep = 0;
                           });
+                          _animationController.reset();
+                          _animationController.forward();
                         },
               ),
               Expanded(
-                child:
-                    _currentStep == 0
-                        ? _buildCertificationTypeSelection()
-                        : _buildDataEntryForm(),
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child:
+                        _currentStep == 0
+                            ? _buildCertificationTypeSelection()
+                            : _buildDataEntryForm(),
+                  ),
+                ),
               ),
             ],
           ),
@@ -672,112 +717,513 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
 
   Widget _buildCertificationTypeSelection() {
     return SingleChildScrollView(
-      child: Column(
-        children: [
-          const SizedBox(height: 24),
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
 
-          // Header
-          _buildHeader(
-            icon: Icons.assignment_outlined,
-            title: 'طلب رقم UCR',
-            subtitle: 'اختر نوع الشهادة للتصدير',
+            // Premium Header Card
+            _buildPremiumHeaderCard(
+              icon: Icons.verified_rounded,
+              title: 'اختر نوع الشهادة',
+              subtitle: 'حدد طريقة إصدار شهادة UCR',
+            ),
+
+            const SizedBox(height: 28),
+
+            // Section Title with Icon
+            _buildSectionHeader(
+              'نوع الشهادة',
+              Icons.assignment_turned_in_rounded,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Option 1: على بطاقة الشركة (النوران)
+            _buildPremiumCertificationOption(
+              type: 'noran',
+              title: 'على بطاقة الشركة',
+              subtitle: 'النوران تتولى جميع المستندات والإجراءات',
+              note: 'رسوم 10%',
+              icon: Icons.business_center_rounded,
+              color: const Color(0xFF2E7D32),
+              isSelected: _certificationType == 'noran',
+              features: ['إجراءات سريعة', 'دعم كامل', 'ضمان الجودة'],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Option 2: على بطاقتي الخاصة
+            _buildPremiumCertificationOption(
+              type: 'client',
+              title: 'على بطاقتي الخاصة',
+              subtitle: 'أنت المسؤول عن توفير المستندات المطلوبة',
+              note: 'بدون رسوم إضافية',
+              icon: Icons.person_rounded,
+              color: const Color(0xFFEF6C00),
+              isSelected: _certificationType == 'client',
+              features: ['توفير مالي', 'مرونة أكثر', 'تحكم كامل'],
+            ),
+
+            const SizedBox(height: 36),
+
+            // Premium Continue Button
+            _buildPremiumContinueButton(),
+
+            const SizedBox(height: 24),
+
+            // Info tip
+            _buildInfoTip(
+              'يمكنك تغيير نوع الشهادة لاحقاً قبل إرسال الطلب',
+              Icons.lightbulb_outline_rounded,
+            ),
+
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumHeaderCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [primaryDark, primaryLight],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
-
-          const SizedBox(height: 32),
-
-          // Title
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(icon, color: Colors.white, size: 36),
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.check_circle_outline, color: primaryDark, size: 24),
-                SizedBox(width: 8),
                 Text(
-                  'نوع الشهادة',
-                  style: TextStyle(
-                    fontSize: 20,
+                  title,
+                  style: const TextStyle(
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
+                    color: Colors.white,
                     fontFamily: 'Cairo',
-                    color: primaryDark,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontFamily: 'Cairo',
                   ),
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
 
-          const SizedBox(height: 20),
-
-          // Option 1: على بطاقة الشركة (النوران)
-          _buildCertificationOption(
-            type: 'noran',
-            title: 'على بطاقة الشركة',
-            subtitle: 'النوران تتولى المستندات',
-            note: 'رسوم 10%',
-            icon: Icons.business,
-            color: Colors.green,
-            isSelected: _certificationType == 'noran',
+  Widget _buildSectionHeader(
+    String title,
+    IconData icon, {
+    bool isRequired = false,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: primaryDark.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
           ),
-
-          const SizedBox(height: 16),
-
-          // Option 2: على بطاقتي الخاصة
-          _buildCertificationOption(
-            type: 'client',
-            title: 'على بطاقتي الخاصة',
-            subtitle: 'أنت توفر المستندات',
-            note: 'بدون رسوم 10%',
-            icon: Icons.person,
-            color: Colors.orange,
-            isSelected: _certificationType == 'client',
+          child: Icon(icon, color: primaryDark, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: primaryDark,
+            fontFamily: 'Cairo',
           ),
-
-          const SizedBox(height: 40),
-
-          // Continue Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed:
-                    _certificationType != null
-                        ? () {
-                          setState(() {
-                            _currentStep = 1;
-                          });
-                        }
-                        : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryDark,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey[300],
-                  disabledForegroundColor: Colors.grey[600],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: _certificationType != null ? 4 : 0,
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'متابعة',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Cairo',
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_back, size: 20),
-                  ],
-                ),
+        ),
+        if (isRequired) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'مطلوب',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.red.shade700,
+                fontFamily: 'Cairo',
               ),
             ),
           ),
+        ],
+      ],
+    );
+  }
 
-          const SizedBox(height: 32),
+  Widget _buildPremiumCertificationOption({
+    required String type,
+    required String title,
+    required String subtitle,
+    required String note,
+    required IconData icon,
+    required Color color,
+    required bool isSelected,
+    required List<String> features,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() {
+          _certificationType = type;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.08) : cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade200,
+            width: isSelected ? 2.5 : 1,
+          ),
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.25),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                  : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                // Icon Container
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    gradient:
+                        isSelected
+                            ? LinearGradient(
+                              colors: [color, color.withValues(alpha: 0.8)],
+                            )
+                            : null,
+                    color: isSelected ? null : color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow:
+                        isSelected
+                            ? [
+                              BoxShadow(
+                                color: color.withValues(alpha: 0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                            : null,
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isSelected ? Colors.white : color,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Text Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cairo',
+                          color: isSelected ? color : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'Cairo',
+                          color: Colors.grey.shade600,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Selection Indicator
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected ? color : Colors.transparent,
+                    border: Border.all(
+                      color: isSelected ? color : Colors.grey.shade400,
+                      width: 2,
+                    ),
+                    boxShadow:
+                        isSelected
+                            ? [
+                              BoxShadow(
+                                color: color.withValues(alpha: 0.4),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                            : null,
+                  ),
+                  child:
+                      isSelected
+                          ? const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 18,
+                          )
+                          : null,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Note Badge and Features
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withValues(alpha: 0.15),
+                        color.withValues(alpha: 0.08),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: color.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        type == 'noran'
+                            ? Icons.percent_rounded
+                            : Icons.savings_rounded,
+                        size: 14,
+                        color: color,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        note,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cairo',
+                          color: color,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // Features Row (only show when selected)
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 300),
+              crossFadeState:
+                  isSelected
+                      ? CrossFadeState.showFirst
+                      : CrossFadeState.showSecond,
+              firstChild: Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children:
+                      features.map((feature) {
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.check_circle_rounded,
+                              color: color,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              feature,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontFamily: 'Cairo',
+                                color: color,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                ),
+              ),
+              secondChild: const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumContinueButton() {
+    final isEnabled = _certificationType != null;
+    return Container(
+      width: double.infinity,
+      height: 60,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors:
+              isEnabled
+                  ? [primaryDark, primaryLight]
+                  : [Colors.grey.shade400, Colors.grey.shade500],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow:
+            isEnabled
+                ? [
+                  BoxShadow(
+                    color: primaryDark.withValues(alpha: 0.4),
+                    blurRadius: 15,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+                : null,
+      ),
+      child: ElevatedButton(
+        onPressed:
+            isEnabled
+                ? () {
+                  HapticFeedback.mediumImpact();
+                  setState(() {
+                    _currentStep = 1;
+                  });
+                  _animationController.reset();
+                  _animationController.forward();
+                }
+                : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          shadowColor: Colors.transparent,
+          disabledBackgroundColor: Colors.transparent,
+          disabledForegroundColor: Colors.white60,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'متابعة للخطوة التالية',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Cairo',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.arrow_forward_rounded, size: 18),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoTip(String message, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.blue.shade600, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 12,
+                fontFamily: 'Cairo',
+                color: Colors.blue.shade800,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -915,68 +1361,892 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
 
   Widget _buildDataEntryForm() {
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+
+            // Premium Header with certification type badge
+            _buildFormHeader(),
+
+            const SizedBox(height: 24),
+
+            // Shipping Method Toggle (Premium Style)
+            _buildPremiumShippingToggle(),
+
+            const SizedBox(height: 28),
+
+            // Destination Section
+            _buildSectionHeader(
+              'الوجهة',
+              Icons.location_on_rounded,
+              isRequired: true,
+            ),
+            const SizedBox(height: 12),
+            _buildPremiumDestinationSection(),
+
+            const SizedBox(height: 28),
+
+            // Goods Info Section
+            _buildSectionHeader(
+              'بيانات البضاعة',
+              Icons.inventory_2_rounded,
+              isRequired: true,
+            ),
+            const SizedBox(height: 12),
+            _buildPremiumGoodsSection(),
+
+            const SizedBox(height: 28),
+
+            // Invoice Section
+            _buildSectionHeader(
+              'بيانات الفاتورة',
+              Icons.receipt_rounded,
+              isRequired: true,
+            ),
+            const SizedBox(height: 12),
+            _buildPremiumInvoiceSection(),
+
+            const SizedBox(height: 28),
+
+            // Items Section
+            _buildSectionHeader(
+              'تفاصيل البنود',
+              Icons.list_alt_rounded,
+              isRequired: true,
+            ),
+            const SizedBox(height: 12),
+            _buildItemsSection(),
+
+            const SizedBox(height: 28),
+
+            // Documents Section
+            _buildSectionHeader(
+              'المستندات المطلوبة',
+              Icons.attach_file_rounded,
+              isRequired: true,
+            ),
+            const SizedBox(height: 12),
+            _buildDocumentsSection(),
+
+            const SizedBox(height: 28),
+
+            // Notes Section (Optional)
+            _buildSectionHeader('ملاحظات إضافية', Icons.note_alt_rounded),
+            const SizedBox(height: 12),
+            _buildNotesSection(),
+
+            const SizedBox(height: 36),
+
+            // Premium Submit Button
+            _buildPremiumSubmitButton(),
+
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormHeader() {
+    final isNoran = _certificationType == 'noran';
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [primaryDark, primaryLight],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Column(
         children: [
-          const SizedBox(height: 24),
-
-          // Header
-          _buildHeader(
-            icon: Icons.edit_document,
-            title: 'طلب رقم UCR',
-            subtitle:
-                _certificationType == 'noran'
-                    ? 'على بطاقة الشركة (النوران)'
-                    : 'على بطاقتي الخاصة',
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.edit_document,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ملء بيانات الطلب',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'أكمل جميع الحقول المطلوبة بدقة',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-
-          const SizedBox(height: 24),
-
-          // Shipping Method Toggle
-          _buildShippingMethodToggle(),
-
-          const SizedBox(height: 24),
-
-          // Destination Section
-          _buildSectionTitle('الوجهة', Icons.location_on),
-          _buildDestinationSection(),
-
-          const SizedBox(height: 24),
-
-          // Goods Info Section
-          _buildSectionTitle('بيانات البضاعة الأساسية', Icons.inventory_2),
-          _buildGoodsInfoSection(),
-
-          const SizedBox(height: 24),
-
-          // Invoice Section
-          _buildSectionTitle('بيانات الفاتورة', Icons.receipt),
-          _buildInvoiceSection(),
-
-          const SizedBox(height: 24),
-
-          // Items Section
-          _buildSectionTitle('تفاصيل البنود', Icons.list_alt),
-          _buildItemsSection(),
-
-          const SizedBox(height: 24),
-
-          // Documents Section
-          _buildSectionTitle('المستندات المطلوبة', Icons.attach_file),
-          _buildDocumentsSection(),
-
-          const SizedBox(height: 24),
-
-          // Notes Section (Optional)
-          _buildSectionTitle('ملاحظات إضافية (اختياري)', Icons.note),
-          _buildNotesSection(),
-
-          const SizedBox(height: 32),
-
-          // Submit Button
-          _buildSubmitButton(),
-
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
+          // Certification type badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isNoran
+                      ? Icons.business_center_rounded
+                      : Icons.person_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  isNoran ? 'على بطاقة الشركة (النوران)' : 'على بطاقتي الخاصة',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        isNoran
+                            ? Colors.green.shade400
+                            : Colors.orange.shade400,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isNoran ? '10%' : 'مجاني',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumShippingToggle() {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildPremiumShippingButton(
+              'شحن جوي',
+              'air',
+              Icons.flight_rounded,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _buildPremiumShippingButton(
+              'شحن بحري',
+              'sea',
+              Icons.directions_boat_rounded,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumShippingButton(
+    String label,
+    String value,
+    IconData icon,
+  ) {
+    final isSelected = _shippingMethod == value;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() {
+          _shippingMethod = value;
+          _containerWeights.clear();
+          _containersCountController.clear();
+          _seaShipmentType = 'fcl';
+          _packagesCountController.clear();
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        height: 60,
+        decoration: BoxDecoration(
+          gradient:
+              isSelected
+                  ? LinearGradient(
+                    colors: [primaryDark, primaryLight],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                  : null,
+          color: isSelected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: primaryDark.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                  : null,
+        ),
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? Colors.white : Colors.grey.shade600,
+                size: 24,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumDestinationSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildPremiumDropdownField(
+            label: 'بلد الوجهة',
+            icon: Icons.public_rounded,
+            value:
+                _destinationCountryController.text.isEmpty
+                    ? null
+                    : _destinationCountryController.text,
+            items: _countries,
+            isRequired: true,
+            onChanged: (value) {
+              setState(() {
+                _destinationCountryController.text = value ?? '';
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildPremiumTextField(
+            controller: _destinationPortController,
+            label: 'الميناء / المطار',
+            placeholder: 'أدخل اسم الميناء أو المطار',
+            icon: Icons.anchor_rounded,
+            isRequired: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumGoodsSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildPremiumTextField(
+            controller: _generalDescriptionController,
+            label: 'الوصف العام للبضاعة',
+            placeholder: 'وصف تفصيلي للبضاعة المراد تصديرها',
+            icon: Icons.description_rounded,
+            isRequired: true,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: _buildPremiumTextField(
+                  controller: _totalWeightController,
+                  label: 'الوزن الإجمالي',
+                  placeholder: '500',
+                  icon: Icons.scale_rounded,
+                  isRequired: true,
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPremiumDropdownField(
+                  label: 'الوحدة',
+                  icon: Icons.straighten_rounded,
+                  value: _generalWeightUnit == 'kilograms' ? 'كيلوجرام' : 'طن',
+                  items: const ['كيلوجرام', 'طن'],
+                  onChanged: (value) {
+                    setState(() {
+                      _generalWeightUnit = value == 'طن' ? 'tons' : 'kilograms';
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          // Sea Shipment Type Selection (only for sea)
+          if (_shippingMethod == 'sea') ...[
+            const SizedBox(height: 20),
+            _buildSeaShipmentTypeSelector(),
+          ],
+          // Packages Count - only show when needed
+          if (_needsPackagesCount) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildPremiumTextField(
+                    controller: _packagesCountController,
+                    label: 'عدد الطرود',
+                    placeholder: '10',
+                    icon: Icons.inventory_rounded,
+                    isRequired: true,
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                if (_shippingMethod == 'sea') ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildPremiumTextField(
+                      controller: _quantityController,
+                      label: 'الكمية',
+                      placeholder: '100',
+                      icon: Icons.production_quantity_limits_rounded,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+          // Containers Section (only for sea + FCL)
+          if (_shippingMethod == 'sea' && _seaShipmentType == 'fcl') ...[
+            const SizedBox(height: 20),
+            _buildContainersSection(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumInvoiceSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Info tip
+          _buildInfoTip(
+            'بيانات الفاتورة التجارية الأصلية المُصدرة للمستورد',
+            Icons.lightbulb_outline_rounded,
+          ),
+          const SizedBox(height: 20),
+          _buildPremiumTextField(
+            controller: _valueInEGPController,
+            label: 'القيمة بالجنيه المصري',
+            placeholder: '50,000',
+            icon: Icons.attach_money_rounded,
+            isRequired: true,
+            keyboardType: TextInputType.number,
+            onChanged: (value) => setState(() {}),
+          ),
+          // Fee Preview for Noran Certified
+          if (_certificationType == 'noran' &&
+              _valueInEGPController.text.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildFeePreviewCard(),
+          ],
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildPremiumTextField(
+                  controller: _invoiceNumberController,
+                  label: 'رقم الفاتورة',
+                  placeholder: 'INV-2025-001',
+                  icon: Icons.numbers_rounded,
+                  isRequired: true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPremiumDateField(
+                  label: 'تاريخ الفاتورة',
+                  icon: Icons.calendar_today_rounded,
+                  value: _invoiceDate,
+                  isRequired: true,
+                  onTap: _pickInvoiceDate,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeePreviewCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.green.shade50, Colors.green.shade100],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.green.shade300),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.green.shade500,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.calculate_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'رسوم التصدير المتوقعة',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontFamily: 'Cairo',
+                    color: Colors.green.shade700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_calculateFeePreview().toStringAsFixed(0)} جنيه مصري',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo',
+                    color: Colors.green.shade800,
+                  ),
+                ),
+                Text(
+                  '(10% من القيمة، الحد الأدنى 3,500 جنيه)',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontFamily: 'Cairo',
+                    color: Colors.green.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumTextField({
+    required TextEditingController controller,
+    required String label,
+    required String placeholder,
+    required IconData icon,
+    TextInputType? keyboardType,
+    bool isRequired = false,
+    int maxLines = 1,
+    Function(String)? onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+                fontFamily: 'Cairo',
+              ),
+            ),
+            if (isRequired)
+              Text(
+                ' *',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade600,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: TextField(
+            controller: controller,
+            textAlign: TextAlign.right,
+            textDirection: TextDirection.rtl,
+            keyboardType: keyboardType,
+            maxLines: maxLines,
+            style: const TextStyle(
+              fontSize: 15,
+              fontFamily: 'Cairo',
+              fontWeight: FontWeight.w500,
+            ),
+            onChanged: onChanged,
+            decoration: InputDecoration(
+              hintText: placeholder,
+              hintStyle: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 14,
+                fontFamily: 'Cairo',
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+              suffixIcon: Icon(icon, color: Colors.grey.shade400, size: 22),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumDropdownField({
+    required String label,
+    required IconData icon,
+    required String? value,
+    required List<String> items,
+    required Function(String?) onChanged,
+    bool isRequired = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+                fontFamily: 'Cairo',
+              ),
+            ),
+            if (isRequired)
+              Text(
+                ' *',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade600,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 16),
+            ),
+            style: const TextStyle(
+              fontSize: 14,
+              fontFamily: 'Cairo',
+              color: Colors.black,
+            ),
+            hint: Text(
+              'اختر...',
+              style: TextStyle(
+                color: Colors.grey.shade400,
+                fontFamily: 'Cairo',
+              ),
+            ),
+            isExpanded: true,
+            items:
+                items.map((item) {
+                  return DropdownMenuItem<String>(
+                    value: item,
+                    child: Text(item),
+                  );
+                }).toList(),
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumDateField({
+    required String label,
+    required IconData icon,
+    required DateTime? value,
+    required VoidCallback onTap,
+    bool isRequired = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+                fontFamily: 'Cairo',
+              ),
+            ),
+            if (isRequired)
+              Text(
+                ' *',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade600,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    value != null
+                        ? DateFormat('yyyy/MM/dd').format(value)
+                        : 'اختر التاريخ',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'Cairo',
+                      color:
+                          value != null ? Colors.black : Colors.grey.shade400,
+                    ),
+                  ),
+                ),
+                Icon(icon, color: Colors.grey.shade400, size: 20),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumSubmitButton() {
+    return Container(
+      width: double.infinity,
+      height: 64,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors:
+              _isSubmitting
+                  ? [Colors.grey.shade400, Colors.grey.shade500]
+                  : [primaryDark, primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow:
+            _isSubmitting
+                ? []
+                : [
+                  BoxShadow(
+                    color: primaryDark.withValues(alpha: 0.45),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+      ),
+      child: ElevatedButton(
+        onPressed: _isSubmitting ? null : _submitRequest,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        child:
+            _isSubmitting
+                ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    const Text(
+                      'جاري إرسال الطلب...',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                )
+                : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.send_rounded, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    const Text(
+                      'إرسال طلب UCR',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
       ),
     );
   }
@@ -1851,39 +3121,25 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   }
 
   Widget _buildItemsSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         children: [
-          const SizedBox(height: 12),
           // Info text - First item is required
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.orange.shade200),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.warning_amber_outlined,
-                  color: Colors.orange.shade700,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'البند الأول مطلوب - يمكنك إضافة بنود إضافية اختيارياً',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontFamily: 'Cairo',
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          _buildInfoTip(
+            'البند الأول مطلوب - يمكنك إضافة بنود إضافية اختيارياً',
+            Icons.info_outline_rounded,
           ),
           const SizedBox(height: 16),
           // First item (required) - always show
@@ -1899,24 +3155,39 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
           if (_items.isNotEmpty) ...[
             const SizedBox(height: 12),
             GestureDetector(
-              onTap: _addItem,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                _addItem();
+              },
               child: Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: accent.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: accent.withOpacity(0.3)),
+                  gradient: LinearGradient(
+                    colors: [
+                      accent.withValues(alpha: 0.1),
+                      accent.withValues(alpha: 0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: accent.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add_circle_outline, color: accent, size: 20),
-                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.add_rounded, color: accent, size: 18),
+                    ),
+                    const SizedBox(width: 10),
                     Text(
                       'إضافة بند إضافي (اختياري)',
                       style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
                         fontFamily: 'Cairo',
                         color: accent,
                       ),
@@ -2147,83 +3418,108 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   }
 
   Widget _buildDocumentsSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         children: [
-          const SizedBox(height: 12),
           // Info text
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.attach_file, color: Colors.blue.shade600, size: 20),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'المستند الأول مطلوب - المستندات الإضافية اختيارية',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontFamily: 'Cairo',
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          _buildInfoTip(
+            'المستند الأول مطلوب - المستندات الإضافية اختيارية',
+            Icons.attach_file_rounded,
           ),
-          const SizedBox(height: 12),
-          // Certification Type Indicator
+          const SizedBox(height: 16),
+          // Certification Type Badge
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade300),
+              gradient: LinearGradient(
+                colors: [
+                  (_certificationType == 'noran' ? Colors.green : Colors.orange)
+                      .withValues(alpha: 0.1),
+                  (_certificationType == 'noran' ? Colors.green : Colors.orange)
+                      .withValues(alpha: 0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: (_certificationType == 'noran'
+                        ? Colors.green
+                        : Colors.orange)
+                    .withValues(alpha: 0.3),
+              ),
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 16,
-                  height: 16,
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color:
                         _certificationType == 'noran'
                             ? Colors.green.shade500
                             : Colors.orange.shade500,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    _certificationType == 'noran'
+                        ? Icons.business_center_rounded
+                        : Icons.person_rounded,
+                    color: Colors.white,
+                    size: 16,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Text(
                   _certificationType == 'noran'
                       ? 'شهادة النوران'
                       : 'شهادتك الخاصة',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'Cairo',
-                    color: Colors.blue.shade800,
+                    color:
+                        _certificationType == 'noran'
+                            ? Colors.green.shade800
+                            : Colors.orange.shade800,
                   ),
                 ),
-                const Text(' - ', style: TextStyle(fontFamily: 'Cairo')),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 10),
+                  width: 1,
+                  height: 20,
+                  color: Colors.grey.shade300,
+                ),
+                Icon(
+                  _shippingMethod == 'air'
+                      ? Icons.flight_rounded
+                      : Icons.directions_boat_rounded,
+                  color: Colors.grey.shade600,
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
                 Text(
                   _shippingMethod == 'air' ? 'شحن جوي' : 'شحن بحري',
                   style: TextStyle(
                     fontSize: 13,
                     fontFamily: 'Cairo',
-                    color: Colors.blue.shade700,
+                    color: Colors.grey.shade700,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           // Documents list
           ..._requiredDocuments.asMap().entries.map((entry) {
             final index = entry.key;
@@ -2894,18 +4190,27 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   }
 
   Widget _buildNotesSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         children: [
-          const SizedBox(height: 12),
-          _buildTextField(
+          _buildPremiumTextField(
             controller: _notesController,
-            label: 'ملاحظات',
-            placeholder: 'أضف أي ملاحظات إضافية...',
-            icon: Icons.edit_note,
+            label: 'ملاحظات إضافية',
+            placeholder: 'أضف أي ملاحظات أو تعليمات خاصة بالطلب...',
+            icon: Icons.edit_note_rounded,
             maxLines: 3,
-            isRequired: false,
           ),
         ],
       ),
@@ -3324,6 +4629,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   Future<void> _submitRequest() async {
     // Check document verification first
     if (!_canSubmitRequests) {
+      HapticFeedback.mediumImpact();
       _showDocumentRequiredDialog();
       return;
     }
@@ -3334,6 +4640,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
 
     // 1. Basic required fields
     if (_generalDescriptionController.text.trim().isEmpty) {
+      HapticFeedback.mediumImpact();
       AlNoranPopups.showError(
         context: context,
         message: 'الرجاء إدخال وصف البضاعة',
@@ -3342,6 +4649,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
     }
 
     if (_totalWeightController.text.trim().isEmpty) {
+      HapticFeedback.mediumImpact();
       AlNoranPopups.showError(
         context: context,
         message: 'الرجاء إدخال الوزن الكلي',
@@ -3351,6 +4659,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
 
     // packagesCount is required only for air shipments, sea parcels, or sea LCL
     if (_needsPackagesCount && _packagesCountController.text.trim().isEmpty) {
+      HapticFeedback.mediumImpact();
       AlNoranPopups.showError(
         context: context,
         message: 'الرجاء إدخال عدد الطرود',
@@ -3359,6 +4668,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
     }
 
     if (_valueInEGPController.text.trim().isEmpty) {
+      HapticFeedback.mediumImpact();
       AlNoranPopups.showError(
         context: context,
         message: 'الرجاء إدخال قيمة الشحنة بالجنيه المصري',
@@ -3720,10 +5030,12 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
 
       print('📤 [UCR] Submitting request: $requestData');
 
+      HapticFeedback.lightImpact();
       final result = await ApiService.createUcrRequest(requestData);
 
       if (mounted) {
         if (result['success'] == true) {
+          HapticFeedback.heavyImpact();
           // Refresh notifications to update badge count
           NotificationService().refresh();
 
@@ -3736,6 +5048,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
           // Go back to home
           context.go('/home');
         } else {
+          HapticFeedback.mediumImpact();
           AlNoranPopups.showError(
             context: context,
             message: result['message'] ?? 'فشل إرسال الطلب',
@@ -3744,6 +5057,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
       }
     } catch (e) {
       print('❌ [UCR] Submit error: $e');
+      HapticFeedback.mediumImpact();
       if (mounted) {
         AlNoranPopups.showError(
           context: context,

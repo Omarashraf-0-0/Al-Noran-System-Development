@@ -30,16 +30,16 @@ void main() async {
     ),
   );
 
-  runApp(const NoranSmartApp());
+  runApp(const AlNoranApp());
 }
 
-class NoranSmartApp extends StatelessWidget {
-  const NoranSmartApp({super.key});
+class AlNoranApp extends StatelessWidget {
+  const AlNoranApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'نوران سمارت',
+      title: 'Al Noran',
       debugShowCheckedModeBanner: false,
 
       // Router Configuration

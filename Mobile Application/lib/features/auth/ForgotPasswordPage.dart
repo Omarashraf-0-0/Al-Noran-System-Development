@@ -62,98 +62,153 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.primary.withValues(alpha: 0.08),
-              AppColors.background,
-              AppColors.background,
-            ],
-            stops: const [0.0, 0.3, 1.0],
+      body: Stack(
+        children: [
+          // Premium Gradient Background
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF690000),
+                  Color(0xFF8B0000),
+                  Color(0xFF4A0000),
+                ],
+                stops: [0.0, 0.5, 1.0],
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Padding(
-                  padding: AppSpacing.paddingHorizontalLG,
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        AppSpacing.gapVerticalSM,
+          // Decorative Top Circle
+          Positioned(
+            top: -80,
+            right: -80,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
+            ),
+          ),
+          // Decorative Bottom Circle
+          Positioned(
+            bottom: -100,
+            left: -60,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
+          // Golden Accent Line
+          Positioned(
+            top: 120,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 2,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Main Content
+          SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 16),
 
-                        // Back Button - على الشمال ويبص للشمال
-                        _buildBackButton(),
+                          // Back Button
+                          _buildBackButton(),
 
-                        AppSpacing.gapVerticalXL,
+                          const SizedBox(height: 32),
 
-                        // Lock Icon
-                        _buildLockIcon(),
+                          // Lock Icon
+                          _buildLockIcon(),
 
-                        AppSpacing.gapVerticalLG,
+                          const SizedBox(height: 28),
 
-                        // Title & Subtitle
-                        _buildHeader(),
+                          // Title & Subtitle
+                          _buildHeader(),
 
-                        AppSpacing.gapVerticalXL,
+                          const SizedBox(height: 32),
 
-                        // Form Card
-                        _buildFormCard(),
+                          // Form Card
+                          _buildFormCard(),
 
-                        AppSpacing.gapVerticalLG,
+                          const SizedBox(height: 28),
 
-                        // Back to Login Link
-                        _buildBackToLoginLink(),
+                          // Back to Login Link
+                          _buildBackToLoginLink(),
 
-                        AppSpacing.gapVerticalXL,
-                      ],
+                          const SizedBox(height: 32),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  // ============= BACK BUTTON - على الشمال ويبص للشمال =============
+  // ============= BACK BUTTON =============
   Widget _buildBackButton() {
     return Align(
       alignment: Alignment.centerLeft,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => context.pop(),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            child: Icon(
-              Icons.arrow_back_rounded,
-              color: AppColors.primary,
-              size: 24,
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => context.pop(),
+            borderRadius: BorderRadius.circular(14),
+            child: const Padding(
+              padding: EdgeInsets.all(12),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
           ),
         ),
@@ -170,25 +225,62 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
       builder: (context, value, child) {
         return Transform.scale(
           scale: value,
-          child: Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  blurRadius: 30,
-                  spreadRadius: 5,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer Glow Ring
+              Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                      Colors.transparent,
+                    ],
+                  ),
                 ),
-              ],
-            ),
-            child: Icon(
-              Icons.lock_reset_rounded,
-              size: 60,
-              color: AppColors.primary,
-            ),
+              ),
+              // Gold Ring
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFD4AF37),
+                      Color(0xFFF5E7A3),
+                      Color(0xFFD4AF37),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFF690000),
+                    ),
+                    child: const Icon(
+                      Icons.lock_reset_rounded,
+                      size: 50,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -199,17 +291,33 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
   Widget _buildHeader() {
     return Column(
       children: [
-        Text(
-          'نسيت كلمة المرور؟',
-          style: AppTypography.h1.copyWith(
-            color: AppColors.primary,
-            fontSize: 28,
+        ShaderMask(
+          shaderCallback:
+              (bounds) => const LinearGradient(
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFF5E7A3),
+                  Color(0xFFD4AF37),
+                ],
+              ).createShader(bounds),
+          child: const Text(
+            'نسيت كلمة المرور؟',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Cairo',
+              color: Colors.white,
+            ),
           ),
         ),
-        AppSpacing.gapVerticalXS,
+        const SizedBox(height: 12),
         Text(
           'لا تقلق! أدخل بريدك الإلكتروني وسنرسل لك\nكود التحقق لإعادة تعيين كلمة المرور',
-          style: AppTypography.body.copyWith(color: AppColors.textLight),
+          style: TextStyle(
+            fontSize: 14,
+            fontFamily: 'Cairo',
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -219,15 +327,20 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
   // ============= FORM CARD =============
   Widget _buildFormCard() {
     return Container(
-      padding: AppSpacing.paddingLG,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: AppSpacing.borderRadiusLG,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
+          BoxShadow(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
             blurRadius: 20,
-            offset: const Offset(0, 8),
+            offset: const Offset(0, -5),
           ),
         ],
       ),
@@ -254,16 +367,67 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
             onSubmitted: (_) => _handleSubmit(),
           ),
 
-          AppSpacing.gapVerticalLG,
+          const SizedBox(height: 28),
 
-          // Submit Button
-          AppPrimaryButton(
-            text: 'إرسال كود التحقق',
-            onPressed: _handleSubmit,
-            isLoading: _isLoading,
-            icon: Icons.send_rounded,
+          // Premium Submit Button
+          _buildPremiumSubmitButton(),
+        ],
+      ),
+    );
+  }
+
+  // ============= PREMIUM SUBMIT BUTTON =============
+  Widget _buildPremiumSubmitButton() {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF690000), Color(0xFF8B0000)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF690000).withValues(alpha: 0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isLoading ? null : _handleSubmit,
+          borderRadius: BorderRadius.circular(16),
+          child: Center(
+            child:
+                _isLoading
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                    : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.send_rounded, color: Colors.white, size: 22),
+                        SizedBox(width: 10),
+                        Text(
+                          'إرسال كود التحقق',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+          ),
+        ),
       ),
     );
   }
@@ -282,58 +446,96 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label outside - على اليمين
+        // Label with premium style
         Padding(
-          padding: const EdgeInsets.only(bottom: 8, right: 4),
-          child: Text(
-            label,
-            style: AppTypography.body.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
+          padding: const EdgeInsets.only(bottom: 10, right: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF333333),
+                ),
+              ),
+            ],
           ),
         ),
-        // Input field
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          textAlign: TextAlign.right,
-          textDirection: TextDirection.ltr,
-          validator: validator,
-          onFieldSubmitted: onSubmitted,
-          style: AppTypography.body.copyWith(color: AppColors.textDark),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: AppTypography.body.copyWith(color: AppColors.textGrey),
-            filled: true,
-            fillColor: AppColors.background,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
+        // Input field with premium styling
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF690000).withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            textAlign: TextAlign.right,
+            textDirection: TextDirection.ltr,
+            validator: validator,
+            onFieldSubmitted: onSubmitted,
+            style: const TextStyle(
+              fontSize: 15,
+              fontFamily: 'Cairo',
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF333333),
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(
+                fontSize: 14,
+                fontFamily: 'Cairo',
+                color: Colors.grey[400],
+              ),
+              filled: true,
+              fillColor: const Color(0xFFF8F9FA),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 18,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: Color(0xFF690000),
+                  width: 2,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Colors.red, width: 1.5),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Colors.red, width: 2),
+              ),
+              suffixIcon: Icon(icon, color: const Color(0xFF690000), size: 22),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.greyBorder, width: 1),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.primary, width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.error, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.error, width: 2),
-            ),
-            // أيقونة على الشمال (بعد النص في RTL)
-            suffixIcon: Icon(icon, color: AppColors.textGrey, size: 22),
           ),
         ),
       ],
@@ -342,31 +544,37 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
 
   // ============= BACK TO LOGIN LINK =============
   Widget _buildBackToLoginLink() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        TextButton(
-          onPressed: () => context.go('/login'),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'العودة لتسجيل الدخول',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: GestureDetector(
+        onTap: () => context.go('/login'),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'العودة لتسجيل الدخول',
+              style: TextStyle(
+                color: Color(0xFFD4AF37),
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Cairo',
+                fontSize: 15,
               ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.arrow_back_ios_rounded,
-                size: 14,
-                color: AppColors.primary,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
+              color: Color(0xFFD4AF37),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

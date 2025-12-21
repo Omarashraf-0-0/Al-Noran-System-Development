@@ -129,7 +129,7 @@ void main() {
 
         // Try to go back
         final backButton = find.byType(BackButton);
-        final backIcon = find.byIcon(Icons.arrow_back);
+        final backIcon = find.byIcon(Icons.arrow_forward);
 
         if (backButton.evaluate().isNotEmpty) {
           await tester.tap(backButton.first);
@@ -210,7 +210,7 @@ void main() {
 
       // Try multiple back navigations
       for (int i = 0; i < 3; i++) {
-        final backIcon = find.byIcon(Icons.arrow_back);
+        final backIcon = find.byIcon(Icons.arrow_forward);
         if (backIcon.evaluate().isNotEmpty) {
           await tester.tap(backIcon.first);
           await tester.pumpAndSettle();

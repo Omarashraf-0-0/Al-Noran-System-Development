@@ -286,7 +286,7 @@ void main() {
         await tester.pumpAndSettle(const Duration(seconds: 3));
 
         // Should navigate to details
-        final backButton = find.byIcon(Icons.arrow_back);
+        final backButton = find.byIcon(Icons.arrow_forward);
         final backButtonRTL = find.byIcon(Icons.arrow_forward);
         final detailsTitle = find.textContaining('تفاصيل');
 

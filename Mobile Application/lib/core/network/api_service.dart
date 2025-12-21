@@ -20,7 +20,7 @@ class ApiService {
       // return 'http://10.0.2.2:3500';
 
       // لو موبايل حقيقي، استخدم IP اللابتوب:
-      return 'http://172.20.10.3:3500';
+      return 'http://192.168.1.6:3500';
     }
 
     // لو iOS Simulator أو جهاز حقيقي

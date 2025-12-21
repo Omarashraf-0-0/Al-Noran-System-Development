@@ -16,34 +16,39 @@ class DocumentVerificationService {
 
   /// Required documents by client type
   /// These must match EXACTLY what is uploaded during registration
+  /// Synced with web frontend DocumentUploadPage.jsx requirements
   static List<String> getRequiredDocuments(String clientType) {
     switch (clientType) {
       case 'personal':
-        // From personalRegistration.dart: personal_id + power_of_attorney
-        return ['personal_id', 'power_of_attorney'];
+        // Personal: power_of_attorney + personal_id (Egyptian) or passport (non-Egyptian)
+        // Note: The actual check depends on nationality stored in user data
+        return ['power_of_attorney', 'personal_id'];
       case 'commercial':
-        // From commercialRegistration.dart: contract, tax_card, commercial_register,
-        // certificate_vat, import_export_card (export_card optional)
+        // Commercial: 8 required documents (synced with web frontend)
         return [
-          'contract',
-          'tax_card',
           'commercial_register',
+          'tax_card',
+          'contract',
           'certificate_vat',
           'import_export_card',
+          'power_of_attorney',
+          'personal_id_of_representative',
+          'trade_certificates',
         ];
       case 'factory':
-        // From factoryRegistration.dart: contract, tax_card, commercial_register,
-        // certificate_vat, production_supplies, industrial_register
+        // Factory: 8 required documents (synced with web frontend)
         return [
-          'contract',
-          'tax_card',
           'commercial_register',
+          'tax_card',
+          'contract',
+          'industrial_register',
           'certificate_vat',
           'production_supplies',
-          'industrial_register',
+          'power_of_attorney',
+          'personal_id_of_representative',
         ];
       default:
-        return ['personal_id', 'power_of_attorney'];
+        return ['power_of_attorney', 'personal_id'];
     }
   }
 
@@ -230,6 +235,8 @@ class DocumentVerificationService {
     switch (type) {
       case 'personal_id':
         return 'البطاقة الشخصية';
+      case 'passport':
+        return 'جواز السفر';
       case 'power_of_attorney':
         return 'التوكيل';
       case 'contract':
@@ -246,6 +253,10 @@ class DocumentVerificationService {
         return 'مستلزمات الإنتاج';
       case 'import_export_card':
         return 'بطاقة استيراد/تصدير';
+      case 'personal_id_of_representative':
+        return 'بطاقة المفوض';
+      case 'trade_certificates':
+        return 'شهادات المزاولة';
       default:
         return type;
     }

@@ -1087,7 +1087,11 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ],
                 ),
-                Icon(Icons.arrow_back_ios, size: 16, color: Colors.grey[400]),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey[400],
+                ),
               ],
             ),
 
@@ -1295,7 +1299,7 @@ class _HomePageState extends State<HomePage> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(
-                              Icons.arrow_back_ios_rounded,
+                              Icons.arrow_forward_ios_rounded,
                               color: Colors.white,
                               size: 16,
                             ),
@@ -1433,7 +1437,7 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   ),
                                   Icon(
-                                    Icons.arrow_back_ios_rounded,
+                                    Icons.arrow_forward_ios_rounded,
                                     size: 16,
                                     color: Colors.red.withValues(alpha: 0.5),
                                   ),
@@ -1529,7 +1533,7 @@ class _HomePageState extends State<HomePage> {
             ),
             // Arrow Icon
             Icon(
-              Icons.arrow_back_ios_rounded,
+              Icons.arrow_forward_ios_rounded,
               size: 16,
               color: Colors.grey[400],
             ),
@@ -1571,7 +1575,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const Spacer(),
-            Icon(Icons.arrow_back_ios, size: 16, color: Colors.grey[400]),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
           ],
         ),
       ),

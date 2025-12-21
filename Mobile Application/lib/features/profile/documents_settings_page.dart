@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -16,16 +17,46 @@ class DocumentsSettingsPage extends StatefulWidget {
   State<DocumentsSettingsPage> createState() => _DocumentsSettingsPageState();
 }
 
-class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
+class _DocumentsSettingsPageState extends State<DocumentsSettingsPage>
+    with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> _documents = [];
   List<Map<String, dynamic>> _requiredDocuments = [];
   String _clientType = '';
   bool _isLoading = true;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  // Premium colors
+  static const Color primaryDark = Color(0xFF690000);
+  static const Color primaryLight = Color(0xFF8B0000);
+  static const Color accent = Color(0xFF1BA3B6);
+  static const Color bgColor = Color(0xFFF8F9FA);
 
   @override
   void initState() {
     super.initState();
     _loadDocuments();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadDocuments() async {
@@ -112,32 +143,35 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
   }
 
   List<Map<String, dynamic>> _getRequiredDocumentsByType(String clientType) {
-    // These must match EXACTLY what is uploaded during registration
+    // These must match EXACTLY what is defined in web frontend DocumentUploadPage.jsx
     switch (clientType) {
       case 'personal':
-        // From personalRegistration.dart
+        // For personal: power_of_attorney + (personal_id for Egyptian OR passport for non-Egyptian)
+        // TODO: Add nationality check for personal_id vs passport
         return [
+          {'type': 'power_of_attorney', 'name': 'التوكيل', 'icon': Icons.gavel},
           {
             'type': 'personal_id',
             'name': 'البطاقة الشخصية',
             'icon': Icons.credit_card,
           },
-          {'type': 'power_of_attorney', 'name': 'التوكيل', 'icon': Icons.gavel},
+          // Note: For non-Egyptians, 'passport' will be used instead of 'personal_id'
+          // This is handled dynamically in the web but for now we show personal_id
         ];
       case 'commercial':
-        // From commercialRegistration.dart
+        // From web DocumentUploadPage.jsx - 8 documents
         return [
-          {'type': 'contract', 'name': 'العقد', 'icon': Icons.description},
-          {
-            'type': 'tax_card',
-            'name': 'البطاقة الضريبية',
-            'icon': Icons.receipt_long,
-          },
           {
             'type': 'commercial_register',
             'name': 'السجل التجاري',
             'icon': Icons.business,
           },
+          {
+            'type': 'tax_card',
+            'name': 'البطاقة الضريبية',
+            'icon': Icons.receipt_long,
+          },
+          {'type': 'contract', 'name': 'العقد', 'icon': Icons.description},
           {
             'type': 'certificate_vat',
             'name': 'شهادة القيمة المضافة',
@@ -146,22 +180,38 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
           {
             'type': 'import_export_card',
             'name': 'بطاقة استيراد/تصدير',
-            'icon': Icons.credit_card,
+            'icon': Icons.import_export,
+          },
+          {'type': 'power_of_attorney', 'name': 'التوكيل', 'icon': Icons.gavel},
+          {
+            'type': 'personal_id_of_representative',
+            'name': 'بطاقة ممثل',
+            'icon': Icons.badge,
+          },
+          {
+            'type': 'trade_certificates',
+            'name': 'شهادات تجارية',
+            'icon': Icons.workspace_premium,
           },
         ];
       case 'factory':
-        // From factoryRegistration.dart
+        // From web DocumentUploadPage.jsx - 8 documents
         return [
-          {'type': 'contract', 'name': 'العقد', 'icon': Icons.description},
+          {
+            'type': 'commercial_register',
+            'name': 'السجل التجاري',
+            'icon': Icons.business,
+          },
           {
             'type': 'tax_card',
             'name': 'البطاقة الضريبية',
             'icon': Icons.receipt_long,
           },
+          {'type': 'contract', 'name': 'العقد', 'icon': Icons.description},
           {
-            'type': 'commercial_register',
-            'name': 'السجل التجاري',
-            'icon': Icons.business,
+            'type': 'industrial_register',
+            'name': 'السجل الصناعي',
+            'icon': Icons.factory,
           },
           {
             'type': 'certificate_vat',
@@ -173,20 +223,21 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
             'name': 'مستلزمات الإنتاج',
             'icon': Icons.inventory,
           },
+          {'type': 'power_of_attorney', 'name': 'التوكيل', 'icon': Icons.gavel},
           {
-            'type': 'industrial_register',
-            'name': 'السجل الصناعي',
-            'icon': Icons.factory,
+            'type': 'personal_id_of_representative',
+            'name': 'بطاقة ممثل',
+            'icon': Icons.badge,
           },
         ];
       default:
         return [
+          {'type': 'power_of_attorney', 'name': 'التوكيل', 'icon': Icons.gavel},
           {
             'type': 'personal_id',
             'name': 'البطاقة الشخصية',
             'icon': Icons.credit_card,
           },
-          {'type': 'power_of_attorney', 'name': 'التوكيل', 'icon': Icons.gavel},
         ];
     }
   }
@@ -284,6 +335,8 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
         return 'البطاقة الشخصية';
       case 'national_id':
         return 'بطاقة الهوية';
+      case 'passport':
+        return 'جواز السفر';
       case 'contract':
         return 'العقد';
       case 'tax_card':
@@ -300,6 +353,10 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
         return 'بطاقة استيراد/تصدير';
       case 'power_of_attorney':
         return 'التوكيل';
+      case 'personal_id_of_representative':
+        return 'بطاقة ممثل';
+      case 'trade_certificates':
+        return 'شهادات تجارية';
       default:
         return type ?? 'مستند';
     }
@@ -310,101 +367,12 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: bgColor,
         body: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
           slivers: [
-            // Enhanced AppBar with Logo
-            SliverAppBar(
-              expandedHeight: 180,
-              floating: false,
-              pinned: true,
-              elevation: 0,
-              backgroundColor: const Color(0xFF690000),
-              automaticallyImplyLeading: false,
-              actions: [
-                Container(
-                  margin: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_forward, color: Colors.white),
-                    onPressed: () => context.pop(),
-                  ),
-                ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                centerTitle: true,
-                background: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      colors: [
-                        const Color(0xFF690000),
-                        const Color(0xFF8B0000),
-                      ],
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(25),
-                      bottomRight: Radius.circular(25),
-                    ),
-                  ),
-                  child: SafeArea(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const SizedBox(height: 20),
-                          // Logo
-                          Container(
-                            width: 70,
-                            height: 70,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(15),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(15),
-                              child: Image.asset(
-                                'assets/img/logo.png',
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.folder_open,
-                                    color: Color(0xFF690000),
-                                    size: 40,
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'المستندات المرفوعة',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            // Premium AppBar
+            _buildPremiumAppBar(),
             // Content
             _isLoading
                 ? SliverFillRemaining(
@@ -412,15 +380,24 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const CircularProgressIndicator(
-                          color: Color(0xFF690000),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const CircularProgressIndicator(
+                            color: accent,
+                            strokeWidth: 3,
+                          ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         Text(
                           'جاري تحميل المستندات...',
                           style: TextStyle(
                             fontFamily: 'Cairo',
-                            fontSize: 14,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
                             color: Colors.grey[600],
                           ),
                         ),
@@ -430,42 +407,87 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
                 )
                 : _documents.isEmpty
                 ? SliverFillRemaining(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(30),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            shape: BoxShape.circle,
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(35),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  accent.withValues(alpha: 0.1),
+                                  accent.withValues(alpha: 0.05),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.folder_outlined,
+                              size: 70,
+                              color: accent,
+                            ),
                           ),
-                          child: Icon(
-                            Icons.folder_open,
-                            size: 80,
-                            color: Colors.grey[400],
+                          const SizedBox(height: 24),
+                          const Text(
+                            'لا توجد مستندات مرفوعة',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2D2D2D),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'لا توجد مستندات مرفوعة',
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[600],
+                          const SizedBox(height: 8),
+                          Text(
+                            'اسحب للأسفل للتحديث',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'اسحب للأسفل للتحديث',
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 13,
-                            color: Colors.grey[500],
+                          const SizedBox(height: 24),
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              _loadDocuments();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: accent,
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.refresh,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'تحديث',
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 )
@@ -475,158 +497,29 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         if (index == 0) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Stats Cards Row
-                              Row(
+                          return FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: SlideTransition(
+                              position: _slideAnimation,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: _buildStatCard(
-                                      'مقبولة',
-                                      '${_documents.where((d) => d['approvalStatus'] == 'approved').length}',
-                                      Colors.green,
-                                      Icons.check_circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildStatCard(
-                                      'قيد المراجعة',
-                                      '${_documents.where((d) => d['approvalStatus'] == 'pending').length}',
-                                      Colors.orange,
-                                      Icons.access_time,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildStatCard(
-                                      'مرفوضة',
-                                      '${_documents.where((d) => d['approvalStatus'] == 'rejected').length}',
-                                      Colors.red,
-                                      Icons.cancel,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              // Second row - upload status
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildStatCard(
-                                      'المرفوعة',
-                                      '${_documents.length}',
-                                      const Color(0xFF1ba3b6),
-                                      Icons.cloud_upload,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildStatCard(
-                                      'ناقصة',
-                                      '${_requiredDocuments.where((r) => !_isDocumentUploaded(r['type'])).length}',
-                                      const Color(0xFF690000),
-                                      Icons.warning_amber,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              // Warning banner if documents not approved
-                              if (!_allDocumentsApproved)
-                                Container(
-                                  margin: const EdgeInsets.only(bottom: 16),
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.orange.shade100,
-                                        Colors.orange.shade50,
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: Colors.orange.shade300,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: Colors.orange,
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.info_outline,
-                                          color: Colors.white,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 14),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            const Text(
-                                              'تنبيه مهم',
-                                              style: TextStyle(
-                                                fontFamily: 'Cairo',
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF2D2D2D),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              _hasMissingDocuments
-                                                  ? 'يوجد مستندات ناقصة. يرجى رفعها لتتمكن من تقديم طلبات ACID و UCR'
-                                                  : _hasRejectedDocuments
-                                                  ? 'يوجد مستندات مرفوضة. يرجى إعادة رفعها للتمكن من تقديم الطلبات'
-                                                  : 'المستندات قيد المراجعة. ستتمكن من تقديم الطلبات بعد الموافقة عليها',
-                                              style: TextStyle(
-                                                fontFamily: 'Cairo',
-                                                fontSize: 12,
-                                                color: Colors.grey[700],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              const SizedBox(height: 8),
-
-                              // Required Documents Section
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 4,
-                                    height: 20,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF690000),
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text(
+                                  // Premium Stats Grid
+                                  _buildPremiumStatsGrid(),
+                                  const SizedBox(height: 20),
+                                  // Warning banner if documents not approved
+                                  if (!_allDocumentsApproved)
+                                    _buildWarningBanner(),
+                                  const SizedBox(height: 16),
+                                  // Section Title
+                                  _buildSectionTitle(
                                     'المستندات المطلوبة',
-                                    style: TextStyle(
-                                      fontFamily: 'Cairo',
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF2D2D2D),
-                                    ),
+                                    Icons.folder_special_outlined,
                                   ),
+                                  const SizedBox(height: 16),
                                 ],
                               ),
-                              const SizedBox(height: 16),
-                            ],
+                            ),
                           );
                         }
 
@@ -650,9 +543,12 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
                             final isRequired = _requiredDocuments.any(
                               (reqDoc) => reqDoc['type'] == doc['documentType'],
                             );
-                            return _buildDocumentCard(
-                              doc,
-                              isRequired: isRequired,
+                            return FadeTransition(
+                              opacity: _fadeAnimation,
+                              child: _buildDocumentCard(
+                                doc,
+                                isRequired: isRequired,
+                              ),
                             );
                           }
 
@@ -667,8 +563,11 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
                                   .toList();
 
                           if (missingIndex < missingDocs.length) {
-                            return _buildMissingDocumentCard(
-                              missingDocs[missingIndex],
+                            return FadeTransition(
+                              opacity: _fadeAnimation,
+                              child: _buildMissingDocumentCard(
+                                missingDocs[missingIndex],
+                              ),
                             );
                           }
                         }
@@ -693,40 +592,257 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
     );
   }
 
-  Widget _buildStatCard(
+  Widget _buildPremiumAppBar() {
+    return SliverAppBar(
+      expandedHeight: 200,
+      floating: false,
+      pinned: true,
+      elevation: 0,
+      backgroundColor: accent,
+      automaticallyImplyLeading: false,
+      actions: [
+        Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_forward, color: Colors.white),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.pop(context);
+            },
+          ),
+        ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        centerTitle: true,
+        background: Stack(
+          children: [
+            // Gradient Background
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                  colors: [accent, Color(0xFF16879A)],
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
+              ),
+            ),
+            // Decorative elements
+            Positioned(
+              top: -40,
+              left: -40,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 40,
+              right: -20,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
+              ),
+            ),
+            // Content
+            SafeArea(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 20),
+                    // Animated Icon
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.8, end: 1.0),
+                      duration: const Duration(milliseconds: 800),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.3),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.folder_special_outlined,
+                              color: accent,
+                              size: 45,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'المستندات المرفوعة',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'إدارة وعرض جميع المستندات',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumStatsGrid() {
+    final approvedCount =
+        _documents.where((d) => d['approvalStatus'] == 'approved').length;
+    final pendingCount =
+        _documents.where((d) => d['approvalStatus'] == 'pending').length;
+    final rejectedCount =
+        _documents.where((d) => d['approvalStatus'] == 'rejected').length;
+    final missingCount =
+        _requiredDocuments.where((r) => !_isDocumentUploaded(r['type'])).length;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildPremiumStatCard(
+                  'مقبولة',
+                  '$approvedCount',
+                  const Color(0xFF4CAF50),
+                  Icons.check_circle_outline,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildPremiumStatCard(
+                  'قيد المراجعة',
+                  '$pendingCount',
+                  Colors.orange,
+                  Icons.schedule,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildPremiumStatCard(
+                  'مرفوضة',
+                  '$rejectedCount',
+                  Colors.red,
+                  Icons.cancel_outlined,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildPremiumStatCard(
+                  'المرفوعة',
+                  '${_documents.length}',
+                  accent,
+                  Icons.cloud_done_outlined,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildPremiumStatCard(
+                  'ناقصة',
+                  '$missingCount',
+                  primaryDark,
+                  Icons.warning_amber_outlined,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumStatCard(
     String label,
     String value,
     Color color,
     IconData icon,
   ) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
+          colors: [color.withValues(alpha: 0.1), color.withValues(alpha: 0.05)],
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
+          Icon(icon, color: color, size: 26),
+          const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
               fontFamily: 'Cairo',
-              fontSize: 26,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
-          const SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
               fontFamily: 'Cairo',
-              fontSize: 13,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
               color: Colors.grey[600],
             ),
           ),
@@ -735,122 +851,300 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
     );
   }
 
-  Widget _buildMissingDocumentCard(Map<String, dynamic> reqDoc) {
-    return InkWell(
-      onTap: () => _uploadDocument(reqDoc['type'], reqDoc['name']),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.orange.shade300, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.orange.withOpacity(0.1),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+  Widget _buildWarningBanner() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.orange.shade100, Colors.orange.shade50],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Container(
-                width: 65,
-                height: 65,
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.orange.shade200, width: 2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.shade300),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.orange,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.info_outline,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'تنبيه مهم',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D2D2D),
+                  ),
                 ),
-                child: Icon(
-                  reqDoc['icon'] ?? Icons.description,
-                  color: Colors.orange,
-                  size: 32,
+                const SizedBox(height: 4),
+                Text(
+                  _hasMissingDocuments
+                      ? 'يوجد مستندات ناقصة. يرجى رفعها للتمكن من تقديم طلبات ACID و UCR'
+                      : _hasRejectedDocuments
+                      ? 'يوجد مستندات مرفوضة. يرجى إعادة رفعها'
+                      : 'المستندات قيد المراجعة',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 12,
+                    color: Colors.grey[700],
+                    height: 1.4,
+                  ),
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: accent, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2D2D2D),
+            ),
+          ),
+          const Spacer(),
+          Container(
+            width: 40,
+            height: 3,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [accent, primaryDark]),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMissingDocumentCard(Map<String, dynamic> reqDoc) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.95, end: 1.0),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOut,
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: GestureDetector(
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              _uploadDocument(reqDoc['type'], reqDoc['name']);
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: Colors.orange.withValues(alpha: 0.4),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.orange.withValues(alpha: 0.12),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Text(
-                            'مطلوب',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                    // Document Icon Container
+                    Container(
+                      width: 65,
+                      height: 65,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.orange.shade100,
+                            Colors.orange.shade50,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.orange.shade200,
+                          width: 2,
+                        ),
+                      ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Icon(
+                              reqDoc['icon'] ?? Icons.description_outlined,
+                              color: Colors.orange.shade700,
+                              size: 30,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
+                          // Warning badge
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.priority_high,
+                                color: Colors.white,
+                                size: 10,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Document Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.orange.shade600,
+                                      Colors.orange,
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.warning_amber,
+                                      color: Colors.white,
+                                      size: 12,
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'مطلوب',
+                                      style: TextStyle(
+                                        fontFamily: 'Cairo',
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
                             reqDoc['name'] ?? 'مستند',
                             style: const TextStyle(
                               fontFamily: 'Cairo',
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF2D2D2D),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.touch_app_outlined,
+                                size: 14,
+                                color: Colors.orange.shade600,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'اضغط لرفع المستند',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 11,
+                                  color: Colors.orange.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 16,
-                          color: Colors.grey[600],
+                    // Upload Button
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Colors.orange.shade600, Colors.orange],
                         ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'يرجى رفع هذا المستند',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.orange.withValues(alpha: 0.4),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.cloud_upload_outlined,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.upload_file,
-                  color: Colors.orange,
-                  size: 24,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -1352,280 +1646,369 @@ class _DocumentsSettingsPageState extends State<DocumentsSettingsPage> {
     final statusText = _getStatusText(approvalStatus);
     final statusIcon = _getStatusIcon(approvalStatus);
     final isRejected = approvalStatus == 'rejected';
+    final isApproved = approvalStatus == 'approved';
     final rejectionReason = doc['rejectionReason']?.toString();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border:
-            isRejected
-                ? Border.all(color: Colors.red.shade300, width: 2)
-                : null,
-        boxShadow: [
-          BoxShadow(
-            color:
-                isRejected
-                    ? Colors.red.withOpacity(0.1)
-                    : Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Icon Container
-                Container(
-                  width: 65,
-                  height: 65,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors:
-                          isPDF
-                              ? [Colors.red.shade400, Colors.red.shade600]
-                              : isImage
-                              ? [Colors.blue.shade400, Colors.blue.shade600]
-                              : [Colors.green.shade400, Colors.green.shade600],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (isPDF
-                                ? Colors.red
-                                : isImage
-                                ? Colors.blue
-                                : Colors.green)
-                            .withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    isPDF
-                        ? Icons.picture_as_pdf
-                        : isImage
-                        ? Icons.image
-                        : Icons.insert_drive_file,
-                    color: Colors.white,
-                    size: 32,
-                  ),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.95, end: 1.0),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOut,
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border:
+                  isRejected
+                      ? Border.all(color: Colors.red.shade300, width: 2)
+                      : isApproved
+                      ? Border.all(
+                        color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+                        width: 1,
+                      )
+                      : null,
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      isRejected
+                          ? Colors.red.withValues(alpha: 0.12)
+                          : isApproved
+                          ? const Color(0xFF4CAF50).withValues(alpha: 0.1)
+                          : Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                 ),
-                const SizedBox(width: 16),
-                // Document Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ],
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     children: [
-                      // Document name and status badge row
-                      Row(
+                      // Premium Icon Container
+                      Stack(
                         children: [
-                          // Approval Status Badge
                           Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
+                            width: 65,
+                            height: 65,
                             decoration: BoxDecoration(
-                              color: statusColor,
-                              borderRadius: BorderRadius.circular(6),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors:
+                                    isPDF
+                                        ? [
+                                          Colors.red.shade400,
+                                          Colors.red.shade600,
+                                        ]
+                                        : isImage
+                                        ? [
+                                          Colors.blue.shade400,
+                                          Colors.blue.shade600,
+                                        ]
+                                        : [
+                                          Colors.teal.shade400,
+                                          Colors.teal.shade600,
+                                        ],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (isPDF
+                                          ? Colors.red
+                                          : isImage
+                                          ? Colors.blue
+                                          : Colors.teal)
+                                      .withValues(alpha: 0.35),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            child: Icon(
+                              isPDF
+                                  ? Icons.picture_as_pdf_rounded
+                                  : isImage
+                                  ? Icons.image_rounded
+                                  : Icons.insert_drive_file_rounded,
+                              color: Colors.white,
+                              size: 30,
+                            ),
+                          ),
+                          // Status indicator badge
+                          Positioned(
+                            bottom: -2,
+                            right: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: statusColor,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: statusColor.withValues(alpha: 0.4),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                statusIcon,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 16),
+                      // Document Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Status Badge + Document name row
+                            Row(
                               children: [
-                                Icon(statusIcon, size: 12, color: Colors.white),
-                                const SizedBox(width: 4),
-                                Text(
-                                  statusText,
-                                  style: const TextStyle(
-                                    fontFamily: 'Cairo',
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        statusColor,
+                                        statusColor.withValues(alpha: 0.8),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: statusColor.withValues(
+                                          alpha: 0.3,
+                                        ),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    statusText,
+                                    style: const TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                          Expanded(
-                            child: Text(
+                            const SizedBox(height: 8),
+                            Text(
                               _getDocumentTypeName(doc['documentType']),
                               style: const TextStyle(
                                 fontFamily: 'Cairo',
-                                fontSize: 16,
+                                fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF690000),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      // Rejection reason if rejected
-                      if (isRejected &&
-                          rejectionReason != null &&
-                          rejectionReason.isNotEmpty)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 6),
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 14,
-                                color: Colors.red.shade700,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  rejectionReason,
-                                  style: TextStyle(
-                                    fontFamily: 'Cairo',
-                                    fontSize: 11,
-                                    color: Colors.red.shade700,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.description,
-                            size: 14,
-                            color: Colors.grey[500],
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              doc['filename'] ?? 'مستند',
-                              style: TextStyle(
-                                fontFamily: 'Cairo',
-                                fontSize: 12,
-                                color: Colors.grey[600],
+                                color: Color(0xFF2D2D2D),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 14,
-                            color: Colors.grey[500],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _formatDate(doc['uploadedAt']),
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 11,
-                              color: Colors.grey[500],
+                            // Rejection reason if rejected
+                            if (isRejected &&
+                                rejectionReason != null &&
+                                rejectionReason.isNotEmpty)
+                              Container(
+                                margin: const EdgeInsets.only(top: 6),
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: Colors.red.shade100,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      size: 16,
+                                      color: Colors.red.shade700,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        rejectionReason,
+                                        style: TextStyle(
+                                          fontFamily: 'Cairo',
+                                          fontSize: 11,
+                                          color: Colors.red.shade700,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            const SizedBox(height: 6),
+                            // File info row
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.schedule_outlined,
+                                  size: 14,
+                                  color: Colors.grey[500],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _formatDate(doc['uploadedAt']),
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 11,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
+                  ),
+                ),
+                // Premium Actions Section
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(18),
+                      bottomRight: Radius.circular(18),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // For approved: only view
+                        if (approvalStatus == 'approved') ...[
+                          _buildPremiumActionButton(
+                            icon: Icons.visibility_outlined,
+                            label: 'عرض المستند',
+                            color: accent,
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              _viewDocument(doc);
+                            },
+                          ),
+                        ]
+                        // For rejected: ONLY re-upload
+                        else if (isRejected) ...[
+                          _buildPremiumActionButton(
+                            icon: Icons.cloud_upload_outlined,
+                            label: 'إعادة رفع المستند',
+                            color: primaryDark,
+                            onPressed: () {
+                              HapticFeedback.mediumImpact();
+                              _reuploadDocument(doc);
+                            },
+                          ),
+                        ]
+                        // For pending: view + edit
+                        else ...[
+                          _buildPremiumActionButton(
+                            icon: Icons.visibility_outlined,
+                            label: 'عرض',
+                            color: accent,
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              _viewDocument(doc);
+                            },
+                          ),
+                          Container(
+                            width: 1,
+                            height: 35,
+                            margin: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                          _buildPremiumActionButton(
+                            icon: Icons.edit_outlined,
+                            label: 'تعديل',
+                            color: primaryDark,
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              _replaceDocument(doc);
+                            },
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          // Actions Divider
-          Divider(height: 1, color: Colors.grey[200]),
-          // Actions Row - different actions based on status
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // For approved: only view
-                if (approvalStatus == 'approved') ...[
-                  _buildActionButton(
-                    icon: Icons.visibility,
-                    label: 'عرض',
-                    color: const Color(0xFF1ba3b6),
-                    onPressed: () => _viewDocument(doc),
-                  ),
-                ]
-                // For rejected: ONLY re-upload (no view)
-                else if (isRejected) ...[
-                  _buildActionButton(
-                    icon: Icons.cloud_upload_outlined,
-                    label: 'إعادة رفع المستند',
-                    color: const Color(0xFF690000),
-                    onPressed: () => _reuploadDocument(doc),
-                  ),
-                ]
-                // For pending: view + edit
-                else ...[
-                  _buildActionButton(
-                    icon: Icons.visibility,
-                    label: 'عرض',
-                    color: const Color(0xFF1ba3b6),
-                    onPressed: () => _viewDocument(doc),
-                  ),
-                  Container(width: 1, height: 30, color: Colors.grey[200]),
-                  _buildActionButton(
-                    icon: Icons.edit,
-                    label: 'تعديل',
-                    color: const Color(0xFF690000),
-                    onPressed: () => _replaceDocument(doc),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildActionButton({
+  Widget _buildPremiumActionButton({
     required IconData icon,
     required String label,
     required Color color,
     required VoidCallback onPressed,
   }) {
     return Expanded(
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 22),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: color,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: color, size: 18),
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

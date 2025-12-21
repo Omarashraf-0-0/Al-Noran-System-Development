@@ -423,7 +423,7 @@ class _NotificationsPageState extends State<NotificationsPage>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                  icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
                   color: Colors.white,
                   onPressed: () {
                     HapticFeedback.lightImpact();

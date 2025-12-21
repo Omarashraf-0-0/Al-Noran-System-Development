@@ -86,8 +86,9 @@ class _UnifiedTopBarState extends State<UnifiedTopBar>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
-  String _userName = '';
-  String _userEmail = '';
+  // Initialize with cached data immediately to prevent flicker
+  late String _userName = _userCache.userName;
+  late String _userEmail = _userCache.userEmail;
   String? _profilePhotoUrl;
   bool _isLoadingPhoto = true;
   int _unreadCount = 0;
@@ -95,6 +96,10 @@ class _UnifiedTopBarState extends State<UnifiedTopBar>
   @override
   void initState() {
     super.initState();
+
+    // Load cached data synchronously first to prevent UI flicker
+    _loadCachedDataSync();
+
     _loadUserData();
     _loadUnreadCount();
 
@@ -119,6 +124,16 @@ class _UnifiedTopBarState extends State<UnifiedTopBar>
     ) {
       if (mounted) setState(() => _unreadCount = count);
     });
+  }
+
+  /// Load cached data synchronously to prevent UI flicker on navigation
+  void _loadCachedDataSync() {
+    if (_userCache.isInitialized) {
+      _userName = _userCache.userName;
+      _userEmail = _userCache.userEmail;
+      _profilePhotoUrl = _userCache.profilePhotoUrl;
+      _isLoadingPhoto = false;
+    }
   }
 
   @override
@@ -220,6 +235,18 @@ class _UnifiedTopBarState extends State<UnifiedTopBar>
                           if (widget.showNotification)
                             _buildNotificationButton(),
                         ],
+                      ),
+
+                      // Center: App Name
+                      const Text(
+                        'Al Noran',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1,
+                        ),
                       ),
 
                       // Right: Menu or Back
@@ -559,7 +586,7 @@ class _UnifiedTopBarState extends State<UnifiedTopBar>
           ),
         ),
         child: const Icon(
-          Icons.arrow_back_rounded,
+          Icons.arrow_forward_rounded,
           color: Colors.white,
           size: 24,
         ),
@@ -676,7 +703,7 @@ class SimpleTopBar extends StatelessWidget {
                     ),
                   ),
                   child: const Icon(
-                    Icons.arrow_back_rounded,
+                    Icons.arrow_forward_rounded,
                     color: Colors.white,
                     size: 24,
                   ),

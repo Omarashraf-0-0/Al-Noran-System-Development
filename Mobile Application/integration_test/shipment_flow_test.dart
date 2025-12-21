@@ -300,7 +300,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Navigate back
-        final backIcon = find.byIcon(Icons.arrow_back);
+        final backIcon = find.byIcon(Icons.arrow_forward);
         final backForward = find.byIcon(Icons.arrow_forward);
 
         if (backIcon.evaluate().isNotEmpty) {

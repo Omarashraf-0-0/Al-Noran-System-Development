@@ -35,7 +35,7 @@ void main() {
       testWidgets('should render back button', (tester) async {
         await tester.pumpWidget(createWidgetUnderTest());
         expect(find.text('الرجوع'), findsOneWidget);
-        expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+        expect(find.byIcon(Icons.arrow_forward), findsOneWidget);
       });
     });
 

@@ -561,6 +561,7 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
   String _getDocumentDisplayName(String docType) {
     final names = {
       'personal_id': 'البطاقة الشخصية',
+      'passport': 'جواز السفر',
       'power_of_attorney': 'التوكيل',
       'contract': 'العقد',
       'tax_card': 'البطاقة الضريبية',
@@ -569,6 +570,8 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
       'import_export_card': 'بطاقة الاستيراد والتصدير',
       'production_supplies': 'مستلزمات الإنتاج',
       'industrial_register': 'السجل الصناعي',
+      'personal_id_of_representative': 'بطاقة المفوض',
+      'trade_certificates': 'شهادات المزاولة',
     };
     return names[docType] ?? docType;
   }
