@@ -14,25 +14,59 @@ const NotificationBell = () => {
 
 	// Get token from localStorage
 	const token = localStorage.getItem("token");
+	const user = JSON.parse(localStorage.getItem("user") || "{}");
 	const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3500";
-	
-	// Safely parse user object
-	let user = {};
-	try {
-		const userStr = localStorage.getItem("user");
-		if (userStr) {
-			user = JSON.parse(userStr);
+
+	// Load cached notifications on mount
+	useEffect(() => {
+		if (!user._id) return;
+		
+		try {
+			const CACHE_KEY = `notifications_${user._id}`;
+			const CACHE_TIMESTAMP_KEY = `notifications_timestamp_${user._id}`;
+			const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+			
+			const cached = localStorage.getItem(CACHE_KEY);
+			const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+			
+			if (cached && timestamp) {
+				const age = Date.now() - parseInt(timestamp);
+				if (age < CACHE_DURATION) {
+					const data = JSON.parse(cached);
+					setNotifications(data.notifications || []);
+					setUnreadCount(data.unreadCount || 0);
+					console.log("Loaded notifications from cache:", data.unreadCount, "unread");
+				}
+			}
+		} catch (error) {
+			console.error("Error loading cached notifications:", error);
 		}
-	} catch (e) {
-		console.error("Error parsing user from localStorage:", e);
-	}
+	}, [user._id]);
+
+	// Save notifications to cache
+	const saveToCache = useCallback((notifs, count) => {
+		if (!user._id) return;
+		
+		try {
+			const CACHE_KEY = `notifications_${user._id}`;
+			const CACHE_TIMESTAMP_KEY = `notifications_timestamp_${user._id}`;
+			
+			localStorage.setItem(CACHE_KEY, JSON.stringify({
+				notifications: notifs,
+				unreadCount: count
+			}));
+			localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+			console.log("Saved to cache:", count, "unread");
+		} catch (error) {
+			console.error("Error saving notifications to cache:", error);
+		}
+	}, [user._id]);
 
 	// Fetch notifications from API
 	const fetchNotifications = useCallback(async () => {
-		if (!token) return;
-		
 		try {
 			setLoading(true);
+			
 			const response = await axios.get(`${apiUrl}/api/notifications`, {
 				headers: {
 					Authorization: `Bearer ${token}`,
@@ -44,8 +78,14 @@ const NotificationBell = () => {
 			});
 
 			if (response.data.success) {
-				setNotifications(response.data.notifications || []);
-				setUnreadCount(response.data.unreadCount || 0);
+				const notifs = response.data.notifications || [];
+				const count = response.data.unreadCount || 0;
+				
+				setNotifications(notifs);
+				setUnreadCount(count);
+				
+				// Save to cache
+				saveToCache(notifs, count);
 			}
 		} catch (error) {
 			console.error("Error fetching notifications:", error);
@@ -55,7 +95,7 @@ const NotificationBell = () => {
 		} finally {
 			setLoading(false);
 		}
-	}, [apiUrl, token]);
+	}, [apiUrl, token, saveToCache]);
 
 	// Fetch unread count only
 	const fetchUnreadCount = useCallback(async () => {
@@ -78,14 +118,9 @@ const NotificationBell = () => {
 	}, [apiUrl, token]);
 
 	useEffect(() => {
-		if (!token || !user._id) {
-			console.log('NotificationBell: No token or user ID available');
-			return;
-		}
+		if (!token || !user._id) return;
 
-		console.log('NotificationBell: Initializing with user:', user._id);
-
-		// Initial fetch
+		// Fetch notifications (cache already loaded in separate useEffect)
 		fetchNotifications();
 
 		// Connect to Socket.IO
@@ -109,7 +144,13 @@ const NotificationBell = () => {
 			console.log('New notification received:', data);
 			
 			// Add notification to the list
-			setNotifications(prev => [data.notification, ...prev]);
+			setNotifications(prev => {
+				const updated = [data.notification, ...prev];
+				// Update cache with new notification
+				const newCount = data.notification.read ? unreadCount : unreadCount + 1;
+				saveToCache(updated, newCount);
+				return updated;
+			});
 			
 			// Update unread count
 			if (!data.notification.read) {
@@ -137,8 +178,7 @@ const NotificationBell = () => {
 				socketRef.current.disconnect();
 			}
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [token, user._id, apiUrl]);
+	}, [token, user._id, apiUrl, fetchNotifications]);
 
 	// Handle notification click - delete notification and navigate to notification page
 	const handleNotificationClick = async (notifId) => {
@@ -169,9 +209,13 @@ const NotificationBell = () => {
 				setNotifications(updated);
 				
 				// Decrease unread count only if the notification was unread
+				const newCount = wasUnread ? Math.max(0, unreadCount - 1) : unreadCount;
 				if (wasUnread) {
-					setUnreadCount(prev => Math.max(0, prev - 1));
+					setUnreadCount(newCount);
 				}
+				
+				// Update cache
+				saveToCache(updated, newCount);
 			}).catch(error => {
 				console.error("Error deleting notification:", error);
 			});

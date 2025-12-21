@@ -167,6 +167,7 @@ const createShipment = async (req, res) => {
 		await mailSender.send_mail(
 			decoded.email,
 			`Shipment Confirmation – ${ACID_ID}`,
+			`Your shipment request with ACID ID ${ACID_ID} has been received and is being processed.`,
 			htmlContent
 		);
 
@@ -753,38 +754,43 @@ const requestRequiredDocuments = async (req, res) => {
 
 		const htmlContent = `
 			<!doctype html>
-			<html>
+			<html dir="rtl" lang="ar">
 			<head>
-			<meta charset="utf-8">
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
 			<title>Required Documents Request</title>
+			<style>
+				body { direction: rtl; text-align: right; }
+				.rtl-text { direction: rtl; text-align: right; unicode-bidi: embed; }
+			</style>
 			</head>
-			<body style="font-family:Arial, sans-serif; background:#f5f7fa; padding:20px;">
-			<div style="max-width:600px; margin:auto; background:#ffffff; padding:25px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.1);">
-				<h2 style="color:#dc2626; text-align:center;">📄 مستندات مطلوبة لشحنتك</h2>
-				<p>مرحباً <strong>${shipment.user_id?.username ||
+			<body style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; background:#f5f7fa; padding:20px; direction:rtl;">
+			<div class="rtl-text" style="max-width:600px; margin:auto; background:#ffffff; padding:25px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.1);">
+				<h2 style="color:#dc2626; text-align:center; direction:rtl;">📄 مستندات مطلوبة لشحنتك</h2>
+				<p style="direction:rtl; text-align:right;">مرحباً <strong>${shipment.user_id?.username ||
 			shipment.user_id?.fullname ||
 			"عزيزي العميل"
 			}</strong>,</p>
-				<p>نود إعلامك بأننا نحتاج إلى المستندات التالية لاستكمال معالجة شحنتك:</p>
+				<p style="direction:rtl; text-align:right;">نود إعلامك بأننا نحتاج إلى المستندات التالية لاستكمال معالجة شحنتك:</p>
 
-				<div style="background:#fef2f2; border-right:4px solid #dc2626; padding:15px; margin:20px 0; border-radius:5px;">
-					<h3 style="color:#dc2626; margin-top:0;">تفاصيل الشحنة:</h3>
-					<p style="margin:5px 0;"><strong>رقم ACID:</strong> ${shipment.acid}</p>
-					<p style="margin:5px 0;"><strong>رقم البوليصة:</strong> ${shipment.number46 || "غير محدد"
+				<div style="background:#fef2f2; border-right:4px solid #dc2626; padding:15px; margin:20px 0; border-radius:5px; direction:rtl; text-align:right;">
+					<h3 style="color:#dc2626; margin-top:0; direction:rtl;">تفاصيل الشحنة:</h3>
+					<p style="margin:5px 0; direction:rtl;"><strong>رقم ACID:</strong> ${shipment.acid}</p>
+					<p style="margin:5px 0; direction:rtl;"><strong>رقم البوليصة:</strong> ${shipment.number46 || "غير محدد"
 			}</p>
-					<p style="margin:5px 0;"><strong>الحالة الحالية:</strong> ${shipment.status}</p>
+					<p style="margin:5px 0; direction:rtl;"><strong>الحالة الحالية:</strong> ${shipment.status}</p>
 				</div>
 
-				<h3 style="color:#dc2626;">المستندات المطلوبة:</h3>
-				<ul style="background:#f9fafb; padding:20px 40px; border-radius:5px; list-style:none;">
+				<h3 style="color:#dc2626; direction:rtl; text-align:right;">المستندات المطلوبة:</h3>
+				<ul style="background:#f9fafb; padding:20px 40px; border-radius:5px; list-style:disc; direction:rtl; text-align:right;">
 					${documentsList}
 				</ul>
 
-				<div style="background:#fef3c7; border:1px solid #fbbf24; padding:15px; margin:20px 0; border-radius:5px; text-align:center;">
-					<p style="margin:0; color:#92400e;"><strong>⚠️ مهم:</strong> يرجى رفع المستندات المطلوبة في أقرب وقت ممكن لتجنب أي تأخير في معالجة شحنتك.</p>
+				<div style="background:#fef3c7; border:1px solid #fbbf24; padding:15px; margin:20px 0; border-radius:5px; text-align:center; direction:rtl;">
+					<p style="margin:0; color:#92400e; direction:rtl;"><strong>⚠️ مهم:</strong> يرجى رفع المستندات المطلوبة في أقرب وقت ممكن لتجنب أي تأخير في معالجة شحنتك.</p>
 				</div>
 
-				<div style="text-align:center; margin-top:30px;">
+				<div style="text-align:center; margin-top:30px; direction:rtl;">
 					<a href="${process.env.FRONTEND_URL ||
 			"http://section-assignment-bucket.s3-website-us-east-1.amazonaws.com"
 			}/shipmentstatus/${shipment.acid}" 
@@ -793,12 +799,12 @@ const requestRequiredDocuments = async (req, res) => {
 					</a>
 				</div>
 
-				<p style="margin-top:25px;">إذا كانت لديك أي أسئلة، يرجى التواصل مع فريق الدعم.</p>
+				<p style="margin-top:25px; direction:rtl; text-align:right;">إذا كانت لديك أي أسئلة، يرجى التواصل مع فريق الدعم.</p>
 
-				<p style="margin-top:25px;">مع أطيب التحيات،<br><strong>فريق الدعم - النوران</strong></p>
+				<p style="margin-top:25px; direction:rtl; text-align:right;">مع أطيب التحيات،<br><strong>فريق الدعم - النوران</strong></p>
 
 				<hr style="margin-top:30px; border:none; border-top:1px solid #eee;">
-				<p style="font-size:12px; color:#888; text-align:center;">هذه رسالة آلية - يرجى عدم الرد عليها مباشرة.</p>
+				<p style="font-size:12px; color:#888; text-align:center; direction:rtl;">هذه رسالة آلية - يرجى عدم الرد عليها مباشرة.</p>
 			</div>
 			</body>
 			</html>
@@ -810,6 +816,7 @@ const requestRequiredDocuments = async (req, res) => {
 			await mailSender.send_mail(
 				clientEmail,
 				`مستندات مطلوبة - شحنة ${shipment.acid}`,
+				`يرجى تقديم المستندات المطلوبة للشحنة رقم ${shipment.acid}`,
 				htmlContent
 			);
 		}
