@@ -61,3 +61,29 @@ export const isValidEgyptianNationalId = (nationalId) => {
 
     return { isValid: true, error: null };
 };
+
+/**
+ * Validates a passport number.
+ * Most passports are 6-9 alphanumeric characters.
+ * 
+ * @param {string} passportNumber - The passport number to validate.
+ * @returns {Object} - { isValid: boolean, error: string|null }
+ */
+export const isValidPassportNumber = (passportNumber) => {
+    if (!passportNumber) return { isValid: false, error: "رقم الباسبور مطلوب" };
+
+    // Remove spaces
+    const cleanPassport = passportNumber.replace(/\s/g, "");
+
+    // Check length (typically 6-9 characters)
+    if (cleanPassport.length < 6 || cleanPassport.length > 9) {
+        return { isValid: false, error: "يجب أن يتكون رقم الباسبور من 6 إلى 9 أحرف" };
+    }
+
+    // Must contain only alphanumeric characters
+    if (!/^[A-Z0-9]{6,9}$/i.test(cleanPassport)) {
+        return { isValid: false, error: "يجب أن يحتوي رقم الباسبور على أحرف وأرقام فقط" };
+    }
+
+    return { isValid: true, error: null };
+};

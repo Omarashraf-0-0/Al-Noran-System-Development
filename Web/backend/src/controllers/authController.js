@@ -111,6 +111,28 @@ const signup = asyncHandler(async (req, res) => {
 		);
 	}
 
+	// Validate personal account requirements based on nationality
+	if (type === "client" && clientDetails?.clientType === "personal") {
+		const nationality = clientDetails.nationality;
+		
+		if (!nationality) {
+			res.status(400);
+			throw new Error("الجنسية مطلوبة للحسابات الشخصية");
+		}
+
+		if (nationality === "egyptian") {
+			if (!clientDetails.ssn || clientDetails.ssn.trim() === "" || clientDetails.ssn.length !== 14) {
+				res.status(400);
+				throw new Error("الرقم القومي مطلوب للحسابات الشخصية");
+			}
+		} else if (nationality === "nonEgyptian") {
+			if (!clientDetails.passportNumber || clientDetails.passportNumber.trim() === "") {
+				res.status(400);
+				throw new Error("رقم الباسبور مطلوب");
+			}
+		}
+	}
+
 	const userData = {
 		fullname,
 		username,
@@ -135,14 +157,18 @@ const signup = asyncHandler(async (req, res) => {
 		if (clientDetails) {
 			userData.clientDetails = {
 				clientType: clientDetails.clientType || null,
+				nationality: clientDetails.nationality || "",
 				ssn: clientDetails.ssn || "",
+				passportNumber: clientDetails.passportNumber || "",
 			};
 		}
 		// Otherwise use flat format (backward compatibility)
 		else if (clientType) {
 			userData.clientDetails = {
 				clientType,
+				nationality: "",
 				ssn: ssn || "",
+				passportNumber: "",
 			};
 		}
 	}

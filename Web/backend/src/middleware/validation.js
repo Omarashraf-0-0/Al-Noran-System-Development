@@ -15,15 +15,31 @@ const signupValidationRules = [
       // Get clientType from either nested or flat format
       const actualClientType = clientDetails?.clientType || clientType;
       const actualSSN = clientDetails?.ssn || ssn;
+      const actualNationality = clientDetails?.nationality || '';
+      const actualPassportNumber = clientDetails?.passportNumber || '';
 
       if (!actualClientType || !['commercial', 'factory', 'personal'].includes(actualClientType)) {
         throw new Error('نوع الحساب غير صحيح. يجب أن يكون تجاري أو مصنع أو شخصي');
       }
-      if (actualClientType === 'personal' && (!actualSSN || actualSSN.trim() === '')) {
-        throw new Error('الرقم القومي مطلوب للحسابات الشخصية');
-      }
-      if (actualClientType === 'personal' && actualSSN && actualSSN.length !== 14) {
-        throw new Error('الرقم القومي يجب أن يكون 14 رقم');
+      
+      // For personal accounts, validate based on nationality
+      if (actualClientType === 'personal') {
+        if (!actualNationality) {
+          throw new Error('الجنسية مطلوبة للحسابات الشخصية');
+        }
+        
+        if (actualNationality === 'egyptian') {
+          if (!actualSSN || actualSSN.trim() === '') {
+            throw new Error('الرقم القومي مطلوب للحسابات الشخصية');
+          }
+          if (actualSSN.length !== 14) {
+            throw new Error('الرقم القومي يجب أن يكون 14 رقم');
+          }
+        } else if (actualNationality === 'nonEgyptian') {
+          if (!actualPassportNumber || actualPassportNumber.trim() === '') {
+            throw new Error('رقم الباسبور مطلوب');
+          }
+        }
       }
     }
 

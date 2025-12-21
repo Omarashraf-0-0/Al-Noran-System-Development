@@ -81,7 +81,16 @@ const UserSchema = new mongoose.Schema(
 				enum: ["commercial", "factory", "personal", null],
 				default: null,
 			},
+			nationality: {
+				type: String,
+				enum: ["egyptian", "nonEgyptian", ""],
+				default: "",
+			},
 			ssn: {
+				type: String,
+				default: "",
+			},
+			passportNumber: {
 				type: String,
 				default: "",
 			},
