@@ -107,26 +107,6 @@ const NotificationBell = ({ isDarkMode }) => {
 		}
 	}, [apiUrl, token, saveToCache]);
 
-	// Fetch unread count only
-	const fetchUnreadCount = useCallback(async () => {
-		try {
-			const response = await axios.get(
-				`${apiUrl}/api/notifications/unread-count`,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				}
-			);
-
-			if (response.data.success) {
-				setUnreadCount(response.data.count || 0);
-			}
-		} catch (error) {
-			console.error("Error fetching unread count:", error);
-		}
-	}, [apiUrl, token]);
-
 	useEffect(() => {
 		if (!token || !user._id) return;
 
@@ -144,21 +124,19 @@ const NotificationBell = ({ isDarkMode }) => {
 		socketRef.current = socket;
 
 		// Authenticate user with socket
+		const userRole = user.role || 'customer';
 		socket.on('connect', () => {
 			console.log('Socket connected for notifications');
-			socket.emit('identify', { odI: user._id, userType: user.role || 'customer' });
+			socket.emit('identify', { odI: user._id, userType: userRole });
 		});
 
 		// Listen for new notifications
 		socket.on('new_notification', (data) => {
 			console.log('New notification received:', data);
 			
-			// Add notification to the list
+			// Add notification to the list and update count
 			setNotifications(prev => {
 				const updated = [data.notification, ...prev];
-				// Update cache with new notification
-				const newCount = data.notification.read ? unreadCount : unreadCount + 1;
-				saveToCache(updated, newCount);
 				return updated;
 			});
 			
@@ -188,6 +166,7 @@ const NotificationBell = ({ isDarkMode }) => {
 				socketRef.current.disconnect();
 			}
 		};
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [token, user._id, apiUrl, fetchNotifications]);
 
 	// Handle notification click - delete notification and navigate to notification page

@@ -3,11 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Stepper from "../components/Stepper";
 import FileRow from "../components/FileRow";
-import UploadModal from "../components/UploadModal";
 import Footer from "../components/Footer";
 import NotificationBell from "../components/NotificationBell";
 import supportAgent from "../assets/images/support_agent.png";
-import documentText from "../assets/images/document-text.png";
 import mainIllustration from "../assets/images/Untitled design (7) 1.png";
 import contractIcon from "../assets/images/contract.png";
 import Datafield from "../components/DataField";
@@ -43,7 +41,6 @@ const ShipmentStatus = () => {
 	const { shipmentId } = useParams();
 	const navigate = useNavigate();
 
-	const [isUploadModalOpen, setUploadModalOpen] = useState(false);
 	const [shipment, setShipment] = useState(null);
 	const [fileItems, setFileItems] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -677,19 +674,6 @@ const ShipmentStatus = () => {
 
 							{/*  Action buttons */}
 							<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-12">
-								{/* Upload documents button */}
-								<button
-									onClick={() => setUploadModalOpen(true)}
-									className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-red-900 text-white font-bold rounded-lg shadow-md hover:bg-red-800 transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700"
-								>
-									<img
-										src={documentText}
-										alt="Upload Document"
-										className="w-6 h-6"
-									/>
-									<span>رفع مستندات أخرى</span>
-								</button>
-
 								{/* Contact Your Agent Button */}
 								{shipment?.employee_id && (
 									<button
@@ -715,49 +699,6 @@ const ShipmentStatus = () => {
 					) : null}
 				</div>
 			</main>
-
-			{/* Upload Modal (opens when upload button is clicked) */}
-			<UploadModal
-				isOpen={isUploadModalOpen}
-				onClose={() => setUploadModalOpen(false)}
-				shipmentId={shipment?._id}
-				onUploadSuccess={async () => {
-					// Refresh files list after successful upload
-					try {
-						const filesResponse = await axios.get(
-							`${
-								import.meta.env.VITE_API_URL
-							}/api/uploads?category=shipment&relatedId=${shipment._id}`,
-							{
-								headers: {
-									Authorization: `Bearer ${token}`,
-								},
-							}
-						);
-
-						const uploads =
-							filesResponse.data?.uploads || filesResponse.data || [];
-						const shipmentFiles = uploads.map((file) => ({
-							name: file.filename || file.originalname || "ملف",
-							date: new Date(
-								file.uploadedAt || file.createdAt
-							).toLocaleDateString("ar-EG", {
-								day: "numeric",
-								month: "long",
-								year: "numeric",
-							}),
-							url: file.presignedUrl || file.url,
-							id: file._id,
-							documentType: file.documentType,
-							description: file.description,
-						}));
-
-						setFileItems(shipmentFiles);
-					} catch (error) {
-						console.error("Error refreshing files:", error);
-					}
-				}}
-			/>
 
 			{/* Required Documents Upload Modal */}
 			{showRequiredDocsModal && (
