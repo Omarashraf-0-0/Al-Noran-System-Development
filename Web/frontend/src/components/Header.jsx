@@ -9,7 +9,7 @@ import NotificationBell from "./NotificationBell";
 import { useTheme } from "../context/ThemeContext";
 
 const Header = () => {
-	const { isDarkMode } = useTheme();
+	const { isDarkMode, toggleTheme } = useTheme();
 	const [user, setUser] = useState(null);
 	const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -300,6 +300,14 @@ const Header = () => {
 														</Link>
 													)}
 												
+												<button
+													onClick={toggleTheme}
+													className={`w-full text-right flex items-center gap-3 px-5 py-3 text-sm ${theme.dropdownText} ${theme.dropdownHover} transition-colors`}
+												>
+													<span className="text-xl">{isDarkMode ? "☀️" : "🌙"}</span>
+													{isDarkMode ? "الوضع النهاري" : "الوضع الليلي"}
+												</button>
+
 												<div className={`h-px ${theme.divider} my-1 mx-4`}></div>
 												
 												<button

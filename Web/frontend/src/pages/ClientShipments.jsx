@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import WelcomeBanner from "./WelcomeBanner";
-import quickReorderIcon from "../assets/images/quick_reorder.png";
-import filterListIcon from "../assets/images/filter_list.png";
-import filterAltIcon from "../assets/images/filter_alt.png";
-import searchIcon from "../assets/images/Search.svg";
+import { Search, Filter, SortAsc, ChevronLeft, ChevronRight, FileText, AlertCircle } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { useTheme } from "../context/ThemeContext";
+import ShipmentCard from "../components/ShipmentCard";
 
 export default function ShipmentsList() {
+	const { isDarkMode } = useTheme();
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [isSortOpen, setIsSortOpen] = useState(false);
@@ -18,12 +18,16 @@ export default function ShipmentsList() {
 	const [error, setError] = useState(null);
 	const [selectedStatus, setSelectedStatus] = useState("الكل");
 	const [sortOption, setSortOption] = useState("newest");
+	
+	// Pagination State
+	const [currentPage, setCurrentPage] = useState(1);
+	const itemsPerPage = 9;
 
 	const user = JSON.parse(localStorage.getItem("user"));
 	const userID = user?.id || user?._id;
 	const token = localStorage.getItem("token");
 
-	// Available shipment statuses (matching Stepper component)
+	// Available shipment statuses
 	const shipmentStatuses = [
 		{ value: "الكل", label: "الكل" },
 		{ value: "في انتظار الشحن", label: "في انتظار الشحن" },
@@ -53,21 +57,18 @@ export default function ShipmentsList() {
 				const response = await axios.get(
 					`${import.meta.env.VITE_API_URL}/api/shipments/user/${userID}`,
 					{
-						headers: {
-							Authorization: `Bearer ${token}`,
-						},
+						headers: { Authorization: `Bearer ${token}` },
 					}
 				);
-
-				console.log("Fetched shipments:", response.data);
 
 				const formattedShipments = (response.data || []).map((shipment) => ({
 					id: shipment._id,
 					clientName: shipment.importerName || "غير محدد",
-					shipmentNo: shipment.number46 || shipment.shipmentNumber || "N/A",
+					shipmentNo: shipment.number46 || shipment.shipmentCode || shipment.acid || "N/A",
 					status: shipment.status || "pending",
 					acid: shipment.acid,
-					createdAt: shipment.createdAt, // Keep raw date for sorting
+					createdAt: shipment.createdAt,
+					portName: shipment.port_name || "غير محدد",
 					date: new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
 						day: "numeric",
 						month: "long",
@@ -76,16 +77,8 @@ export default function ShipmentsList() {
 				}));
 
 				setShipments(formattedShipments);
-
-				if (formattedShipments.length === 0) {
-					toast("لا توجد شحنات");
-				}
-			} catch (error) {
 				console.error("Error fetching shipments:", error);
-				const errorMessage =
-					error.response?.data?.message ||
-					error.message ||
-					"Failed to fetch shipments";
+				const errorMessage = error.response?.data?.message || "Failed to fetch shipments";
 				setError(errorMessage);
 				toast.error(errorMessage);
 			} finally {
@@ -96,25 +89,13 @@ export default function ShipmentsList() {
 		fetchShipments();
 	}, [userID, token]);
 
-	const toggleFilter = () => {
-		setIsFilterOpen(!isFilterOpen);
-		setIsSortOpen(false);
-	};
-	const toggleSort = () => {
-		setIsSortOpen(!isSortOpen);
-		setIsFilterOpen(false);
-	};
+	const toggleFilter = () => { setIsFilterOpen(!isFilterOpen); setIsSortOpen(false); };
+	const toggleSort = () => { setIsSortOpen(!isSortOpen); setIsFilterOpen(false); };
+	const handleFilterApply = () => setIsFilterOpen(false);
+	const handleSortApply = () => setIsSortOpen(false);
 
-	const handleFilterApply = () => {
-		setIsFilterOpen(false);
-	};
-
-	const handleSortApply = () => {
-		setIsSortOpen(false);
-	};
-
-	// Get display label for status (Arabic)
-	const getStatusLabel = (status) => {
+	// Normalize status for comparison
+	const normalizeStatus = (status) => {
 		const statusMap = {
 			"Pending": "في انتظار الشحن",
 			"قيد الانتظار": "في انتظار الشحن",
@@ -136,188 +117,156 @@ export default function ShipmentsList() {
 		return statusMap[status] || status;
 	};
 
-	// Normalize status for comparison (all Arabic)
-	const normalizeStatus = (status) => {
-		const statusNormalization = {
-			"Pending": "في انتظار الشحن",
-			"قيد الانتظار": "في انتظار الشحن",
-			"في انتظار الشحن": "في انتظار الشحن",
-			"In Transit": "في الطريق",
-			"في الطريق": "في الطريق",
-			"Arrived": "تم وصول البضاعة",
-			"تم وصول البضاعة": "تم وصول البضاعة",
-			"في انتظار وصول الإذن": "في انتظار وصول الإذن",
-			"تم وصول الإذن": "تم وصول الإذن",
-			"Customs Clearance": "التخليص الجمركي",
-			"التخليص الجمركي": "التخليص الجمركي",
-			"جارى ادراج الشحنة واستكمال الاجراءات": "جارى ادراج الشحنة واستكمال الاجراءات",
-			"جاري الكشف والتثمين": "جاري الكشف والتثمين",
-			"Completed": "مكتملة",
-			"مكتملة": "مكتملة",
-			"تمت بنجاح": "تمت بنجاح",
-		};
-		return statusNormalization[status] || status;
-	};
-
-	// Filter and sort shipments
+	// Filter and sort
 	let filteredShipments = shipments.filter((shipment) => {
-		// Filter by search term
-		const matchesSearch = shipment.shipmentNo
-			.toLowerCase()
-			.includes(searchTerm.toLowerCase());
-
-		// Filter by status - normalize both the filter and shipment status for comparison
-		const matchesStatus =
-			selectedStatus === "الكل" ||
-			normalizeStatus(shipment.status) === normalizeStatus(selectedStatus);
-
+		const matchesSearch = shipment.shipmentNo.toLowerCase().includes(searchTerm.toLowerCase());
+		const matchesStatus = selectedStatus === "الكل" || normalizeStatus(shipment.status) === selectedStatus;
 		return matchesSearch && matchesStatus;
 	});
 
-	// Sort shipments
 	filteredShipments = [...filteredShipments].sort((a, b) => {
 		switch (sortOption) {
-			case "newest":
-				return new Date(b.createdAt) - new Date(a.createdAt);
-			case "oldest":
-				return new Date(a.createdAt) - new Date(b.createdAt);
-			case "clientAZ":
-				return a.clientName.localeCompare(b.clientName, "ar");
-			case "clientZA":
-				return b.clientName.localeCompare(a.clientName, "ar");
-			default:
-				return 0;
+			case "newest": return new Date(b.createdAt) - new Date(a.createdAt);
+			case "oldest": return new Date(a.createdAt) - new Date(b.createdAt);
+			case "clientAZ": return a.clientName.localeCompare(b.clientName, "ar");
+			case "clientZA": return b.clientName.localeCompare(a.clientName, "ar");
+			default: return 0;
 		}
 	});
 
+	// Pagination Logic
+	const totalPages = Math.ceil(filteredShipments.length / itemsPerPage);
+	const indexOfLastItem = currentPage * itemsPerPage;
+	const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+	const currentItems = filteredShipments.slice(indexOfFirstItem, indexOfLastItem);
+
+	const paginate = (pageNumber) => setCurrentPage(pageNumber);
+	const nextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+	const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+
 	return (
-		<div className="flex flex-col min-h-screen bg-gray-50 font-sans relative">
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#0a0505]" : "bg-gray-50"}`}>
+			
+			{/* Animated Background */}
+			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+				{isDarkMode ? (
+					<>
+						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#690000]/10 rounded-full filter blur-[100px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#2b0000]/20 rounded-full filter blur-[120px] animate-float-slow"></div>
+					</>
+				) : (
+					<div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-red-50/50 to-transparent"></div>
+				)}
+			</div>
+
 			<Header />
-			<WelcomeBanner />
+			
+			<section className="flex-grow w-full pt-24 pb-12 px-4 md:px-8 relative z-10">
+				<div className="max-w-7xl mx-auto">
+					{/* Header Section */}
+					<div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-red-800"}`}>
+							<FileText className={isDarkMode ? "text-red-500" : "text-red-800"} size={32} />
+							شحناتي
+							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-red-100 text-red-800"}`}>
+								{filteredShipments.length} شحنة
+							</span>
+						</h1>
+					</div>
 
-			<section className="flex-grow w-full bg-white py-12 px-8 shadow-inner relative">
-				<div className="max-w-6xl mx-auto">
-					<h1 className="text-3xl font-bold text-right text-red-800 mb-8">
-						شحناتي
-					</h1>
-
-					{/* 🔍 Search + Filter + Sort */}
-					<div className="flex items-center justify-center mb-8 gap-4 relative">
-						{/* Left side — Filter + Sort */}
-						<div className="flex items-center gap-3">
-							{/* Filter Button */}
-							<button
-								onClick={toggleFilter}
-								className={`flex items-center gap-2 font-medium transition-colors ${
-									isFilterOpen
-										? "bg-red-800 text-white px-3 py-1 rounded-md"
-										: "text-red-800"
-								}`}
-							>
-								<img
-									src={filterAltIcon}
-									alt="Filter"
-									className="w-5 h-5 object-contain"
-								/>
-								تصفية
-							</button>
-
-							{/* Sort Button */}
-							<button
-								onClick={toggleSort}
-								className={`flex items-center gap-2 font-medium transition-colors ${
-									isSortOpen
-										? "bg-red-800 text-white px-3 py-1 rounded-md"
-										: "text-red-800"
-								}`}
-							>
-								<img
-									src={filterListIcon}
-									alt="Sort"
-									className="w-5 h-5 object-contain"
-								/>
-								ترتيب
-							</button>
-						</div>
-
+					{/* 🔍 Search + Filter + Sort (Glassmorphism) */}
+					<div className={`mb-10 p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 shadow-lg border relative z-20 ${
+						isDarkMode ? "bg-[#1a1010]/80 backdrop-blur-xl border-white/10" : "bg-white/80 backdrop-blur-xl border-white/40"
+					}`}>
 						{/* Search Bar */}
-						<div className="relative w-1/2">
+						<div className="relative flex-1 w-full">
 							<input
 								type="text"
-								placeholder="ابحث برقم الشحنة"
+								placeholder="ابحث برقم الشحنة، ACID..."
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
-								className="w-full bg-white shadow-md rounded-full py-2 px-4 pr-10 text-right focus:outline-none focus:ring-2 focus:ring-red-500 placeholder-gray-400 text-black"
+								className={`w-full rounded-xl py-3 px-4 pr-12 focus:outline-none focus:ring-2 transition-all ${
+									isDarkMode 
+										? "bg-black/30 border-white/10 text-white placeholder-gray-500 focus:ring-red-500/50" 
+										: "bg-gray-100 border-transparent text-gray-900 placeholder-gray-400 focus:ring-red-500/30"
+								}`}
 							/>
-							<img
-								src={searchIcon}
-								alt="Search"
-								className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-							/>
+							<Search className={`absolute left-4 top-3.5 w-5 h-5 ${isDarkMode ? "text-gray-500" : "text-gray-400"}`} />
 						</div>
 
-						{/* 🧩 Filter Dropdown */}
+						{/* Buttons */}
+						<div className="flex items-center gap-3 w-full md:w-auto">
+							<button onClick={toggleFilter} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+								isFilterOpen || isDarkMode ? "bg-red-600 text-white hover:bg-red-700" : "bg-red-50 text-red-800 hover:bg-red-100"
+							}`}>
+								<Filter size={20} />
+								<span className="hidden sm:inline">تصفية</span>
+							</button>
+							<button onClick={toggleSort} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+								isSortOpen || isDarkMode ? "bg-[#2b1515] text-red-400 border border-red-900/30 hover:bg-[#3d1a1a]" : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+							}`}>
+								<SortAsc size={20} />
+								<span className="hidden sm:inline">ترتيب</span>
+							</button>
+						</div>
+
+						{/* Dropdowns logic remains handled by state but using simpler absolute positioning relative to this container */}
 						{isFilterOpen && (
-							<div className="absolute top-14 left-40 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">
-									تصفية حسب الحالة:
-								</h4>
-								<select
-									value={selectedStatus}
-									onChange={(e) => setSelectedStatus(e.target.value)}
-									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
-								>
+							<div className={`absolute top-full left-0 mt-2 w-64 p-4 rounded-xl shadow-2xl border z-30 ${isDarkMode ? "bg-[#1e1e1e] border-white/10 text-gray-200" : "bg-white border-gray-100 text-gray-700"}`} dir="rtl">
+								<h4 className="font-bold mb-3 text-sm opacity-70">تصفية حسب الحالة</h4>
+								<div className="max-h-60 overflow-y-auto space-y-1">
 									{shipmentStatuses.map((status) => (
-										<option key={status.value} value={status.value}>
+										<button
+											key={status.value}
+											onClick={() => { setSelectedStatus(status.value); setIsFilterOpen(false); }}
+											className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
+												selectedStatus === status.value 
+													? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-50 text-red-800")
+													: "hover:bg-gray-500/10"
+											}`}
+										>
 											{status.label}
-										</option>
+										</button>
 									))}
-								</select>
-								<button
-									onClick={handleFilterApply}
-									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
-								>
-									تطبيق
-								</button>
+								</div>
 							</div>
 						)}
 
-						{/* 🧩 Sort Dropdown */}
 						{isSortOpen && (
-							<div className="absolute top-14 left-20 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">ترتيب حسب:</h4>
-								<select
-									value={sortOption}
-									onChange={(e) => setSortOption(e.target.value)}
-									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
-								>
-									<option value="newest">الأحدث أولاً</option>
-									<option value="oldest">الأقدم أولاً</option>
-									<option value="clientAZ">العميل (أ-ي)</option>
-									<option value="clientZA">العميل (ي-أ)</option>
-								</select>
-								<button
-									onClick={handleSortApply}
-									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
-								>
-									تطبيق
-								</button>
+							<div className={`absolute top-full left-32 mt-2 w-56 p-4 rounded-xl shadow-2xl border z-30 ${isDarkMode ? "bg-[#1e1e1e] border-white/10 text-gray-200" : "bg-white border-gray-100 text-gray-700"}`} dir="rtl">
+								<h4 className="font-bold mb-3 text-sm opacity-70">ترتيب حسب</h4>
+								{[
+									{ v: "newest", l: "الأحدث أولاً" },
+									{ v: "oldest", l: "الأقدم أولاً" },
+									{ v: "clientAZ", l: "العميل (أ-ي)" },
+									{ v: "clientZA", l: "العميل (ي-أ)" }
+								].map((opt) => (
+									<button
+										key={opt.v}
+										onClick={() => { setSortOption(opt.v); setIsSortOpen(false); }}
+										className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
+											sortOption === opt.v
+												? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-50 text-red-800")
+												: "hover:bg-gray-500/10"
+										}`}
+									>
+										{opt.l}
+									</button>
+								))}
 							</div>
 						)}
 					</div>
 
-					{/* 📦 Shipments Table */}
+					{/* 📦 Shipments Grid */}
 					{loading ? (
-						<div className="flex justify-center items-center py-12 gap-4">
-							<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
-							<span className="text-gray-600 text-lg">
-								جاري تحميل الشحنات...
-							</span>
+						<div className="flex flex-col items-center justify-center py-20">
+							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4"></div>
+							<p className={isDarkMode ? "text-gray-400" : "text-gray-600"}>جاري تحميل الشحنات...</p>
 						</div>
 					) : error ? (
-						<div className="bg-red-50 border border-red-300 rounded-lg p-4 text-right">
-							<p className="text-red-800 font-medium mb-3">
-								❌ حدث خطأ: {error}
+						<div className={`bg-red-50 border border-red-300 rounded-lg p-4 text-right ${isDarkMode ? "bg-red-900/20 border-red-700" : ""}`}>
+							<p className={`font-medium mb-3 flex items-center gap-2 ${isDarkMode ? "text-red-400" : "text-red-800"}`}>
+								<AlertCircle size={20} /> حدث خطأ: {error}
 							</p>
 							<button
 								onClick={() => window.location.reload()}
@@ -327,85 +276,79 @@ export default function ShipmentsList() {
 							</button>
 						</div>
 					) : filteredShipments.length === 0 ? (
-						<div className="text-center py-12">
-							<p className="text-gray-500 text-lg">لا توجد شحنات</p>
+						<div className={`text-center py-20 rounded-3xl border border-dashed ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+							<div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${isDarkMode ? "bg-white/5" : "bg-gray-50"}`}>
+								<Inbox className={isDarkMode ? "text-gray-600" : "text-gray-300"} size={40} />
+							</div>
+							<h3 className={`text-xl font-bold mb-2 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>لا توجد شحنات</h3>
+							<p className="text-gray-500">لم يتم العثور على شحنات تطابق بحثك</p>
 						</div>
 					) : (
-						<div className="overflow-x-auto">
-							<table className="w-full text-right border-separate border-spacing-y-3">
-								<thead>
-									<tr className="bg-red-800 text-white">
-										<th className="py-3 px-4 text-right rounded-tr-lg">المستورد / التاريخ</th>
-										<th className="py-3 px-4 text-right">رقم الشحنة</th>
-										<th className="py-3 px-4 text-right">رقم ACID</th>
-										<th className="py-3 px-4 text-right">الحالة</th>
-										<th className="py-3 px-4 text-right rounded-tl-lg">الإجراءات</th>
-									</tr>
-								</thead>
-								<tbody>
-									{filteredShipments.map((shipment) => (
-										<tr
-											key={shipment.id}
-											className="bg-gray-100 hover:bg-gray-200 rounded-xl transition text-right"
-										>
-											<td className="py-3 px-4 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="text-gray-700 text-base font-semibold">
-														{shipment.clientName}
-													</span>
-													<span className="text-gray-500 text-xs">
-														{shipment.date}
-													</span>
-												</div>
-											</td>
+						<>
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+								{currentItems.map((shipment) => (
+									<ShipmentCard key={shipment.id} shipment={shipment} />
+								))}
+							</div>
 
-											<td className="py-3 px-4 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="font-semibold text-gray-800">
-														{shipment.shipmentNo}
-													</span>
-												</div>
-											</td>
+							{/* Pagination Controls */}
+							{totalPages > 1 && (
+								<div className="flex justify-center items-center gap-4 mt-8" dir="ltr">
+									<button
+										onClick={prevPage}
+										disabled={currentPage === 1}
+										className={`p-2 rounded-full transition-colors ${
+											currentPage === 1 
+												? (isDarkMode ? "text-gray-600 cursor-not-allowed" : "text-gray-300 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-700")
+										}`}
+									>
+										<ChevronLeft size={24} />
+									</button>
+									
+									<div className={`px-4 py-2 rounded-lg font-medium ${isDarkMode ? "bg-white/5 text-gray-300" : "bg-gray-100 text-gray-700"}`}>
+										Page {currentPage} of {totalPages}
+									</div>
 
-											<td className="py-3 px-4 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="text-gray-700 text-base">
-														{shipment.acid || "—"}
-													</span>
-												</div>
-											</td>
-
-											<td className="py-3 px-4 align-top">
-												<span
-													className="bg-blue-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit"
-													style={{ color: "#690000" }}
-												>
-													<img
-														src={quickReorderIcon}
-														alt="status icon"
-														className="w-4 h-4"
-													/>
-													{getStatusLabel(shipment.status)}
-												</span>
-											</td>
-
-											<td className="py-3 px-4 align-top">
-												<a href={`/shipmentstatus/${shipment.acid}`}>
-													<button className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition text-sm font-medium">
-														عرض التفاصيل
-													</button>
-												</a>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
+									<button
+										onClick={nextPage}
+										disabled={currentPage === totalPages}
+										className={`p-2 rounded-full transition-colors ${
+											currentPage === totalPages 
+												? (isDarkMode ? "text-gray-600 cursor-not-allowed" : "text-gray-300 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-700")
+										}`}
+									>
+										<ChevronRight size={24} />
+									</button>
+								</div>
+							)}
+						</>
 					)}
 				</div>
 			</section>
 
 			<Footer />
 		</div>
+	);
+}
+
+function Inbox({ className, size }) {
+	return (
+		<svg 
+			xmlns="http://www.w3.org/2000/svg" 
+			width={size} 
+			height={size} 
+			viewBox="0 0 24 24" 
+			fill="none" 
+			stroke="currentColor" 
+			strokeWidth="2" 
+			strokeLinecap="round" 
+			strokeLinejoin="round" 
+			className={className}
+		>
+			<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline>
+			<path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+		</svg>
 	);
 }

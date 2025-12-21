@@ -1,32 +1,49 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { toast } from "react-hot-toast";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import WelcomeBanner from "./WelcomeBanner";
-import LoadingSpinner from "../components/LoadingSpinner";
-import ErrorMessage from "../components/ErrorMessage";
-import SearchAndFilters from "../components/SearchAndFilters";
-import RequestsTable from "../components/RequestsTable";
-import RequestsEmptyState from "../components/RequestsEmptyState";
-import { Clock, CheckCircle, XCircle } from "lucide-react";
+import { Search, Filter, SortAsc, ChevronLeft, ChevronRight, FileCode, AlertCircle, Package } from "lucide-react";
+import axios from "axios";
+import { toast } from "react-hot-toast";
+import { useTheme } from "../context/ThemeContext";
+import ShipmentCard from "../components/ShipmentCard";
 
-const AcidRequestsPage = () => {
+export default function AcidRequestsPage() {
+	const navigate = useNavigate();
+	const { isDarkMode } = useTheme();
 	const [searchTerm, setSearchTerm] = useState("");
-	const [statusFilter, setStatusFilter] = useState("all");
-	const [sortBy, setSortBy] = useState("newest");
-	const [acidRequests, setAcidRequests] = useState([]);
+	const [isFilterOpen, setIsFilterOpen] = useState(false);
+	const [isSortOpen, setIsSortOpen] = useState(false);
+	const [requests, setRequests] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
-	const navigate = useNavigate();
+	const [statusFilter, setStatusFilter] = useState("all");
+	const [sortOption, setSortOption] = useState("newest");
+	
+	// Pagination State
+	const [currentPage, setCurrentPage] = useState(1);
+	const itemsPerPage = 9;
 
-	// TODO: RBAC - Get user role and permissions from context/store
-	// Example: const { user, hasPermission } = useAuth();
-	// const canCreateRequest = hasPermission('acid:create');
-	// const canViewAllRequests = hasPermission('acid:viewAll');
-	const user = JSON.parse(localStorage.getItem("user"));
 	const token = localStorage.getItem("token");
+
+	// Status Helpers
+	const getStatusText = (status) => {
+		switch (status) {
+			case "ACID Issued": return "تم إصدار ACID";
+			case "Under Review": return "قيد المراجعة";
+			case "Rejected": return "مرفوض";
+			case "Pending": return "قيد الانتظار";
+			default: return status || "غير محدد";
+		}
+	};
+	
+	const statusOptions = [
+		{ value: "all", label: "الكل" },
+		{ value: "ACID Issued", label: "تم إصدار ACID" },
+		{ value: "Under Review", label: "قيد المراجعة" },
+		{ value: "Rejected", label: "مرفوض" },
+		{ value: "Pending", label: "قيد الانتظار" },
+	];
 
 	useEffect(() => {
 		const fetchAcidRequests = async () => {
@@ -35,7 +52,6 @@ const AcidRequestsPage = () => {
 				setError(null);
 
 				if (!token) {
-					setError("الرجاء تسجيل الدخول");
 					toast.error("الرجاء تسجيل الدخول");
 					navigate("/login");
 					return;
@@ -44,51 +60,38 @@ const AcidRequestsPage = () => {
 				const response = await axios.get(
 					`${import.meta.env.VITE_API_URL}/api/acid`,
 					{
-						headers: {
-							Authorization: `Bearer ${token}`,
-						},
+						headers: { Authorization: `Bearer ${token}` },
 					}
 				);
 
-				console.log("Fetched ACID requests:", response.data);
-
-				// Handle both response formats: { requests: [...] } or direct array
 				const requestsArray = response.data?.requests || response.data || [];
 				const formattedRequests = requestsArray.map((request) => ({
 					id: request._id,
-					acidCode: request.acidCode || "قيد المعالجة",
-					supplierName: request.supplier?.name || "غير محدد",
-					customsItem: request.goods?.customsItem || "غير محدد",
-					weight: request.goods?.weight || 0,
-					status: request.status || "Pending",
-					// Keep raw date for sorting
-					rawDate: request.requestDate || request.createdAt,
-					requestDate: new Date(
-						request.requestDate || request.createdAt
-					).toLocaleDateString("ar-EG", {
+					type: "acid_request",
+					shipmentNo: request.acidCode || `طلب #${request._id.slice(-6)}`,
+					clientName: request.supplierName || request.supplier?.name || "غير محدد",
+					portName: request.goods?.customsItem || "غير محدد", // Using secondary info as 'Item'
+					secondaryIcon: Package,
+					status: getStatusText(request.status),
+					acid: request.acidCode,
+					link: `/acidrequest/${request._id}`,
+					createdAt: request.createdAt,
+					date: new Date(request.requestDate || request.createdAt).toLocaleDateString("ar-EG", {
 						day: "numeric",
 						month: "long",
 						year: "numeric",
 					}),
-					createdAt: request.createdAt,
-					hasShipment: request.hasShipment || false,
-					shipmentId: request.shipmentId?._id || request.shipmentId,
-					shipmentCreatedAt: request.shipmentCreatedAt,
+					// Helpers for filtering
+					rawStatus: request.status,
+					rawCode: request.acidCode || "",
+					rawSupplier: request.supplierName || ""
 				}));
 
-				setAcidRequests(formattedRequests);
-
-				if (formattedRequests.length === 0) {
-					toast("لا توجد طلبات ACID");
-				}
+				setRequests(formattedRequests);
 			} catch (error) {
 				console.error("Error fetching ACID requests:", error);
-				const errorMessage =
-					error.response?.data?.message ||
-					error.message ||
-					"فشل في تحميل طلبات ACID";
-				setError(errorMessage);
-				toast.error(errorMessage);
+				setError("فشل في تحميل طلبات ACID");
+				toast.error("فشل في تحميل طلبات ACID");
 			} finally {
 				setLoading(false);
 			}
@@ -97,157 +100,209 @@ const AcidRequestsPage = () => {
 		fetchAcidRequests();
 	}, [token, navigate]);
 
-	const getStatusIcon = (status) => {
-		switch (status) {
-			case "approved":
-			case "completed":
-				return <CheckCircle className="w-4 h-4 text-green-600" />;
-			case "rejected":
-				return <XCircle className="w-4 h-4 text-red-600" />;
-			case "pending":
-				return <Clock className="w-4 h-4 text-yellow-600" />;
-			default:
-				return <Clock className="w-4 h-4 text-gray-600" />;
+	const toggleFilter = () => { setIsFilterOpen(!isFilterOpen); setIsSortOpen(false); };
+	const toggleSort = () => { setIsSortOpen(!isSortOpen); setIsFilterOpen(false); };
+
+	// Filter & Sort
+	let filteredRequests = requests.filter((req) => {
+		const matchesSearch = 
+			req.shipmentNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			req.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+		const matchesStatus = statusFilter === "all" || req.rawStatus === statusFilter;
+		return matchesSearch && matchesStatus;
+	});
+
+	filteredRequests = [...filteredRequests].sort((a, b) => {
+		switch (sortOption) {
+			case "newest": return new Date(b.createdAt) - new Date(a.createdAt);
+			case "oldest": return new Date(a.createdAt) - new Date(b.createdAt);
+			case "supplierAZ": return a.clientName.localeCompare(b.clientName, "ar");
+			default: return 0;
 		}
-	};
-	const getStatusText = (status) => {
-		switch (status) {
-			case "ACID Issued":
-				return "تم إصدار ACID";
-			case "Under Review":
-				return "قيد المراجعة";
-			case "Rejected":
-				return "مرفوض";
-			case "Pending":
-				return "قيد الانتظار";
-			default:
-				return status || "غير محدد";
-		}
-	};
+	});
 
-	const getStatusColor = (status) => {
-		switch (status) {
-			case "ACID Issued":
-				return "bg-green-100";
-			case "Rejected":
-				return "bg-red-100";
-			case "Under Review":
-				return "bg-blue-100";
-			case "Pending":
-				return "bg-yellow-100";
-			default:
-				return "bg-gray-100";
-		}
-	};
-
-	// Filter options for status dropdown
-	const filterOptions = [
-		{ value: "all", label: "الكل" },
-		{ value: "ACID Issued", label: "تم إصدار ACID" },
-		{ value: "Under Review", label: "قيد المراجعة" },
-		{ value: "Rejected", label: "مرفوض" },
-		{ value: "Pending", label: "قيد الانتظار" },
-	];
-
-	// Sort options
-	const sortOptions = [
-		{ value: "newest", label: "الأحدث أولاً" },
-		{ value: "oldest", label: "الأقدم أولاً" },
-		{ value: "supplierAZ", label: "المورد (أ-ي)" },
-		{ value: "supplierZA", label: "المورد (ي-أ)" },
-		{ value: "acidCode", label: "رقم ACID" },
-	];
-
-	// Filter by search term and status
-	const filteredRequests = acidRequests
-		.filter((request) => {
-			// Search filter
-			const matchesSearch =
-				request.acidCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				request.supplierName.toLowerCase().includes(searchTerm.toLowerCase());
-			
-			// Status filter
-			const matchesStatus = statusFilter === "all" || request.status === statusFilter;
-			
-			return matchesSearch && matchesStatus;
-		})
-		.sort((a, b) => {
-			switch (sortBy) {
-				case "newest":
-					return new Date(b.rawDate) - new Date(a.rawDate);
-				case "oldest":
-					return new Date(a.rawDate) - new Date(b.rawDate);
-				case "supplierAZ":
-					return a.supplierName.localeCompare(b.supplierName, "ar");
-				case "supplierZA":
-					return b.supplierName.localeCompare(a.supplierName, "ar");
-				case "acidCode":
-					return a.acidCode.localeCompare(b.acidCode);
-				default:
-					return 0;
-			}
-		});
+	// Pagination
+	const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+	const currentItems = filteredRequests.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
 	return (
-		<div className="flex flex-col min-h-screen bg-gray-50 font-sans relative">
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#0a0505]" : "bg-gray-50"}`}>
+			
+			{/* Background */}
+			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+				{isDarkMode ? (
+					<>
+						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#690000]/10 rounded-full filter blur-[100px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#2b0000]/20 rounded-full filter blur-[120px] animate-float-slow"></div>
+					</>
+				) : (
+					<div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-red-50/50 to-transparent"></div>
+				)}
+			</div>
+
 			<Header />
-			<WelcomeBanner />
+			
+			<section className="flex-grow w-full pt-24 pb-12 px-4 md:px-8 relative z-10">
+				<div className="max-w-7xl mx-auto">
+					<div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-red-800"}`}>
+							<FileCode className={isDarkMode ? "text-red-500" : "text-red-800"} size={32} />
+							طلبات ACID
+							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-red-100 text-red-800"}`}>
+								{filteredRequests.length} طلب
+							</span>
+						</h1>
+						
+						<button
+							onClick={() => navigate("/acidrequest")}
+							className="bg-red-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition shadow-lg hover:shadow-red-900/20 flex items-center gap-2"
+						>
+							<span className="text-xl">+</span>
+							طلب جديد
+						</button>
+					</div>
 
-			<section className="flex-grow w-full bg-white py-12 px-8 shadow-inner relative">
-				<div className="max-w-6xl mx-auto">
-					<h1 className="text-3xl font-bold text-right text-red-800 mb-8">
-						طلبات ACID
-					</h1>
+					{/* Operations Bar */}
+					<div className={`mb-10 p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 shadow-lg border relative z-20 ${
+						isDarkMode ? "bg-[#1a1010]/80 backdrop-blur-xl border-white/10" : "bg-white/80 backdrop-blur-xl border-white/40"
+					}`}>
+						<div className="relative flex-1 w-full">
+							<input
+								type="text"
+								placeholder="ابحث برقم ACID أو المورد..."
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								className={`w-full rounded-xl py-3 px-4 pr-12 focus:outline-none focus:ring-2 transition-all ${
+									isDarkMode 
+										? "bg-black/30 border-white/10 text-white placeholder-gray-500 focus:ring-red-500/50" 
+										: "bg-gray-100 border-transparent text-gray-900 placeholder-gray-400 focus:ring-red-500/30"
+								}`}
+							/>
+							<Search className={`absolute left-4 top-3.5 w-5 h-5 ${isDarkMode ? "text-gray-500" : "text-gray-400"}`} />
+						</div>
 
-					{/* Search + Filter + Sort */}
-					<SearchAndFilters
-						searchTerm={searchTerm}
-						onSearchChange={(e) => setSearchTerm(e.target.value)}
-						placeholder="ابحث برقم ACID أو اسم المورد"
-						statusOptions={filterOptions}
-						statusFilter={statusFilter}
-						onStatusFilterChange={setStatusFilter}
-						sortOptions={sortOptions}
-						sortBy={sortBy}
-						onSortChange={setSortBy}
-					/>
-
-					{/* ACID Requests Table - TODO: RBAC filter based on user permissions */}
-					{loading ? (
-						<LoadingSpinner message="جاري تحميل الطلبات..." />
-					) : error ? (
-						<ErrorMessage
-							error={error}
-							onRetry={() => window.location.reload()}
-							retryButtonText="إعادة محاولة"
-						/>
-					) : filteredRequests.length === 0 ? (
-						<RequestsEmptyState
-							onAddNew={() => navigate("/acidrequest")}
-							message="لا توجد طلبات ACID"
-							buttonText="إضافة طلب جديد"
-						/>
-					) : (
-						<RequestsTable
-							requests={filteredRequests}
-							getStatusIcon={getStatusIcon}
-							getStatusText={getStatusText}
-							getStatusColor={getStatusColor}
-						/>
-					)}
-
-					{/* Add New Request Button */}
-					{/* TODO: RBAC - Only show if user has permission to create ACID requests */}
-					{/* Example: {canCreateRequest && !loading && !error && filteredRequests.length > 0 && ( */}
-					{!loading && !error && filteredRequests.length > 0 && (
-						<div className="flex justify-center mt-8">
-							<button
-								onClick={() => navigate("/acidrequest")}
-								className="bg-red-800 text-white px-8 py-3 rounded-lg font-semibold hover:bg-red-700 transition-all transform hover:scale-105 shadow-lg"
-							>
-								إضافة طلب ACID جديد
+						<div className="flex items-center gap-3 w-full md:w-auto">
+							<button onClick={toggleFilter} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+								isFilterOpen || isDarkMode ? "bg-red-600 text-white hover:bg-red-700" : "bg-red-50 text-red-800 hover:bg-red-100"
+							}`}>
+								<Filter size={20} />
+								<span className="hidden sm:inline">تصفية</span>
+							</button>
+							<button onClick={toggleSort} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+								isSortOpen || isDarkMode ? "bg-[#2b1515] text-red-400 border border-red-900/30 hover:bg-[#3d1a1a]" : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+							}`}>
+								<SortAsc size={20} />
+								<span className="hidden sm:inline">ترتيب</span>
 							</button>
 						</div>
+
+						{isFilterOpen && (
+							<div className={`absolute top-full left-0 mt-2 w-64 p-4 rounded-xl shadow-2xl border z-30 ${isDarkMode ? "bg-[#1e1e1e] border-white/10 text-gray-200" : "bg-white border-gray-100 text-gray-700"}`} dir="rtl">
+								<h4 className="font-bold mb-3 text-sm opacity-70">تصفية حسب الحالة</h4>
+								<div className="space-y-1">
+									{statusOptions.map((status) => (
+										<button
+											key={status.value}
+											onClick={() => { setStatusFilter(status.value); setIsFilterOpen(false); }}
+											className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
+												statusFilter === status.value 
+													? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-50 text-red-800")
+													: "hover:bg-gray-500/10"
+											}`}
+										>
+											{status.label}
+										</button>
+									))}
+								</div>
+							</div>
+						)}
+
+						{isSortOpen && (
+							<div className={`absolute top-full left-32 mt-2 w-56 p-4 rounded-xl shadow-2xl border z-30 ${isDarkMode ? "bg-[#1e1e1e] border-white/10 text-gray-200" : "bg-white border-gray-100 text-gray-700"}`} dir="rtl">
+								<h4 className="font-bold mb-3 text-sm opacity-70">ترتيب حسب</h4>
+								{[
+									{ v: "newest", l: "الأحدث أولاً" },
+									{ v: "oldest", l: "الأقدم أولاً" },
+									{ v: "supplierAZ", l: "المورد (أ-ي)" }
+								].map((opt) => (
+									<button
+										key={opt.v}
+										onClick={() => { setSortOption(opt.v); setIsSortOpen(false); }}
+										className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
+											sortOption === opt.v
+												? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-50 text-red-800")
+												: "hover:bg-gray-500/10"
+										}`}
+									>
+										{opt.l}
+									</button>
+								))}
+							</div>
+						)}
+					</div>
+
+					{loading ? (
+						<div className="flex flex-col items-center justify-center py-20">
+							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4"></div>
+							<p className={isDarkMode ? "text-gray-400" : "text-gray-600"}>جاري تحميل الطلبات...</p>
+						</div>
+					) : error ? (
+						<div className={`bg-red-50 border border-red-300 rounded-lg p-4 text-right ${isDarkMode ? "bg-red-900/20 border-red-700" : ""}`}>
+							<p className={`font-medium mb-3 flex items-center gap-2 ${isDarkMode ? "text-red-400" : "text-red-800"}`}>
+								<AlertCircle size={20} /> {error}
+							</p>
+						</div>
+					) : filteredRequests.length === 0 ? (
+						<div className={`text-center py-20 rounded-3xl border border-dashed ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+							<div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${isDarkMode ? "bg-white/5" : "bg-gray-50"}`}>
+								<FileCode className={isDarkMode ? "text-gray-600" : "text-gray-300"} size={40} />
+							</div>
+							<h3 className={`text-xl font-bold mb-2 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>لا توجد طلبات ACID</h3>
+							<button
+								onClick={() => navigate("/acidrequest")}
+								className="mt-4 bg-red-800 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition"
+							>
+								إضافة طلب جديد
+							</button>
+						</div>
+					) : (
+						<>
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+								{currentItems.map((request) => (
+									<ShipmentCard key={request.id} shipment={request} />
+								))}
+							</div>
+
+							{totalPages > 1 && (
+								<div className="flex justify-center items-center gap-4 mt-8" dir="ltr">
+									<button
+										onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+										disabled={currentPage === 1}
+										className={`p-2 rounded-full transition-colors ${
+											currentPage === 1 
+												? (isDarkMode ? "text-gray-600 cursor-not-allowed" : "text-gray-300 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-700")
+										}`}
+									>
+										<ChevronLeft size={24} />
+									</button>
+									<div className={`px-4 py-2 rounded-lg font-medium ${isDarkMode ? "bg-white/5 text-gray-300" : "bg-gray-100 text-gray-700"}`}>
+										Page {currentPage} of {totalPages}
+									</div>
+									<button
+										onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+										disabled={currentPage === totalPages}
+										className={`p-2 rounded-full transition-colors ${
+											currentPage === totalPages 
+												? (isDarkMode ? "text-gray-600 cursor-not-allowed" : "text-gray-300 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-700")
+										}`}
+									>
+										<ChevronRight size={24} />
+									</button>
+								</div>
+							)}
+						</>
 					)}
 				</div>
 			</section>
@@ -255,6 +310,4 @@ const AcidRequestsPage = () => {
 			<Footer />
 		</div>
 	);
-};
-
-export default AcidRequestsPage;
+}
