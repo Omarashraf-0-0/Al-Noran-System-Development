@@ -4,6 +4,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import Cropper from "react-easy-crop";
 import Header from "../components/Header";
+import { useTheme } from "../context/ThemeContext";
 
 const MyProfileClient = () => {
 	const navigate = useNavigate();
@@ -50,43 +51,30 @@ const MyProfileClient = () => {
 		setShowDeleteConfirmModal(true);
 	};
 
-	// Theme State with localStorage persistence
-	const [isDarkMode, setIsDarkMode] = useState(() => {
-		const savedTheme = localStorage.getItem("profileTheme");
-		return savedTheme ? savedTheme === "dark" : true; // Default to dark for premium feel
-	});
+	// Use Global Theme Context
+	const { isDarkMode, toggleTheme } = useTheme();
 
-	// Sync theme to localStorage
-	useEffect(() => {
-		localStorage.setItem("profileTheme", isDarkMode ? "dark" : "light");
-	}, [isDarkMode]);
-
-	const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
-	// Theme classes - RED THEME (Client)
+	// Theme classes - PREMIUM RED DESIGN
 	const theme = {
 		pageBg: isDarkMode 
-			? "bg-gradient-to-br from-[#1a0a0a] via-[#2d0d0d] to-[#0a1a1a]" 
-			: "bg-gradient-to-br from-[#FFF5F5] via-[#FFF0F0] to-[#FFF5F5]",
+			? "bg-[#0a0505]" 
+			: "bg-[#F5F7FA]",
+		headerBg: isDarkMode
+			? "bg-gradient-to-r from-[#690000] to-[#2b0000]"
+			: "bg-gradient-to-r from-[#690000] to-[#8B0000]",
 		card: isDarkMode 
-			? "bg-white/10 backdrop-blur-md border-white/10" 
-			: "bg-white shadow-xl border-red-50",
-		cardHover: isDarkMode 
-			? "hover:bg-white/15 hover:border-[#690000]/50" 
-			: "hover:bg-red-50 hover:border-red-200",
-		textPrimary: isDarkMode ? "text-white" : "text-gray-900",
-		textSecondary: isDarkMode ? "text-white/70" : "text-gray-600",
-		textMuted: isDarkMode ? "text-white/50" : "text-gray-400",
+			? "bg-[#1a1010] border-[#3d1a1a]" 
+			: "bg-white border-red-50 shadow-sm",
+		textPrimary: isDarkMode ? "text-gray-100" : "text-gray-900",
+		textSecondary: isDarkMode ? "text-gray-400" : "text-gray-500",
 		input: isDarkMode 
-			? "bg-white/5 border-white/10 text-white placeholder-white/30" 
-			: "bg-red-50/50 border-red-100 text-gray-900 placeholder-gray-400",
-		inputFocus: isDarkMode 
-			? "focus:border-[#690000] focus:ring-[#690000]/20" 
-			: "focus:border-[#690000] focus:ring-[#690000]/10",
-		headerGradient: "bg-gradient-to-l from-[#690000] to-[#8B0000]",
-		blob1: isDarkMode ? "bg-[#690000]/20" : "bg-[#690000]/10",
-		blob2: isDarkMode ? "bg-[#1ba3b6]/15" : "bg-[#1ba3b6]/10",
-		modalBg: isDarkMode ? "bg-black/80" : "bg-white",
+			? "bg-[#2b1515] border-[#4a2020] text-gray-100 focus:border-red-500" 
+			: "bg-gray-50 border-gray-200 text-gray-900 focus:border-red-500",
+		buttonPrimary: "bg-gradient-to-r from-[#690000] to-[#8B0000] text-white hover:shadow-lg hover:shadow-red-900/40",
+		buttonSecondary: isDarkMode 
+			? "bg-[#2b1515] text-gray-200 hover:bg-[#3d1a1a]" 
+			: "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200",
+		iconBg: isDarkMode ? "bg-red-500/10 text-red-500" : "bg-red-50 text-red-600",
 		modalOverlay: isDarkMode ? "bg-black/60" : "bg-black/40",
 	};
 
@@ -267,11 +255,6 @@ const MyProfileClient = () => {
 	const handleCropConfirm = async () => {
 		if (!selectedImage || !croppedAreaPixels) return;
 		
-		console.log("📸 [Frontend] Starting crop confirm...");
-		console.log("👤 [Frontend] Current User State:", user);
-		console.log("🏭 [Frontend] Client Details:", user?.clientDetails);
-		console.log("🏷️ [Frontend] Client Type:", user?.clientDetails?.clientType);
-
 		setUploadingPhoto(true);
 		setShowCropModal(false);
 		try {
@@ -281,42 +264,34 @@ const MyProfileClient = () => {
 			formDataUpload.append("category", "registration");
 			formDataUpload.append("documentType", "profilePhoto");
 			
-			// Append clientType if available (required for client registration uploads)
 			if (user?.clientDetails?.clientType) {
 				formDataUpload.append("clientType", user.clientDetails.clientType);
 			}
 
 			const token = localStorage.getItem("token");
 			
-			// 1. Upload the file
 			const response = await axios.post(
 				`${import.meta.env.VITE_API_URL}/api/uploads`,
 				formDataUpload,
 				{ headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
 			);
 
-			// 2. Identify the identifier (S3 key or URL)
 			const photoIdentifier = response.data.upload?.s3Key || response.data.file?.url || response.data.file?.filename || response.data.upload?.url;
 			
 			if (photoIdentifier) {
-				// 3. Update user profile with the identifier
 				await axios.put(
 					`${import.meta.env.VITE_API_URL}/api/users/profile`,
 					{ profilePhoto: photoIdentifier, fullname: user.fullname, username: user.username, phone: user.phone, email: user.email },
 					{ headers: { Authorization: `Bearer ${token}` } }
 				);
 
-				// 4. Update local state for immediate feedback
-				// If we have a direct URL (presigned or local), use it. Otherwise rely on fetchUserProfile logic.
 				const displayUrl = response.data.upload?.url || response.data.file?.url || (photoIdentifier.startsWith("http") ? photoIdentifier : null);
 				
 				if (displayUrl) {
 					setProfilePhoto(displayUrl.startsWith("/uploads") ? `${import.meta.env.VITE_API_URL}${displayUrl}` : displayUrl);
 				} else {
-					// Fallback: fetch profile again to get the fresh presigned URL
 					fetchUserProfile();
 				}
-				
 				toast.success("تم تحميل الصورة بنجاح");
 			} else {
 				throw new Error("No photo identifier returned");
@@ -349,28 +324,18 @@ const MyProfileClient = () => {
 		}
 	};
 
-	const getClientType = () => {
-		const clientType = user?.clientDetails?.clientType;
-		if (clientType === "factory") return { label: "مصنع", icon: "🏭", color: "bg-orange-500" };
-		if (clientType === "commercial") return { label: "تجاري", icon: "🏪", color: "bg-blue-500" };
-		return { label: "فردي", icon: "👤", color: "bg-purple-500" };
-	};
-
 	const isVerified = user?.clientDetails?.documentsVerified;
 
 	if (loading) {
 		return (
-			<div className="min-h-screen bg-gradient-to-br from-[#690000] to-[#4a0000] flex items-center justify-center">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-14 w-14 border-4 border-white border-t-transparent mx-auto mb-4"></div>
-					<p className="text-white/80">جاري تحميل البيانات...</p>
-				</div>
+			<div className={`min-h-screen ${theme.pageBg} flex items-center justify-center`}>
+				<div className="animate-spin rounded-full h-12 w-12 border-4 border-[#690000] border-t-transparent"></div>
 			</div>
 		);
 	}
 
 	return (
-		<div className={`min-h-screen ${theme.pageBg} relative overflow-hidden transition-colors duration-300`} dir="rtl">
+		<div className={`min-h-screen ${theme.pageBg} relative overflow-hidden transition-colors duration-300 font-sans`} dir="rtl">
 			<style>{`
 				@keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
 				@keyframes float-reverse { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(20px); } }
@@ -388,277 +353,233 @@ const MyProfileClient = () => {
 			<div className="fixed inset-0 pointer-events-none overflow-hidden">
 				{isDarkMode ? (
 					<>
-						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#690000]/20 rounded-full filter blur-[150px] animate-pulse-glow"></div>
-						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#1ba3b6]/20 rounded-full filter blur-[180px] animate-float-slow"></div>
-						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#8B0000]/20 rounded-full filter blur-[120px] animate-float-reverse"></div>
-						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#690000]/20 rounded-xl animate-float rotate-45"></div>
-						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#1ba3b6]/20 rounded-full animate-float-reverse"></div>
+						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#ff0000]/20 rounded-full filter blur-[150px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#ff4d4d]/15 rounded-full filter blur-[180px] animate-float-slow"></div>
+						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#8B0000]/30 rounded-full filter blur-[120px] animate-float-reverse"></div>
+						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#ff0000]/30 rounded-xl animate-float rotate-45"></div>
+						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#ff4d4d]/30 rounded-full animate-float-reverse"></div>
 					</>
 				) : (
 					<>
-						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#FFB6C1]/30 rounded-full filter blur-[150px] animate-pulse-glow"></div>
-						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#87CEEB]/20 rounded-full filter blur-[180px] animate-float-slow"></div>
-						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#FFDAB9]/30 rounded-full filter blur-[120px] animate-float-reverse"></div>
-						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#690000]/10 rounded-xl animate-float rotate-45"></div>
-						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#1ba3b6]/10 rounded-full animate-float-reverse"></div>
+						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#ff0000]/15 rounded-full filter blur-[150px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#ff4d4d]/20 rounded-full filter blur-[180px] animate-float-slow"></div>
+						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#ff0000]/10 rounded-full filter blur-[120px] animate-float-reverse"></div>
+						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#ff0000]/30 rounded-xl animate-float rotate-45"></div>
+						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#ff4d4d]/30 rounded-full animate-float-reverse"></div>
 					</>
 				)}
 			</div>
 
 			<Header />
 
-			<main className="w-full max-w-[98%] mx-auto p-4 md:p-6 relative z-10 space-y-6">
+			{/* Main Content Wrapper - Added pt-28 to fix header overlap */}
+			<main className="relative pt-28 pb-12 px-4 md:px-6 max-w-7xl mx-auto space-y-8">
 				
-				{/* Row 1: Profile Header Card */}
-				<div className={`${theme.headerGradient} rounded-2xl p-6 relative overflow-hidden shadow-2xl border border-white/10`}>
-					<div className="absolute top-0 left-0 w-40 h-40 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-					<div className="absolute bottom-0 right-0 w-32 h-32 bg-[#1ba3b6]/10 rounded-full translate-x-1/4 translate-y-1/4"></div>
-					
-					<div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
-						{/* Profile Photo */}
-						<div className="relative group">
-							<div className="w-28 h-28 rounded-full bg-white/10 backdrop-blur p-1 shadow-2xl border border-white/20">
-								<div className="w-full h-full rounded-full bg-black/20 flex items-center justify-center overflow-hidden">
-									{loadingPhoto || uploadingPhoto ? (
-										<div className="animate-spin rounded-full h-8 w-8 border-2 border-[#1ba3b6] border-t-transparent"></div>
-									) : profilePhoto ? (
-										<img src={profilePhoto} alt="Profile" className="w-full h-full object-cover rounded-full" />
-									) : (
-										<span className="text-4xl text-white">{getClientType().icon}</span>
-									)}
-								</div>
-							</div>
-							<label htmlFor="photo-upload" className="absolute bottom-1 right-1 bg-[#1ba3b6] hover:bg-[#158A9A] w-9 h-9 rounded-full flex items-center justify-center cursor-pointer shadow-lg border-2 border-[#690000] transition-transform hover:scale-110">
-								<svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-								</svg>
-							</label>
-							<input id="photo-upload" type="file" accept="image/jpeg,image/jpg,image/png" onChange={handlePhotoUpload} className="hidden" />
-						</div>
-
-						{/* User Info */}
-						<div className="text-center md:text-right flex-1">
-							<h1 className="text-3xl font-bold text-white mb-2">{user?.fullname}</h1>
-							<div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-2">
-								<p className="text-white/70 text-sm">@{user?.username}</p>
-								<span className="text-white/20">|</span>
-								<p className="text-white/70 text-sm" dir="ltr">{user?.email}</p>
-							</div>
-							<div className="flex flex-wrap justify-center md:justify-start gap-2">
-								<span className={`${getClientType().color} text-white text-xs px-3 py-1 rounded-full font-bold shadow bg-opacity-80`}>
-									{getClientType().icon} {getClientType().label}
-								</span>
-								<span className={`${isVerified ? "bg-green-500" : "bg-amber-500"} text-white text-xs px-3 py-1 rounded-full font-bold shadow bg-opacity-80`}>
-									{isVerified ? "✓ موثق" : "⏳ قيد التحقق"}
-								</span>
-							</div>
-						</div>
-
-						{/* Theme Toggle */}
-						<button 
-							onClick={toggleTheme} 
-							className="p-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all hover:scale-105 flex items-center gap-2"
-						>
-							{isDarkMode ? (
-								<svg className="w-5 h-5 text-yellow-300" fill="currentColor" viewBox="0 0 24 24">
-									<path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
-								</svg>
-							) : (
-								<svg className="w-5 h-5 text-white bg-white/20 rounded-full" fill="currentColor" viewBox="0 0 24 24">
-									<path fillRule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" clipRule="evenodd" />
-								</svg>
-							)}
-						</button>
-					</div>
-				</div>
-
-				{/* Row 2: Stats Cards */}
-				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-					<Link to="/client-shipments" className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} transition-all group flex items-center justify-between`}>
-						<div>
-							<p className={`${theme.textMuted} text-xs mb-1`}>الشحنات النشطة</p>
-							<p className={`text-2xl font-bold ${theme.textPrimary}`}>12</p>
-						</div>
-						<div className="w-12 h-12 bg-[#690000]/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform text-2xl border border-[#690000]/20 text-[#690000]">📦</div>
-					</Link>
-					<Link to="/acid-requests" className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} transition-all group flex items-center justify-between`}>
-						<div>
-							<p className={`${theme.textMuted} text-xs mb-1`}>طلبات ACID</p>
-							<p className={`text-2xl font-bold ${theme.textPrimary}`}>8</p>
-						</div>
-						<div className="w-12 h-12 bg-[#1ba3b6]/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform text-2xl border border-[#1ba3b6]/20 text-[#1ba3b6]">📄</div>
-					</Link>
-					<div className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} flex items-center justify-between`}>
-						<div>
-							<p className={`${theme.textMuted} text-xs mb-1`}>المكتملة</p>
-							<p className={`text-2xl font-bold ${theme.textPrimary}`}>45</p>
-						</div>
-						<div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center text-2xl border border-green-500/20 text-green-500">✅</div>
-					</div>
-					<Link to="/payments" className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} transition-all group flex items-center justify-between`}>
-						<div>
-							<p className={`${theme.textMuted} text-xs mb-1`}>المدفوعات</p>
-							<p className={`text-2xl font-bold ${theme.textPrimary}`}>3</p>
-						</div>
-						<div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform text-2xl border border-amber-500/20 text-amber-500">💳</div>
-					</Link>
-				</div>
-
-				{/* Row 3: Personal Information + Quick Actions */}
-				<div className="grid lg:grid-cols-2 gap-6">
-					
-					{/* Personal Information */}
-					<div className={`${theme.card} rounded-2xl border p-6 h-full flex flex-col`}>
-						<div className="flex items-center justify-between mb-6">
-							<h3 className={`text-lg font-bold ${theme.textPrimary} flex items-center gap-2`}>
-								<span className="w-8 h-8 bg-[#690000]/10 rounded-lg flex items-center justify-center text-[#690000] border border-[#690000]/20">👤</span>
-								البيانات الشخصية
-							</h3>
-						</div>
-						
-						<div className="space-y-4 flex-1">
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div>
-									<label className={`block text-sm font-medium ${theme.textSecondary} mb-1`}>الاسم الكامل</label>
-									<input
-										type="text"
-										name="fullname"
-										value={formData.fullname}
-										onChange={handleInputChange}
-										disabled={!isEditing}
-										className={`w-full p-3 rounded-xl border ${theme.input} ${theme.inputFocus} transition-all`}
-									/>
-								</div>
-								<div>
-									<label className={`block text-sm font-medium ${theme.textSecondary} mb-1`}>اسم المستخدم</label>
-									<input
-										type="text"
-										name="username"
-										value={formData.username}
-										onChange={handleInputChange}
-										disabled={!isEditing}
-										className={`w-full p-3 rounded-xl border ${theme.input} ${theme.inputFocus} transition-all`}
-									/>
-								</div>
-								<div>
-									<label className={`block text-sm font-medium ${theme.textSecondary} mb-1`}>رقم الهاتف</label>
-									<input
-										type="text"
-										name="phone"
-										value={formData.phone}
-										onChange={handleInputChange}
-										disabled={!isEditing}
-										className={`w-full p-3 rounded-xl border ${theme.input} ${theme.inputFocus} transition-all`}
-									/>
-								</div>
-								<div>
-									<label className={`block text-sm font-medium ${theme.textSecondary} mb-1`}>البريد الإلكتروني</label>
-									<input
-										type="email"
-										name="email"
-										value={formData.email}
-										onChange={handleInputChange}
-										disabled={!isEditing}
-										className={`w-full p-3 rounded-xl border ${theme.input} ${theme.inputFocus} transition-all`}
-									/>
-								</div>
-							</div>
-						</div>
+				{/* 1. Profile Header Section */}
+				<div className={`relative overflow-hidden rounded-3xl ${theme.card} border transition-all duration-300`}>
+					{/* Decorative Cover Background */}
+					<div className={`h-32 md:h-48 w-full ${theme.headerBg} relative`}>
+						<div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+						<div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+						<div className="absolute top-10 right-10 w-20 h-20 bg-black/10 rounded-full blur-xl"></div>
 					</div>
 
-					{/* Quick Actions */}
-					<div className="space-y-6">
-						<div className={`${theme.card} rounded-2xl border p-6`}>
-							<h3 className={`text-lg font-bold ${theme.textPrimary} mb-6 flex items-center gap-2`}>
-								<span className="w-8 h-8 bg-[#690000]/10 rounded-lg flex items-center justify-center text-[#690000] border border-[#690000]/20">⚡</span>
-								إجراءات سريعة
-							</h3>
-							<div className="flex flex-col gap-3">
+					<div className="px-6 md:px-10 pb-8">
+						<div className="flex flex-col md:flex-row gap-6 mt-[-3rem] md:mt-[-4rem] items-center md:items-end">
+							
+							{/* Profile Avatar */}
+							<div className="relative group">
+								<div className={`w-32 h-32 md:w-40 md:h-40 rounded-full p-1.5 ${theme.card} shadow-2xl`}>
+									<div className="w-full h-full rounded-full overflow-hidden relative bg-gray-100">
+										{loadingPhoto || uploadingPhoto ? (
+											<div className="w-full h-full flex items-center justify-center bg-gray-100">
+												<div className="animate-spin rounded-full h-8 w-8 border-2 border-[#690000] border-t-transparent"></div>
+											</div>
+										) : profilePhoto ? (
+											<img src={profilePhoto} alt="Profile" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+										) : (
+											<div className={`w-full h-full flex items-center justify-center ${theme.headerBg} text-white`}>
+												<span className="text-4xl">👤</span>
+											</div>
+										)}
+										
+										{/* Hover Overlay for Photo Actions */}
+										<div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+											<label htmlFor="photo-upload" className="cursor-pointer p-2 bg-white/20 hover:bg-white/40 rounded-full backdrop-blur-sm text-white transition-all">
+												<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+											</label>
+											{profilePhoto && (
+												<button onClick={handleDeletePhoto} className="p-2 bg-red-500/80 hover:bg-red-600 rounded-full text-white transition-all">
+													<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+												</button>
+											)}
+										</div>
+									</div>
+								</div>
+								<input id="photo-upload" type="file" accept="image/jpeg,image/jpg,image/png" onChange={handlePhotoUpload} className="hidden" />
+							</div>
+
+							{/* User Info Text */}
+							<div className="flex-1 text-center md:text-right mb-2">
+								<h1 className={`text-3xl font-bold ${theme.textPrimary} mb-1 flex items-center justify-center md:justify-start gap-3`}>
+									{user?.fullname}
+									{isVerified && <span className="text-blue-500 text-xl" title="موثق">✓</span>}
+								</h1>
+								<div className={`flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm ${theme.textSecondary}`}>
+									<span className="flex items-center gap-1">@ {user?.username}</span>
+									<span className="hidden md:inline">•</span>
+									<span className="flex items-center gap-1">{user?.email}</span>
+								</div>
+							</div>
+
+							{/* Action Buttons */}
+							<div className="flex items-center gap-3">
+								<button 
+									onClick={toggleTheme}
+									className={`p-3 rounded-full transition-all ${isDarkMode ? "bg-yellow-400/10 text-yellow-400 hover:bg-yellow-400/20" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+								>
+									{isDarkMode ? "☀️" : "🌙"}
+								</button>
 								{isEditing ? (
-									<div className="flex gap-3">
-										<button
-											onClick={handleSave}
-											className="flex-1 bg-[#690000] hover:bg-[#8B0000] text-white py-3 px-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-[#690000]/30 active:scale-95"
-										>
-											حفظ التغييرات
+									<>
+										<button onClick={handleSave} className={`px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg ${theme.buttonPrimary}`}>
+											حفظ
 										</button>
-										<button
-											onClick={() => {
-												setIsEditing(false);
-												setFormData(originalFormData);
-												setHasUnsavedChanges(false);
-											}}
-											className={`flex-1 ${isDarkMode ? "bg-white/10 hover:bg-white/20 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"} py-3 px-4 rounded-xl font-bold transition-all active:scale-95`}
-										>
+										<button onClick={() => { setIsEditing(false); setFormData(originalFormData); }} className={`px-6 py-2.5 rounded-xl font-bold transition-all ${theme.buttonSecondary}`}>
 											إلغاء
 										</button>
-									</div>
+									</>
 								) : (
-									<button
-										onClick={() => setIsEditing(true)}
-										className={`w-full py-3 px-4 rounded-xl font-bold transition-all border ${
-											isDarkMode 
-												? "bg-[#690000]/10 text-[#690000] border-[#690000]/30 hover:bg-[#690000]/20" 
-												: "bg-red-50 text-[#690000] border-red-200 hover:bg-red-100"
-										} active:scale-95 flex items-center justify-center gap-2`}
-									>
-										<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-										</svg>
+									<button onClick={() => setIsEditing(true)} className={`px-6 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95 ${theme.buttonPrimary}`}>
 										تعديل البيانات
 									</button>
 								)}
-
-								<button
-									onClick={() => setShowPasswordModal(true)}
-									className={`w-full py-3 px-4 rounded-xl font-bold transition-all border ${
-										isDarkMode 
-											? "bg-white/5 text-white/80 border-white/10 hover:bg-white/10" 
-											: "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
-									} active:scale-95 flex items-center justify-center gap-2`}
-								>
-									<svg className="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-									</svg>
-									تغيير كلمة المرور
-								</button>
-
-								{!isVerified && (
-									<Link to="/upload-documents" className={`w-full py-3 px-4 rounded-xl font-bold transition-all border ${isDarkMode ? "bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500/20" : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"} active:scale-95 flex items-center justify-center gap-2`}>
-										<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-										</svg>
-										رفع المستندات (التوثيق)
-									</Link>
-								)}
-
-								{profilePhoto && (
-									<button
-										onClick={handleDeletePhoto}
-										disabled={deletingPhoto}
-										className="w-full py-3 px-4 rounded-xl font-bold transition-all bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 active:scale-95 flex items-center justify-center gap-2"
-									>
-										{deletingPhoto ? (
-											<div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
-										) : (
-											<>
-												<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-												</svg>
-												حذف الصورة الشخصية
-											</>
-										)}
-									</button>
-								)}
-								
-								<Link to="/chat" className={`w-full py-3 px-4 rounded-xl font-bold transition-all border ${isDarkMode ? "bg-[#1ba3b6]/10 text-[#1ba3b6] border-[#1ba3b6]/20 hover:bg-[#1ba3b6]/20" : "bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-100"} active:scale-95 flex items-center justify-center gap-2`}>
-									<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-									</svg>
-									الدعم الفني
-								</Link>
 							</div>
+						</div>
+					</div>
+				</div>
+
+				{/* 2. Stats Grid */}
+				<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+					{[
+						{ label: "الشحنات النشطة", value: "12", icon: "📦", color: "text-[#690000]", link: "/client-shipments" },
+						{ label: "طلبات ACID", value: "5", icon: "📄", color: "text-blue-600", link: "/acid-requests" },
+						{ label: "المدفوعات", value: "$4.5k", icon: "💳", color: "text-green-600", link: "/payments" },
+						{ label: "تذاكر الدعم", value: "2", icon: "💬", color: "text-purple-600", link: "/chat" },
+					].map((stat, idx) => (
+						<Link key={idx} to={stat.link} className={`p-5 rounded-2xl ${theme.card} border hover:-translate-y-1 transition-transform duration-300 group`}>
+							<div className="flex justify-between items-start">
+								<div>
+									<p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>{stat.label}</p>
+									<p className={`text-2xl font-bold ${theme.textPrimary}`}>{stat.value}</p>
+								</div>
+								<div className={`p-3 rounded-xl bg-gray-50 group-hover:bg-white transition-colors shadow-sm ${stat.color} text-xl`}>
+									{stat.icon}
+								</div>
+							</div>
+						</Link>
+					))}
+				</div>
+
+				<div className="grid lg:grid-cols-3 gap-8">
+					{/* 3. Personal Info Form */}
+					<div className={`lg:col-span-2 rounded-3xl ${theme.card} border p-6 md:p-8`}>
+						<div className="flex items-center gap-3 mb-8">
+							<div className={`p-2.5 rounded-xl ${theme.iconBg}`}>
+								<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+							</div>
+							<h2 className={`text-xl font-bold ${theme.textPrimary}`}>البيانات الشخصية</h2>
+						</div>
+
+						<div className="grid md:grid-cols-2 gap-6">
+							<div>
+								<label className={`block text-sm font-medium ${theme.textSecondary} mb-2`}>الاسم الكامل</label>
+								<input 
+									type="text" 
+									name="fullname" 
+									value={formData.fullname} 
+									onChange={handleInputChange} 
+									disabled={!isEditing}
+									className={`w-full p-3.5 rounded-xl border transition-all outline-none ${theme.input} disabled:opacity-60`}
+								/>
+							</div>
+							<div>
+								<label className={`block text-sm font-medium ${theme.textSecondary} mb-2`}>البريد الإلكتروني</label>
+								<input 
+									type="email" 
+									name="email" 
+									value={formData.email} 
+									onChange={handleInputChange} 
+									disabled={!isEditing}
+									className={`w-full p-3.5 rounded-xl border transition-all outline-none ${theme.input} disabled:opacity-60`}
+								/>
+							</div>
+							<div>
+								<label className={`block text-sm font-medium ${theme.textSecondary} mb-2`}>رقم الهاتف</label>
+								<input 
+									type="text" 
+									name="phone" 
+									value={formData.phone} 
+									onChange={handleInputChange} 
+									disabled={!isEditing}
+									className={`w-full p-3.5 rounded-xl border transition-all outline-none ${theme.input} disabled:opacity-60`}
+								/>
+							</div>
+							<div>
+								<label className={`block text-sm font-medium ${theme.textSecondary} mb-2`}>اسم المستخدم</label>
+								<input 
+									type="text" 
+									name="username" 
+									value={formData.username} 
+									onChange={handleInputChange} 
+									disabled={!isEditing}
+									className={`w-full p-3.5 rounded-xl border transition-all outline-none ${theme.input} disabled:opacity-60`}
+								/>
+							</div>
+						</div>
+					</div>
+
+					{/* 4. Quick Actions & Status */}
+					<div className="space-y-6">
+						{/* Account Security Card */}
+						<div className={`rounded-3xl ${theme.card} border p-6`}>
+							<h3 className={`text-lg font-bold ${theme.textPrimary} mb-4`}>الأمان والتوثيق</h3>
+							<div className="space-y-4">
+								<div className={`p-4 rounded-xl flex items-center justify-between ${isVerified ? "bg-green-500/10 border border-green-500/20" : "bg-yellow-500/10 border border-yellow-500/20"}`}>
+									<div className="flex items-center gap-3">
+										<div className={`w-10 h-10 rounded-full flex items-center justify-center ${isVerified ? "bg-green-500 text-white" : "bg-yellow-500 text-white"}`}>
+											{isVerified ? "✓" : "!"}
+										</div>
+										<div>
+											<p className={`font-bold text-sm ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>{isVerified ? "الحساب موثق" : "الحساب غير موثق"}</p>
+											<p className="text-xs opacity-70">المستندات {isVerified ? "سليمة" : "مطلوبة"}</p>
+										</div>
+									</div>
+									{!isVerified && (
+										<Link to="/upload-documents" className="text-xs font-bold text-yellow-600 hover:underline">
+											رفع الآن
+										</Link>
+									)}
+								</div>
+
+								<button 
+									onClick={() => setShowPasswordModal(true)}
+									className={`w-full py-3.5 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${theme.buttonSecondary}`}
+								>
+									<span>🔒</span> تغيير كلمة المرور
+								</button>
+							</div>
+						</div>
+
+						{/* Support Card */}
+						<div className={`rounded-3xl ${theme.card} border p-6 relative overflow-hidden group`}>
+							<div className={`absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-blue-400 to-purple-500`}></div>
+							<h3 className={`text-lg font-bold ${theme.textPrimary} mb-2`}>مركز المساعدة</h3>
+							<p className={`text-sm ${theme.textSecondary} mb-4`}>تواجه مشكلة في شحناتك؟ تواصل معنا.</p>
+							<Link to="/chat" className="flex items-center justify-between text-blue-500 font-bold group-hover:translate-x-[-4px] transition-transform">
+								<span>تواصل مع الدعم</span>
+								<svg className="w-5 h-5 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+							</Link>
 						</div>
 					</div>
 				</div>
@@ -666,31 +587,16 @@ const MyProfileClient = () => {
 
 			{/* Delete Confirmation Modal */}
 			{showDeleteConfirmModal && (
-				<div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${theme.modalOverlay} backdrop-blur-sm`}>
-					<div className={`${theme.modalBg} rounded-2xl max-w-sm w-full shadow-2xl border border-white/10 overflow-hidden transform transition-all scale-100`}>
-						<div className="p-6 text-center space-y-4">
-							<div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4 border border-red-500/20">
-								<svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-								</svg>
-							</div>
-							<h3 className={`text-xl font-bold ${theme.textPrimary}`}>حذف الصورة الشخصية</h3>
-							<p className={`${theme.textSecondary}`}>هل أنت متأكد من رغبتك في حذف الصورة الشخصية؟ لا يمكن التراجع عن هذا الإجراء.</p>
-							
-							<div className="flex gap-3 pt-4">
-								<button
-									onClick={() => setShowDeleteConfirmModal(false)}
-									className={`flex-1 py-3 rounded-xl font-bold transition-all ${isDarkMode ? "bg-white/10 hover:bg-white/20 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
-								>
-									إلغاء
-								</button>
-								<button
-									onClick={confirmDeletePhoto}
-									className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-red-500/30"
-								>
-									حذف
-								</button>
-							</div>
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+					<div className={`${theme.card} rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden border p-6 text-center`}>
+						<div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4 text-red-600">
+							<svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+						</div>
+						<h3 className={`text-xl font-bold ${theme.textPrimary} mb-2`}>حذف الصورة؟</h3>
+						<p className={`${theme.textSecondary} mb-6`}>لا يمكن التراجع عن هذا الإجراء، هل أنت متأكد؟</p>
+						<div className="flex gap-3">
+							<button onClick={() => setShowDeleteConfirmModal(false)} className={`flex-1 py-3 rounded-xl font-bold ${theme.buttonSecondary}`}>إلغاء</button>
+							<button onClick={confirmDeletePhoto} className="flex-1 py-3 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/30">حذف</button>
 						</div>
 					</div>
 				</div>
@@ -699,31 +605,17 @@ const MyProfileClient = () => {
 			{/* Crop Modal */}
 			{showCropModal && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-					<div className={`${theme.modalBg} rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-white/10`}>
+					<div className={`bg-[#1a1a1a] rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-white/10`}>
 						<div className="p-4 border-b border-white/10 flex justify-between items-center">
-							<h3 className={`text-lg font-bold ${theme.textPrimary}`}>قص الصورة</h3>
-							<button onClick={() => setShowCropModal(false)} className={`text-gray-400 hover:text-white`}>
-								✕
-							</button>
+							<h3 className="text-lg font-bold text-white">تعديل الصورة</h3>
+							<button onClick={() => setShowCropModal(false)} className="text-gray-400 hover:text-white">✕</button>
 						</div>
 						<div className="relative h-80 w-full bg-black">
-							<Cropper
-								image={selectedImage}
-								crop={crop}
-								zoom={zoom}
-								aspect={1}
-								onCropChange={setCrop}
-								onZoomChange={setZoom}
-								onCropComplete={onCropComplete}
-							/>
+							<Cropper image={selectedImage} crop={crop} zoom={zoom} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} />
 						</div>
-						<div className="p-4 flex gap-3 justify-end bg-black/20">
-							<button onClick={() => setShowCropModal(false)} className="px-4 py-2 text-white/70 hover:text-white transition-colors">
-								إلغاء
-							</button>
-							<button onClick={handleCropConfirm} className="px-6 py-2 bg-[#690000] hover:bg-[#8B0000] text-white rounded-lg font-bold transition-colors">
-								قص وحفظ
-							</button>
+						<div className="p-4 flex gap-3 justify-end bg-[#1a1a1a]">
+							<button onClick={() => setShowCropModal(false)} className="px-5 py-2 text-gray-300 hover:text-white font-medium">إلغاء</button>
+							<button onClick={handleCropConfirm} className="px-6 py-2 bg-[#690000] text-white rounded-xl font-bold hover:bg-[#8B0000]">حفظ</button>
 						</div>
 					</div>
 				</div>
@@ -731,90 +623,37 @@ const MyProfileClient = () => {
 
 			{/* Password Change Modal */}
 			{showPasswordModal && (
-				<div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${theme.modalOverlay} backdrop-blur-sm`}>
-					<div className={`${theme.modalBg} rounded-2xl max-w-md w-full shadow-2xl border border-white/10 overflow-hidden transform transition-all scale-100`}>
-						<div className={`p-6 ${theme.headerGradient} relative overflow-hidden`}>
-							<div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full translate-x-1/2 -translate-y-1/2"></div>
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+					<div className={`${theme.card} rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border`}>
+						<div className={`p-6 ${theme.headerBg} relative overflow-hidden`}>
+							<div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
 							<h3 className="text-xl font-bold text-white relative z-10 flex items-center gap-2">
-								<span className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">🔒</span>
-								تغيير كلمة المرور
+								<span>🔒</span> تغيير كلمة المرور
 							</h3>
 						</div>
-						
 						<div className="p-6 space-y-4">
-							<div>
-								<label className={`block text-sm font-medium ${theme.textSecondary} mb-1`}>كلمة المرور الحالية</label>
-								<div className="relative">
-									<input
-										type={showPasswords.currentPassword ? "text" : "password"}
-										name="currentPassword"
-										value={passwordData.currentPassword}
-										onChange={handlePasswordChange}
-										className={`w-full p-3 pl-10 rounded-xl border ${theme.input} ${theme.inputFocus} transition-all`}
-									/>
-									<button
-										type="button"
-										onClick={() => setShowPasswords(prev => ({ ...prev, currentPassword: !prev.currentPassword }))}
-										className="absolute left-3 top-3 text-gray-400 hover:text-[#690000]"
-									>
-										{showPasswords.currentPassword ? "👁️" : "👁️‍🗨️"}
-									</button>
+							{["currentPassword", "newPassword", "confirmPassword"].map((field, idx) => (
+								<div key={idx}>
+									<label className={`block text-sm font-medium ${theme.textSecondary} mb-1.5`}>
+										{field === "currentPassword" ? "كلمة المرور الحالية" : field === "newPassword" ? "كلمة المرور الجديدة" : "تأكيد كلمة المرور"}
+									</label>
+									<div className="relative">
+										<input 
+											type={showPasswords[field] ? "text" : "password"} 
+											name={field} 
+											value={passwordData[field]} 
+											onChange={handlePasswordChange} 
+											className={`w-full p-3 pl-10 rounded-xl border transition-all outline-none ${theme.input}`}
+										/>
+										<button type="button" onClick={() => setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }))} className="absolute left-3 top-3.5 text-gray-400 hover:text-red-500">
+											{showPasswords[field] ? "👁️" : "👁️‍🗨️"}
+										</button>
+									</div>
 								</div>
-							</div>
-							
-							<div>
-								<label className={`block text-sm font-medium ${theme.textSecondary} mb-1`}>كلمة المرور الجديدة</label>
-								<div className="relative">
-									<input
-										type={showPasswords.newPassword ? "text" : "password"}
-										name="newPassword"
-										value={passwordData.newPassword}
-										onChange={handlePasswordChange}
-										className={`w-full p-3 pl-10 rounded-xl border ${theme.input} ${theme.inputFocus} transition-all`}
-									/>
-									<button
-										type="button"
-										onClick={() => setShowPasswords(prev => ({ ...prev, newPassword: !prev.newPassword }))}
-										className="absolute left-3 top-3 text-gray-400 hover:text-[#690000]"
-									>
-										{showPasswords.newPassword ? "👁️" : "👁️‍🗨️"}
-									</button>
-								</div>
-							</div>
-							
-							<div>
-								<label className={`block text-sm font-medium ${theme.textSecondary} mb-1`}>تأكيد كلمة المرور</label>
-								<div className="relative">
-									<input
-										type={showPasswords.confirmPassword ? "text" : "password"}
-										name="confirmPassword"
-										value={passwordData.confirmPassword}
-										onChange={handlePasswordChange}
-										className={`w-full p-3 pl-10 rounded-xl border ${theme.input} ${theme.inputFocus} transition-all`}
-									/>
-									<button
-										type="button"
-										onClick={() => setShowPasswords(prev => ({ ...prev, confirmPassword: !prev.confirmPassword }))}
-										className="absolute left-3 top-3 text-gray-400 hover:text-[#690000]"
-									>
-										{showPasswords.confirmPassword ? "👁️" : "👁️‍🗨️"}
-									</button>
-								</div>
-							</div>
-
-							<div className="flex gap-3 pt-4">
-								<button
-									onClick={() => setShowPasswordModal(false)}
-									className={`flex-1 py-3 rounded-xl font-bold transition-all ${isDarkMode ? "bg-white/10 hover:bg-white/20 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
-								>
-									إلغاء
-								</button>
-								<button
-									onClick={handleChangePasswordSubmit}
-									className="flex-1 bg-[#690000] hover:bg-[#8B0000] text-white py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-[#690000]/30"
-								>
-									حفظ
-								</button>
+							))}
+							<div className="flex gap-3 pt-2">
+								<button onClick={() => setShowPasswordModal(false)} className={`flex-1 py-3 rounded-xl font-bold ${theme.buttonSecondary}`}>إلغاء</button>
+								<button onClick={handleChangePasswordSubmit} className={`flex-1 py-3 rounded-xl font-bold ${theme.buttonPrimary}`}>حفظ</button>
 							</div>
 						</div>
 					</div>
