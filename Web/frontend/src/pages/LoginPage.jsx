@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import { useGoogleLogin } from "@react-oauth/google";
 
 const LoginPage = () => {
 	const navigate = useNavigate();
 	const [isLoading, setIsLoading] = useState(false);
+	const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
 	const [isVisible, setIsVisible] = useState(false);
 	const [formData, setFormData] = useState({
@@ -24,6 +26,95 @@ const LoginPage = () => {
 			[field]: e.target.value,
 		}));
 	};
+
+	// Google Login Handler
+	const googleLogin = useGoogleLogin({
+		onSuccess: async (tokenResponse) => {
+			setIsGoogleLoading(true);
+			try {
+				// Get user info from Google
+				const userInfoResponse = await axios.get(
+					"https://www.googleapis.com/oauth2/v3/userinfo",
+					{
+						headers: {
+							Authorization: `Bearer ${tokenResponse.access_token}`,
+						},
+					}
+				);
+
+				const { email, name, sub: googleId, picture } = userInfoResponse.data;
+
+				// Send to backend
+				const response = await axios.post(
+					`${import.meta.env.VITE_API_URL}/api/auth/google`,
+					{
+						email,
+						displayName: name,
+						googleId,
+						accessToken: tokenResponse.access_token,
+					}
+				);
+
+				if (response.data.success) {
+					if (response.data.isNewUser) {
+						// New user - redirect to register with prefilled data
+						toast.success("مرحباً! يرجى إكمال بيانات التسجيل");
+						navigate("/register", {
+							state: {
+								googleData: {
+									email,
+									fullname: name,
+									googleId,
+									profilePhoto: picture,
+								},
+							},
+						});
+					} else {
+						// Existing user - login directly
+						toast.success("تم تسجيل الدخول بنجاح");
+						const user = response.data.user;
+						localStorage.setItem("user", JSON.stringify(user));
+						localStorage.setItem("token", response.data.token);
+						localStorage.setItem("tokenExpiry", Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+						setTimeout(() => {
+							switch (user.type) {
+								case "client":
+									navigate("/home");
+									break;
+								case "employee":
+									if (user.employeeDetails?.employeeType === "System Admin") {
+										navigate("/admindashboard");
+									} else {
+										navigate("/employeedashboard");
+									}
+									break;
+								case "admin":
+									navigate("/admindashboard");
+									break;
+								default:
+									navigate("/home");
+							}
+						}, 1000);
+					}
+				}
+			} catch (error) {
+				console.error("Google login error:", error);
+				if (error.response?.status === 403) {
+					toast.error(error.response?.data?.message || "تم إيقاف حسابك. تواصل مع الإدارة");
+				} else {
+					toast.error("فشل تسجيل الدخول بجوجل. حاول مرة أخرى");
+				}
+			} finally {
+				setIsGoogleLoading(false);
+			}
+		},
+		onError: (error) => {
+			console.error("Google OAuth error:", error);
+			toast.error("فشل الاتصال بجوجل. حاول مرة أخرى");
+			setIsGoogleLoading(false);
+		},
+	});
 
 	const handleLogin = async (e) => {
 		e.preventDefault();
@@ -304,13 +395,27 @@ const LoginPage = () => {
 					>
 						<button
 							type="button"
-							className="w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-[#690000]/30 transition-all duration-300 group"
+							onClick={() => googleLogin()}
+							disabled={isGoogleLoading}
+							className="w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-[#690000]/30 transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed"
 						>
-							<img src="/src/assets/images/googleIcon.png" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" onError={(e) => {
-								e.target.onerror = null;
-								e.target.src = "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg";
-							}} />
-							<span className="text-gray-700 font-medium">المتابعة مع Google</span>
+							{isGoogleLoading ? (
+								<>
+									<svg className="animate-spin h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24">
+										<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+										<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+									</svg>
+									<span className="text-gray-700 font-medium">جاري الاتصال بجوجل...</span>
+								</>
+							) : (
+								<>
+									<img src="/src/assets/images/googleIcon.png" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" onError={(e) => {
+										e.target.onerror = null;
+										e.target.src = "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg";
+									}} />
+									<span className="text-gray-700 font-medium">المتابعة مع Google</span>
+								</>
+							)}
 						</button>
 					</div>
 

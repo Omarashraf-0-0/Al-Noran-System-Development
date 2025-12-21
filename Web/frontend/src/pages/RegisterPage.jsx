@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 
 const RegisterPage = () => {
 	const navigate = useNavigate();
+	const location = useLocation();
 	const [isLoading, setIsLoading] = useState(false);
 	const [isVisible, setIsVisible] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+	const [isGoogleSignup, setIsGoogleSignup] = useState(false);
+	const [googleData, setGoogleData] = useState(null);
 	const [formData, setFormData] = useState({
 		fullname: "",
 		email: "",
@@ -23,7 +26,22 @@ const RegisterPage = () => {
 
 	useEffect(() => {
 		setIsVisible(true);
-	}, []);
+		
+		// Check if coming from Google login with prefilled data
+		if (location.state?.googleData) {
+			const gData = location.state.googleData;
+			setGoogleData(gData);
+			setIsGoogleSignup(true);
+			setFormData(prev => ({
+				...prev,
+				fullname: gData.fullname || "",
+				email: gData.email || "",
+				// Generate a username from email
+				username: gData.email ? gData.email.split("@")[0] : "",
+			}));
+			toast.success("تم جلب بياناتك من جوجل. أكمل باقي البيانات", { duration: 4000 });
+		}
+	}, [location.state]);
 
 	const handleInputChange = (field) => (e) => {
 		setFormData((prev) => ({
@@ -43,8 +61,13 @@ const RegisterPage = () => {
 		e.preventDefault();
 
 		// Validations
-		if (formData.password !== formData.confirmPassword) {
+		if (!isGoogleSignup && formData.password !== formData.confirmPassword) {
 			toast.error("كلمة المرور وتأكيد كلمة المرور غير متطابقين");
+			return;
+		}
+
+		if (!isGoogleSignup && formData.password.length < 6) {
+			toast.error("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
 			return;
 		}
 
@@ -58,6 +81,16 @@ const RegisterPage = () => {
 			return;
 		}
 
+		if (!formData.phone) {
+			toast.error("رجاءً أدخل رقم الهاتف");
+			return;
+		}
+
+		if (!formData.type) {
+			toast.error("رجاءً اختر نوع الحساب");
+			return;
+		}
+
 		setIsLoading(true);
 
 		try {
@@ -66,13 +99,18 @@ const RegisterPage = () => {
 				username: formData.username,
 				phone: formData.phone,
 				email: formData.email,
-				password: formData.password,
+				password: isGoogleSignup ? `Google_${googleData.googleId}_${Date.now()}` : formData.password,
 				type: "client",
 				clientDetails: {
 					clientType: formData.type,
 					ssn: formData.ssn || "",
 				},
 			};
+
+			// Add googleId if coming from Google signup
+			if (isGoogleSignup && googleData?.googleId) {
+				registrationData.googleId = googleData.googleId;
+			}
 
 			const response = await axios.post(
 				`${import.meta.env.VITE_API_URL}/api/auth/signup`,
@@ -163,11 +201,19 @@ const RegisterPage = () => {
 							/>
 						</Link>
 						<h1 className="text-3xl font-bold text-[#690000] mb-2">
-							إنشاء حساب جديد
+							{isGoogleSignup ? "إكمال التسجيل" : "إنشاء حساب جديد"}
 						</h1>
 						<p className="text-gray-500">
-							انضم إلينا وابدأ رحلتك مع نوران
+							{isGoogleSignup ? "أكمل بياناتك للمتابعة مع حساب جوجل" : "انضم إلينا وابدأ رحلتك مع نوران"}
 						</p>
+						{isGoogleSignup && (
+							<div className="mt-3 flex items-center justify-center gap-2 text-green-600 bg-green-50 py-2 px-4 rounded-lg">
+								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+								</svg>
+								<span className="text-sm font-medium">متصل بحساب جوجل</span>
+							</div>
+						)}
 					</div>
 
 					{/* Form */}
@@ -208,6 +254,7 @@ const RegisterPage = () => {
 						>
 							<label className="block text-sm font-semibold text-gray-700 mb-2">
 								البريد الإلكتروني <span className="text-red-500">*</span>
+								{isGoogleSignup && <span className="text-green-600 text-xs mr-2">(من جوجل)</span>}
 							</label>
 							<div className="relative group">
 								<div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#690000] transition-colors">
@@ -221,7 +268,8 @@ const RegisterPage = () => {
 									onChange={handleInputChange("email")}
 									placeholder="example@email.com"
 									required
-									className="w-full pr-12 pl-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] focus:bg-white transition-all duration-300"
+									readOnly={isGoogleSignup}
+									className={`w-full pr-12 pl-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] focus:bg-white transition-all duration-300 ${isGoogleSignup ? 'bg-gray-100 cursor-not-allowed' : ''}`}
 									dir="ltr"
 								/>
 							</div>
@@ -281,7 +329,8 @@ const RegisterPage = () => {
 							</div>
 						</div>
 
-						{/* Password Row */}
+						{/* Password Row - Only show if not Google signup */}
+						{!isGoogleSignup && (
 						<div 
 							className="grid grid-cols-1 sm:grid-cols-2 gap-4"
 							style={{ 
@@ -305,7 +354,7 @@ const RegisterPage = () => {
 										value={formData.password}
 										onChange={handleInputChange("password")}
 										placeholder="••••••••"
-										required
+										required={!isGoogleSignup}
 										className="w-full pr-12 pl-12 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] focus:bg-white transition-all duration-300"
 										dir="ltr"
 									/>
@@ -367,6 +416,7 @@ const RegisterPage = () => {
 								</div>
 							</div>
 						</div>
+						)}
 
 						{/* Account Type */}
 						<div 
