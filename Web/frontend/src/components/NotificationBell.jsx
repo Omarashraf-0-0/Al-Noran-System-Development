@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { io } from "socket.io-client";
 
 const NotificationBell = ({ isDarkMode }) => {
 	const [notifications, setNotifications] = useState([]);
@@ -9,11 +10,60 @@ const NotificationBell = ({ isDarkMode }) => {
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
+	const socketRef = useRef(null);
 
 	// Get token from localStorage
 	const token = localStorage.getItem("token");
+	const user = JSON.parse(localStorage.getItem("user") || "{}");
 	const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3500";
 
+<<<<<<< HEAD
+=======
+	// Load cached notifications on mount
+	useEffect(() => {
+		if (!user._id) return;
+		
+		try {
+			const CACHE_KEY = `notifications_${user._id}`;
+			const CACHE_TIMESTAMP_KEY = `notifications_timestamp_${user._id}`;
+			const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+			
+			const cached = localStorage.getItem(CACHE_KEY);
+			const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+			
+			if (cached && timestamp) {
+				const age = Date.now() - parseInt(timestamp);
+				if (age < CACHE_DURATION) {
+					const data = JSON.parse(cached);
+					setNotifications(data.notifications || []);
+					setUnreadCount(data.unreadCount || 0);
+					console.log("Loaded notifications from cache:", data.unreadCount, "unread");
+				}
+			}
+		} catch (error) {
+			console.error("Error loading cached notifications:", error);
+		}
+	}, [user._id]);
+
+	// Save notifications to cache
+	const saveToCache = useCallback((notifs, count) => {
+		if (!user._id) return;
+		
+		try {
+			const CACHE_KEY = `notifications_${user._id}`;
+			const CACHE_TIMESTAMP_KEY = `notifications_timestamp_${user._id}`;
+			
+			localStorage.setItem(CACHE_KEY, JSON.stringify({
+				notifications: notifs,
+				unreadCount: count
+			}));
+			localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+			console.log("Saved to cache:", count, "unread");
+		} catch (error) {
+			console.error("Error saving notifications to cache:", error);
+		}
+	}, [user._id]);
+>>>>>>> main
 	// Theme configuration
 	const theme = {
 		dropdownBg: isDarkMode ? "bg-[#1a1010] border-[#3d1a1a]" : "bg-white border-gray-200",
@@ -29,6 +79,7 @@ const NotificationBell = ({ isDarkMode }) => {
 	const fetchNotifications = useCallback(async () => {
 		try {
 			setLoading(true);
+			
 			const response = await axios.get(`${apiUrl}/api/notifications`, {
 				headers: {
 					Authorization: `Bearer ${token}`,
@@ -40,8 +91,14 @@ const NotificationBell = ({ isDarkMode }) => {
 			});
 
 			if (response.data.success) {
-				setNotifications(response.data.notifications || []);
-				setUnreadCount(response.data.unreadCount || 0);
+				const notifs = response.data.notifications || [];
+				const count = response.data.unreadCount || 0;
+				
+				setNotifications(notifs);
+				setUnreadCount(count);
+				
+				// Save to cache
+				saveToCache(notifs, count);
 			}
 		} catch (error) {
 			console.error("Error fetching notifications:", error);
@@ -51,39 +108,69 @@ const NotificationBell = ({ isDarkMode }) => {
 		} finally {
 			setLoading(false);
 		}
-	}, [apiUrl, token]);
-
-	// Fetch unread count only
-	const fetchUnreadCount = useCallback(async () => {
-		try {
-			const response = await axios.get(
-				`${apiUrl}/api/notifications/unread-count`,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				}
-			);
-
-			if (response.data.success) {
-				setUnreadCount(response.data.count || 0);
-			}
-		} catch (error) {
-			console.error("Error fetching unread count:", error);
-		}
-	}, [apiUrl, token]);
+	}, [apiUrl, token, saveToCache]);
 
 	useEffect(() => {
-		if (!token) return;
+		if (!token || !user._id) return;
 
-		// Initial fetch
+		// Fetch notifications (cache already loaded in separate useEffect)
 		fetchNotifications();
 
-		// Poll for new notifications every 30 seconds
-		const interval = setInterval(fetchUnreadCount, 30000);
+		// Connect to Socket.IO
+		const socket = io(apiUrl, {
+			autoConnect: true,
+			reconnection: true,
+			reconnectionDelay: 1000,
+			reconnectionAttempts: 5,
+		});
 
-		return () => clearInterval(interval);
-	}, [token, fetchNotifications, fetchUnreadCount]);
+		socketRef.current = socket;
+
+		// Authenticate user with socket
+		const userRole = user.role || 'customer';
+		socket.on('connect', () => {
+			console.log('Socket connected for notifications');
+			socket.emit('identify', { odI: user._id, userType: userRole });
+		});
+
+		// Listen for new notifications
+		socket.on('new_notification', (data) => {
+			console.log('New notification received:', data);
+			
+			// Add notification to the list and update count
+			setNotifications(prev => {
+				const updated = [data.notification, ...prev];
+				return updated;
+			});
+			
+			// Update unread count
+			if (!data.notification.read) {
+				setUnreadCount(prev => prev + 1);
+			}
+			
+			// Show toast notification
+			toast.success(data.notification.title, {
+				icon: getNotificationIcon(data.notification.type),
+				duration: 4000,
+			});
+		});
+
+		socket.on('disconnect', () => {
+			console.log('Socket disconnected from notifications');
+		});
+
+		socket.on('connect_error', (error) => {
+			console.error('Socket connection error:', error);
+		});
+
+		// Cleanup on unmount
+		return () => {
+			if (socketRef.current) {
+				socketRef.current.disconnect();
+			}
+		};
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [token, user._id, apiUrl, fetchNotifications]);
 
 	// Handle notification click - delete notification and navigate to notification page
 	const handleNotificationClick = async (notifId) => {
@@ -114,9 +201,13 @@ const NotificationBell = ({ isDarkMode }) => {
 				setNotifications(updated);
 				
 				// Decrease unread count only if the notification was unread
+				const newCount = wasUnread ? Math.max(0, unreadCount - 1) : unreadCount;
 				if (wasUnread) {
-					setUnreadCount(prev => Math.max(0, prev - 1));
+					setUnreadCount(newCount);
 				}
+				
+				// Update cache
+				saveToCache(updated, newCount);
 			}).catch(error => {
 				console.error("Error deleting notification:", error);
 			});

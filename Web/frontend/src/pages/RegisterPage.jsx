@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import { isValidPassportNumber } from "../utils/validationUtils";
 
 const RegisterPage = () => {
 	const navigate = useNavigate();
@@ -20,7 +21,13 @@ const RegisterPage = () => {
 		password: "",
 		confirmPassword: "",
 		type: "",
+<<<<<<< HEAD
 		ssn: "",
+=======
+		nationality: "",
+		ssn: "",
+		passportNumber: "",
+>>>>>>> main
 		terms: false,
 	});
 
@@ -71,9 +78,30 @@ const RegisterPage = () => {
 			return;
 		}
 
+<<<<<<< HEAD
 		if (formData.type === "personal" && (!formData.ssn || formData.ssn.length !== 14)) {
 			toast.error("رجاءً أدخل رقم بطاقة قومية صحيح (14 رقم)");
 			return;
+=======
+		if (formData.type === "personal") {
+			if (!formData.nationality) {
+				toast.error("رجاءً اختر الجنسية");
+				return;
+			}
+
+			if (formData.nationality === "egyptian") {
+				if (!formData.ssn || formData.ssn.length !== 14) {
+					toast.error("رجاءً أدخل رقم بطاقة قومية صحيح (14 رقم)");
+					return;
+				}
+			} else if (formData.nationality === "nonEgyptian") {
+				const passportValidation = isValidPassportNumber(formData.passportNumber);
+				if (!passportValidation.isValid) {
+					toast.error(passportValidation.error);
+					return;
+				}
+			}
+>>>>>>> main
 		}
 
 		if (!formData.terms) {
@@ -103,7 +131,13 @@ const RegisterPage = () => {
 				type: "client",
 				clientDetails: {
 					clientType: formData.type,
+<<<<<<< HEAD
 					ssn: formData.ssn || "",
+=======
+					nationality: formData.nationality || "",
+					ssn: formData.nationality === "egyptian" ? formData.ssn : "",
+					passportNumber: formData.nationality === "nonEgyptian" ? formData.passportNumber : "",
+>>>>>>> main
 				},
 			};
 
@@ -195,7 +229,11 @@ const RegisterPage = () => {
 					>
 						<Link to="/">
 							<img
+<<<<<<< HEAD
 								src="/src/assets/images/coloredLogo.svg"
+=======
+								src="/images/coloredLogo.svg"
+>>>>>>> main
 								alt="النوران"
 								className="h-20 mx-auto mb-4 hover:scale-110 transition-transform duration-300"
 							/>
@@ -456,13 +494,77 @@ const RegisterPage = () => {
 							</div>
 						</div>
 
+<<<<<<< HEAD
 						{/* SSN - Only for personal accounts */}
+=======
+						{/* Nationality - Only for personal accounts */}
+>>>>>>> main
 						{formData.type === "personal" && (
 							<div 
 								style={{ 
 									animation: 'fade-in-up 0.4s ease-out forwards'
 								}}
 							>
+<<<<<<< HEAD
+=======
+								<label className="block text-sm font-semibold text-gray-700 mb-3">
+									الجنسية <span className="text-red-500">*</span>
+								</label>
+								<div className="grid grid-cols-2 gap-3">
+									<label
+										className={`flex items-center justify-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+											formData.nationality === "egyptian"
+												? "border-[#690000] bg-[#690000]/5 shadow-md"
+												: "border-gray-200 hover:border-[#690000]/30 hover:bg-gray-50"
+										}`}
+									>
+										<input
+											type="radio"
+											name="nationality"
+											value="egyptian"
+											checked={formData.nationality === "egyptian"}
+											onChange={handleInputChange("nationality")}
+											className="hidden"
+											required
+										/>
+										<span className="text-xl">🇪🇬</span>
+										<span className={`text-sm font-medium ${formData.nationality === "egyptian" ? "text-[#690000]" : "text-gray-600"}`}>
+											مصري
+										</span>
+									</label>
+									<label
+										className={`flex items-center justify-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+											formData.nationality === "nonEgyptian"
+												? "border-[#690000] bg-[#690000]/5 shadow-md"
+												: "border-gray-200 hover:border-[#690000]/30 hover:bg-gray-50"
+										}`}
+									>
+										<input
+											type="radio"
+											name="nationality"
+											value="nonEgyptian"
+											checked={formData.nationality === "nonEgyptian"}
+											onChange={handleInputChange("nationality")}
+											className="hidden"
+											required
+										/>
+										{/* <span className="text-xl">🌍</span> */}
+										<span className={`text-sm font-medium ${formData.nationality === "nonEgyptian" ? "text-[#690000]" : "text-gray-600"}`}>
+											غير مصري
+										</span>
+									</label>
+								</div>
+							</div>
+						)}
+
+						{/* SSN - Only for Egyptian personal accounts */}
+						{formData.type === "personal" && formData.nationality === "egyptian" && (
+							<div 
+								style={{ 
+									animation: 'fade-in-up 0.4s ease-out forwards'
+								}}
+							>
+>>>>>>> main
 								<label className="block text-sm font-semibold text-gray-700 mb-2">
 									رقم البطاقة القومية <span className="text-red-500">*</span>
 								</label>
@@ -486,6 +588,39 @@ const RegisterPage = () => {
 							</div>
 						)}
 
+<<<<<<< HEAD
+=======
+						{/* Passport Number - Only for Non-Egyptian personal accounts */}
+						{formData.type === "personal" && formData.nationality === "nonEgyptian" && (
+							<div 
+								style={{ 
+									animation: 'fade-in-up 0.4s ease-out forwards'
+								}}
+							>
+								<label className="block text-sm font-semibold text-gray-700 mb-2">
+									رقم الباسبور <span className="text-red-500">*</span>
+								</label>
+								<div className="relative group">
+									<div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#690000] transition-colors">
+										<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+										</svg>
+									</div>
+									<input
+										type="text"
+										value={formData.passportNumber}
+										onChange={handleInputChange("passportNumber")}
+										placeholder="ادخل رقم الباسبور (6-9 أحرف وأرقام)"
+										required
+										maxLength={9}
+										className="w-full pr-12 pl-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] focus:bg-white transition-all duration-300 tracking-wider uppercase"
+										dir="ltr"
+									/>
+								</div>
+							</div>
+						)}
+
+>>>>>>> main
 						{/* Terms Checkbox */}
 						<div 
 							className="flex items-start gap-3"
@@ -582,7 +717,11 @@ const RegisterPage = () => {
 					}}
 				>
 					<img
+<<<<<<< HEAD
 						src="/src/assets/images/white logo.svg"
+=======
+						src="/images/white logo.svg"
+>>>>>>> main
 						alt="النوران"
 						className="h-44 mb-10 drop-shadow-2xl animate-float-slow"
 					/>

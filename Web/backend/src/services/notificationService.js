@@ -372,6 +372,27 @@ const createNotification = async (options) => {
 		await notification.save();
 		console.log(`📬 [NotificationService] Created notification: ${type} for user: ${userId}`);
 
+		// إرسال الإشعار عبر Socket.IO للمستخدمين المتصلين
+		if (global.io && global.userSockets) {
+			try {
+				const userSocketIds = global.userSockets.get(userId.toString());
+				if (userSocketIds && userSocketIds.size > 0) {
+					// إرسال الإشعار لجميع الجلسات النشطة للمستخدم
+					userSocketIds.forEach(socketId => {
+						global.io.to(socketId).emit('new_notification', {
+							notification: notification.toObject(),
+							unreadCount: notification.isRead ? undefined : 1 // سيتم تحديثه من الفرونت إند
+						});
+					});
+					console.log(`🔔 [NotificationService] Notification sent via Socket.IO to user: ${userId}`);
+				} else {
+					console.log(`⚠️ [NotificationService] User ${userId} is not currently connected via Socket.IO`);
+				}
+			} catch (socketError) {
+				console.error("❌ [NotificationService] Socket.IO error:", socketError.message);
+			}
+		}
+
 		// إرسال البريد الإلكتروني إذا مطلوب
 		if (sendEmail) {
 			try {
@@ -726,6 +747,32 @@ const notifyChatMessage = async (userId, chatId, senderName) => {
 };
 
 /**
+ * الحصول على إشعارات الموظف حسب المعرف
+ */
+const getEmployeeNotificationsById = async (employeeId) => {
+	try {
+		if (!employeeId) {
+			throw new Error("employeeId is required");
+		}
+
+		const notifications = await Notification.find({ userId: employeeId })
+			.sort({ createdAt: -1 }); // latest first
+
+		console.log(`📬 [NotificationService] Fetched ${notifications.length} notifications for employee: ${employeeId}`);
+
+		// ✅ ALWAYS return array
+		return notifications;
+
+	} catch (error) {
+		console.error(
+			"❌ [NotificationService] Error fetching notifications:",
+			error.message
+		);
+		throw error;
+	}
+};
+
+/**
  * إشعار إيصال دفع جديد
  */
 const notifyPaymentReceiptUploaded = async (userId, paymentId) => {
@@ -877,6 +924,7 @@ module.exports = {
 	notifyShipmentDocumentsRequested,
 	notifyUCRStatus,
 	notifyChatMessage,
+	getEmployeeNotificationsById,
 	notifyPaymentReceiptUploaded,
 	notifyPaymentStatus,
 	notifyInvoiceCreated,

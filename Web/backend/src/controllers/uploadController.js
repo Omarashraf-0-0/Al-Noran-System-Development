@@ -258,7 +258,8 @@ const getUploadById = async (req, res) => {
 		if (upload.s3Key) {
 			try {
 				const { getPresignedUrl } = require("../utils/s3Helpers");
-				const presignedUrl = await getPresignedUrl(upload.s3Key, 3600); // 1 hour expiry
+				const isDownload = req.query.download === "true";
+				const presignedUrl = await getPresignedUrl(upload.s3Key, 3600, { isDownload }); // 1 hour expiry
 
 				// Return upload data with presigned URL
 				return res.json({
@@ -578,6 +579,40 @@ const rejectDocument = async (req, res) => {
 	}
 };
 
+// ✅ Proxy download through backend to hide S3 URL
+const proxyDownload = async (req, res) => {
+	try {
+		const upload = await Upload.findById(req.params.id);
+
+		if (!upload) {
+			return res.status(404).json({ message: "Upload not found" });
+		}
+
+		if (!upload.s3Key) {
+			return res.status(400).json({ message: "File does not exist in storage" });
+		}
+
+		const { getFileStream } = require("../utils/s3Helpers");
+		
+		try {
+			const s3Stream = await getFileStream(upload.s3Key);
+			
+			// Set headers for download
+			res.setHeader('Content-disposition', `attachment; filename="${encodeURIComponent(upload.originalname || upload.filename)}"`);
+			res.setHeader('Content-type', upload.mimetype || 'application/octet-stream');
+			
+			// Pipe stream to response
+			s3Stream.pipe(res);
+		} catch (s3Error) {
+			console.error("Proxy download failed:", s3Error);
+			res.status(500).json({ message: "Failed to download file from storage" });
+		}
+	} catch (error) {
+		console.error("Proxy download error:", error);
+		res.status(500).json({ message: error.message });
+	}
+};
+
 module.exports = {
 	uploadSingleFile,
 	uploadMultipleFiles,
@@ -591,4 +626,5 @@ module.exports = {
 	getPendingDocuments,
 	approveDocument,
 	rejectDocument,
+	proxyDownload,
 };

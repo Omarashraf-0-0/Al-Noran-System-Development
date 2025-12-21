@@ -1,524 +1,307 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { toast } from "react-hot-toast";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import WelcomeBanner from "./WelcomeBanner";
-import quickReorderIcon from "../assets/images/quick_reorder.png";
-import filterListIcon from "../assets/images/filter_list.png";
-import filterAltIcon from "../assets/images/filter_alt.png";
-import searchIcon from "../assets/images/Search.svg";
+import { Search, Filter, SortAsc, ChevronLeft, ChevronRight, FileText, AlertCircle, Globe } from "lucide-react";
+import axios from "axios";
+import { toast } from "react-hot-toast";
+import { useTheme } from "../context/ThemeContext";
+import ShipmentCard from "../components/ShipmentCard";
 
-// Status configurations
-const STATUS_CONFIG = {
-	pending: {
-		label: "قيد المراجعة",
-		color: "bg-yellow-200",
-		textColor: "#856404",
-	},
-	under_review: {
-		label: "قيد التدقيق",
-		color: "bg-blue-200",
-		textColor: "#0c5460",
-	},
-	approved: {
-		label: "معتمد",
-		color: "bg-green-200",
-		textColor: "#155724",
-	},
-	rejected: {
-		label: "مرفوض",
-		color: "bg-red-200",
-		textColor: "#721c24",
-	},
-	needs_revision: {
-		label: "يحتاج تعديل",
-		color: "bg-orange-200",
-		textColor: "#856404",
-	},
-	ucr_issued: {
-		label: "تم إصدار UCR",
-		color: "bg-indigo-200",
-		textColor: "#3730a3",
-	},
-	completed: {
-		label: "مكتمل",
-		color: "bg-green-300",
-		textColor: "#155724",
-	},
+// Status Configuration Helpers
+const STATUS_LABELS = {
+	pending: "قيد المراجعة",
+	under_review: "قيد التدقيق",
+	approved: "معتمد",
+	rejected: "مرفوض",
+	needs_revision: "يحتاج تعديل",
+	ucr_issued: "تم إصدار UCR",
+	completed: "مكتمل",
 };
 
-// Document type labels
-const DOCUMENT_LABELS = {
-	bank_waiver: "التنازل البنكي",
-	export_invoice: "الفاتورة الأصلية",
-	export_packing_list: "كشف العبوة",
-	shipping_permit: "إذن الشحن",
-	awb: "بوليصة الشحن الجوي (AWB)",
-	bl: "بوليصة الشحن البحري (B/L)",
-};
-
-const UCRRequestsPage = () => {
+export default function UCRRequestsPage() {
 	const navigate = useNavigate();
-	const [loading, setLoading] = useState(true);
-	const [requests, setRequests] = useState([]);
-	const [filteredRequests, setFilteredRequests] = useState([]);
-	const [statusFilter, setStatusFilter] = useState("all");
-	const [searchQuery, setSearchQuery] = useState("");
-	const [sortBy, setSortBy] = useState("newest");
+	const { isDarkMode } = useTheme();
+	const [searchTerm, setSearchTerm] = useState("");
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [isSortOpen, setIsSortOpen] = useState(false);
+	const [requests, setRequests] = useState([]);
+	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	const [statusFilter, setStatusFilter] = useState("all");
+	const [sortOption, setSortOption] = useState("newest");
+	
+	// Pagination State
+	const [currentPage, setCurrentPage] = useState(1);
+	const itemsPerPage = 9;
+
+	const token = localStorage.getItem("token");
 
 	// Status options for filter
 	const statusOptions = [
 		{ value: "all", label: "الكل" },
-		{ value: "pending", label: "قيد المراجعة" },
-		{ value: "under_review", label: "قيد التدقيق" },
-		{ value: "approved", label: "معتمد" },
-		{ value: "rejected", label: "مرفوض" },
-		{ value: "needs_revision", label: "يحتاج تعديل" },
-		{ value: "ucr_issued", label: "تم إصدار UCR" },
-		{ value: "completed", label: "مكتمل" },
+		...Object.entries(STATUS_LABELS).map(([key, label]) => ({ value: key, label }))
 	];
 
-	// Fetch UCR requests
-	const fetchRequests = useCallback(async () => {
-		setLoading(true);
-		setError(null);
-		try {
-			const token = localStorage.getItem("token");
-			if (!token) {
-				toast.error("يجب تسجيل الدخول أولاً");
-				navigate("/login");
-				return;
-			}
+	useEffect(() => {
+		const fetchRequests = async () => {
+			try {
+				setLoading(true);
+				setError(null);
 
-			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/ucr`,
-				{
-					headers: { Authorization: `Bearer ${token}` },
+				if (!token) {
+					toast.error("يجب تسجيل الدخول أولاً");
+					navigate("/login");
+					return;
 				}
-			);
 
-			if (response.data.success) {
-				setRequests(response.data.data || []);
+				const response = await axios.get(
+					`${import.meta.env.VITE_API_URL}/api/ucr`,
+					{
+						headers: { Authorization: `Bearer ${token}` },
+					}
+				);
+
+				if (response.data.success) {
+					const formattedRequests = (response.data.data || []).map((req) => ({
+						id: req._id,
+						type: "ucr_request",
+						shipmentNo: req.ucrNumber || `طلب #${req._id.slice(-6)}`,
+						clientName: req.destinationCountry || "غير محدد", // Using Destination as primary info
+						portName: req.destinationPort || "—",
+						status: STATUS_LABELS[req.status] || req.status,
+						ucr: req.ucrNumber,
+						// acid removed to prevent showing ID
+						link: `/ucr-request/${req._id}`,
+						createdAt: req.createdAt,
+						date: new Date(req.createdAt).toLocaleDateString("ar-EG", {
+							day: "numeric",
+							month: "long",
+							year: "numeric",
+						}),
+						// Raw data for filtering
+						rawStatus: req.status,
+						rawValue: req.valueInEGP
+					}));
+					setRequests(formattedRequests);
+				}
+			} catch (error) {
+				console.error("Error fetching UCR requests:", error);
+				setError("فشل في جلب طلبات UCR");
+				toast.error("فشل في جلب طلبات UCR");
+			} finally {
+				setLoading(false);
 			}
-		} catch (error) {
-			console.error("Error fetching UCR requests:", error);
-			const errorMessage = error.response?.data?.message || "فشل في جلب الطلبات";
-			setError(errorMessage);
-			if (error.response?.status === 401) {
-				toast.error("انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى");
-				navigate("/login");
-			} else {
-				toast.error(errorMessage);
-			}
-		} finally {
-			setLoading(false);
-		}
-	}, [navigate]);
-
-	useEffect(() => {
-		fetchRequests();
-	}, [fetchRequests]);
-
-	// Filter and sort requests
-	useEffect(() => {
-		let result = [...requests];
-
-		// Apply status filter
-		if (statusFilter !== "all") {
-			result = result.filter((req) => req.status === statusFilter);
-		}
-
-		// Apply search filter
-		if (searchQuery) {
-			const query = searchQuery.toLowerCase();
-			result = result.filter(
-				(req) =>
-					req.ucrNumber?.toLowerCase().includes(query) ||
-					req.generalDescription?.toLowerCase().includes(query) ||
-					req.destinationCountry?.toLowerCase().includes(query)
-			);
-		}
-
-		// Apply sorting
-		result.sort((a, b) => {
-			if (sortBy === "newest") {
-				return new Date(b.createdAt) - new Date(a.createdAt);
-			} else if (sortBy === "oldest") {
-				return new Date(a.createdAt) - new Date(b.createdAt);
-			} else if (sortBy === "value_high") {
-				return (b.valueInEGP || 0) - (a.valueInEGP || 0);
-			} else if (sortBy === "value_low") {
-				return (a.valueInEGP || 0) - (b.valueInEGP || 0);
-			}
-			return 0;
-		});
-
-		setFilteredRequests(result);
-	}, [requests, statusFilter, searchQuery, sortBy]);
-
-	// Toggle filter dropdown
-	const toggleFilter = () => {
-		setIsFilterOpen(!isFilterOpen);
-		setIsSortOpen(false);
-	};
-
-	// Toggle sort dropdown
-	const toggleSort = () => {
-		setIsSortOpen(!isSortOpen);
-		setIsFilterOpen(false);
-	};
-
-	// Format date
-	const formatDate = (dateStr) => {
-		if (!dateStr) return "—";
-		return new Date(dateStr).toLocaleDateString("ar-EG", {
-			year: "numeric",
-			month: "long",
-			day: "numeric",
-		});
-	};
-
-	// Format currency
-	const formatCurrency = (value) => {
-		if (!value) return "—";
-		return new Intl.NumberFormat("ar-EG", {
-			style: "currency",
-			currency: "EGP",
-			maximumFractionDigits: 0,
-		}).format(value);
-	};
-
-	// Get status style
-	const getStatusStyle = (status) => {
-		const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
-		return {
-			className: config.color,
-			color: config.textColor,
 		};
-	};
 
-	// Handle delete request
-	const handleDelete = async (requestId) => {
-		if (!window.confirm("هل أنت متأكد من حذف هذا الطلب؟")) return;
+		fetchRequests();
+	}, [token, navigate]);
 
-		try {
-			const token = localStorage.getItem("token");
-			const response = await axios.delete(
-				`${import.meta.env.VITE_API_URL}/api/ucr/${requestId}`,
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
-			);
+	const toggleFilter = () => { setIsFilterOpen(!isFilterOpen); setIsSortOpen(false); };
+	const toggleSort = () => { setIsSortOpen(!isSortOpen); setIsFilterOpen(false); };
 
-			if (response.data.success) {
-				toast.success("تم حذف الطلب بنجاح");
-				fetchRequests();
-			}
-		} catch (error) {
-			console.error("Error deleting request:", error);
-			toast.error(error.response?.data?.message || "فشل في حذف الطلب");
+	// Filter & Sort
+	let filteredRequests = requests.filter((req) => {
+		const matchesSearch = 
+			req.shipmentNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			req.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+		const matchesStatus = statusFilter === "all" || req.rawStatus === statusFilter;
+		return matchesSearch && matchesStatus;
+	});
+
+	filteredRequests = [...filteredRequests].sort((a, b) => {
+		switch (sortOption) {
+			case "newest": return new Date(b.createdAt) - new Date(a.createdAt);
+			case "oldest": return new Date(a.createdAt) - new Date(b.createdAt);
+			case "value_high": return (b.rawValue || 0) - (a.rawValue || 0);
+			case "value_low": return (a.rawValue || 0) - (b.rawValue || 0);
+			default: return 0;
 		}
-	};
+	});
+
+	// Pagination
+	const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+	const currentItems = filteredRequests.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
 	return (
-		<div className="flex flex-col min-h-screen bg-gray-50 font-sans relative">
-			<Header />
-			<WelcomeBanner />
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#0a0505]" : "bg-gray-50"}`}>
+			
+			{/* Background */}
+			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+				{isDarkMode ? (
+					<>
+						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#690000]/10 rounded-full filter blur-[100px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#2b0000]/20 rounded-full filter blur-[120px] animate-float-slow"></div>
+					</>
+				) : (
+					<div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-red-50/50 to-transparent"></div>
+				)}
+			</div>
 
-			<section className="flex-grow w-full bg-white py-12 px-8 shadow-inner relative">
-				<div className="max-w-6xl mx-auto">
-					{/* Header with Add Button */}
-					<div className="flex items-center justify-between mb-8">
-						<h1 className="text-3xl font-bold text-right text-red-800">
-							طلباتي UCR
+			<Header />
+			
+			<section className="flex-grow w-full pt-24 pb-12 px-4 md:px-8 relative z-10">
+				<div className="max-w-7xl mx-auto">
+					<div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-red-800"}`}>
+							<Globe className={isDarkMode ? "text-blue-500" : "text-red-800"} size={32} />
+							طلبات UCR
+							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-red-100 text-red-800"}`}>
+								{filteredRequests.length} طلب
+							</span>
 						</h1>
+						
 						<button
 							onClick={() => navigate("/ucr-request")}
-							className="bg-red-800 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition flex items-center gap-2"
+							className="bg-red-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition shadow-lg hover:shadow-red-900/20 flex items-center gap-2"
 						>
 							<span className="text-xl">+</span>
 							طلب جديد
 						</button>
 					</div>
 
-					{/* 🔍 Search + Filter + Sort */}
-					<div className="flex items-center justify-center mb-8 gap-4 relative">
-						{/* Left side — Filter + Sort */}
-						<div className="flex items-center gap-3">
-							{/* Filter Button */}
-							<button
-								onClick={toggleFilter}
-								className={`flex items-center gap-2 font-medium transition-colors ${
-									isFilterOpen
-										? "bg-red-800 text-white px-3 py-1 rounded-md"
-										: "text-red-800"
-								}`}
-							>
-								<img
-									src={filterAltIcon}
-									alt="Filter"
-									className="w-5 h-5 object-contain"
-								/>
-								تصفية
-							</button>
-
-							{/* Sort Button */}
-							<button
-								onClick={toggleSort}
-								className={`flex items-center gap-2 font-medium transition-colors ${
-									isSortOpen
-										? "bg-red-800 text-white px-3 py-1 rounded-md"
-										: "text-red-800"
-								}`}
-							>
-								<img
-									src={filterListIcon}
-									alt="Sort"
-									className="w-5 h-5 object-contain"
-								/>
-								ترتيب
-							</button>
-						</div>
-
-						{/* Search Bar */}
-						<div className="relative w-1/2">
+					{/* Operations Bar */}
+					<div className={`mb-10 p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 shadow-lg border relative z-20 ${
+						isDarkMode ? "bg-[#1a1010]/80 backdrop-blur-xl border-white/10" : "bg-white/80 backdrop-blur-xl border-white/40"
+					}`}>
+						<div className="relative flex-1 w-full">
 							<input
 								type="text"
-								placeholder="ابحث برقم الطلب أو UCR أو الوجهة..."
-								value={searchQuery}
-								onChange={(e) => setSearchQuery(e.target.value)}
-								className="w-full bg-white shadow-md rounded-full py-2 px-4 pr-10 text-right focus:outline-none focus:ring-2 focus:ring-red-500 placeholder-gray-400 text-black"
+								placeholder="ابحث برقم UCR، الطلب، أو الدولة..."
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								className={`w-full rounded-xl py-3 px-4 pr-12 focus:outline-none focus:ring-2 transition-all ${
+									isDarkMode 
+										? "bg-black/30 border-white/10 text-white placeholder-gray-500 focus:ring-blue-500/50" 
+										: "bg-gray-100 border-transparent text-gray-900 placeholder-gray-400 focus:ring-red-500/30"
+								}`}
 							/>
-							<img
-								src={searchIcon}
-								alt="Search"
-								className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-							/>
+							<Search className={`absolute left-4 top-3.5 w-5 h-5 ${isDarkMode ? "text-gray-500" : "text-gray-400"}`} />
 						</div>
 
-						{/* 🧩 Filter Dropdown */}
+						<div className="flex items-center gap-3 w-full md:w-auto">
+							<button onClick={toggleFilter} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+								isFilterOpen || isDarkMode ? "bg-red-600 text-white hover:bg-red-700" : "bg-red-50 text-red-800 hover:bg-red-100"
+							}`}>
+								<Filter size={20} />
+								<span className="hidden sm:inline">تصفية</span>
+							</button>
+							<button onClick={toggleSort} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+								isSortOpen || isDarkMode ? "bg-[#2b1515] text-red-400 border border-red-900/30 hover:bg-[#3d1a1a]" : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+							}`}>
+								<SortAsc size={20} />
+								<span className="hidden sm:inline">ترتيب</span>
+							</button>
+						</div>
+
 						{isFilterOpen && (
-							<div className="absolute top-14 left-40 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">
-									تصفية حسب الحالة:
-								</h4>
-								<select
-									value={statusFilter}
-									onChange={(e) => setStatusFilter(e.target.value)}
-									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
-								>
+							<div className={`absolute top-full left-0 mt-2 w-64 p-4 rounded-xl shadow-2xl border z-30 ${isDarkMode ? "bg-[#1e1e1e] border-white/10 text-gray-200" : "bg-white border-gray-100 text-gray-700"}`} dir="rtl">
+								<h4 className="font-bold mb-3 text-sm opacity-70">تصفية حسب الحالة</h4>
+								<div className="space-y-1">
 									{statusOptions.map((status) => (
-										<option key={status.value} value={status.value}>
+										<button
+											key={status.value}
+											onClick={() => { setStatusFilter(status.value); setIsFilterOpen(false); }}
+											className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
+												statusFilter === status.value 
+													? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-50 text-red-800")
+													: "hover:bg-gray-500/10"
+											}`}
+										>
 											{status.label}
-										</option>
+										</button>
 									))}
-								</select>
-								<button
-									onClick={() => setIsFilterOpen(false)}
-									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
-								>
-									تطبيق
-								</button>
+								</div>
 							</div>
 						)}
 
-						{/* 🧩 Sort Dropdown */}
 						{isSortOpen && (
-							<div className="absolute top-14 left-20 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">ترتيب حسب:</h4>
-								<select
-									value={sortBy}
-									onChange={(e) => setSortBy(e.target.value)}
-									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
-								>
-									<option value="newest">الأحدث أولاً</option>
-									<option value="oldest">الأقدم أولاً</option>
-									<option value="value_high">القيمة الأعلى</option>
-									<option value="value_low">القيمة الأقل</option>
-								</select>
-								<button
-									onClick={() => setIsSortOpen(false)}
-									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
-								>
-									تطبيق
-								</button>
+							<div className={`absolute top-full left-32 mt-2 w-56 p-4 rounded-xl shadow-2xl border z-30 ${isDarkMode ? "bg-[#1e1e1e] border-white/10 text-gray-200" : "bg-white border-gray-100 text-gray-700"}`} dir="rtl">
+								<h4 className="font-bold mb-3 text-sm opacity-70">ترتيب حسب</h4>
+								{[
+									{ v: "newest", l: "الأحدث أولاً" },
+									{ v: "oldest", l: "الأقدم أولاً" },
+									{ v: "value_high", l: "القيمة الأعلى" },
+									{ v: "value_low", l: "القيمة الأقل" }
+								].map((opt) => (
+									<button
+										key={opt.v}
+										onClick={() => { setSortOption(opt.v); setIsSortOpen(false); }}
+										className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
+											sortOption === opt.v
+												? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-50 text-red-800")
+												: "hover:bg-gray-500/10"
+										}`}
+									>
+										{opt.l}
+									</button>
+								))}
 							</div>
 						)}
 					</div>
 
-					{/* 📋 Requests Table */}
 					{loading ? (
-						<div className="flex justify-center items-center py-12 gap-4">
-							<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
-							<span className="text-gray-600 text-lg">جاري تحميل الطلبات...</span>
+						<div className="flex flex-col items-center justify-center py-20">
+							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4"></div>
+							<p className={isDarkMode ? "text-gray-400" : "text-gray-600"}>جاري تحميل الطلبات...</p>
 						</div>
 					) : error ? (
-						<div className="bg-red-50 border border-red-300 rounded-lg p-4 text-right">
-							<p className="text-red-800 font-medium mb-3">❌ حدث خطأ: {error}</p>
-							<button
-								onClick={() => window.location.reload()}
-								className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-							>
-								إعادة محاولة
-							</button>
+						<div className={`bg-red-50 border border-red-300 rounded-lg p-4 text-right ${isDarkMode ? "bg-red-900/20 border-red-700" : ""}`}>
+							<p className={`font-medium mb-3 flex items-center gap-2 ${isDarkMode ? "text-red-400" : "text-red-800"}`}>
+								<AlertCircle size={20} /> {error}
+							</p>
 						</div>
 					) : filteredRequests.length === 0 ? (
-						<div className="text-center py-12">
-							<span className="text-5xl mb-4 block">📭</span>
-							<p className="text-gray-500 text-lg mb-4">
-								{requests.length === 0
-									? "لا توجد طلبات UCR بعد"
-									: "لا توجد طلبات تطابق معايير البحث"}
-							</p>
-							{requests.length === 0 && (
-								<button
-									onClick={() => navigate("/ucr-request")}
-									className="bg-red-800 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition"
-								>
-									إنشاء أول طلب UCR
-								</button>
-							)}
+						<div className={`text-center py-20 rounded-3xl border border-dashed ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+							<div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${isDarkMode ? "bg-white/5" : "bg-gray-50"}`}>
+								<Globe className={isDarkMode ? "text-gray-600" : "text-gray-300"} size={40} />
+							</div>
+							<h3 className={`text-xl font-bold mb-2 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>لا توجد طلبات UCR</h3>
+							<button
+								onClick={() => navigate("/ucr-request")}
+								className="mt-4 bg-red-800 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition"
+							>
+								إضافة طلب جديد
+							</button>
 						</div>
 					) : (
-						<div className="overflow-x-auto">
-							<table className="w-full text-right border-separate border-spacing-y-3">
-								<thead>
-									<tr className="bg-red-800 text-white">
-										<th className="py-3 px-4 text-right rounded-tr-lg">رقم UCR / التاريخ</th>
-										<th className="py-3 px-4 text-right">الوجهة</th>
-										<th className="py-3 px-4 text-right">القيمة</th>
-										<th className="py-3 px-4 text-right">الحالة</th>
-										<th className="py-3 px-4 text-right rounded-tl-lg">الإجراءات</th>
-									</tr>
-								</thead>
-								<tbody>
-									{filteredRequests.map((request) => {
-										const statusStyle = getStatusStyle(request.status);
-										return (
-											<tr
-												key={request._id}
-												className="bg-gray-100 hover:bg-gray-200 rounded-xl transition text-right"
-											>
-												<td className="py-3 px-4 align-top">
-													<div className="flex flex-col text-sm">
-														<span className="text-gray-700 text-base font-semibold">
-															{request.ucrNumber || `طلب #${request._id?.slice(-6)}`}
-														</span>
-														<span className="text-gray-500 text-xs">
-															{formatDate(request.createdAt)}
-														</span>
-													</div>
-												</td>
+						<>
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+								{currentItems.map((request) => (
+									<ShipmentCard key={request.id} shipment={request} />
+								))}
+							</div>
 
-												<td className="py-3 px-4 align-top">
-													<div className="flex flex-col text-sm">
-														<span className="text-gray-700 text-base font-semibold flex items-center gap-1">
-															{request.shippingMethod === "air" ? "✈️" : "🚢"}
-															{request.destinationCountry || "غير محدد"}
-														</span>
-														{request.destinationPort && (
-															<span className="text-gray-500 text-xs">
-																{request.destinationPort}
-															</span>
-														)}
-													</div>
-												</td>
-
-												<td className="py-3 px-4 align-top">
-													<span className="text-gray-600 text-sm">
-														{formatCurrency(request.valueInEGP)}
-													</span>
-												</td>
-
-												<td className="py-3 px-4 align-top">
-													<span
-														className={`${statusStyle.className} text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit`}
-														style={{ color: statusStyle.color }}
-													>
-														<img
-															src={quickReorderIcon}
-															alt="status icon"
-															className="w-4 h-4"
-														/>
-														{STATUS_CONFIG[request.status]?.label || request.status}
-													</span>
-												</td>
-
-												<td className="py-3 px-4 align-top">
-													<div className="flex flex-col gap-2">
-														{/* Needs revision alert - show which documents need revision */}
-														{request.status === "needs_revision" && (
-															<div className="bg-orange-100 border border-orange-300 rounded-lg p-2 text-xs">
-																<p className="text-orange-800 font-bold mb-1">⚠️ مطلوب تعديل</p>
-																{/* Show documents that need revision */}
-																{request.documentStatuses?.filter(ds => ds.status === "needs_revision").length > 0 ? (
-																	<div className="space-y-1">
-																		{request.documentStatuses.filter(ds => ds.status === "needs_revision").map((ds, idx) => {
-																			// Find the matching upload to get document type
-																			const upload = request.uploads?.find(u => 
-																				u._id === ds.uploadId || u.id === ds.uploadId
-																			);
-																			const docName = upload?.documentType 
-																				? DOCUMENT_LABELS[upload.documentType] || upload.documentType 
-																				: "مستند";
-																			return (
-																				<div key={idx} className="bg-white/50 rounded p-1">
-																					<p className="text-orange-700 font-medium">📄 {docName}</p>
-																					{ds.employeeNotes && (
-																						<p className="text-orange-600 text-xs mr-4">💬 {ds.employeeNotes}</p>
-																					)}
-																				</div>
-																			);
-																		})}
-																	</div>
-																) : request.employeeNotes ? (
-																	<p className="text-orange-700 text-xs">{request.employeeNotes}</p>
-																) : null}
-															</div>
-														)}
-														<div className="flex items-center gap-2">
-															<button
-																onClick={() => navigate(`/ucr-request/${request._id}`)}
-																className="text-blue-600 text-sm font-medium underline cursor-pointer hover:text-blue-800"
-															>
-																عرض التفاصيل
-															</button>
-															{(request.status === "pending" || request.status === "needs_revision") && (
-																<>
-																	<span className="text-gray-300">|</span>
-																	<button
-																		onClick={() => navigate(`/ucr-request/${request._id}/edit`)}
-																		className={`text-sm font-medium underline cursor-pointer ${request.status === "needs_revision" ? "text-orange-600 hover:text-orange-800 font-bold" : "text-yellow-600 hover:text-yellow-800"}`}
-																	>
-																		{request.status === "needs_revision" ? "✏️ تعديل الآن" : "تعديل"}
-																	</button>
-																</>
-															)}
-															{request.status === "pending" && (
-																<>
-																	<span className="text-gray-300">|</span>
-																	<button
-																		onClick={() => handleDelete(request._id)}
-																		className="text-red-600 text-sm font-medium underline cursor-pointer hover:text-red-800"
-																	>
-																		حذف
-																	</button>
-																</>
-															)}
-														</div>
-													</div>
-												</td>
-											</tr>
-										);
-									})}
-								</tbody>
-							</table>
-						</div>
+							{totalPages > 1 && (
+								<div className="flex justify-center items-center gap-4 mt-8" dir="ltr">
+									<button
+										onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+										disabled={currentPage === 1}
+										className={`p-2 rounded-full transition-colors ${
+											currentPage === 1 
+												? (isDarkMode ? "text-gray-600 cursor-not-allowed" : "text-gray-300 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-700")
+										}`}
+									>
+										<ChevronLeft size={24} />
+									</button>
+									<div className={`px-4 py-2 rounded-lg font-medium ${isDarkMode ? "bg-white/5 text-gray-300" : "bg-gray-100 text-gray-700"}`}>
+										Page {currentPage} of {totalPages}
+									</div>
+									<button
+										onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+										disabled={currentPage === totalPages}
+										className={`p-2 rounded-full transition-colors ${
+											currentPage === totalPages 
+												? (isDarkMode ? "text-gray-600 cursor-not-allowed" : "text-gray-300 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-700")
+										}`}
+									>
+										<ChevronRight size={24} />
+									</button>
+								</div>
+							)}
+						</>
 					)}
 				</div>
 			</section>
@@ -526,6 +309,4 @@ const UCRRequestsPage = () => {
 			<Footer />
 		</div>
 	);
-};
-
-export default UCRRequestsPage;
+}

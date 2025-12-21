@@ -15,6 +15,7 @@ const {
 	updateFCMToken,
 	getNotificationSettings,
 	updateNotificationSettings,
+	getEmployeeNotifications,
 } = require("../controllers/notificationController");
 
 // =====================================================
@@ -34,6 +35,9 @@ router.put("/read-all", protect, markAllAsRead);
 
 // Clear read notifications
 router.delete("/clear-read", protect, clearReadNotifications);
+
+// Get employee notifications
+router.get("/employee-notifications", protect, getEmployeeNotifications);
 
 // FCM Token
 router.put("/fcm-token", protect, updateFCMToken);
@@ -62,5 +66,6 @@ router.put("/:id/archive", protect, archiveNotification);
 
 // Delete notification
 router.delete("/:id", protect, deleteNotification);
+
 
 module.exports = router;

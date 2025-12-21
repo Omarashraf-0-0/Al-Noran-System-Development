@@ -1,15 +1,31 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from "react";
+=======
+import React, { useState, useEffect, useRef } from "react";
+>>>>>>> main
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { useGoogleLogin } from "@react-oauth/google";
+<<<<<<< HEAD
 
 const LoginPage = () => {
 	const navigate = useNavigate();
+=======
+import ReCAPTCHA from "react-google-recaptcha";
+
+const LoginPage = () => {
+	const navigate = useNavigate();
+	const recaptchaRef = useRef(null);
+>>>>>>> main
 	const [isLoading, setIsLoading] = useState(false);
 	const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
 	const [isVisible, setIsVisible] = useState(false);
+<<<<<<< HEAD
+=======
+	const [captchaToken, setCaptchaToken] = useState(null);
+>>>>>>> main
 	const [formData, setFormData] = useState({
 		email: "",
 		password: "",
@@ -118,12 +134,29 @@ const LoginPage = () => {
 
 	const handleLogin = async (e) => {
 		e.preventDefault();
+<<<<<<< HEAD
+=======
+
+		// Validate CAPTCHA
+		if (!captchaToken) {
+			toast.error('يرجى التحقق من أنك لست روبوت');
+			return;
+		}
+
+>>>>>>> main
 		setIsLoading(true);
 
 		try {
 			const response = await axios.post(
 				`${import.meta.env.VITE_API_URL}/api/auth/login`,
+<<<<<<< HEAD
 				formData
+=======
+				{
+					...formData,
+					captchaToken, // Send CAPTCHA token to backend
+				}
+>>>>>>> main
 			);
 
 			toast.success("تم تسجيل الدخول بنجاح");
@@ -159,6 +192,16 @@ const LoginPage = () => {
 				});
 			} else if (error.response?.status === 401) {
 				toast.error("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+<<<<<<< HEAD
+=======
+			} else if (error.response?.status === 400 && error.response?.data?.message?.includes('CAPTCHA')) {
+				toast.error("التحقق الأمني فشل. يرجى المحاولة مرة أخرى");
+				// Reset CAPTCHA on failure
+				if (recaptchaRef.current) {
+					recaptchaRef.current.reset();
+					setCaptchaToken(null);
+				}
+>>>>>>> main
 			} else {
 				toast.error(error.response?.data?.message || "فشل تسجيل الدخول");
 			}
@@ -236,7 +279,11 @@ const LoginPage = () => {
 					>
 						<Link to="/">
 							<img
+<<<<<<< HEAD
 								src="/src/assets/images/coloredLogo.svg"
+=======
+								src="/images/coloredLogo.svg"
+>>>>>>> main
 								alt="النوران"
 								className="h-28 mx-auto mb-6 hover:scale-110 transition-transform duration-300"
 							/>
@@ -339,6 +386,35 @@ const LoginPage = () => {
 							</Link>
 						</div>
 
+<<<<<<< HEAD
+=======
+						{/* Google reCAPTCHA v2 */}
+						<div 
+							className="flex justify-center"
+							style={{ 
+								animation: isVisible ? 'fade-in-up 0.6s ease-out 0.35s forwards' : 'none',
+								opacity: 0 
+							}}
+						>
+							<ReCAPTCHA
+								ref={recaptchaRef}
+								sitekey={import.meta.env.VITE_GOOGLE_RECAPTCHA_SITE_KEY || 'YOUR_SITE_KEY'}
+								onChange={(token) => {
+									setCaptchaToken(token);
+								}}
+								onExpired={() => {
+									setCaptchaToken(null);
+									toast.error('انتهت صلاحية التحقق. يرجى المحاولة مرة أخرى');
+								}}
+								onErrored={() => {
+									setCaptchaToken(null);
+									toast.error('حدث خطأ في التحقق. يرجى المحاولة مرة أخرى');
+								}}
+								theme="light"
+							/>
+						</div>
+
+>>>>>>> main
 						{/* Submit Button */}
 						<div
 							style={{ 
@@ -409,7 +485,11 @@ const LoginPage = () => {
 								</>
 							) : (
 								<>
+<<<<<<< HEAD
 									<img src="/src/assets/images/googleIcon.png" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" onError={(e) => {
+=======
+									<img src="/images/googleIcon.png" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" onError={(e) => {
+>>>>>>> main
 										e.target.onerror = null;
 										e.target.src = "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg";
 									}} />
@@ -460,7 +540,11 @@ const LoginPage = () => {
 					}}
 				>
 					<img
+<<<<<<< HEAD
 						src="/src/assets/images/white logo.svg"
+=======
+						src="/images/white logo.svg"
+>>>>>>> main
 						alt="النوران"
 						className="h-44 mb-10 drop-shadow-2xl animate-float-slow"
 					/>

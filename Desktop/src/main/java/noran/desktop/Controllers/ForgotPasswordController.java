@@ -84,7 +84,7 @@ public class ForgotPasswordController {
     }
 
     private boolean sendOtpRequest(String email) throws IOException {
-        URL url = new URL("http://localhost:3500/api/otp/forgotPassword");
+        URL url = new URL(noran.desktop.AppConfig.API_FORGOT_PASSWORD);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");

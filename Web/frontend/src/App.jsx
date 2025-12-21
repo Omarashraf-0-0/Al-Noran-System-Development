@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useNotificationSocket } from "./hooks/useNotificationSocket";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -171,6 +172,10 @@ const ProfileRoute = () => {
 import { ThemeProvider } from "./context/ThemeContext";
 
 const App = () => {
+	// Initialize notification socket connection at app level
+	// This ensures notifications work immediately when the app loads
+	useNotificationSocket();
+
 	return (
 		<ThemeProvider>
 			<div>

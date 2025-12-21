@@ -26,6 +26,8 @@ class ApiService {
             headers: {
               'Content-Type': 'application/json',
               'ngrok-skip-browser-warning': 'true', // مهم لـ ngrok
+              'X-Client-Type': 'mobile', // تحديد أن الطلب من تطبيق الموبايل
+              'X-Flutter-App': 'true', // header إضافي للتأكيد
             },
             body: jsonEncode({'email': email, 'password': password}),
           )
@@ -99,6 +101,8 @@ class ApiService {
             headers: {
               'Content-Type': 'application/json',
               'ngrok-skip-browser-warning': 'true',
+              'X-Client-Type': 'mobile',
+              'X-Flutter-App': 'true',
             },
             body: jsonEncode({
               'email': email,
@@ -190,6 +194,8 @@ class ApiService {
         headers: {
           'Content-Type': 'application/json',
           'ngrok-skip-browser-warning': 'true',
+          'X-Client-Type': 'mobile',
+          'X-Flutter-App': 'true',
         },
         body: jsonEncode(body),
       );

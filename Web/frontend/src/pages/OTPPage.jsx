@@ -159,7 +159,11 @@ const OTPPage = () => {
 					>
 						<Link to="/">
 							<img
+<<<<<<< HEAD
 								src="/src/assets/images/coloredLogo.svg"
+=======
+								src="/images/coloredLogo.svg"
+>>>>>>> main
 								alt="النوران"
 								className="h-28 mx-auto mb-6 hover:scale-110 transition-transform duration-300"
 							/>
@@ -273,7 +277,11 @@ const OTPPage = () => {
 					}}
 				>
 					<img
+<<<<<<< HEAD
 						src="/src/assets/images/white logo.svg"
+=======
+						src="/images/white logo.svg"
+>>>>>>> main
 						alt="النوران"
 						className="h-44 mb-10 drop-shadow-2xl animate-float-slow"
 					/>

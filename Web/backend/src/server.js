@@ -37,9 +37,21 @@ connectDB();
 
 // --- 2. إنشاء سيرفر HTTP وربطه بـ Express و Socket.IO ---
 const server = http.createServer(app);
+
+// CORS allowed origins - supports both development and production
+const allowedOrigins = [
+	"http://localhost:5173",
+	"http://localhost:3000",
+	"https://al-noran-system.web.app",       // Firebase Hosting
+	"https://al-noran-system.firebaseapp.com", // Firebase Hosting alternate
+	"https://alnoran.org",                    // Custom domain
+	"https://www.alnoran.org",                // Custom domain with www
+	process.env.FRONTEND_URL,                 // Environment variable for flexibility
+].filter(Boolean); // Remove undefined values
+
 const io = new Server(server, {
 	cors: {
-		origin: "http://localhost:5173", // تأكد أن هذا هو رابط الفرونت إند
+		origin: allowedOrigins,
 		methods: ["GET", "POST"],
 		credentials: true,
 	},
@@ -47,9 +59,20 @@ const io = new Server(server, {
 
 app.use(
 	cors({
-		origin: "http://localhost:5173",
+		origin: function (origin, callback) {
+			// Allow requests with no origin (mobile apps, Postman, etc.)
+			if (!origin) return callback(null, true);
+			
+			if (allowedOrigins.includes(origin)) {
+				callback(null, true);
+			} else {
+				console.log(`CORS blocked origin: ${origin}`);
+				callback(null, true); // Allow all origins in production for now
+			}
+		},
 		credentials: true,
 		optionsSuccessStatus: 200,
+		exposedHeaders: ["Content-Disposition"],
 	})
 );
 app.use(logger);
@@ -67,10 +90,13 @@ app.use((req, res, next) => {
 	next();
 });
 
-app.use(
-	"/",
-	express.static(path.join(__dirname, "..", "..", "frontend", "public"))
-);
+// Only serve frontend static files in development (when frontend folder exists)
+const frontendPath = path.join(__dirname, "..", "..", "frontend", "public");
+const fs = require('fs');
+if (fs.existsSync(frontendPath)) {
+	app.use("/", express.static(frontendPath));
+}
+
 // Serve uploaded files (both legacy local uploads and new local uploads)
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
@@ -122,6 +148,10 @@ const { Chat, Message } = require("./models/chat");
 // Track online users
 const onlineUsers = new Map(); // Map<socketId, { odI, userType }>
 const userSockets = new Map(); // Map<odI, Set<socketId>>
+
+// Make io globally accessible for notification service
+global.io = io;
+global.userSockets = userSockets;
 
 io.on("connection", (socket) => {
 	console.log(`User connected: ${socket.id}`);

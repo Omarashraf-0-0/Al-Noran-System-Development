@@ -492,6 +492,30 @@ const updateNotificationSettings = async (req, res) => {
 	}
 };
 
+
+const getEmployeeNotifications = async (req, res) => {
+	try {
+		console.log("here");
+		const  employeeId  = req.body._id;
+		console.log(employeeId);
+		const notifications = await notificationService.getEmployeeNotificationsById(employeeId);
+
+		console.log(notifications);
+		return res.status(200).json({
+			success: true,
+			count: notifications.length,
+			data: notifications,
+		});
+	} catch (error) {
+		return res.status(500).json({
+			success: false,
+			message: error.message,
+		});
+	}
+};
+
+
+
 module.exports = {
 	getNotifications,
 	getNotificationById,
@@ -506,4 +530,5 @@ module.exports = {
 	updateFCMToken,
 	getNotificationSettings,
 	updateNotificationSettings,
+	getEmployeeNotifications,
 };

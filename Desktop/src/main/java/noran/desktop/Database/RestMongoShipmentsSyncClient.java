@@ -14,8 +14,8 @@ import java.util.*;
 
 public class RestMongoShipmentsSyncClient {
 
-    private static final String REMOTE_SHIPMENTS_GET_URL = "http://localhost:3500/api/shipments/getAll";
-    private static final String REMOTE_SHIPMENTS_CREATE_URL = "http://localhost:3500/api/shipments/addShipments";
+    private static final String REMOTE_SHIPMENTS_GET_URL = noran.desktop.AppConfig.API_SHIPMENTS_GET_ALL;
+    private static final String REMOTE_SHIPMENTS_CREATE_URL = noran.desktop.AppConfig.API_SHIPMENTS_ADD;
 
     public static void main(String[] args) {
         try {
@@ -35,7 +35,8 @@ public class RestMongoShipmentsSyncClient {
         for (int i = 0; i < remoteArr.length(); i++) {
             JSONObject doc = remoteArr.getJSONObject(i);
             String id = parseId(doc);
-            if (id != null) remoteById.put(id, doc);
+            if (id != null)
+                remoteById.put(id, doc);
         }
 
         ensureLocalTableExists();
@@ -54,8 +55,10 @@ public class RestMongoShipmentsSyncClient {
                     j.put("clientId", rs.getString("clientId"));
                     j.put("port_name", rs.getString("port_name"));
                     j.put("num_of_containers", rs.getInt("num_of_containers"));
-                    j.put("type_of_containers", new JSONArray(rs.getString("type_of_containers") == null ? "[]" : rs.getString("type_of_containers")));
-                    j.put("third_gomroky", new JSONArray(rs.getString("third_gomroky") == null ? "[]" : rs.getString("third_gomroky")));
+                    j.put("type_of_containers", new JSONArray(
+                            rs.getString("type_of_containers") == null ? "[]" : rs.getString("type_of_containers")));
+                    j.put("third_gomroky", new JSONArray(
+                            rs.getString("third_gomroky") == null ? "[]" : rs.getString("third_gomroky")));
                     j.put("country", rs.getString("country"));
                     j.put("status", rs.getString("status"));
                     j.put("policy", rs.getString("policy"));
@@ -65,7 +68,8 @@ public class RestMongoShipmentsSyncClient {
                     j.put("sundries", rs.getDouble("sundries"));
 
                     String id = rs.getString("shipment_id");
-                    if (id != null) localById.put(id, j);
+                    if (id != null)
+                        localById.put(id, j);
                     localList.add(j);
                 }
             }
@@ -74,7 +78,8 @@ public class RestMongoShipmentsSyncClient {
         // ✅ Insert remote-only shipments
         List<JSONObject> toInsert = new ArrayList<>();
         for (Map.Entry<String, JSONObject> e : remoteById.entrySet()) {
-            if (!localById.containsKey(e.getKey())) toInsert.add(e.getValue());
+            if (!localById.containsKey(e.getKey()))
+                toInsert.add(e.getValue());
         }
 
         System.out.println("Remote-only shipments to insert locally: " + toInsert.size());
@@ -82,18 +87,19 @@ public class RestMongoShipmentsSyncClient {
         if (!toInsert.isEmpty()) {
             try (Connection conn = DatabaseConnection.connect()) {
                 String insertSQL = """
-                    INSERT OR REPLACE INTO shipments (
-                        port_name, num_of_containers, type_of_containers, third_gomroky, country,
-                        status, policy, dragt, clearance_fees, expenses_and_tips, sundries, clientId
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """;
+                            INSERT OR REPLACE INTO shipments (
+                                port_name, num_of_containers, type_of_containers, third_gomroky, country,
+                                status, policy, dragt, clearance_fees, expenses_and_tips, sundries, clientId
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """;
 
                 PreparedStatement pstmt = conn.prepareStatement(insertSQL);
 
                 for (JSONObject doc : toInsert) {
                     pstmt.setString(1, doc.optString("port_name", ""));
                     pstmt.setInt(2, doc.optInt("num_of_containers", 0));
-                    pstmt.setString(3, doc.has("type_of_containers") ? doc.getJSONArray("type_of_containers").toString() : "[]");
+                    pstmt.setString(3,
+                            doc.has("type_of_containers") ? doc.getJSONArray("type_of_containers").toString() : "[]");
                     pstmt.setString(4, doc.has("third_gomroky") ? doc.getJSONArray("third_gomroky").toString() : "[]");
                     pstmt.setString(5, doc.optString("country", ""));
                     pstmt.setString(6, doc.optString("status", ""));
@@ -107,8 +113,10 @@ public class RestMongoShipmentsSyncClient {
                     String clientId = null;
                     if (doc.has("clientId")) {
                         Object c = doc.get("clientId");
-                        if (c instanceof JSONObject) clientId = ((JSONObject) c).optString("$oid", null);
-                        else clientId = doc.optString("clientId", null);
+                        if (c instanceof JSONObject)
+                            clientId = ((JSONObject) c).optString("$oid", null);
+                        else
+                            clientId = doc.optString("clientId", null);
                     }
                     pstmt.setString(12, clientId);
 
@@ -124,23 +132,23 @@ public class RestMongoShipmentsSyncClient {
     private static void ensureLocalTableExists() throws Exception {
         try (Connection conn = DatabaseConnection.connect()) {
             String create = """
-                CREATE TABLE IF NOT EXISTS shipments (
-                    shipment_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    port_name TEXT NOT NULL,
-                    num_of_containers INTEGER CHECK (num_of_containers >= 0),
-                    type_of_containers TEXT,
-                    third_gomroky TEXT,
-                    country TEXT,
-                    status TEXT,
-                    policy TEXT,
-                    dragt BOOLEAN DEFAULT 0,
-                    clearance_fees REAL DEFAULT 0.00,
-                    expenses_and_tips REAL DEFAULT 0.00,
-                    sundries REAL DEFAULT 0.00,
-                    clientId TEXT,
-                    FOREIGN KEY (clientId) REFERENCES users(_id)
-                )
-            """;
+                        CREATE TABLE IF NOT EXISTS shipments (
+                            shipment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            port_name TEXT NOT NULL,
+                            num_of_containers INTEGER CHECK (num_of_containers >= 0),
+                            type_of_containers TEXT,
+                            third_gomroky TEXT,
+                            country TEXT,
+                            status TEXT,
+                            policy TEXT,
+                            dragt BOOLEAN DEFAULT 0,
+                            clearance_fees REAL DEFAULT 0.00,
+                            expenses_and_tips REAL DEFAULT 0.00,
+                            sundries REAL DEFAULT 0.00,
+                            clientId TEXT,
+                            FOREIGN KEY (clientId) REFERENCES users(_id)
+                        )
+                    """;
             try (Statement st = conn.createStatement()) {
                 st.execute(create);
             }
@@ -155,18 +163,24 @@ public class RestMongoShipmentsSyncClient {
             conn.setRequestProperty("Accept", "application/json");
 
             int status = conn.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(status >= 200 && status < 300 ? conn.getInputStream() : conn.getErrorStream(), StandardCharsets.UTF_8));
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader(status >= 200 && status < 300 ? conn.getInputStream() : conn.getErrorStream(),
+                            StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
             String line;
-            while ((line = br.readLine()) != null) sb.append(line);
+            while ((line = br.readLine()) != null)
+                sb.append(line);
             String resp = sb.toString();
-            if (resp.isBlank()) return new JSONArray();
+            if (resp.isBlank())
+                return new JSONArray();
 
             Object parsed = new org.json.JSONTokener(resp).nextValue();
-            if (parsed instanceof JSONArray) return (JSONArray) parsed;
+            if (parsed instanceof JSONArray)
+                return (JSONArray) parsed;
             if (parsed instanceof JSONObject) {
                 JSONObject o = (JSONObject) parsed;
-                if (o.has("shipments") && o.get("shipments") instanceof JSONArray) return o.getJSONArray("shipments");
+                if (o.has("shipments") && o.get("shipments") instanceof JSONArray)
+                    return o.getJSONArray("shipments");
                 return new JSONArray().put(o);
             }
 
@@ -177,13 +191,16 @@ public class RestMongoShipmentsSyncClient {
     }
 
     private static String parseId(JSONObject doc) {
-        if (doc == null) return null;
+        if (doc == null)
+            return null;
         if (doc.has("_id")) {
             Object idObj = doc.get("_id");
             if (idObj instanceof JSONObject) {
                 JSONObject idDoc = (JSONObject) idObj;
-                if (idDoc.has("$oid")) return idDoc.optString("$oid", null);
-            } else return doc.optString("_id", null);
+                if (idDoc.has("$oid"))
+                    return idDoc.optString("$oid", null);
+            } else
+                return doc.optString("_id", null);
         }
         return null;
     }

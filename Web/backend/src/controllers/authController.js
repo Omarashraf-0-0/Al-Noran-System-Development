@@ -2,17 +2,42 @@ const User = require("../models/user");
 const { validationResult } = require("express-validator");
 const asyncHandler = require("express-async-handler");
 const notificationService = require("../services/notificationService");
+const { verifyCaptcha } = require("../services/captchaService");
 
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
 const login = asyncHandler(async (req, res) => {
-	const { email, password } = req.body;
+	const { email, password, captchaToken } = req.body;
+	
+	// Check if request is from mobile app
+	const isMobileApp = req.headers['x-client-type'] === 'mobile' || 
+	                    req.headers['user-agent']?.includes('Flutter') ||
+	                    req.headers['x-flutter-app'] === 'true';
 
 	// Validation
 	if (!email || !password) {
 		res.status(400);
 		throw new Error("من فضلك أدخل البريد الإلكتروني وكلمة المرور");
+	}
+
+	// Verify reCAPTCHA token (only for web, skip for mobile)
+	if (!isMobileApp) {
+		if (captchaToken) {
+			const captchaResult = await verifyCaptcha(captchaToken);
+			if (!captchaResult.success) {
+				console.warn(`⚠️ [Auth] reCAPTCHA verification failed`);
+				res.status(400);
+				throw new Error("فشل التحقق الأمني. يرجى المحاولة مرة أخرى");
+			}
+			console.log(`✅ [Auth] reCAPTCHA verified successfully`);
+		} else {
+			// CAPTCHA token is required for web only
+			res.status(400);
+			throw new Error("يرجى إكمال التحقق الأمني");
+		}
+	} else {
+		console.log(`📱 [Auth] Mobile app login - skipping CAPTCHA`);
 	}
 
 	// Check for user
@@ -111,6 +136,28 @@ const signup = asyncHandler(async (req, res) => {
 		);
 	}
 
+	// Validate personal account requirements based on nationality
+	if (type === "client" && clientDetails?.clientType === "personal") {
+		const nationality = clientDetails.nationality;
+		
+		if (!nationality) {
+			res.status(400);
+			throw new Error("الجنسية مطلوبة للحسابات الشخصية");
+		}
+
+		if (nationality === "egyptian") {
+			if (!clientDetails.ssn || clientDetails.ssn.trim() === "" || clientDetails.ssn.length !== 14) {
+				res.status(400);
+				throw new Error("الرقم القومي مطلوب للحسابات الشخصية");
+			}
+		} else if (nationality === "nonEgyptian") {
+			if (!clientDetails.passportNumber || clientDetails.passportNumber.trim() === "") {
+				res.status(400);
+				throw new Error("رقم الباسبور مطلوب");
+			}
+		}
+	}
+
 	const userData = {
 		fullname,
 		username,
@@ -135,14 +182,18 @@ const signup = asyncHandler(async (req, res) => {
 		if (clientDetails) {
 			userData.clientDetails = {
 				clientType: clientDetails.clientType || null,
+				nationality: clientDetails.nationality || "",
 				ssn: clientDetails.ssn || "",
+				passportNumber: clientDetails.passportNumber || "",
 			};
 		}
 		// Otherwise use flat format (backward compatibility)
 		else if (clientType) {
 			userData.clientDetails = {
 				clientType,
+				nationality: "",
 				ssn: ssn || "",
+				passportNumber: "",
 			};
 		}
 	}

@@ -13,6 +13,7 @@ const {
 	deleteUpload,
 	checkRequiredDocuments,
 	getPresignedUrlForKey,
+	proxyDownload,
 } = require("../controllers/uploadS3Controller");
 
 /**
@@ -60,6 +61,13 @@ router.get("/check-required/:userId", protect, checkRequiredDocuments);
  * @access  Private
  */
 router.get("/presigned-url/:s3Key", protect, getPresignedUrlForKey);
+
+/**
+ * @route   GET /api/uploads/:id/download
+ * @desc    Secure proxy download (hides S3 URL)
+ * @access  Private
+ */
+router.get("/:id/download", protect, proxyDownload);
 
 /**
  * @route   GET /api/uploads/:id
