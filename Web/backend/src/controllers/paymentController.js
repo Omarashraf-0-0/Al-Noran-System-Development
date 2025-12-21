@@ -2,6 +2,41 @@ const Payment = require("../models/payment");
 const Invoice = require("../models/invoice");
 const User = require("../models/user"); // Assuming User model path
 const notificationService = require("../services/notificationService");
+const { getPresignedUrl } = require("../utils/s3Helpers");
+
+// Helper function to generate presigned URLs for payment transactions
+const generatePresignedUrlsForPayments = async (payments) => {
+    const paymentsWithUrls = [];
+    for (const payment of payments) {
+        const paymentObj = payment.toObject ? payment.toObject() : { ...payment };
+        const transactionsWithUrls = [];
+        
+        for (const tx of paymentObj.transactions) {
+            let imageUrl = tx.imageUrls;
+            // Check if it's an S3 key (not already a full URL or if it's an expired presigned URL)
+            if (imageUrl && !imageUrl.startsWith('blob:')) {
+                try {
+                    // If it's already a full S3 URL, extract the key
+                    if (imageUrl.includes('amazonaws.com')) {
+                        // Extract s3Key from URL: https://bucket.s3.region.amazonaws.com/key or presigned URL
+                        const urlObj = new URL(imageUrl.split('?')[0]); // Remove query params
+                        imageUrl = decodeURIComponent(urlObj.pathname.substring(1)); // Remove leading /
+                    }
+                    // Generate fresh presigned URL
+                    const presignedUrl = await getPresignedUrl(imageUrl, 3600); // 1 hour expiry
+                    transactionsWithUrls.push({ ...tx, imageUrls: presignedUrl });
+                } catch (err) {
+                    console.error(`Failed to generate presigned URL for: ${tx.imageUrls}`, err.message);
+                    transactionsWithUrls.push(tx); // Keep original if generation fails
+                }
+            } else {
+                transactionsWithUrls.push(tx);
+            }
+        }
+        paymentsWithUrls.push({ ...paymentObj, transactions: transactionsWithUrls });
+    }
+    return paymentsWithUrls;
+};
 
 // @desc    Create new payment
 // @route   POST /api/payments
@@ -78,7 +113,9 @@ const createPayment = async (req, res) => {
 const getMyPayments = async (req, res) => {
     try {
         const payments = await Payment.find({ userId: req.user.id }).sort({ createdAt: -1 });
-        res.json(payments);
+        // Generate presigned URLs for payment receipt images
+        const paymentsWithUrls = await generatePresignedUrlsForPayments(payments);
+        res.json(paymentsWithUrls);
     } catch (error) {
         console.error("Error fetching payments:", error);
         res.status(500).json({ message: "Server Error" });
@@ -155,7 +192,13 @@ const getAdminFinancials = async (req, res) => {
             };
         });
 
-        res.json(summary);
+        // Generate presigned URLs for all payment images
+        const summaryWithUrls = await Promise.all(summary.map(async (item) => {
+            const paymentsWithUrls = await generatePresignedUrlsForPayments(item.payments);
+            return { ...item, payments: paymentsWithUrls };
+        }));
+
+        res.json(summaryWithUrls);
 
     } catch (error) {
         console.error("Error details:", error);

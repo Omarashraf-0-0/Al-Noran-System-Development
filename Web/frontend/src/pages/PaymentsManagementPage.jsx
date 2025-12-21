@@ -305,6 +305,10 @@ const PaymentsManagementPage = () => {
                                                         src={trans.imageUrls}
                                                         alt="Receipt"
                                                         className="w-full h-40 object-cover rounded cursor-pointer hover:opacity-90"
+                                                        onError={(e) => {
+                                                            e.target.onerror = null;
+                                                            e.target.src = '/placeholder-image.png';
+                                                        }}
                                                     />
                                                 </a>
                                                 <div className="flex justify-between items-center mt-2">

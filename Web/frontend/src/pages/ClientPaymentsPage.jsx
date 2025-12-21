@@ -223,7 +223,8 @@ const ClientPaymentsPage = () => {
 
             // S3 controller returns { success: true, uploads: [...] }
             // where uploads is array of objects { url, s3Key, ... }
-            const filePaths = uploadRes.data.uploads.map(f => f.url || f.s3Key);
+            // IMPORTANT: Save s3Key (not presigned URL) so backend can generate fresh URLs
+            const filePaths = uploadRes.data.uploads.map(f => f.s3Key);
 
             // 2. Create Payment Record
             // Model expects transactions: [{ imageUrls: "...", status: "PENDING" }]
@@ -231,7 +232,7 @@ const ClientPaymentsPage = () => {
                 userId: user._id, // or from token
                 paymentMethod: "BANK_TRANSFER",
                 transactions: filePaths.map(path => ({
-                    imageUrls: path, // Prompt example showed string. Pass the path/url here.
+                    imageUrls: path, // Store S3 key for generating fresh presigned URLs
                     status: "PENDING"
                 }))
             };
@@ -394,11 +395,15 @@ const ClientPaymentsPage = () => {
                                     {payment.transactions?.map((tx, idx) => (
                                         <div key={idx} className="flex items-center gap-3 border rounded-lg p-2">
                                             <div className="w-16 h-16 bg-gray-200 rounded-md overflow-hidden flex-shrink-0">
-                                                {/* Assuming imageUrls is a path segment, prepend base url if needed, or if it's full url */}
+                                                {/* Backend now returns presigned S3 URLs */}
                                                 <img
-                                                    src={tx.imageUrls.startsWith('http') ? tx.imageUrls : `${import.meta.env.VITE_API_URL}/${tx.imageUrls.replace(/\\/g, '/')}`}
+                                                    src={tx.imageUrls}
                                                     alt="receipt"
                                                     className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.onerror = null;
+                                                        e.target.src = '/placeholder-image.png';
+                                                    }}
                                                 />
                                             </div>
                                             <div className="flex-grow">
