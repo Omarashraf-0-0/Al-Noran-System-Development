@@ -66,7 +66,19 @@ const HeroSection = () => {
 
 					{/* CTAs */}
 					<div className="flex flex-col sm:flex-row gap-4 mt-8 animate-fade-in-up animation-delay-600">
-						{!user && (
+						{user ? (
+							<Link
+								to={user.type === "employee" ? "/employeedashboard" : "/home"}
+								className="group px-10 py-4 bg-[#690000] hover:bg-[#8B0000] text-white text-lg font-bold rounded-full shadow-lg hover:shadow-[#690000]/40 transition-all duration-300 transform hover:-translate-y-1 hover:scale-105"
+							>
+								<span className="flex items-center gap-2">
+									لوحة التحكم
+									<svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+									</svg>
+								</span>
+							</Link>
+						) : (
 							<Link
 								to="/register"
 								className="group px-10 py-4 bg-[#690000] hover:bg-[#8B0000] text-white text-lg font-bold rounded-full shadow-lg hover:shadow-[#690000]/40 transition-all duration-300 transform hover:-translate-y-1 hover:scale-105"

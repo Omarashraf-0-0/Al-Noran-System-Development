@@ -4,6 +4,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import Header from "../components/Header";
 import Cropper from "react-easy-crop";
+import { useTheme } from "../context/ThemeContext";
 
 const AdminProfilePage = () => {
 	const navigate = useNavigate();
@@ -74,17 +75,8 @@ const AdminProfilePage = () => {
 
 // Inside return JSX, add the modal:
 
-	// Theme State with localStorage persistence (Admin uses Gold/Dark Gold accent)
-	const [isDarkMode, setIsDarkMode] = useState(() => {
-		const savedTheme = localStorage.getItem("adminProfileTheme");
-		return savedTheme ? savedTheme === "dark" : false; // Default to light for admin
-	});
-
-	useEffect(() => {
-		localStorage.setItem("adminProfileTheme", isDarkMode ? "dark" : "light");
-	}, [isDarkMode]);
-
-	const toggleTheme = () => setIsDarkMode(!isDarkMode);
+	// Use Global Theme Context
+	const { isDarkMode, toggleTheme } = useTheme();
 
 	// Theme classes - GOLD THEME
 	const theme = {
@@ -384,24 +376,24 @@ const AdminProfilePage = () => {
 					<>
 						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#D4AF37]/20 rounded-full filter blur-[150px] animate-pulse-glow"></div>
 						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#B5952F]/20 rounded-full filter blur-[180px] animate-float-slow"></div>
-						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#8A7120]/20 rounded-full filter blur-[120px] animate-float-reverse"></div>
-						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#D4AF37]/20 rounded-xl animate-float rotate-45"></div>
-						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#B5952F]/20 rounded-full animate-float-reverse"></div>
+						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#CFB53B]/20 rounded-full filter blur-[120px] animate-float-reverse"></div>
+						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#D4AF37]/30 rounded-xl animate-float rotate-45"></div>
+						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#B5952F]/30 rounded-full animate-float-reverse"></div>
 					</>
 				) : (
 					<>
-						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#D4AF37]/20 rounded-full filter blur-[150px] animate-pulse-glow"></div>
+						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#D4AF37]/10 rounded-full filter blur-[150px] animate-pulse-glow"></div>
 						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#F3E5AB]/40 rounded-full filter blur-[180px] animate-float-slow"></div>
-						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#D4AF37]/10 rounded-full filter blur-[120px] animate-float-reverse"></div>
-						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#D4AF37]/30 rounded-xl animate-float rotate-45"></div>
-						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#B5952F]/30 rounded-full animate-float-reverse"></div>
+						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#B5952F]/10 rounded-full filter blur-[120px] animate-float-reverse"></div>
+						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#D4AF37]/20 rounded-xl animate-float rotate-45"></div>
+						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#B5952F]/20 rounded-full animate-float-reverse"></div>
 					</>
 				)}
 			</div>
 
 			<Header />
 
-			<main className="w-full max-w-[98%] mx-auto p-4 md:p-6 relative z-10 space-y-6">
+			<main className="w-full max-w-[98%] mx-auto p-4 md:p-6 pt-24 relative z-10 space-y-6">
 				
 				{/* Row 1: Profile Header Card */}
 				<div className={`${theme.headerGradient} rounded-2xl p-6 relative overflow-hidden shadow-2xl border border-white/10`}>
