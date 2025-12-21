@@ -96,6 +96,7 @@ const signup = asyncHandler(async (req, res) => {
 		rank,
 		clientDetails,
 		employeeDetails,
+		googleId,
 	} = req.body;
 
 	const userExists = await User.findOne({
@@ -118,6 +119,11 @@ const signup = asyncHandler(async (req, res) => {
 		password,
 		type,
 	};
+
+	// Add googleId if provided (for Google signup)
+	if (googleId) {
+		userData.googleId = googleId;
+	}
 
 	// Add taxNumber and rank if provided
 	if (taxNumber) userData.taxNumber = taxNumber;
