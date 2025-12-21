@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/cached_api_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 
@@ -27,6 +28,7 @@ class _PaymentsPageState extends State<PaymentsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _selectedIndex = 3; // الفواتير (index 3)
+  final CachedApiService _cachedApi = CachedApiService();
 
   // Premium Colors
   static const Color primaryDark = Color(0xFF690000);
@@ -65,11 +67,11 @@ class _PaymentsPageState extends State<PaymentsPage>
     setState(() => _isLoading = true);
 
     try {
-      // Load all data in parallel
+      // Load all data in parallel using cached API
       final results = await Future.wait([
-        ApiService.getMyInvoices(),
-        ApiService.getMyPayments(),
-        ApiService.getWalletBalance(),
+        _cachedApi.getMyInvoices(),
+        _cachedApi.getMyPayments(),
+        _cachedApi.getWalletBalance(),
       ]);
 
       final invoicesResult = results[0];

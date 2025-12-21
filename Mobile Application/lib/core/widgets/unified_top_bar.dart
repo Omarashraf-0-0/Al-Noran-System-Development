@@ -72,11 +72,17 @@ class UnifiedTopBar extends StatefulWidget {
 
 class _UnifiedTopBarState extends State<UnifiedTopBar>
     with SingleTickerProviderStateMixin {
-  // Premium Colors
+  // Premium Colors - Light Mode
   static const Color primaryDark = Color(0xFF690000);
   static const Color primaryLight = Color(0xFF8B0000);
   static const Color accentColor = Color(0xFF1ba3b6);
   static const Color goldAccent = Color(0xFFD4AF37);
+
+  // Dark Mode Colors
+  static const Color darkBackground = Color(0xFF1E1E1E);
+  static const Color darkCard = Color(0xFF252525);
+  static const Color darkText = Color(0xFFE0E0E0);
+  static const Color darkTextSecondary = Color(0xFFB0B0B0);
 
   final UserCacheService _userCache = UserCacheService();
   final NotificationService _notificationService = NotificationService();
@@ -182,17 +188,26 @@ class _UnifiedTopBarState extends State<UnifiedTopBar>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       height: widget.height,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            primaryDark,
-            primaryLight,
-            primaryDark.withValues(alpha: 0.95),
-          ],
+          colors:
+              isDark
+                  ? [
+                    const Color(0xFF1A0505),
+                    const Color(0xFF2D0A0A),
+                    const Color(0xFF1A0505),
+                  ]
+                  : [
+                    primaryDark,
+                    primaryLight,
+                    primaryDark.withValues(alpha: 0.95),
+                  ],
           stops: const [0.0, 0.5, 1.0],
         ),
         borderRadius: const BorderRadius.only(
@@ -201,7 +216,10 @@ class _UnifiedTopBarState extends State<UnifiedTopBar>
         ),
         boxShadow: [
           BoxShadow(
-            color: primaryDark.withValues(alpha: 0.4),
+            color:
+                isDark
+                    ? Colors.black.withValues(alpha: 0.5)
+                    : primaryDark.withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),

@@ -6,6 +6,7 @@ import '../../core/network/api_service.dart';
 import '../../core/widgets/widgets.dart';
 import '../../theme/theme.dart';
 import '../../util/file_picker_helper.dart';
+import 'auth_dark_mode_mixin.dart';
 
 class CommercialRegistrationPage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -18,7 +19,7 @@ class CommercialRegistrationPage extends StatefulWidget {
 }
 
 class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AuthDarkModeMixin {
   File? _contractFile;
   File? _taxCardFile;
   File? _commercialRegisterFile;
@@ -76,18 +77,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
           Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF690000),
-                  Color(0xFF8B0000),
-                  Color(0xFF4A0000),
-                ],
-                stops: [0.0, 0.5, 1.0],
-              ),
-            ),
+            decoration: BoxDecoration(gradient: backgroundGradientFull),
           ),
 
           // ============= DECORATIVE CIRCLES =============
@@ -99,7 +89,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: decorativeCircleColor,
               ),
             ),
           ),
@@ -111,7 +101,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
+                color: decorativeCircleColorSmall,
               ),
             ),
           ),
@@ -204,7 +194,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: backButtonBgColor,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
@@ -255,9 +245,9 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
             ),
             child: Container(
               margin: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF690000),
+                color: logoContainerColor,
               ),
               child: const Icon(
                 Icons.business_rounded,
@@ -310,24 +300,11 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
 
   // ============= PREMIUM REQUIRED DOCS CARD =============
   Widget _buildRequiredDocsCard() {
+    final sectionTitleColor = const Color(0xFF690000);
+
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
-          ),
-          BoxShadow(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
+      decoration: cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -342,11 +319,11 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
                 ),
               ),
               const SizedBox(width: 10),
-              const Text(
+              Text(
                 'المستندات المطلوبة',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF690000),
+                  color: sectionTitleColor,
                   fontSize: 17,
                   fontFamily: 'Cairo',
                 ),
@@ -424,13 +401,11 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF690000), Color(0xFF8B0000)],
-        ),
+        gradient: buttonGradient,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF690000).withValues(alpha: 0.4),
+            color: buttonShadowColor,
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -452,22 +427,22 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
                         strokeWidth: 2.5,
                       ),
                     )
-                    : const Row(
+                    : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.check_circle_rounded,
                           color: Colors.white,
                           size: 22,
                         ),
-                        SizedBox(width: 10),
+                        const SizedBox(width: 10),
                         Text(
                           'إتمام التسجيل',
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Cairo',
-                            color: Colors.white,
+                            color: buttonTextColor,
                           ),
                         ),
                       ],
@@ -480,19 +455,14 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
 
   // ============= PREMIUM OPTIONAL DOCS CARD =============
   Widget _buildOptionalDocsCard() {
+    final optionalTitleColor =
+        isDark ? AppColors.darkTextSecondary : Colors.grey[600];
+    final optionalBarColor =
+        isDark ? AppColors.darkTextMuted : Colors.grey[400];
+
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      decoration: cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -502,7 +472,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
                 width: 4,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: Colors.grey[400],
+                  color: optionalBarColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -511,7 +481,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
                 'مستندات اختيارية',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey[600],
+                  color: optionalTitleColor,
                   fontSize: 17,
                   fontFamily: 'Cairo',
                 ),
@@ -544,6 +514,28 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
     required bool isRequired,
   }) {
     final bool hasFile = file != null;
+    final uploadBgColor =
+        isDark ? AppColors.darkSurface : const Color(0xFFF8F9FA);
+    final uploadBorderColor =
+        hasFile
+            ? const Color(0xFFD4AF37)
+            : (isDark ? AppColors.darkBorder : Colors.grey[200]!);
+    final iconBgColor =
+        hasFile
+            ? const Color(0xFFD4AF37).withValues(alpha: 0.15)
+            : (isDark
+                ? AppColors.darkCard
+                : const Color(0xFF690000).withValues(alpha: 0.1));
+    final uploadIconColor =
+        hasFile ? const Color(0xFFD4AF37) : const Color(0xFF690000);
+    final titleTextColor =
+        isDark ? AppColors.darkTextPrimary : const Color(0xFF333333);
+    final fileTextColor =
+        hasFile
+            ? const Color(0xFFD4AF37)
+            : (isDark ? AppColors.darkTextMuted : Colors.grey[500]);
+    final arrowColor = isDark ? AppColors.darkTextMuted : Colors.grey[400];
+    final requiredColor = const Color(0xFF690000);
 
     return Material(
       color: Colors.transparent,
@@ -553,10 +545,10 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8F9FA),
+            color: uploadBgColor,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: hasFile ? const Color(0xFFD4AF37) : Colors.grey[200]!,
+              color: uploadBorderColor,
               width: hasFile ? 2 : 1.5,
             ),
             boxShadow: [
@@ -564,7 +556,9 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
                 color:
                     hasFile
                         ? const Color(0xFFD4AF37).withValues(alpha: 0.1)
-                        : const Color(0xFF690000).withValues(alpha: 0.05),
+                        : (isDark
+                            ? Colors.black.withValues(alpha: 0.2)
+                            : const Color(0xFF690000).withValues(alpha: 0.05)),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -575,20 +569,14 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color:
-                      hasFile
-                          ? const Color(0xFFD4AF37).withValues(alpha: 0.15)
-                          : const Color(0xFF690000).withValues(alpha: 0.1),
+                  color: iconBgColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   hasFile
                       ? Icons.check_circle_rounded
                       : Icons.upload_file_rounded,
-                  color:
-                      hasFile
-                          ? const Color(0xFFD4AF37)
-                          : const Color(0xFF690000),
+                  color: uploadIconColor,
                   size: 22,
                 ),
               ),
@@ -601,18 +589,18 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
                       children: [
                         Text(
                           title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF333333),
+                            color: titleTextColor,
                             fontSize: 14,
                             fontFamily: 'Cairo',
                           ),
                         ),
                         if (isRequired)
-                          const Text(
+                          Text(
                             ' *',
                             style: TextStyle(
-                              color: Color(0xFF690000),
+                              color: requiredColor,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -622,10 +610,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
                     Text(
                       hasFile ? file.path.split('/').last : subtitle,
                       style: TextStyle(
-                        color:
-                            hasFile
-                                ? const Color(0xFFD4AF37)
-                                : Colors.grey[500],
+                        color: fileTextColor,
                         fontSize: 12,
                         fontFamily: 'Cairo',
                         fontWeight:
@@ -639,9 +624,9 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
               ),
               if (hasFile)
                 IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.close_rounded,
-                    color: Color(0xFF690000),
+                    color: const Color(0xFF690000),
                     size: 20,
                   ),
                   onPressed: onRemove,
@@ -651,7 +636,7 @@ class _CommercialRegistrationPageState extends State<CommercialRegistrationPage>
               else
                 Icon(
                   Icons.arrow_forward_ios_rounded,
-                  color: Colors.grey[400],
+                  color: arrowColor,
                   size: 14,
                 ),
             ],

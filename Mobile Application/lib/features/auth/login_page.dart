@@ -29,6 +29,9 @@ class _LoginPageState extends State<LoginPage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  // Dark Mode Helper
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +71,25 @@ class _LoginPageState extends State<LoginPage>
 
   @override
   Widget build(BuildContext context) {
+    // Dark Mode Colors
+    final gradientColors =
+        _isDark
+            ? [
+              const Color(0xFF1A1A2E),
+              const Color(0xFF16213E),
+              const Color(0xFF0F0F1A),
+            ]
+            : [
+              const Color(0xFF690000),
+              const Color(0xFF8B0000),
+              const Color(0xFF4A0000),
+            ];
+
+    final decorativeCircleColor =
+        _isDark
+            ? AppColors.gold.withValues(alpha: 0.05)
+            : Colors.white.withValues(alpha: 0.08);
+
     return Scaffold(
       body: Stack(
         children: [
@@ -75,16 +97,12 @@ class _LoginPageState extends State<LoginPage>
           Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF690000),
-                  Color(0xFF8B0000),
-                  Color(0xFF4A0000),
-                ],
-                stops: [0.0, 0.5, 1.0],
+                colors: gradientColors,
+                stops: const [0.0, 0.5, 1.0],
               ),
             ),
           ),
@@ -97,7 +115,7 @@ class _LoginPageState extends State<LoginPage>
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: decorativeCircleColor,
               ),
             ),
           ),
@@ -110,7 +128,10 @@ class _LoginPageState extends State<LoginPage>
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
+                color:
+                    _isDark
+                        ? AppColors.gold.withValues(alpha: 0.03)
+                        : Colors.white.withValues(alpha: 0.05),
               ),
             ),
           ),
@@ -125,7 +146,9 @@ class _LoginPageState extends State<LoginPage>
                 gradient: LinearGradient(
                   colors: [
                     Colors.transparent,
-                    const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                    const Color(
+                      0xFFD4AF37,
+                    ).withValues(alpha: _isDark ? 0.3 : 0.5),
                     Colors.transparent,
                   ],
                 ),
@@ -244,9 +267,12 @@ class _LoginPageState extends State<LoginPage>
                   child: Padding(
                     padding: const EdgeInsets.all(4),
                     child: Container(
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Color(0xFF690000),
+                        color:
+                            _isDark
+                                ? const Color(0xFF1A1A2E)
+                                : const Color(0xFF690000),
                       ),
                       padding: const EdgeInsets.all(20),
                       child: Image.asset(
@@ -315,22 +341,36 @@ class _LoginPageState extends State<LoginPage>
 
   // ============= FORM CARD =============
   Widget _buildFormCard() {
+    final cardColor = _isDark ? AppColors.darkCard : Colors.white;
+    final labelColor =
+        _isDark ? AppColors.darkTextPrimary : const Color(0xFF333333);
+    final forgotPasswordColor =
+        _isDark ? AppColors.gold : const Color(0xFF690000);
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(24),
+        border:
+            _isDark
+                ? Border.all(color: AppColors.darkBorder.withValues(alpha: 0.5))
+                : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color:
+                _isDark
+                    ? Colors.black.withValues(alpha: 0.4)
+                    : Colors.black.withValues(alpha: 0.2),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
-          BoxShadow(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
+          if (!_isDark)
+            BoxShadow(
+              color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
         ],
       ),
       child: Column(
@@ -395,15 +435,15 @@ class _LoginPageState extends State<LoginPage>
                   Text(
                     'نسيت كلمة المرور؟',
                     style: AppTypography.small.copyWith(
-                      color: const Color(0xFF690000),
+                      color: forgotPasswordColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(
+                  Icon(
                     Icons.arrow_forward_ios_rounded,
                     size: 12,
-                    color: Color(0xFF690000),
+                    color: forgotPasswordColor,
                   ),
                 ],
               ),
@@ -421,16 +461,28 @@ class _LoginPageState extends State<LoginPage>
 
   // ============= PREMIUM LOGIN BUTTON =============
   Widget _buildPremiumLoginButton() {
+    final buttonGradient =
+        _isDark
+            ? const LinearGradient(
+              colors: [Color(0xFFD4AF37), Color(0xFFB8960C)],
+            )
+            : const LinearGradient(
+              colors: [Color(0xFF690000), Color(0xFF8B0000)],
+            );
+    final shadowColor =
+        _isDark
+            ? const Color(0xFFD4AF37).withValues(alpha: 0.3)
+            : const Color(0xFF690000).withValues(alpha: 0.4);
+    final textColor = _isDark ? Colors.black : Colors.white;
+
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF690000), Color(0xFF8B0000)],
-        ),
+        gradient: buttonGradient,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF690000).withValues(alpha: 0.4),
+            color: shadowColor,
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -444,30 +496,26 @@ class _LoginPageState extends State<LoginPage>
           child: Center(
             child:
                 _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(
-                        color: Colors.white,
+                        color: textColor,
                         strokeWidth: 2.5,
                       ),
                     )
                     : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
-                          Icons.login_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
+                        Icon(Icons.login_rounded, color: textColor, size: 22),
                         const SizedBox(width: 10),
-                        const Text(
+                        Text(
                           'تسجيل الدخول',
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Cairo',
-                            color: Colors.white,
+                            color: textColor,
                           ),
                         ),
                       ],
@@ -490,6 +538,16 @@ class _LoginPageState extends State<LoginPage>
     String? Function(String?)? validator,
     Function(String)? onSubmitted,
   }) {
+    final labelColor =
+        _isDark ? AppColors.darkTextPrimary : const Color(0xFF333333);
+    final inputTextColor =
+        _isDark ? AppColors.darkTextPrimary : const Color(0xFF333333);
+    final fillColor = _isDark ? AppColors.darkSurface : const Color(0xFFF8F9FA);
+    final borderColor = _isDark ? AppColors.darkBorder : Colors.grey[200]!;
+    final focusBorderColor = _isDark ? AppColors.gold : const Color(0xFF690000);
+    final iconColor = _isDark ? AppColors.gold : const Color(0xFF690000);
+    final hintColor = _isDark ? AppColors.darkTextMuted : Colors.grey[400];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -511,7 +569,7 @@ class _LoginPageState extends State<LoginPage>
                 label,
                 style: AppTypography.body.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF333333),
+                  color: labelColor,
                 ),
               ),
             ],
@@ -523,7 +581,10 @@ class _LoginPageState extends State<LoginPage>
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF690000).withValues(alpha: 0.08),
+                color:
+                    _isDark
+                        ? Colors.black.withValues(alpha: 0.2)
+                        : const Color(0xFF690000).withValues(alpha: 0.08),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -539,14 +600,14 @@ class _LoginPageState extends State<LoginPage>
             validator: validator,
             onFieldSubmitted: onSubmitted,
             style: AppTypography.body.copyWith(
-              color: const Color(0xFF333333),
+              color: inputTextColor,
               fontWeight: FontWeight.w500,
             ),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: AppTypography.body.copyWith(color: Colors.grey[400]),
+              hintStyle: AppTypography.body.copyWith(color: hintColor),
               filled: true,
-              fillColor: const Color(0xFFF8F9FA),
+              fillColor: fillColor,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 18,
                 vertical: 18,
@@ -557,14 +618,11 @@ class _LoginPageState extends State<LoginPage>
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
+                borderSide: BorderSide(color: borderColor, width: 1.5),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFF690000),
-                  width: 2,
-                ),
+                borderSide: BorderSide(color: focusBorderColor, width: 2),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -581,18 +639,19 @@ class _LoginPageState extends State<LoginPage>
                           _obscurePassword
                               ? Icons.visibility_off_rounded
                               : Icons.visibility_rounded,
-                          color: Colors.grey[500],
+                          color:
+                              _isDark
+                                  ? AppColors.darkTextMuted
+                                  : Colors.grey[500],
                           size: 22,
                         ),
                         onPressed: () {
                           setState(() => _obscurePassword = !_obscurePassword);
                         },
                       )
-                      : Icon(icon, color: const Color(0xFF690000), size: 22),
+                      : Icon(icon, color: iconColor, size: 22),
               prefixIcon:
-                  isPassword
-                      ? Icon(icon, color: const Color(0xFF690000), size: 22)
-                      : null,
+                  isPassword ? Icon(icon, color: iconColor, size: 22) : null,
             ),
           ),
         ),
@@ -655,13 +714,24 @@ class _LoginPageState extends State<LoginPage>
 
   // ============= SOCIAL LOGIN =============
   Widget _buildSocialLogin() {
+    final cardColor = _isDark ? AppColors.darkCard : Colors.white;
+    final textColor =
+        _isDark ? AppColors.darkTextPrimary : const Color(0xFF333333);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
+        border:
+            _isDark
+                ? Border.all(color: AppColors.darkBorder.withValues(alpha: 0.5))
+                : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
+            color:
+                _isDark
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : Colors.black.withValues(alpha: 0.15),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -681,7 +751,7 @@ class _LoginPageState extends State<LoginPage>
                   'المتابعة بحساب جوجل',
                   style: AppTypography.body.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF333333),
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -707,12 +777,25 @@ class _LoginPageState extends State<LoginPage>
 
   // ============= SIGN UP LINK =============
   Widget _buildSignUpLink() {
+    final containerColor =
+        _isDark
+            ? AppColors.darkCard.withValues(alpha: 0.5)
+            : Colors.white.withValues(alpha: 0.1);
+    final borderColor =
+        _isDark
+            ? AppColors.gold.withValues(alpha: 0.3)
+            : Colors.white.withValues(alpha: 0.2);
+    final textColor =
+        _isDark
+            ? AppColors.darkTextSecondary
+            : Colors.white.withValues(alpha: 0.9);
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: containerColor,
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -733,10 +816,7 @@ class _LoginPageState extends State<LoginPage>
           const SizedBox(width: 8),
           Text(
             'ليس لديك حساب؟',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontFamily: 'Cairo',
-            ),
+            style: TextStyle(color: textColor, fontFamily: 'Cairo'),
           ),
         ],
       ),

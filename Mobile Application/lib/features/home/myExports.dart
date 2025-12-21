@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/cached_api_service.dart';
 import '../../core/services/recent_shipments_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
 
@@ -27,6 +28,8 @@ class _MyExportsPageState extends State<MyExportsPage>
   static const Color accentColor = Color(0xFF1ba3b6);
   static const Color goldAccent = Color(0xFFD4AF37);
   static const Color bgColor = Color(0xFFF8F9FA);
+
+  final CachedApiService _cachedApi = CachedApiService();
 
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
@@ -270,10 +273,10 @@ class _MyExportsPageState extends State<MyExportsPage>
 
       print('📦 [MyExports] Loading UCR requests and export shipments...');
 
-      // Load UCR requests and export shipments in parallel
+      // Load UCR requests and export shipments in parallel using cached API
       final results = await Future.wait([
-        ApiService.getMyUcrRequests(),
-        ApiService.getMyExportShipments(),
+        _cachedApi.getMyUcrRequests(),
+        _cachedApi.getMyExportShipments(),
       ]);
 
       final ucrResponse = results[0] as Map<String, dynamic>;

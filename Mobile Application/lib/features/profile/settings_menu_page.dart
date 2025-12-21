@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'dart:math' as math;
 import 'user_settings_page.dart';
 import 'documents_settings_page.dart';
 import 'change_password_page.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/services/firebase_push_service.dart';
+import '../../core/providers/theme_provider.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 
 class SettingsMenuPage extends StatefulWidget {
@@ -30,7 +32,7 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
   static const Color primaryDark = Color(0xFF690000);
   static const Color primaryLight = Color(0xFF8B0000);
   static const Color accent = Color(0xFF1BA3B6);
-  static const Color bgColor = Color(0xFFF8F9FA);
+  // bgColor is now dynamic based on theme
 
   @override
   void initState() {
@@ -299,6 +301,9 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF8F9FA);
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -428,6 +433,15 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
                             _toggleNotifications(value);
                           },
                           activeColor: const Color(0xFF4CAF50),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Dark Mode Toggle
+                        Consumer<ThemeProvider>(
+                          builder: (context, themeProvider, child) {
+                            return _buildPremiumThemeCard(themeProvider);
+                          },
                         ),
 
                         const SizedBox(height: 12),
@@ -1184,6 +1198,182 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
                   ),
                 ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Premium Theme Selection Card
+  Widget _buildPremiumThemeCard(ThemeProvider themeProvider) {
+    final isDark = themeProvider.isDarkMode;
+    final goldColor = const Color(0xFFD4AF37);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF252525) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: goldColor.withValues(alpha: 0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+        border: Border.all(color: goldColor.withValues(alpha: 0.3), width: 1.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Icon container
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [goldColor, goldColor.withOpacity(0.7)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: goldColor.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    themeProvider.themeModeIcon,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'المظهر',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color:
+                              isDark ? Colors.white : const Color(0xFF2D2D2D),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'الوضع ${themeProvider.themeModeName}',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 12,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Theme Options
+            Row(
+              children: [
+                _buildThemeOption(
+                  icon: Icons.light_mode_rounded,
+                  label: 'فاتح',
+                  isSelected: themeProvider.themeMode == AppThemeMode.light,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    themeProvider.setThemeMode(AppThemeMode.light);
+                  },
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 10),
+                _buildThemeOption(
+                  icon: Icons.dark_mode_rounded,
+                  label: 'داكن',
+                  isSelected: themeProvider.themeMode == AppThemeMode.dark,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    themeProvider.setThemeMode(AppThemeMode.dark);
+                  },
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 10),
+                _buildThemeOption(
+                  icon: Icons.brightness_auto_rounded,
+                  label: 'تلقائي',
+                  isSelected: themeProvider.themeMode == AppThemeMode.system,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    themeProvider.setThemeMode(AppThemeMode.system);
+                  },
+                  isDark: isDark,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeOption({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    final goldColor = const Color(0xFFD4AF37);
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color:
+                isSelected
+                    ? goldColor.withOpacity(0.15)
+                    : (isDark ? const Color(0xFF1E1E1E) : Colors.grey[100]),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? goldColor : Colors.transparent,
+              width: 2,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                size: 24,
+                color:
+                    isSelected
+                        ? goldColor
+                        : (isDark ? Colors.grey[500] : Colors.grey[600]),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color:
+                      isSelected
+                          ? goldColor
+                          : (isDark ? Colors.grey[400] : Colors.grey[700]),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

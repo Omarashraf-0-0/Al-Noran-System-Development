@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
 import '../../core/storage/secure_storage.dart';
+import '../../core/utils/dynamic_colors.dart';
+import '../../theme/app_colors.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
   const ProfileSettingsPage({Key? key}) : super(key: key);
@@ -265,14 +267,19 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDarkMode;
+    final bgColor = isDark ? AppColors.darkBackground : const Color(0xFFF5F5F5);
+    final appBarColor =
+        isDark ? AppColors.darkSurface : const Color(0xFF690000);
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: bgColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF690000),
-          elevation: 0,
-          title: const Text(
+          backgroundColor: appBarColor,
+          elevation: isDark ? 0 : 0,
+          title: Text(
             'إعدادات الملف الشخصي',
             style: TextStyle(
               fontFamily: 'Cairo',
@@ -283,7 +290,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           ),
           centerTitle: true,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_forward_ios, color: Colors.white),
+            icon: Icon(Icons.arrow_forward_ios, color: Colors.white),
             onPressed: () => context.pop(),
           ),
         ),
@@ -475,18 +482,30 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     required List<Widget> children,
     Color? iconColor,
   }) {
+    final isDark = context.isDarkMode;
+    final cardBgColor = isDark ? AppColors.darkCard : Colors.white;
+    final shadowColor =
+        isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.05);
+    final titleColor =
+        isDark ? AppColors.darkTextPrimary : const Color(0xFF690000);
+    final dividerColor = isDark ? AppColors.darkBorder : Colors.grey.shade300;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBgColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: shadowColor,
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
+        border:
+            isDark
+                ? Border.all(color: AppColors.darkBorder.withOpacity(0.3))
+                : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,16 +516,16 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF690000),
+                  color: titleColor,
                 ),
               ),
             ],
           ),
-          const Divider(height: 24, thickness: 1),
+          Divider(height: 24, thickness: 1, color: dividerColor),
           ...children,
         ],
       ),
@@ -522,30 +541,41 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     int maxLines = 1,
     bool enabled = true,
   }) {
+    final isDark = context.isDarkMode;
+    final fillColor =
+        isDark
+            ? (enabled ? AppColors.darkSurface : AppColors.darkBackground)
+            : (enabled ? Colors.grey.shade50 : Colors.grey.shade200);
+    final labelColor =
+        isDark ? AppColors.darkTextSecondary : Colors.grey.shade700;
+    final borderColor = isDark ? AppColors.darkBorder : Colors.grey.shade300;
+    final textColor = isDark ? AppColors.darkTextPrimary : Colors.black87;
+    final iconColor = const Color(0xFF1ba3b6);
+
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
       maxLines: maxLines,
       enabled: enabled,
-      style: const TextStyle(fontFamily: 'Cairo', fontSize: 15),
+      style: TextStyle(fontFamily: 'Cairo', fontSize: 15, color: textColor),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(fontFamily: 'Cairo', color: Colors.grey.shade700),
-        prefixIcon: Icon(icon, color: const Color(0xFF1ba3b6)),
+        labelStyle: TextStyle(fontFamily: 'Cairo', color: labelColor),
+        prefixIcon: Icon(icon, color: iconColor),
         filled: true,
-        fillColor: enabled ? Colors.grey.shade50 : Colors.grey.shade200,
+        fillColor: fillColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF1ba3b6), width: 2),
+          borderSide: BorderSide(color: const Color(0xFF1ba3b6), width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -553,7 +583,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borderColor),
         ),
       ),
     );
@@ -565,34 +595,44 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     required bool obscureText,
     required VoidCallback onToggle,
   }) {
+    final isDark = context.isDarkMode;
+    final fillColor = isDark ? AppColors.darkSurface : Colors.grey.shade50;
+    final labelColor =
+        isDark ? AppColors.darkTextSecondary : Colors.grey.shade700;
+    final borderColor = isDark ? AppColors.darkBorder : Colors.grey.shade300;
+    final textColor = isDark ? AppColors.darkTextPrimary : Colors.black87;
+    final iconColor = Colors.orange;
+    final suffixIconColor =
+        isDark ? AppColors.darkTextSecondary : Colors.grey.shade600;
+
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
-      style: const TextStyle(fontFamily: 'Cairo', fontSize: 15),
+      style: TextStyle(fontFamily: 'Cairo', fontSize: 15, color: textColor),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(fontFamily: 'Cairo', color: Colors.grey.shade700),
-        prefixIcon: const Icon(Icons.lock, color: Colors.orange),
+        labelStyle: TextStyle(fontFamily: 'Cairo', color: labelColor),
+        prefixIcon: Icon(Icons.lock, color: iconColor),
         suffixIcon: IconButton(
           icon: Icon(
             obscureText ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey.shade600,
+            color: suffixIconColor,
           ),
           onPressed: onToggle,
         ),
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: fillColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.orange, width: 2),
+          borderSide: BorderSide(color: iconColor, width: 2),
         ),
       ),
     );

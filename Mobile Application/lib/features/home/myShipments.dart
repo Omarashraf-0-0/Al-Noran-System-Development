@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/cached_api_service.dart';
 import '../../core/services/shipments_cache_service.dart';
 import '../../core/services/recent_shipments_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
@@ -26,6 +27,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   final ShipmentsCacheService _shipmentsCache = ShipmentsCacheService();
+  final CachedApiService _cachedApi = CachedApiService();
 
   int _selectedIndex = 1; // الوارد (index 1)
   String _selectedFilter = 'الكل';
@@ -249,10 +251,10 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
 
       print('🚢 [MyShipments] Loading shipments and ACID requests...');
 
-      // Load shipments from cache and ACID requests from API in parallel
+      // Load shipments from cache and ACID requests from cached API in parallel
       final results = await Future.wait([
         _shipmentsCache.getAllShipments(), // Use cache service
-        ApiService.getAllAcidRequests(),
+        _cachedApi.getAllAcidRequests(),
       ]);
 
       final shipments = results[0] as List<Map<String, dynamic>>;

@@ -119,6 +119,44 @@ class AppColors {
     ),
   ];
 
+  // ==================== Dark Mode Colors ====================
+  /// الألوان الداكنة - Dark Mode
+  static const Color darkBackground = Color(0xFF121212);
+  static const Color darkSurface = Color(0xFF1E1E1E);
+  static const Color darkCard = Color(0xFF252525);
+  static const Color darkCardElevated = Color(0xFF2D2D2D);
+
+  // Dark Text Colors
+  static const Color darkTextPrimary = Color(0xFFFFFFFF);
+  static const Color darkTextSecondary = Color(0xFFE0E0E0);
+  static const Color darkTextMuted = Color(0xFFB0B0B0);
+  static const Color darkTextHint = Color(0xFF757575);
+
+  // Dark Borders
+  static const Color darkBorder = Color(0xFF3D3D3D);
+  static const Color darkDivider = Color(0xFF2D2D2D);
+
+  // Premium Gold for Dark Mode
+  static const Color gold = Color(0xFFD4AF37);
+  static const Color goldLight = Color(0xFFF5E7A3);
+  static const Color goldDark = Color(0xFFB8960C);
+
+  /// Alias for gold - used in dark mode theming
+  static const Color darkGold = gold;
+
+  // Dark Mode Gradients
+  static const LinearGradient darkPrimaryGradient = LinearGradient(
+    colors: [Color(0xFF8B0000), Color(0xFF690000), Color(0xFF4A0000)],
+    begin: Alignment.topRight,
+    end: Alignment.bottomLeft,
+  );
+
+  static const LinearGradient darkSurfaceGradient = LinearGradient(
+    colors: [darkSurface, darkCard],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
   // ==================== Helper Methods ====================
   /// الحصول على لون حالة الشحنة
   static Color getShipmentStatusColor(int status) {

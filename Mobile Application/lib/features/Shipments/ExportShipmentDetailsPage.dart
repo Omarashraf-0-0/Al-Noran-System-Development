@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/cached_api_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
 import '../../core/services/user_cache_service.dart';
 import '../../core/services/notification_service.dart';
@@ -36,6 +37,7 @@ class _ExportShipmentDetailsPageState extends State<ExportShipmentDetailsPage>
 
   // User cache service
   final UserCacheService _userCache = UserCacheService();
+  final CachedApiService _cachedApi = CachedApiService();
 
   // Loading state
   bool _isLoading = true;
@@ -135,8 +137,8 @@ class _ExportShipmentDetailsPageState extends State<ExportShipmentDetailsPage>
         '📦 [ExportShipmentDetails] Loading shipment: ${widget.shipmentId}',
       );
 
-      final response = await ApiService.getExportShipmentById(
-        id: widget.shipmentId,
+      final response = await _cachedApi.getExportShipmentById(
+        shipmentId: widget.shipmentId,
       );
 
       if (response['success'] == true && response['data'] != null) {
@@ -187,7 +189,7 @@ class _ExportShipmentDetailsPageState extends State<ExportShipmentDetailsPage>
       );
 
       // Get required documents from API (documents requested by employee)
-      final response = await ApiService.getExportRequiredDocuments(
+      final response = await _cachedApi.getExportRequiredDocuments(
         shipmentId: shipmentId,
       );
 
@@ -196,32 +198,37 @@ class _ExportShipmentDetailsPageState extends State<ExportShipmentDetailsPage>
       if (response['success'] == true) {
         final requiredDocs = response['requiredDocuments'] ?? [];
 
-        // Process required documents and fetch file details for uploaded ones
+        // Collect all file IDs that need to be fetched
+        final fileIds = <String>[];
+        for (var doc in requiredDocs) {
+          if (doc['uploaded'] == true && doc['fileId'] != null) {
+            fileIds.add(doc['fileId'].toString());
+          }
+        }
+
+        // Fetch all file details in parallel (much faster!)
+        Map<String, Map<String, dynamic>> fileDataMap = {};
+        if (fileIds.isNotEmpty) {
+          print(
+            '📄 [ExportShipmentDetails] Fetching ${fileIds.length} files in parallel...',
+          );
+          fileDataMap = await _cachedApi.getMultipleUploadsById(
+            uploadIds: fileIds,
+          );
+        }
+
+        // Process required documents with fetched file data
         for (var doc in requiredDocs) {
           final docMap = Map<String, dynamic>.from(doc);
 
-          // If document is uploaded, fetch file details
+          // If document is uploaded, add cached file details
           if (docMap['uploaded'] == true && docMap['fileId'] != null) {
             final fileId = docMap['fileId'].toString();
-            print(
-              '📄 [ExportShipmentDetails] Fetching file details for: $fileId',
-            );
-
-            try {
-              final fileResponse = await ApiService.getUploadById(
-                uploadId: fileId,
-              );
-              if (fileResponse['success'] == true &&
-                  fileResponse['upload'] != null) {
-                docMap['uploadData'] = fileResponse['upload'];
-                print(
-                  '✅ [ExportShipmentDetails] Got file data: ${fileResponse['upload']}',
-                );
-              }
-            } catch (e) {
-              print(
-                '❌ [ExportShipmentDetails] Error fetching file $fileId: $e',
-              );
+            final fileResponse = fileDataMap[fileId];
+            if (fileResponse != null &&
+                fileResponse['success'] == true &&
+                fileResponse['upload'] != null) {
+              docMap['uploadData'] = fileResponse['upload'];
             }
           }
 
@@ -1473,11 +1480,6 @@ class _ExportShipmentDetailsPageState extends State<ExportShipmentDetailsPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // زر رفع مستند جديد
-        _buildAddNewDocumentButton(),
-
-        const SizedBox(height: 16),
-
         if (_requiredDocuments.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 20),

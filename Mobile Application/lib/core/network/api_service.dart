@@ -1,35 +1,15 @@
 import 'dart:convert';
-import 'dart:io'; // للتحقق من المنصة
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart'; // للتحقق من kIsWeb
 import 'package:http_parser/http_parser.dart';
 import '../storage/secure_storage.dart';
 
 class ApiService {
-  // Base URL - يتغير حسب المنصة تلقائياً
+  // Base URL - سيرفر Render الجديد
   static String get baseUrl {
-    // لو Web (Chrome/Edge/Firefox)
-    if (kIsWeb) {
-      return 'http://localhost:3500';
-    }
-
-    // لو Android (Emulator أو Physical Device)
-    if (Platform.isAndroid) {
-      // للـ Emulator - استخدم IP الخاص
-      // return 'http://10.0.2.2:3500';
-
-      // لو موبايل حقيقي، استخدم IP اللابتوب:
-      return 'http://192.168.1.6:3500';
-    }
-
-    // لو iOS Simulator أو جهاز حقيقي
-    if (Platform.isIOS) {
-      return 'http://localhost:3500'; // iOS simulator يستخدم localhost عادي
-    }
-
-    // Default
-    return 'http://localhost:3500';
+    // الـ Production URL على Render
+    return 'https://al-noran-system-development.onrender.com';
   }
 
   // Login API

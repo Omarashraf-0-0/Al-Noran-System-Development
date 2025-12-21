@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/cached_api_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
 import '../../core/services/user_cache_service.dart';
 import '../../core/services/notification_service.dart';
@@ -33,6 +34,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage>
 
   // User cache service
   final UserCacheService _userCache = UserCacheService();
+  final CachedApiService _cachedApi = CachedApiService();
 
   // Loading state
   bool _isLoading = true;
@@ -118,7 +120,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage>
     try {
       print('📦 [ShipmentDetails] Loading shipment: ${widget.shipmentId}');
 
-      final response = await ApiService.getShipmentByAcid(
+      final response = await _cachedApi.getShipmentByAcid(
         acid: widget.shipmentId,
       );
 
@@ -167,7 +169,7 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage>
 
       print('📋 [ShipmentDetails] Loading required documents for: $shipmentId');
 
-      final response = await ApiService.getRequiredDocuments(
+      final response = await _cachedApi.getRequiredDocuments(
         shipmentId: shipmentId,
       );
 
@@ -176,25 +178,34 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage>
           response['requiredDocuments'] ?? [],
         );
 
-        // Fetch file details for uploaded documents
+        // Collect all file IDs that need to be fetched
+        final fileIds = <String>[];
+        for (var doc in docs) {
+          if (doc['uploaded'] == true && doc['fileId'] != null) {
+            fileIds.add(doc['fileId'].toString());
+          }
+        }
+
+        // Fetch all file details in parallel (much faster!)
+        Map<String, Map<String, dynamic>> fileDataMap = {};
+        if (fileIds.isNotEmpty) {
+          print(
+            '📄 [ShipmentDetails] Fetching ${fileIds.length} files in parallel...',
+          );
+          fileDataMap = await _cachedApi.getMultipleUploadsById(
+            uploadIds: fileIds,
+          );
+        }
+
+        // Add file data to documents
         for (var doc in docs) {
           if (doc['uploaded'] == true && doc['fileId'] != null) {
             final fileId = doc['fileId'].toString();
-            print('📄 [ShipmentDetails] Fetching file details for: $fileId');
-
-            try {
-              final fileResponse = await ApiService.getUploadById(
-                uploadId: fileId,
-              );
-              if (fileResponse['success'] == true &&
-                  fileResponse['upload'] != null) {
-                doc['uploadData'] = fileResponse['upload'];
-                print(
-                  '✅ [ShipmentDetails] Got file data: ${fileResponse['upload']}',
-                );
-              }
-            } catch (e) {
-              print('❌ [ShipmentDetails] Error fetching file $fileId: $e');
+            final fileResponse = fileDataMap[fileId];
+            if (fileResponse != null &&
+                fileResponse['success'] == true &&
+                fileResponse['upload'] != null) {
+              doc['uploadData'] = fileResponse['upload'];
             }
           }
         }
@@ -1384,11 +1395,6 @@ class _ShipmentDetailsPageState extends State<ShipmentDetailsPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // زر رفع مستند جديد
-        _buildAddNewDocumentButton(),
-
-        const SizedBox(height: 16),
-
         // عرض المستندات المطلوبة من الموظف
         if (_requiredDocuments.isNotEmpty)
           ..._requiredDocuments.map((doc) {

@@ -35,6 +35,9 @@ class _RegisterPageState extends State<RegisterPage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  // Dark Mode Helper
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +81,25 @@ class _RegisterPageState extends State<RegisterPage>
 
   @override
   Widget build(BuildContext context) {
+    // Dark Mode Colors
+    final gradientColors =
+        _isDark
+            ? [
+              const Color(0xFF1A1A2E),
+              const Color(0xFF16213E),
+              const Color(0xFF0F0F1A),
+            ]
+            : [
+              const Color(0xFF690000),
+              const Color(0xFF8B0000),
+              const Color(0xFF4A0000),
+            ];
+
+    final decorativeCircleColor =
+        _isDark
+            ? AppColors.gold.withValues(alpha: 0.05)
+            : Colors.white.withValues(alpha: 0.08);
+
     return Scaffold(
       body: Stack(
         children: [
@@ -85,16 +107,12 @@ class _RegisterPageState extends State<RegisterPage>
           Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF690000),
-                  Color(0xFF8B0000),
-                  Color(0xFF4A0000),
-                ],
-                stops: [0.0, 0.5, 1.0],
+                colors: gradientColors,
+                stops: const [0.0, 0.5, 1.0],
               ),
             ),
           ),
@@ -107,7 +125,7 @@ class _RegisterPageState extends State<RegisterPage>
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: decorativeCircleColor,
               ),
             ),
           ),
@@ -120,7 +138,10 @@ class _RegisterPageState extends State<RegisterPage>
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
+                color:
+                    _isDark
+                        ? AppColors.gold.withValues(alpha: 0.03)
+                        : Colors.white.withValues(alpha: 0.05),
               ),
             ),
           ),
@@ -135,7 +156,9 @@ class _RegisterPageState extends State<RegisterPage>
                 gradient: LinearGradient(
                   colors: [
                     Colors.transparent,
-                    const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                    const Color(
+                      0xFFD4AF37,
+                    ).withValues(alpha: _isDark ? 0.3 : 0.5),
                     Colors.transparent,
                   ],
                 ),
@@ -207,18 +230,23 @@ class _RegisterPageState extends State<RegisterPage>
 
   // ============= BACK BUTTON =============
   Widget _buildBackButton() {
+    final buttonBgColor =
+        _isDark
+            ? AppColors.darkCard.withValues(alpha: 0.5)
+            : Colors.white.withValues(alpha: 0.15);
+
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: buttonBgColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withValues(alpha: _isDark ? 0.3 : 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -245,22 +273,32 @@ class _RegisterPageState extends State<RegisterPage>
 
   // ============= FORM CARD =============
   Widget _buildFormCard() {
+    final cardColor = _isDark ? AppColors.darkCard : Colors.white;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(24),
+        border:
+            _isDark
+                ? Border.all(color: AppColors.darkBorder.withValues(alpha: 0.5))
+                : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color:
+                _isDark
+                    ? Colors.black.withValues(alpha: 0.4)
+                    : Colors.black.withValues(alpha: 0.2),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
-          BoxShadow(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
+          if (!_isDark)
+            BoxShadow(
+              color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
         ],
       ),
       child: Column(
@@ -419,16 +457,28 @@ class _RegisterPageState extends State<RegisterPage>
 
   // ============= PREMIUM REGISTER BUTTON =============
   Widget _buildPremiumRegisterButton() {
+    final buttonGradient =
+        _isDark
+            ? const LinearGradient(
+              colors: [Color(0xFFD4AF37), Color(0xFFB8960C)],
+            )
+            : const LinearGradient(
+              colors: [Color(0xFF690000), Color(0xFF8B0000)],
+            );
+    final shadowColor =
+        _isDark
+            ? const Color(0xFFD4AF37).withValues(alpha: 0.3)
+            : const Color(0xFF690000).withValues(alpha: 0.4);
+    final textColor = _isDark ? Colors.black : Colors.white;
+
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF690000), Color(0xFF8B0000)],
-        ),
+        gradient: buttonGradient,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF690000).withValues(alpha: 0.4),
+            color: shadowColor,
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -442,30 +492,30 @@ class _RegisterPageState extends State<RegisterPage>
           child: Center(
             child:
                 _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(
-                        color: Colors.white,
+                        color: textColor,
                         strokeWidth: 2.5,
                       ),
                     )
                     : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.person_add_rounded,
-                          color: Colors.white,
+                          color: textColor,
                           size: 22,
                         ),
                         const SizedBox(width: 10),
-                        const Text(
+                        Text(
                           'إنشاء الحساب',
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Cairo',
-                            color: Colors.white,
+                            color: textColor,
                           ),
                         ),
                       ],
@@ -491,6 +541,16 @@ class _RegisterPageState extends State<RegisterPage>
     String? Function(String?)? validator,
     Function(String)? onSubmitted,
   }) {
+    final labelColor =
+        _isDark ? AppColors.darkTextPrimary : const Color(0xFF333333);
+    final inputTextColor =
+        _isDark ? AppColors.darkTextPrimary : const Color(0xFF333333);
+    final fillColor = _isDark ? AppColors.darkSurface : const Color(0xFFF8F9FA);
+    final borderColor = _isDark ? AppColors.darkBorder : Colors.grey[200]!;
+    final focusBorderColor = _isDark ? AppColors.gold : const Color(0xFF690000);
+    final iconColor = _isDark ? AppColors.gold : const Color(0xFF690000);
+    final hintColor = _isDark ? AppColors.darkTextMuted : Colors.grey[400];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -512,7 +572,7 @@ class _RegisterPageState extends State<RegisterPage>
                 label,
                 style: AppTypography.body.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF333333),
+                  color: labelColor,
                 ),
               ),
             ],
@@ -524,7 +584,10 @@ class _RegisterPageState extends State<RegisterPage>
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF690000).withValues(alpha: 0.08),
+                color:
+                    _isDark
+                        ? Colors.black.withValues(alpha: 0.2)
+                        : const Color(0xFF690000).withValues(alpha: 0.08),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -540,14 +603,14 @@ class _RegisterPageState extends State<RegisterPage>
             validator: validator,
             onFieldSubmitted: onSubmitted,
             style: AppTypography.body.copyWith(
-              color: const Color(0xFF333333),
+              color: inputTextColor,
               fontWeight: FontWeight.w500,
             ),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: AppTypography.body.copyWith(color: Colors.grey[400]),
+              hintStyle: AppTypography.body.copyWith(color: hintColor),
               filled: true,
-              fillColor: const Color(0xFFF8F9FA),
+              fillColor: fillColor,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 18,
                 vertical: 16,
@@ -558,14 +621,11 @@ class _RegisterPageState extends State<RegisterPage>
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
+                borderSide: BorderSide(color: borderColor, width: 1.5),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFF690000),
-                  width: 2,
-                ),
+                borderSide: BorderSide(color: focusBorderColor, width: 2),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -582,16 +642,17 @@ class _RegisterPageState extends State<RegisterPage>
                           obscureText
                               ? Icons.visibility_off_rounded
                               : Icons.visibility_rounded,
-                          color: Colors.grey[500],
+                          color:
+                              _isDark
+                                  ? AppColors.darkTextMuted
+                                  : Colors.grey[500],
                           size: 22,
                         ),
                         onPressed: onToggleObscure,
                       )
-                      : Icon(icon, color: const Color(0xFF690000), size: 22),
+                      : Icon(icon, color: iconColor, size: 22),
               prefixIcon:
-                  isPassword
-                      ? Icon(icon, color: const Color(0xFF690000), size: 22)
-                      : null,
+                  isPassword ? Icon(icon, color: iconColor, size: 22) : null,
             ),
           ),
         ),
@@ -651,9 +712,12 @@ class _RegisterPageState extends State<RegisterPage>
                 child: Padding(
                   padding: const EdgeInsets.all(4),
                   child: Container(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFF690000),
+                      color:
+                          _isDark
+                              ? const Color(0xFF1A1A2E)
+                              : const Color(0xFF690000),
                     ),
                     padding: const EdgeInsets.all(18),
                     child: Image.asset(
@@ -721,6 +785,12 @@ class _RegisterPageState extends State<RegisterPage>
 
   // ============= ACCOUNT TYPE SELECTOR =============
   Widget _buildAccountTypeSelector() {
+    final labelColor =
+        _isDark ? AppColors.darkTextPrimary : const Color(0xFF333333);
+    final containerBg =
+        _isDark ? AppColors.darkSurface : const Color(0xFFF8F9FA);
+    final borderColor = _isDark ? AppColors.darkBorder : Colors.grey[200]!;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -741,7 +811,7 @@ class _RegisterPageState extends State<RegisterPage>
                 'نوع الحساب',
                 style: AppTypography.body.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF333333),
+                  color: labelColor,
                 ),
               ),
             ],
@@ -750,12 +820,15 @@ class _RegisterPageState extends State<RegisterPage>
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8F9FA),
+            color: containerBg,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey[200]!, width: 1.5),
+            border: Border.all(color: borderColor, width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF690000).withValues(alpha: 0.06),
+                color:
+                    _isDark
+                        ? Colors.black.withValues(alpha: 0.2)
+                        : const Color(0xFF690000).withValues(alpha: 0.06),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -781,6 +854,25 @@ class _RegisterPageState extends State<RegisterPage>
 
   Widget _buildAccountTypeButton(String label, String value, IconData icon) {
     final isSelected = _selectedAccountType == value;
+    final unselectedIconColor =
+        _isDark ? AppColors.darkTextMuted : Colors.grey[500];
+    final unselectedTextColor =
+        _isDark ? AppColors.darkTextSecondary : Colors.grey[600];
+
+    final buttonGradient =
+        _isDark
+            ? const LinearGradient(
+              colors: [Color(0xFFD4AF37), Color(0xFFB8960C)],
+            )
+            : const LinearGradient(
+              colors: [Color(0xFF690000), Color(0xFF8B0000)],
+            );
+    final shadowColor =
+        _isDark
+            ? const Color(0xFFD4AF37).withValues(alpha: 0.3)
+            : const Color(0xFF690000).withValues(alpha: 0.3);
+    final selectedTextColor = _isDark ? Colors.black : Colors.white;
+
     return Expanded(
       child: GestureDetector(
         onTap: () {
@@ -792,19 +884,14 @@ class _RegisterPageState extends State<RegisterPage>
           curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            gradient:
-                isSelected
-                    ? const LinearGradient(
-                      colors: [Color(0xFF690000), Color(0xFF8B0000)],
-                    )
-                    : null,
+            gradient: isSelected ? buttonGradient : null,
             color: isSelected ? null : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             boxShadow:
                 isSelected
                     ? [
                       BoxShadow(
-                        color: const Color(0xFF690000).withValues(alpha: 0.3),
+                        color: shadowColor,
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -815,7 +902,7 @@ class _RegisterPageState extends State<RegisterPage>
             children: [
               Icon(
                 icon,
-                color: isSelected ? Colors.white : Colors.grey[500],
+                color: isSelected ? selectedTextColor : unselectedIconColor,
                 size: 24,
               ),
               const SizedBox(height: 6),
@@ -824,7 +911,7 @@ class _RegisterPageState extends State<RegisterPage>
                 style: TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 13,
-                  color: isSelected ? Colors.white : Colors.grey[600],
+                  color: isSelected ? selectedTextColor : unselectedTextColor,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
@@ -837,6 +924,33 @@ class _RegisterPageState extends State<RegisterPage>
 
   // ============= TERMS CHECKBOX =============
   Widget _buildTermsCheckbox() {
+    final containerBg =
+        _agreeToTerms
+            ? (_isDark
+                ? const Color(0xFFD4AF37).withValues(alpha: 0.15)
+                : const Color(0xFF690000).withValues(alpha: 0.08))
+            : (_isDark ? AppColors.darkSurface : const Color(0xFFF8F9FA));
+    final borderColor =
+        _agreeToTerms
+            ? (_isDark ? const Color(0xFFD4AF37) : const Color(0xFF690000))
+            : (_isDark ? AppColors.darkBorder : Colors.grey[200]!);
+    final checkboxBorderColor =
+        _agreeToTerms
+            ? (_isDark ? const Color(0xFFD4AF37) : const Color(0xFF690000))
+            : (_isDark ? AppColors.darkTextMuted : Colors.grey[400]!);
+    final textColor =
+        _isDark ? AppColors.darkTextPrimary : const Color(0xFF333333);
+
+    final checkboxGradient =
+        _isDark
+            ? const LinearGradient(
+              colors: [Color(0xFFD4AF37), Color(0xFFB8960C)],
+            )
+            : const LinearGradient(
+              colors: [Color(0xFF690000), Color(0xFF8B0000)],
+            );
+    final checkIconColor = _isDark ? Colors.black : Colors.white;
+
     return GestureDetector(
       onTap: () {
         setState(() => _agreeToTerms = !_agreeToTerms);
@@ -845,13 +959,10 @@ class _RegisterPageState extends State<RegisterPage>
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color:
-              _agreeToTerms
-                  ? const Color(0xFF690000).withValues(alpha: 0.08)
-                  : const Color(0xFFF8F9FA),
+          color: containerBg,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: _agreeToTerms ? const Color(0xFF690000) : Colors.grey[200]!,
+            color: borderColor,
             width: _agreeToTerms ? 2 : 1.5,
           ),
         ),
@@ -862,27 +973,16 @@ class _RegisterPageState extends State<RegisterPage>
               width: 26,
               height: 26,
               decoration: BoxDecoration(
-                gradient:
-                    _agreeToTerms
-                        ? const LinearGradient(
-                          colors: [Color(0xFF690000), Color(0xFF8B0000)],
-                        )
-                        : null,
+                gradient: _agreeToTerms ? checkboxGradient : null,
                 color: _agreeToTerms ? null : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color:
-                      _agreeToTerms
-                          ? const Color(0xFF690000)
-                          : Colors.grey[400]!,
-                  width: 2,
-                ),
+                border: Border.all(color: checkboxBorderColor, width: 2),
               ),
               child:
                   _agreeToTerms
-                      ? const Icon(
+                      ? Icon(
                         Icons.check_rounded,
-                        color: Colors.white,
+                        color: checkIconColor,
                         size: 18,
                       )
                       : null,
@@ -894,7 +994,7 @@ class _RegisterPageState extends State<RegisterPage>
                 style: TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 13,
-                  color: const Color(0xFF333333),
+                  color: textColor,
                   fontWeight: _agreeToTerms ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
@@ -907,12 +1007,25 @@ class _RegisterPageState extends State<RegisterPage>
 
   // ============= LOGIN LINK =============
   Widget _buildLoginLink() {
+    final containerColor =
+        _isDark
+            ? AppColors.darkCard.withValues(alpha: 0.5)
+            : Colors.white.withValues(alpha: 0.1);
+    final borderColor =
+        _isDark
+            ? AppColors.gold.withValues(alpha: 0.3)
+            : Colors.white.withValues(alpha: 0.2);
+    final textColor =
+        _isDark
+            ? AppColors.darkTextSecondary
+            : Colors.white.withValues(alpha: 0.9);
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: containerColor,
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -933,10 +1046,7 @@ class _RegisterPageState extends State<RegisterPage>
           const SizedBox(width: 8),
           Text(
             'لديك حساب بالفعل؟',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontFamily: 'Cairo',
-            ),
+            style: TextStyle(color: textColor, fontFamily: 'Cairo'),
           ),
         ],
       ),
@@ -999,13 +1109,24 @@ class _RegisterPageState extends State<RegisterPage>
 
   // ============= SOCIAL REGISTRATION =============
   Widget _buildSocialRegistration() {
+    final cardColor = _isDark ? AppColors.darkCard : Colors.white;
+    final textColor =
+        _isDark ? AppColors.darkTextPrimary : const Color(0xFF333333);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
+        border:
+            _isDark
+                ? Border.all(color: AppColors.darkBorder.withValues(alpha: 0.5))
+                : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
+            color:
+                _isDark
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : Colors.black.withValues(alpha: 0.15),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -1025,7 +1146,7 @@ class _RegisterPageState extends State<RegisterPage>
                   'التسجيل بحساب جوجل',
                   style: AppTypography.body.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF333333),
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(width: 12),

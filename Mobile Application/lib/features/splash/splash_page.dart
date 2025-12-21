@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
 import '../../core/network/api_service.dart';
+import '../../core/services/cached_api_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -69,6 +70,9 @@ class _SplashScreenState extends State<SplashScreen>
         final userData = await ApiService.getUserData();
 
         if (mounted && userData != null) {
+          // Prefetch data in background for better performance
+          CachedApiService().prefetchData();
+
           context.go(
             '/home',
             extra: {

@@ -5,6 +5,7 @@ import '../../core/network/api_service.dart';
 import '../../core/widgets/widgets.dart';
 import '../../theme/theme.dart';
 import '../../util/validators.dart';
+import 'auth_dark_mode_mixin.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -14,7 +15,7 @@ class ForgotPasswordPage extends StatefulWidget {
 }
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AuthDarkModeMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   bool _isLoading = false;
@@ -68,16 +69,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
           Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF690000),
-                  Color(0xFF8B0000),
-                  Color(0xFF4A0000),
-                ],
-                stops: [0.0, 0.5, 1.0],
+                colors: backgroundGradient,
+                stops: const [0.0, 0.5, 1.0],
               ),
             ),
           ),
@@ -90,7 +87,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: decorativeCircleColor,
               ),
             ),
           ),
@@ -103,7 +100,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
+                color: decorativeCircleColorSmall,
               ),
             ),
           ),
@@ -118,7 +115,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                 gradient: LinearGradient(
                   colors: [
                     Colors.transparent,
-                    const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                    Color(0xFFD4AF37).withValues(alpha: goldenLineAlpha),
                     Colors.transparent,
                   ],
                 ),
@@ -184,14 +181,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
       alignment: Alignment.centerLeft,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: backButtonBgColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -268,9 +265,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                 child: Padding(
                   padding: const EdgeInsets.all(4),
                   child: Container(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFF690000),
+                      color: logoContainerColor,
                     ),
                     child: const Icon(
                       Icons.lock_reset_rounded,
@@ -328,22 +325,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
   Widget _buildFormCard() {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
-          ),
-          BoxShadow(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
+      decoration: cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -382,13 +364,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF690000), Color(0xFF8B0000)],
-        ),
+        gradient: buttonGradient,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF690000).withValues(alpha: 0.4),
+            color: buttonShadowColor,
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -402,26 +382,30 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
           child: Center(
             child:
                 _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(
-                        color: Colors.white,
+                        color: buttonTextColor,
                         strokeWidth: 2.5,
                       ),
                     )
-                    : const Row(
+                    : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.send_rounded, color: Colors.white, size: 22),
-                        SizedBox(width: 10),
+                        Icon(
+                          Icons.send_rounded,
+                          color: buttonTextColor,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
                         Text(
                           'إرسال كود التحقق',
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Cairo',
-                            color: Colors.white,
+                            color: buttonTextColor,
                           ),
                         ),
                       ],
@@ -462,11 +446,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
               const SizedBox(width: 8),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontFamily: 'Cairo',
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF333333),
+                  color: labelColor,
                 ),
               ),
             ],
@@ -474,16 +458,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
         ),
         // Input field with premium styling
         Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF690000).withValues(alpha: 0.08),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+          decoration: inputShadowDecoration,
           child: TextFormField(
             controller: controller,
             keyboardType: keyboardType,
@@ -492,21 +467,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
             textDirection: TextDirection.ltr,
             validator: validator,
             onFieldSubmitted: onSubmitted,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontFamily: 'Cairo',
               fontWeight: FontWeight.w500,
-              color: Color(0xFF333333),
+              color: inputTextColor,
             ),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(
                 fontSize: 14,
                 fontFamily: 'Cairo',
-                color: Colors.grey[400],
+                color: hintColor,
               ),
               filled: true,
-              fillColor: const Color(0xFFF8F9FA),
+              fillColor: fillColor,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 18,
                 vertical: 18,
@@ -517,14 +492,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
+                borderSide: BorderSide(color: borderColor, width: 1.5),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFF690000),
-                  width: 2,
-                ),
+                borderSide: BorderSide(color: focusBorderColor, width: 2),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -534,7 +506,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                 borderRadius: BorderRadius.circular(14),
                 borderSide: const BorderSide(color: Colors.red, width: 2),
               ),
-              suffixIcon: Icon(icon, color: const Color(0xFF690000), size: 22),
+              suffixIcon: Icon(icon, color: iconColor, size: 22),
             ),
           ),
         ),
@@ -547,17 +519,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: linkContainerColor,
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: linkBorderColor),
       ),
       child: GestureDetector(
         onTap: () => context.go('/login'),
-        child: Row(
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'العودة لتسجيل الدخول',
               style: TextStyle(
                 color: Color(0xFFD4AF37),
@@ -566,8 +538,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                 fontSize: 15,
               ),
             ),
-            const SizedBox(width: 8),
-            const Icon(
+            SizedBox(width: 8),
+            Icon(
               Icons.arrow_forward_ios_rounded,
               size: 14,
               color: Color(0xFFD4AF37),

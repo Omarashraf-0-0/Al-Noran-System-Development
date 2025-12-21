@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 import '../../core/widgets/enhanced_popups.dart';
+import '../../theme/app_colors.dart';
+import 'auth_dark_mode_mixin.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;
@@ -14,7 +16,7 @@ class ResetPasswordPage extends StatefulWidget {
 }
 
 class _ResetPasswordPageState extends State<ResetPasswordPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AuthDarkModeMixin {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
@@ -73,16 +75,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
           Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF690000),
-                  Color(0xFF8B0000),
-                  Color(0xFF4A0000),
-                ],
-                stops: [0.0, 0.5, 1.0],
+                colors: backgroundGradient,
+                stops: const [0.0, 0.5, 1.0],
               ),
             ),
           ),
@@ -96,7 +94,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: decorativeCircleColor,
               ),
             ),
           ),
@@ -108,7 +106,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
+                color: decorativeCircleColorSmall,
               ),
             ),
           ),
@@ -196,7 +194,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: backButtonBgColor,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
@@ -247,9 +245,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
             ),
             child: Container(
               margin: const EdgeInsets.all(5),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF690000),
+                color: logoContainerColor,
               ),
               child: const Icon(
                 Icons.lock_reset_rounded,
@@ -303,19 +301,21 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
 
   // ============= PREMIUM FORM CARD =============
   Widget _buildFormCard() {
+    final badgeBgColor =
+        isDark
+            ? AppColors.gold.withValues(alpha: 0.15)
+            : LinearGradient(
+              colors: [
+                const Color(0xFF690000).withValues(alpha: 0.1),
+                const Color(0xFFD4AF37).withValues(alpha: 0.1),
+              ],
+            );
+    final badgeTextColor = isDark ? AppColors.gold : const Color(0xFF690000);
+    final badgeIconColor = isDark ? AppColors.gold : const Color(0xFF690000);
+
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+      decoration: cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -324,27 +324,31 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
             margin: const EdgeInsets.only(bottom: 20),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF690000).withValues(alpha: 0.1),
-                  const Color(0xFFD4AF37).withValues(alpha: 0.1),
-                ],
-              ),
+              color: isDark ? AppColors.gold.withValues(alpha: 0.15) : null,
+              gradient:
+                  isDark
+                      ? null
+                      : LinearGradient(
+                        colors: [
+                          const Color(0xFF690000).withValues(alpha: 0.1),
+                          const Color(0xFFD4AF37).withValues(alpha: 0.1),
+                        ],
+                      ),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
               ),
             ),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.shield_rounded, size: 18, color: Color(0xFF690000)),
-                SizedBox(width: 8),
+                Icon(Icons.shield_rounded, size: 18, color: badgeIconColor),
+                const SizedBox(width: 8),
                 Text(
                   'كلمة مرور محمية',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF690000),
+                    color: badgeTextColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -400,6 +404,17 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
     VoidCallback? onToggleVisibility,
     IconData? prefixIcon,
   }) {
+    final labelTextColor = isDark ? AppColors.gold : const Color(0xFF690000);
+    final textFieldBgColor =
+        isDark ? AppColors.darkSurface : const Color(0xFFF8F8F8);
+    final textColor =
+        isDark ? AppColors.darkTextPrimary : const Color(0xFF2D2D2D);
+    final borderActiveColor = const Color(0xFFD4AF37);
+    final borderInactiveColor = const Color(0xFFD4AF37).withValues(alpha: 0.3);
+    final visibilityColor = isDark ? AppColors.gold : const Color(0xFF690000);
+    final hintTextColor =
+        isDark ? AppColors.darkTextMuted : Colors.grey.shade400;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -411,10 +426,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF690000),
+                  color: labelTextColor,
                 ),
               ),
               const SizedBox(width: 8),
@@ -439,20 +454,20 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
         // TextField
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF8F8F8),
+            color: textFieldBgColor,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color:
                   controller.text.isNotEmpty
-                      ? const Color(0xFFD4AF37)
-                      : const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                      ? borderActiveColor
+                      : borderInactiveColor,
               width: controller.text.isNotEmpty ? 2 : 1.5,
             ),
           ),
           child: TextField(
             controller: controller,
             obscureText: isPassword ? obscureText : false,
-            style: const TextStyle(fontSize: 16, color: Color(0xFF2D2D2D)),
+            style: TextStyle(fontSize: 16, color: textColor),
             decoration: InputDecoration(
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
@@ -460,7 +475,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
                 vertical: 16,
               ),
               hintText: label,
-              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+              hintStyle: TextStyle(color: hintTextColor, fontSize: 14),
               // Toggle visibility
               suffixIcon:
                   isPassword
@@ -469,7 +484,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
                           obscureText
                               ? Icons.visibility_off_rounded
                               : Icons.visibility_rounded,
-                          color: const Color(0xFF690000),
+                          color: visibilityColor,
                           size: 22,
                         ),
                         onPressed: onToggleVisibility,
@@ -499,13 +514,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
         ),
         child: Ink(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF690000), Color(0xFF8B0000), Color(0xFF690000)],
-            ),
+            gradient: buttonGradient,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF690000).withValues(alpha: 0.4),
+                color: buttonShadowColor,
                 blurRadius: 15,
                 offset: const Offset(0, 6),
               ),
@@ -515,25 +528,30 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
             alignment: Alignment.center,
             child:
                 _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          buttonTextColor,
+                        ),
                       ),
                     )
-                    : const Row(
+                    : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.check_circle_rounded, color: Colors.white),
-                        SizedBox(width: 10),
+                        Icon(
+                          Icons.check_circle_rounded,
+                          color: buttonTextColor,
+                        ),
+                        const SizedBox(width: 10),
                         Text(
                           'تأكيد',
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: buttonTextColor,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -547,10 +565,23 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
 
   // ============= PREMIUM PASSWORD REQUIREMENTS =============
   Widget _buildPasswordRequirements() {
+    final containerBg =
+        isDark
+            ? AppColors.darkCard.withValues(alpha: 0.5)
+            : Colors.white.withValues(alpha: 0.15);
+    final textNotMetColor =
+        isDark
+            ? AppColors.darkTextSecondary
+            : Colors.white.withValues(alpha: 0.7);
+    final circleNotMetColor =
+        isDark ? AppColors.darkCard : Colors.white.withValues(alpha: 0.1);
+    final iconNotMetColor =
+        isDark ? AppColors.darkTextMuted : Colors.white.withValues(alpha: 0.5);
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
+        color: containerBg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
@@ -605,6 +636,15 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
   }
 
   Widget _buildRequirement(String text, bool isMet) {
+    final textNotMetColor =
+        isDark
+            ? AppColors.darkTextSecondary
+            : Colors.white.withValues(alpha: 0.7);
+    final circleNotMetColor =
+        isDark ? AppColors.darkCard : Colors.white.withValues(alpha: 0.1);
+    final iconNotMetColor =
+        isDark ? AppColors.darkTextMuted : Colors.white.withValues(alpha: 0.5);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -614,10 +654,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
             text,
             style: TextStyle(
               fontSize: 14,
-              color:
-                  isMet
-                      ? const Color(0xFF4CAF50)
-                      : Colors.white.withValues(alpha: 0.7),
+              color: isMet ? const Color(0xFF4CAF50) : textNotMetColor,
               fontWeight: isMet ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -629,14 +666,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
               color:
                   isMet
                       ? const Color(0xFF4CAF50).withValues(alpha: 0.2)
-                      : Colors.white.withValues(alpha: 0.1),
+                      : circleNotMetColor,
             ),
             child: Icon(
               isMet ? Icons.check_circle : Icons.radio_button_unchecked,
-              color:
-                  isMet
-                      ? const Color(0xFF4CAF50)
-                      : Colors.white.withValues(alpha: 0.5),
+              color: isMet ? const Color(0xFF4CAF50) : iconNotMetColor,
               size: 16,
             ),
           ),
