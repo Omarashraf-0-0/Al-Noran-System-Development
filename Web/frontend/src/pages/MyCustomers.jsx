@@ -312,8 +312,8 @@ const MyCustomers = () => {
 													/>
 												</svg>
 											</div>
-										</button>
-
+										</div>
+									</div>
 									{/* Shipments List - Expandable */}
 									{expandedCustomer === customer._id && (
 										<div className="p-4 bg-white border-t border-gray-200">

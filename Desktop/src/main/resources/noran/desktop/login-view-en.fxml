@@ -15,7 +15,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="600.0" prefWidth="1000.0" style="-fx-background-image: url('noran/desktop/images/background.png');                    -fx-background-size: cover;                    -fx-background-position: center center;                    -fx-background-repeat: no-repeat;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.LoginController">
+<AnchorPane style="-fx-background-image: url('noran/desktop/images/background.png');                    -fx-background-size: cover;                    -fx-background-position: center center;                    -fx-background-repeat: no-repeat;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.LoginController">
     <ImageView fitHeight="768.0" fitWidth="1366.0" pickOnBounds="true" preserveRatio="false">
         <image>
             <Image url="@images/background.png" />

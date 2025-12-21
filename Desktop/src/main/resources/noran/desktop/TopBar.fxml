@@ -4,31 +4,42 @@
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<HBox alignment="CENTER" prefHeight="136.0" prefWidth="1033.0" spacing="75" style="-fx-padding: 12 0; -fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0, 0, 2);" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.TopBarController">
+<BorderPane prefHeight="100.0" style="-fx-padding: 12 24; -fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0, 0, 2);" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.TopBarController">
 
-    <ImageView fitHeight="112" fitWidth="200" preserveRatio="true">
-        <image><Image url="@images/Logo.png" /></image>
-    </ImageView>
+    <!-- RIGHT SIDE: Logo + Page Name with Menu Icon -->
+    <left>
+        <HBox alignment="CENTER_RIGHT" spacing="12">
+            <HBox fx:id="menuArea" alignment="CENTER_RIGHT" spacing="8" style="-fx-background-color: #ffffff; -fx-padding: 6 10; -fx-background-radius: 20; -fx-cursor: hand;" onMouseClicked="#toggleSidebar">
+                <ImageView fx:id="menuIcon" fitHeight="28" fitWidth="28"><image><Image url="@images/menu.png" /></image></ImageView>
+                <Label fx:id="pageName" style="-fx-font-size: 15; -fx-font-weight: bold; -fx-text-fill: #111;" text="لوحة التحكم" />
+            </HBox>
+            <ImageView fitHeight="80" fitWidth="140" preserveRatio="true">
+                <image><Image url="@images/Logo.png" /></image>
+            </ImageView>
+        </HBox>
+    </left>
 
-    <HBox alignment="CENTER_RIGHT" spacing="8" style="-fx-background-color: #ffffff; -fx-padding: 6 10; -fx-background-radius: 20;">
-        <ImageView fitHeight="18" fitWidth="18"><image><Image url="@images/menu.png" /></image></ImageView>
-        <Label fx:id="pageName" prefHeight="22.0" prefWidth="141.0" style="-fx-font-size: 15; -fx-text-fill: #111;" text="لوحة التحكم" />
-    </HBox>
+    <!-- CENTER: Search Bar -->
+    <center>
+        <HBox alignment="CENTER" style="-fx-padding: 0 40;">
+            <HBox fx:id="searchContainer" alignment="CENTER" maxHeight="40" spacing="8" style="-fx-background-color: #f3f4f6; -fx-padding: 8 16; -fx-background-radius: 20;">
+                <TextField fx:id="searchField" prefWidth="350" promptText="ابحث ....." style="-fx-background-color: transparent; -fx-font-size: 14;" />
+                <ImageView fitHeight="18" fitWidth="18"><image><Image url="@images/search.png" /></image></ImageView>
+            </HBox>
+        </HBox>
+    </center>
 
-    <HBox fx:id="searchContainer" alignment="CENTER_RIGHT" maxHeight="40" spacing="8" style="-fx-background-color: #f3f4f6; -fx-padding: 6 10; -fx-background-radius: 20;">
+    <!-- LEFT SIDE: Avatar + User Info -->
+    <right>
+        <HBox fx:id="userProfileArea" alignment="CENTER_LEFT" spacing="12" style="-fx-cursor: hand;" onMouseClicked="#showUserMenu">
+            <VBox alignment="CENTER_RIGHT" spacing="2">
+                <Label fx:id="userNameLabel" style="-fx-font-weight: 600; -fx-font-size: 14;" text="Amr" />
+                <Label fx:id="userEmailLabel" style="-fx-text-fill: #9b9b9b; -fx-font-size: 11;" text="user@email.com" />
+            </VBox>
+            <ImageView fx:id="avatarImage" fitHeight="60" fitWidth="60" preserveRatio="true">
+                <image><Image url="@images/AVATAR%201.png" /></image>
+            </ImageView>
+        </HBox>
+    </right>
 
-        <TextField fx:id="searchField" prefWidth="380" promptText="ابحث برقم الشحنة أو اسم العميل" style="-fx-background-color: transparent;" />
-        <ImageView fitHeight="18" fitWidth="18"><image><Image url="@images/search.png" /></image></ImageView>
-
-    </HBox>
-
-    <HBox alignment="CENTER" spacing="10">
-        <VBox alignment="CENTER_LEFT" prefHeight="112.0" prefWidth="113.0" spacing="2">
-            <Label fx:id="userNameLabel" style="-fx-font-weight: 600; -fx-font-size: 14;" text="Amr" />
-            <Label fx:id="userIdLabel" style="-fx-text-fill: #9b9b9b; -fx-font-size: 11;" text="ID: 1234567" />
-        </VBox>
-        <ImageView fitHeight="86.0" fitWidth="115.0" preserveRatio="true">
-            <image><Image url="@images/AVATAR%201.png" /></image>
-        </ImageView>
-    </HBox>
-</HBox>
+</BorderPane>

@@ -124,7 +124,8 @@ const uploadFile = async (req, res) => {
 			clientType = reqClientType || user.clientDetails?.clientType;
 
 			// For registration category, validate required documents
-			if (category === "registration" && !clientType) {
+			// Skip check for profilePhoto as it doesn't depend on client type
+			if (category === "registration" && !clientType && documentType !== "profilePhoto") {
 				console.log("❌ clientType required for registration");
 				return res.status(400).json({
 					message:

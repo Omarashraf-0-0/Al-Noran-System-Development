@@ -1,0 +1,31 @@
+/* Reset default button styles */
+.sidebar-button.button {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 8;
+    -fx-padding: 8 12;
+    -fx-cursor: hand;
+    -fx-alignment: center-left;
+}
+
+.sidebar-button.button .text {
+    -fx-fill: #333333;
+}
+
+.sidebar-button.button:hover {
+    -fx-background-color: #f0f0f0;
+}
+
+/* Active button state */
+.sidebar-button-active.button {
+    -fx-background-color: #a40000;
+    -fx-background-insets: 0;
+    -fx-background-radius: 8;
+    -fx-padding: 8 12;
+    -fx-cursor: hand;
+    -fx-alignment: center-left;
+}
+
+.sidebar-button-active.button .text {
+    -fx-fill: white;
+}

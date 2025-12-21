@@ -10,11 +10,10 @@
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Font?>
-
 <?import javafx.scene.layout.HBox?>
-<AnchorPane prefHeight="780.0" prefWidth="1250.0"
-            style="-fx-background-image: url('noran/desktop/images/background.png');
+<?import javafx.scene.layout.StackPane?>
+
+<StackPane style="-fx-background-image: url('noran/desktop/images/background.png');
                    -fx-background-size: cover;
                    -fx-background-position: center center;
                    -fx-background-repeat: no-repeat;"
@@ -23,71 +22,78 @@
             fx:controller="noran.desktop.Controllers.ForgotPasswordController">
 
     <!-- Background -->
-    <ImageView fitHeight="768.0" fitWidth="1366.0" pickOnBounds="true" preserveRatio="false">
+    <ImageView fitHeight="768.0" fitWidth="1366.0" pickOnBounds="true" preserveRatio="false" StackPane.alignment="CENTER">
         <image>
             <Image url="@images/background.png" />
         </image>
     </ImageView>
 
-    <!-- Main Card -->
-    <VBox layoutX="400.0" layoutY="160.0"
-          prefWidth="500.0" prefHeight="300.0" spacing="25"
+    <!-- Modern Glass Card -->
+    <VBox maxWidth="420" maxHeight="380" prefWidth="420" prefHeight="380" spacing="24"
           alignment="CENTER"
-          style="-fx-background-color: rgba(199,230,234,0.6);
-                 -fx-background-radius: 20;
-                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 5,0,0,3);"
-          nodeOrientation="RIGHT_TO_LEFT">
+          style="-fx-background-color: rgba(255,255,255,0.9);
+                 -fx-background-radius: 24;
+                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 8);"
+          nodeOrientation="RIGHT_TO_LEFT"
+          StackPane.alignment="CENTER">
 
         <padding>
-            <Insets top="30" right="40" bottom="30" left="40"/>
+            <Insets top="35" right="45" bottom="35" left="45"/>
         </padding>
 
-        <!-- Back Link in HBox aligned to TOP_LEFT -->
-        <HBox alignment="TOP_RIGHT" prefWidth="500" >
-            <Hyperlink text="الرجوع" onAction="#onBackClicked"
-                       style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
-                          -fx-font-size: 13; -fx-text-fill: #690000;
-                          -fx-underline: true;" />
+        <!-- Back Link -->
+        <HBox alignment="TOP_LEFT" prefWidth="350">
+            <Hyperlink text="⬅️ الرجوع" onAction="#onBackClicked"
+                       style="-fx-font-family: 'Segoe UI'; -fx-font-size: 13; -fx-text-fill: #888; -fx-underline: false;" />
         </HBox>
 
-        <!-- Title -->
-        <Label text="نسيت كلمة المرور"
-               style="-fx-font-family: 'Poppins'; -fx-font-weight: 700;
-                  -fx-font-size: 20; -fx-text-fill: #690000;" />
+        <!-- Icon + Title -->
+        <Label text="🔓 نسيت كلمة المرور"
+               style="-fx-font-family: 'Segoe UI', 'Poppins'; -fx-font-weight: 700;
+                      -fx-font-size: 24; -fx-text-fill: #690000;" />
+        
+        <Label text="أدخل بريدك الإلكتروني لإرسال رمز التحقق"
+               style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14; -fx-text-fill: #666;" />
 
         <!-- Email Field -->
-        <GridPane hgap="10" vgap="10" nodeOrientation="RIGHT_TO_LEFT" alignment="CENTER">
-            <Label text="البريد الالكتروني"
-                   style="-fx-font-family: 'Poppins'; -fx-font-weight: 600;
-                      -fx-font-size: 14; -fx-text-fill: #690000;
-                      -fx-alignment: CENTER-RIGHT;" GridPane.rowIndex="0" />
+        <GridPane hgap="10" vgap="12" nodeOrientation="RIGHT_TO_LEFT" alignment="CENTER">
+            <Label text="📧 البريد الالكتروني"
+                   style="-fx-font-family: 'Segoe UI'; -fx-font-weight: 600;
+                          -fx-font-size: 14; -fx-text-fill: #444;
+                          -fx-alignment: CENTER-RIGHT;" GridPane.rowIndex="0" />
 
-            <TextField fx:id="emailField" promptText="name@gmail.com"
+            <TextField fx:id="emailField" promptText="example@email.com"
                        GridPane.rowIndex="1"
-                       prefWidth="300"
-                       nodeOrientation="RIGHT_TO_LEFT"
-                       style="-fx-font-family: 'Poppins'; -fx-font-size: 14;
-                          -fx-background-radius: 10;
-                          -fx-alignment: CENTER-RIGHT;
-                          -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" />
+                       prefWidth="320" prefHeight="42"
+                       nodeOrientation="LEFT_TO_RIGHT"
+                       style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14;
+                              -fx-background-radius: 12;
+                              -fx-background-color: #f5f5f5;
+                              -fx-border-color: #ddd;
+                              -fx-border-radius: 12;
+                              -fx-padding: 10 15;" />
         </GridPane>
 
-        <!-- Send Button -->
-        <Button fx:id="sendCodeButton" text="إرسال الكود" onAction="#onSendCodeClicked"
-                prefWidth="200" prefHeight="35"
-                style="-fx-font-family: 'Poppins'; -fx-font-weight: 600;
-                   -fx-font-size: 14; -fx-background-color: #690000;
-                   -fx-background-radius: 8; -fx-text-fill: white;" />
+        <!-- Send Button with Gradient -->
+        <Button fx:id="sendCodeButton" text="📤 إرسال الكود" onAction="#onSendCodeClicked"
+                prefWidth="220" prefHeight="48"
+                style="-fx-font-family: 'Segoe UI'; -fx-font-weight: 700;
+                       -fx-font-size: 16; -fx-background-color: linear-gradient(to bottom, #a40000, #690000);
+                       -fx-background-radius: 14; -fx-text-fill: white;
+                       -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 8, 0, 0, 3);" />
     </VBox>
 
-
     <!-- Logo -->
-    <ImageView fitHeight="120.0" fitWidth="180.0"
-               layoutX="40.0" layoutY="20.0"
-               preserveRatio="true" pickOnBounds="true">
+    <ImageView fitHeight="240.0" fitWidth="230.0"
+               preserveRatio="true" pickOnBounds="true"
+               StackPane.alignment="TOP_LEFT">
         <image>
             <Image url="@images/Logo.png" />
         </image>
+        <StackPane.margin>
+            <Insets top="-10" />
+        </StackPane.margin>
     </ImageView>
 
-</AnchorPane>
+</StackPane>
+

@@ -15,10 +15,11 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="700" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.HelloController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.HelloController">
 
     <stylesheets>
         <String fx:value="@invoices-table.css" />
+        <String fx:value="@combo-style.css" />
     </stylesheets>
 
     <left>
@@ -32,16 +33,17 @@
     <!-- ======= Main Content ======= -->
     <center>
         <VBox spacing="18" style="-fx-padding: 18 24;">
-         <AnchorPane prefHeight="25.0" prefWidth="659.0">
-            <children>
-               <Button fx:id="updateClientBtn1" layoutX="23.0" layoutY="-1.0" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
-               <ImageView fitHeight="47.0" fitWidth="61.0" layoutX="29.0" layoutY="3.0" pickOnBounds="true" preserveRatio="true">
-                  <image>
-                     <Image url="@images/cached.png" />
-                  </image>
-               </ImageView>
-            </children>
-         </AnchorPane>
+         <HBox alignment="CENTER_LEFT">
+            <Button fx:id="refreshBtn" onAction="#refresh" style="-fx-background-color: transparent; -fx-cursor: hand;">
+               <graphic>
+                  <ImageView fitHeight="47.0" fitWidth="61.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@images/cached.png" />
+                     </image>
+                  </ImageView>
+               </graphic>
+            </Button>
+         </HBox>
             <!-- Client Info -->
             <VBox spacing="8" style="-fx-background-color: white; -fx-padding: 18; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);">
                 <HBox spacing="25">
@@ -62,6 +64,10 @@
             <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 4 0 12 0;">
                 <Label style="-fx-font-weight: bold;" text="الشحنة:" />
                 <ComboBox fx:id="clientShipmentComboBox" prefWidth="250" promptText="اختر الشحنة" style="-fx-background-radius: 8; -fx-background-color: #fff;" />
+            <Button fx:id="addRowBtn1" onAction="#addNewInvoiceRow" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="إضافة عنصر جديد +" />
+            <Button fx:id="deleteRowBtn1" onAction="#deleteSelectedRow" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="مسح العنصر" />
+            <Button fx:id="sendInvoiceBtn1" onAction="#sendInvoiceToDatabase" style="-fx-background-color: #a40000; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" text="إرسال الفاتورة" />
+            <Label fx:id="totalCost1" style="-fx-font-weight: bold; -fx-font-size: 16;" text="المجموع الكلي: 0.00 جنيه" />
             </HBox>
 
             <!-- Invoices Table -->
@@ -85,15 +91,8 @@
             <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 12 0 0 0;">
                 <!-- Buttons -->
                 <HBox alignment="CENTER_RIGHT" spacing="12" style="-fx-padding: 12 0 0 0;">
-                    <Button fx:id="addRowBtn" onAction="#addNewInvoiceRow" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="إضافة عنصر جديد +" />
-
-                    <Button fx:id="deleteRowBtn" onAction="#deleteSelectedRow" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8;" text="مسح العنصر" />
-
-                    <Button fx:id="sendInvoiceBtn" onAction="#sendInvoiceToDatabase" style="-fx-background-color: #a40000; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" text="إرسال الفاتورة" />
 
                     <Region HBox.hgrow="ALWAYS" />
-
-                    <Label fx:id="totalCost" style="-fx-font-weight: bold; -fx-font-size: 16;" text="المجموع الكلي: 0.00 جنيه" />
 
 <!--                    <Button fx:id="downloadPdfBtn"-->
 <!--                            onAction="#downloadInvoicePDF"-->

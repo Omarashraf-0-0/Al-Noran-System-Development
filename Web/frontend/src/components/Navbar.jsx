@@ -28,10 +28,10 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 
 	return (
 		<header
-			className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+			className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
 				scrolled
-					? "bg-white shadow-md py-2"
-					: "bg-transparent py-4 md:py-6"
+					? "bg-white/95 backdrop-blur-md shadow-lg py-2"
+					: "bg-gradient-to-b from-black/30 to-transparent py-4 md:py-6"
 			}`}
 		>
 			<div className="container mx-auto px-4 flex items-center justify-between">
@@ -49,11 +49,11 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 						/>
 					</Link>
 
-					<nav className="hidden md:flex items-center gap-8">
+				<nav className="hidden md:flex items-center gap-8">
 						{[
 							{ label: "الرئيسية", path: "/" },
-							{ label: "عن النوران", path: "#about" },
-							{ label: "خدماتنا", path: "#services" },
+							{ label: "عن النوران", action: () => window.scrollTo({ top: 0, behavior: "smooth" }) },
+							{ label: "خدماتنا", action: () => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" }) },
 							{ label: "تتبع الشحنة", action: () => document.getElementById("tracking-section")?.scrollIntoView({ behavior: "smooth" }) },
 						].map((item, index) => (
 							item.action ? (
@@ -116,10 +116,10 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 					{showAuth && (
 						<Link
 							to="/login"
-							className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all transform hover:-translate-y-0.5 ${
+							className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all duration-300 transform hover:-translate-y-0.5 hover:scale-105 ${
 								scrolled
-									? "bg-[#690000] text-white hover:bg-[#8B0000] shadow-lg hover:shadow-red-900/20"
-									: "bg-white text-[#690000] hover:bg-gray-100 shadow-xl"
+									? "bg-[#690000] text-white hover:bg-[#8B0000] shadow-lg hover:shadow-[#690000]/30"
+									: "bg-white text-[#690000] hover:bg-gray-50 shadow-xl hover:shadow-2xl"
 							}`}
 						>
 							تسجيل الدخول

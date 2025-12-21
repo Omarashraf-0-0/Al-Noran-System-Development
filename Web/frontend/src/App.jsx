@@ -34,6 +34,7 @@ import ShipmentChatPage from "./pages/ShipmentChatPage";
 import ClientProfilePage from "./pages/ClientProfilePage";
 import EmployeeProfilePage from "./pages/EmployeeProfilePage";
 import AdminProfilePage from "./pages/AdminProfilePage";
+import MyProfileClient from "./pages/MyProfileClient";
 import PaymentsManagementPage from "./pages/PaymentsManagementPage";
 import ClientPaymentsPage from "./pages/ClientPaymentsPage";
 import NotificationPage from "./pages/NotificationPage";
@@ -154,18 +155,16 @@ const ProfileRoute = () => {
 	const userType = user?.type;
 	const employeeType = user?.employeeDetails?.employeeType;
 
+	// Each user type gets their own dedicated profile page
 	if (userType === "client") {
-		return <ClientProfilePage />;
-	} else if (userType === "employee") {
-		// System Admin gets AdminProfilePage, other employees get EmployeeProfilePage
-		if (employeeType === "System Admin") {
-			return <AdminProfilePage />;
-		}
-		return <EmployeeProfilePage />;
-	} else if (userType === "admin") {
+		return <MyProfileClient />;
+	} else if (userType === "admin" || (userType === "employee" && employeeType === "System Admin")) {
 		return <AdminProfilePage />;
+	} else if (userType === "employee") {
+		return <EmployeeProfilePage />;
 	}
-	// Default to employee profile if type not found
+	
+	// Default fallback
 	return <EmployeeProfilePage />;
 };
 

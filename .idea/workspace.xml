@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="71fa68e8-5159-49fe-9ebe-37f5d135855b" name="Changes" comment="some gui updates">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AdminInvoices.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/Desktop/src/main/resources/noran/desktop/AdminInvoices.fxml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,12 +26,12 @@
     &quot;assignee&quot;: &quot;Amr3bsme3&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/Omarashraf-0-0/Al-Noran-System-Development.git&quot;,
-    &quot;accountId&quot;: &quot;6a079c3b-78da-4884-bdc3-4b6aad69a185&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/Omarashraf-0-0/Al-Noran-System-Development.git",
+    "accountId": "649c067f-de00-4c2b-81b5-56a034cf9a24"
   }
-}</component>
+}]]></component>
   <component name="JavaAutoRunManager">
     <enabled-run-configurations>
       <run-configuration type="MavenRunConfiguration" name="Desktop Run" />
@@ -59,31 +58,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
-    &quot;Application.Run Desktop.executor&quot;: &quot;Run&quot;,
-    &quot;Maven.Desktop Run.executor&quot;: &quot;Run&quot;,
-    &quot;Node.js.server.js.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;desktop/test-merge&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/Yasmine Shehata/IdeaProjects/Client/Al-Noran-System-Development/Desktop/src/main/resources/noran/desktop/images&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_ADD_EXTERNAL_FILES": "true",
+    "Application.Run Desktop.executor": "Run",
+    "Maven.Desktop Run.executor": "Run",
+    "Node.js.server.js.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "E:/agile/Desktop",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\Yasmine Shehata\IdeaProjects\Client\Al-Noran-System-Development\Desktop\src\main\resources\noran\desktop\images" />
     </key>
   </component>
-  <component name="RunManager" selected="Node.js.server.js">
+  <component name="RunManager" selected="Application.Run Desktop">
     <configuration name="Run Desktop" type="Application" factoryName="Application">
       <option name="MAIN_CLASS_NAME" value="noran.desktop.Applications.LoginApplication" />
       <method v="2">
@@ -139,21 +138,7 @@
     <list>
       <item itemvalue="Application.Run Desktop" />
       <item itemvalue="Maven.Desktop Run" />
-      <item itemvalue="Node.js.server.js" />
     </list>
-    <recent_temporary>
-      <list>
-        <item itemvalue="Node.js.server.js" />
-      </list>
-    </recent_temporary>
-  </component>
-  <component name="SharedIndexes">
-    <attachedChunks>
-      <set>
-        <option value="bundled-jdk-9f38398b9061-39b83d9b5494-intellij.indexing.shared.core-IU-241.18968.26" />
-        <option value="bundled-js-predefined-1d06a55b98c1-0b3e54e931b4-JavaScript-IU-241.18968.26" />
-      </set>
-    </attachedChunks>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
