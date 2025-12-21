@@ -44,6 +44,8 @@ const allowedOrigins = [
 	"http://localhost:3000",
 	"https://al-noran-system.web.app",       // Firebase Hosting
 	"https://al-noran-system.firebaseapp.com", // Firebase Hosting alternate
+	"https://alnoran.org",                    // Custom domain
+	"https://www.alnoran.org",                // Custom domain with www
 	process.env.FRONTEND_URL,                 // Environment variable for flexibility
 ].filter(Boolean); // Remove undefined values
 
