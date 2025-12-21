@@ -2,17 +2,33 @@ const User = require("../models/user");
 const { validationResult } = require("express-validator");
 const asyncHandler = require("express-async-handler");
 const notificationService = require("../services/notificationService");
+const { verifyCaptcha } = require("../services/captchaService");
 
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
 const login = asyncHandler(async (req, res) => {
-	const { email, password } = req.body;
+	const { email, password, captchaToken } = req.body;
 
 	// Validation
 	if (!email || !password) {
 		res.status(400);
 		throw new Error("من فضلك أدخل البريد الإلكتروني وكلمة المرور");
+	}
+
+	// Verify reCAPTCHA token
+	if (captchaToken) {
+		const captchaResult = await verifyCaptcha(captchaToken);
+		if (!captchaResult.success) {
+			console.warn(`⚠️ [Auth] reCAPTCHA verification failed`);
+			res.status(400);
+			throw new Error("فشل التحقق الأمني. يرجى المحاولة مرة أخرى");
+		}
+		console.log(`✅ [Auth] reCAPTCHA verified successfully`);
+	} else {
+		// CAPTCHA token is required
+		res.status(400);
+		throw new Error("يرجى إكمال التحقق الأمني");
 	}
 
 	// Check for user

@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { useGoogleLogin } from "@react-oauth/google";
+import ReCAPTCHA from "react-google-recaptcha";
 
 const LoginPage = () => {
 	const navigate = useNavigate();
+	const recaptchaRef = useRef(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
 	const [isVisible, setIsVisible] = useState(false);
+	const [captchaToken, setCaptchaToken] = useState(null);
 	const [formData, setFormData] = useState({
 		email: "",
 		password: "",
@@ -118,12 +121,22 @@ const LoginPage = () => {
 
 	const handleLogin = async (e) => {
 		e.preventDefault();
+
+		// Validate CAPTCHA
+		if (!captchaToken) {
+			toast.error('يرجى التحقق من أنك لست روبوت');
+			return;
+		}
+
 		setIsLoading(true);
 
 		try {
 			const response = await axios.post(
 				`${import.meta.env.VITE_API_URL}/api/auth/login`,
-				formData
+				{
+					...formData,
+					captchaToken, // Send CAPTCHA token to backend
+				}
 			);
 
 			toast.success("تم تسجيل الدخول بنجاح");
@@ -159,6 +172,13 @@ const LoginPage = () => {
 				});
 			} else if (error.response?.status === 401) {
 				toast.error("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+			} else if (error.response?.status === 400 && error.response?.data?.message?.includes('CAPTCHA')) {
+				toast.error("التحقق الأمني فشل. يرجى المحاولة مرة أخرى");
+				// Reset CAPTCHA on failure
+				if (recaptchaRef.current) {
+					recaptchaRef.current.reset();
+					setCaptchaToken(null);
+				}
 			} else {
 				toast.error(error.response?.data?.message || "فشل تسجيل الدخول");
 			}
@@ -337,6 +357,32 @@ const LoginPage = () => {
 							>
 								نسيت كلمة المرور؟
 							</Link>
+						</div>
+
+						{/* Google reCAPTCHA v2 */}
+						<div 
+							className="flex justify-center"
+							style={{ 
+								animation: isVisible ? 'fade-in-up 0.6s ease-out 0.35s forwards' : 'none',
+								opacity: 0 
+							}}
+						>
+							<ReCAPTCHA
+								ref={recaptchaRef}
+								sitekey={import.meta.env.VITE_GOOGLE_RECAPTCHA_SITE_KEY || 'YOUR_SITE_KEY'}
+								onChange={(token) => {
+									setCaptchaToken(token);
+								}}
+								onExpired={() => {
+									setCaptchaToken(null);
+									toast.error('انتهت صلاحية التحقق. يرجى المحاولة مرة أخرى');
+								}}
+								onErrored={() => {
+									setCaptchaToken(null);
+									toast.error('حدث خطأ في التحقق. يرجى المحاولة مرة أخرى');
+								}}
+								theme="light"
+							/>
 						</div>
 
 						{/* Submit Button */}
