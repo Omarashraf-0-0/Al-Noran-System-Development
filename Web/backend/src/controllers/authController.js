@@ -10,10 +10,20 @@ const { verifyCaptcha } = require("../services/captchaService");
 const login = asyncHandler(async (req, res) => {
 	const { email, password, captchaToken } = req.body;
 	
+	// Log all headers for debugging
+	console.log(`🔍 [Auth] Login attempt for: ${email}`);
+	console.log(`🔍 [Auth] Headers received:`, {
+		'x-client-type': req.headers['x-client-type'],
+		'x-flutter-app': req.headers['x-flutter-app'],
+		'user-agent': req.headers['user-agent']?.substring(0, 50) // First 50 chars
+	});
+	
 	// Check if request is from mobile app
 	const isMobileApp = req.headers['x-client-type'] === 'mobile' || 
 	                    req.headers['user-agent']?.includes('Flutter') ||
 	                    req.headers['x-flutter-app'] === 'true';
+	
+	console.log(`🔍 [Auth] Is mobile app: ${isMobileApp}`);
 
 	// Validation
 	if (!email || !password) {
@@ -33,6 +43,7 @@ const login = asyncHandler(async (req, res) => {
 			console.log(`✅ [Auth] reCAPTCHA verified successfully`);
 		} else {
 			// CAPTCHA token is required for web only
+			console.warn(`⚠️ [Auth] CAPTCHA required but not provided (web login)`);
 			res.status(400);
 			throw new Error("يرجى إكمال التحقق الأمني");
 		}

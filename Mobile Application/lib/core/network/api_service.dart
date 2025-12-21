@@ -18,17 +18,20 @@ class ApiService {
     required String password,
   }) async {
     try {
+      final headers = {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+        'X-Client-Type': 'mobile',
+        'X-Flutter-App': 'true',
+      };
+      
       print('🔐 [API] Login request to: $baseUrl/api/auth/login');
+      print('🔐 [API] Headers being sent: $headers');
 
       final response = await http
           .post(
             Uri.parse('$baseUrl/api/auth/login'),
-            headers: {
-              'Content-Type': 'application/json',
-              'ngrok-skip-browser-warning': 'true', // مهم لـ ngrok
-              'X-Client-Type': 'mobile', // تحديد أن الطلب من تطبيق الموبايل
-              'X-Flutter-App': 'true', // header إضافي للتأكيد
-            },
+            headers: headers,
             body: jsonEncode({'email': email, 'password': password}),
           )
           .timeout(
