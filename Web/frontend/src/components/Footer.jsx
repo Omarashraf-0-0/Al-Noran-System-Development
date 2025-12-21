@@ -69,7 +69,7 @@ const Footer = () => {
 					{/* Company Info */}
 					<div className="lg:col-span-1">
 						<img
-							src="/src/assets/images/white logo.png"
+							src="/images/white logo.png"
 							alt="النوران"
 							className="h-24 mb-6"
 						/>

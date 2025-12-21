@@ -95,7 +95,7 @@ const ResetPasswordPage = () => {
 					>
 						<Link to="/">
 							<img
-								src="/src/assets/images/coloredLogo.svg"
+								src="/images/coloredLogo.svg"
 								alt="النوران"
 								className="h-28 mx-auto mb-6 hover:scale-110 transition-transform duration-300"
 							/>
@@ -285,7 +285,7 @@ const ResetPasswordPage = () => {
 					}}
 				>
 					<img
-						src="/src/assets/images/white logo.svg"
+						src="/images/white logo.svg"
 						alt="النوران"
 						className="h-44 mb-10 drop-shadow-2xl animate-float-slow"
 					/>

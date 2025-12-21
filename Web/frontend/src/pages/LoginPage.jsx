@@ -236,7 +236,7 @@ const LoginPage = () => {
 					>
 						<Link to="/">
 							<img
-								src="/src/assets/images/coloredLogo.svg"
+								src="/images/coloredLogo.svg"
 								alt="النوران"
 								className="h-28 mx-auto mb-6 hover:scale-110 transition-transform duration-300"
 							/>
@@ -409,7 +409,7 @@ const LoginPage = () => {
 								</>
 							) : (
 								<>
-									<img src="/src/assets/images/googleIcon.png" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" onError={(e) => {
+									<img src="/images/googleIcon.png" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" onError={(e) => {
 										e.target.onerror = null;
 										e.target.src = "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg";
 									}} />
@@ -460,7 +460,7 @@ const LoginPage = () => {
 					}}
 				>
 					<img
-						src="/src/assets/images/white logo.svg"
+						src="/images/white logo.svg"
 						alt="النوران"
 						className="h-44 mb-10 drop-shadow-2xl animate-float-slow"
 					/>

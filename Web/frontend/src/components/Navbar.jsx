@@ -61,7 +61,7 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 					<Link to="/" className="flex items-center gap-2">
 						{/* Use colored logo when scrolled, white logo when transparent (if available, else colored) */}
 						<img
-							src="/src/assets/images/coloredLogo.png"
+							src="/images/coloredLogo.png"
 							alt="النوران"
 							className={`h-10 w-auto transition-transform hover:scale-105 ${
 								scrolled ? "" : "brightness-0 invert drop-shadow-md"
