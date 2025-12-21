@@ -28,7 +28,7 @@ const AuthNavbar = () => {
 				{/* Left Section - Logo */}
 				<Link to="/" className="flex items-center gap-2">
 					<img
-						src="/src/assets/images/coloredLogo.png"
+						src="/images/coloredLogo.png"
 						alt="النوران"
 						className={`h-10 w-auto transition-transform hover:scale-105 ${
 							scrolled ? "" : "brightness-0 invert drop-shadow-md"

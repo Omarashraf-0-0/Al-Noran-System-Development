@@ -2,7 +2,7 @@ import React from "react";
 
 const BackgroundContainer = ({
 	children,
-	backgroundImage = "/src/assets/images/background.png",
+	backgroundImage = "/images/background.png",
 }) => {
 	return (
 		<div

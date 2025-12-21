@@ -10,7 +10,7 @@ const HeroSection = () => {
 			<div
 				className="absolute inset-0 bg-cover bg-center bg-no-repeat transform scale-105"
 				style={{
-					backgroundImage: "url('/src/assets/images/hero-bg.png')",
+					backgroundImage: "url('/images/hero-bg.png')",
 				}}
 			>
 				{/* Modern Gradient Overlay with Brand Colors - Darker for consistency */}
@@ -28,7 +28,7 @@ const HeroSection = () => {
 					{/* Small Watermark Logo with Glow Effect */}
 					<div className="w-36 h-36 md:w-44 md:h-44 mb-4 opacity-95 drop-shadow-2xl animate-fade-in">
 						<img
-							src="/src/assets/images/coloredLogo.svg"
+							src="/images/coloredLogo.svg"
 							alt="النوران"
 							className="w-full h-full object-contain filter drop-shadow-lg"
 						/>
