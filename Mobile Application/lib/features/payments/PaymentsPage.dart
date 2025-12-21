@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -26,6 +27,13 @@ class _PaymentsPageState extends State<PaymentsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _selectedIndex = 3; // الفواتير (index 3)
+
+  // Premium Colors
+  static const Color primaryDark = Color(0xFF690000);
+  static const Color primaryLight = Color(0xFF8B0000);
+  static const Color accentColor = Color(0xFF1BA3B6);
+  static const Color goldAccent = Color(0xFFD4AF37);
+  static const Color bgColor = Color(0xFFF8F9FA);
 
   // Data
   List<Map<String, dynamic>> _invoices = [];
@@ -145,80 +153,321 @@ class _PaymentsPageState extends State<PaymentsPage>
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: bgColor,
         body: Column(
           children: [
-            UnifiedTopBar(showBackButton: true, showMenu: false),
+            // UnifiedTopBar with page title
+            UnifiedTopBar(
+              showBackButton: true,
+              showMenu: false,
+              title: 'الفواتير والمدفوعات',
+              subtitle: 'إدارة فواتيرك ومدفوعاتك',
+              titleIcon: Icons.account_balance_wallet_rounded,
+              showWelcome: false,
+            ),
             Expanded(
               child: SafeArea(
                 top: false,
                 child:
                     _isLoading
-                        ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF690000),
-                          ),
-                        )
-                        : Column(
-                          children: [
-                            // Summary Cards
-                            _buildSummaryCards(),
-                            const SizedBox(height: 16),
-                            // Tabs
-                            _buildTabs(),
-                            const SizedBox(height: 16),
-                            // Tab Content
-                            Expanded(
-                              child: TabBarView(
-                                controller: _tabController,
-                                children: [
-                                  _buildInvoicesList(),
-                                  _buildPaymentsList(),
-                                ],
-                              ),
+                        ? _buildPremiumLoadingState()
+                        : RefreshIndicator(
+                          onRefresh: _loadData,
+                          color: primaryDark,
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Column(
+                              children: [
+                                // Premium Summary Section
+                                _buildPremiumSummarySection(),
+                                const SizedBox(height: 16),
+                                // Premium Tabs
+                                _buildPremiumTabs(),
+                                const SizedBox(height: 8),
+                                // Tab Content
+                                SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.5,
+                                  child: TabBarView(
+                                    controller: _tabController,
+                                    children: [
+                                      _buildInvoicesList(),
+                                      _buildPaymentsList(),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
               ),
             ),
           ],
         ),
-        floatingActionButton: _buildUploadReceiptButton(),
+        floatingActionButton: _buildPremiumUploadButton(),
         floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
         bottomNavigationBar: _buildPremiumBottomNav(),
       ),
     );
   }
 
-  Widget _buildSummaryCards() {
+  Widget _buildPremiumHeader() {
     return Container(
-      margin: const EdgeInsets.all(16),
-      child: Row(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [primaryDark, primaryLight],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: Row(
+            children: [
+              // Back Button
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              // Title & Subtitle
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: goldAccent.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.account_balance_wallet_rounded,
+                            color: goldAccent,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'الفواتير والمدفوعات',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'إدارة فواتيرك ومدفوعاتك',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 13,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Stats indicator
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.receipt_long_rounded,
+                      size: 14,
+                      color: goldAccent,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${_invoices.where((i) => i['status'] != 'تم الدفع').length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Wallet Balance Card
-          Expanded(
-            child: _buildSummaryCard(
-              title: 'رصيد المحفظة',
-              value: '${_walletBalance.toStringAsFixed(0)} ج.م',
-              icon: Icons.account_balance_wallet_rounded,
-              color: Colors.green,
-              gradient: [
-                Colors.green.withOpacity(0.8),
-                Colors.green.withOpacity(0.6),
-              ],
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  primaryDark.withOpacity(0.1),
+                  accentColor.withOpacity(0.1),
+                ],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: CircularProgressIndicator(
+                color: primaryDark,
+                strokeWidth: 3,
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          // Total Debt Card
-          Expanded(
-            child: _buildSummaryCard(
-              title: 'إجمالي المستحقات',
-              value: '${_totalDebt.toStringAsFixed(0)} ج.م',
-              icon: Icons.receipt_long_rounded,
-              color: const Color(0xFF690000),
-              gradient: [
-                const Color(0xFF690000).withOpacity(0.9),
-                const Color(0xFF690000).withOpacity(0.7),
+          const SizedBox(height: 20),
+          const Text(
+            'جاري تحميل البيانات...',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumSummarySection() {
+    final unpaidCount =
+        _invoices.where((i) => i['status'] != 'تم الدفع').length;
+    final paidCount = _invoices.where((i) => i['status'] == 'تم الدفع').length;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        children: [
+          // Main Balance Cards
+          Row(
+            children: [
+              // Wallet Balance Card - Glassmorphism Style
+              Expanded(
+                child: _buildGlassCard(
+                  title: 'رصيد المحفظة',
+                  value: '${_walletBalance.toStringAsFixed(0)}',
+                  currency: 'ج.م',
+                  icon: Icons.account_balance_wallet_rounded,
+                  gradientColors: [
+                    const Color(0xFF10B981),
+                    const Color(0xFF059669),
+                  ],
+                  iconBgColor: Colors.white.withOpacity(0.2),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Total Debt Card
+              Expanded(
+                child: _buildGlassCard(
+                  title: 'إجمالي المستحقات',
+                  value: '${_totalDebt.toStringAsFixed(0)}',
+                  currency: 'ج.م',
+                  icon: Icons.receipt_long_rounded,
+                  gradientColors: [primaryDark, primaryLight],
+                  iconBgColor: goldAccent.withOpacity(0.3),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Stats Row
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildStatItem(
+                    icon: Icons.pending_actions_rounded,
+                    label: 'فواتير معلقة',
+                    value: '$unpaidCount',
+                    color: Colors.orange,
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.grey.withOpacity(0.2),
+                ),
+                Expanded(
+                  child: _buildStatItem(
+                    icon: Icons.check_circle_rounded,
+                    label: 'تم الدفع',
+                    value: '$paidCount',
+                    color: Colors.green,
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.grey.withOpacity(0.2),
+                ),
+                Expanded(
+                  child: _buildStatItem(
+                    icon: Icons.upload_file_rounded,
+                    label: 'إيصالات',
+                    value: '${_payments.length}',
+                    color: accentColor,
+                  ),
+                ),
               ],
             ),
           ),
@@ -227,27 +476,28 @@ class _PaymentsPageState extends State<PaymentsPage>
     );
   }
 
-  Widget _buildSummaryCard({
+  Widget _buildGlassCard({
     required String title,
     required String value,
+    required String currency,
     required IconData icon,
-    required Color color,
-    required List<Color> gradient,
+    required List<Color> gradientColors,
+    required Color iconBgColor,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: gradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: gradientColors[0].withOpacity(0.35),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -257,72 +507,165 @@ class _PaymentsPageState extends State<PaymentsPage>
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: Colors.white, size: 24),
+                child: Icon(icon, color: Colors.white, size: 22),
               ),
               const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.trending_up_rounded,
+                      color: Colors.white.withOpacity(0.9),
+                      size: 12,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      'EGP',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontFamily: 'Cairo',
-              color: Colors.white70,
+              color: Colors.white.withOpacity(0.85),
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Cairo',
-              color: Colors.white,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Cairo',
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  currency,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Cairo',
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTabs() {
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Cairo',
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontFamily: 'Cairo',
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumTabs() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: TabBar(
         controller: _tabController,
         labelColor: Colors.white,
-        unselectedLabelColor: const Color(0xFF690000),
+        unselectedLabelColor: primaryDark,
         indicator: BoxDecoration(
-          color: const Color(0xFF690000),
-          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(colors: [primaryDark, primaryLight]),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: primaryDark.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         indicatorPadding: const EdgeInsets.all(4),
+        dividerColor: Colors.transparent,
+        splashFactory: NoSplash.splashFactory,
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
         labelStyle: const TextStyle(
           fontFamily: 'Cairo',
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: FontWeight.bold,
         ),
         unselectedLabelStyle: const TextStyle(
           fontFamily: 'Cairo',
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
         tabs: [
@@ -331,25 +674,25 @@ class _PaymentsPageState extends State<PaymentsPage>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.receipt_outlined, size: 18),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 const Text('الفواتير'),
                 if (_invoices
                     .where((i) => i['status'] != 'تم الدفع')
                     .isNotEmpty) ...[
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
+                      horizontal: 8,
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(10),
+                      color: goldAccent,
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '${_invoices.where((i) => i['status'] != 'تم الدفع').length}',
                       style: const TextStyle(
-                        fontSize: 10,
+                        fontSize: 11,
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
@@ -364,7 +707,7 @@ class _PaymentsPageState extends State<PaymentsPage>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.payments_outlined, size: 18),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 const Text('الإيصالات'),
               ],
             ),
@@ -374,9 +717,87 @@ class _PaymentsPageState extends State<PaymentsPage>
     );
   }
 
+  Widget _buildPremiumUploadButton() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [accentColor, accentColor.withGreen(180)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: FloatingActionButton.extended(
+        onPressed: _isUploading ? null : _showUploadReceiptSheet,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        label:
+            _isUploading
+                ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+                : const Row(
+                  children: [
+                    Icon(
+                      Icons.upload_file_rounded,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'رفع إيصال',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCards() {
+    // Legacy method - keeping for compatibility but not used
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildSummaryCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required List<Color> gradient,
+  }) {
+    // Legacy method - keeping for compatibility but not used
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildTabs() {
+    // Legacy method - keeping for compatibility but not used
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildUploadReceiptButton() {
+    // Legacy method - keeping for compatibility but not used
+    return const SizedBox.shrink();
+  }
+
   Widget _buildInvoicesList() {
     if (_invoices.isEmpty) {
-      return _buildEmptyState(
+      return _buildPremiumEmptyState(
         icon: Icons.receipt_long_outlined,
         message: 'لا توجد فواتير حالياً',
         subMessage: 'ستظهر فواتيرك هنا عند إصدارها',
@@ -658,7 +1079,7 @@ class _PaymentsPageState extends State<PaymentsPage>
 
   Widget _buildPaymentsList() {
     if (_payments.isEmpty) {
-      return _buildEmptyState(
+      return _buildPremiumEmptyState(
         icon: Icons.payments_outlined,
         message: 'لا توجد إيصالات مرفوعة',
         subMessage: 'اضغط على زر رفع إيصال لشحن محفظتك',
@@ -899,67 +1320,127 @@ class _PaymentsPageState extends State<PaymentsPage>
     required String message,
     required String subMessage,
   }) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 80, color: Colors.grey[300]),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'Cairo',
-              color: Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subMessage,
-            style: TextStyle(
-              fontSize: 14,
-              fontFamily: 'Cairo',
-              color: Colors.grey[500],
-            ),
-          ),
-        ],
-      ),
+    // Legacy - redirect to premium version
+    return _buildPremiumEmptyState(
+      icon: icon,
+      message: message,
+      subMessage: subMessage,
     );
   }
 
-  Widget _buildUploadReceiptButton() {
-    return FloatingActionButton.extended(
-      onPressed: _isUploading ? null : _showUploadReceiptSheet,
-      backgroundColor: _isUploading ? Colors.grey : const Color(0xFF690000),
-      elevation: 4,
-      label:
-          _isUploading
-              ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-              : const Text(
-                'رفع إيصال',
-                style: TextStyle(
-                  fontSize: 14,
+  Widget _buildPremiumEmptyState({
+    required IconData icon,
+    required String message,
+    required String subMessage,
+  }) {
+    return Center(
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Animated icon container
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.8, end: 1.0),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.elasticOut,
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            primaryDark.withOpacity(0.1),
+                            accentColor.withOpacity(0.1),
+                          ],
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Icon(
+                          icon,
+                          size: 50,
+                          color: primaryDark.withOpacity(0.5),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Cairo',
-                  color: Colors.white,
+                  color: Color(0xFF424242),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subMessage,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontFamily: 'Cairo',
+                  color: Colors.grey[500],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              // Upload button shortcut
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [accentColor, accentColor.withGreen(180)],
+                  ),
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accentColor.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: InkWell(
+                  onTap: _showUploadReceiptSheet,
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.upload_file_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'رفع إيصال جديد',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-      icon:
-          _isUploading
-              ? null
-              : const Icon(
-                Icons.upload_file_rounded,
-                size: 22,
-                color: Colors.white,
-              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

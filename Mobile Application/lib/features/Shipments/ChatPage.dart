@@ -586,85 +586,88 @@ class _CustomerSupportChatPageState extends State<CustomerSupportChatPage>
   }
 
   Widget _buildTypingIndicator() {
-    // Employee typing indicator on FAR LEFT side
+    // Employee typing indicator on FAR LEFT side (using LTR for proper positioning)
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16, right: 50),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+      padding: const EdgeInsets.only(bottom: 16, left: 0, right: 50),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/img/logo.png',
+                  width: 28,
+                  height: 28,
+                  fit: BoxFit.contain,
+                  errorBuilder:
+                      (_, __, ___) => Icon(
+                        Icons.support_agent_rounded,
+                        color: primaryDark,
+                        size: 20,
+                      ),
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                'assets/img/logo.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.contain,
-                errorBuilder:
-                    (_, __, ___) => Icon(
-                      Icons.support_agent_rounded,
-                      color: primaryDark,
-                      size: 20,
-                    ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: AnimatedBuilder(
-              animation: _typingAnimation,
-              builder: (context, child) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(3, (i) {
-                    return Padding(
-                      padding: EdgeInsets.only(left: i < 2 ? 4 : 0),
-                      child: Opacity(
-                        opacity: (_typingAnimation.value - (i * 0.2)).clamp(
-                          0.3,
-                          1.0,
-                        ),
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: primaryDark.withOpacity(0.6),
-                            shape: BoxShape.circle,
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: AnimatedBuilder(
+                animation: _typingAnimation,
+                builder: (context, child) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(3, (i) {
+                      return Padding(
+                        padding: EdgeInsets.only(left: i < 2 ? 4 : 0),
+                        child: Opacity(
+                          opacity: (_typingAnimation.value - (i * 0.2)).clamp(
+                            0.3,
+                            1.0,
+                          ),
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: primaryDark.withOpacity(0.6),
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  }),
-                );
-              },
+                      );
+                    }),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -695,197 +698,203 @@ class _CustomerSupportChatPageState extends State<CustomerSupportChatPage>
       child: Padding(
         padding: EdgeInsets.only(
           bottom: 12,
-          // No padding - avatars go to the edges
-          left: isEmployee ? 0 : 50, // User: small padding from left
-          right: isEmployee ? 50 : 0, // Employee: small padding from right
+          // Padding for the opposite side
+          left: isEmployee ? 0 : 50, // User: padding from left
+          right: isEmployee ? 50 : 0, // Employee: padding from right
         ),
-        child: Row(
-          mainAxisAlignment:
-              isEmployee ? MainAxisAlignment.start : MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            // Employee avatar (FAR LEFT - first in row)
-            if (isEmployee && showAvatar) ...[
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(
-                    'assets/img/logo.png',
-                    width: 28,
-                    height: 28,
-                    fit: BoxFit.contain,
-                    errorBuilder:
-                        (_, __, ___) => Icon(
-                          Icons.support_agent_rounded,
-                          color: primaryDark,
-                          size: 20,
-                        ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-            ] else if (isEmployee) ...[
-              const SizedBox(width: 44),
-            ],
-
-            // Message bubble
-            Flexible(
-              child: GestureDetector(
-                onLongPress: () {
-                  HapticFeedback.mediumImpact();
-                  _showMessageOptions(message);
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(14),
+        // Use LTR for chat layout so User is on FAR RIGHT and Employee is on FAR LEFT
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Row(
+            mainAxisAlignment:
+                isEmployee ? MainAxisAlignment.start : MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Employee avatar (FAR LEFT - first in LTR row)
+              if (isEmployee && showAvatar) ...[
+                Container(
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    gradient:
-                        !isEmployee
-                            ? LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [primaryDark, primaryLight],
-                            )
-                            : null,
-                    color: isEmployee ? Colors.white : null,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(18),
-                      topRight: const Radius.circular(18),
-                      // User on right: small bottom-right, Employee on left: small bottom-left
-                      bottomRight: Radius.circular(isEmployee ? 18 : 4),
-                      bottomLeft: Radius.circular(isEmployee ? 4 : 18),
-                    ),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
-                        color: (isEmployee ? Colors.grey : primaryDark)
-                            .withOpacity(0.15),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment:
-                        isEmployee
-                            ? CrossAxisAlignment.start
-                            : CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        text,
-                        style: TextStyle(
-                          color: isEmployee ? Colors.black87 : Colors.white,
-                          fontSize: 15,
-                          height: 1.5,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            time,
-                            style: TextStyle(
-                              color:
-                                  isEmployee
-                                      ? Colors.grey[500]
-                                      : Colors.white.withOpacity(0.8),
-                              fontSize: 11,
-                              fontFamily: 'Cairo',
-                            ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      'assets/img/logo.png',
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.contain,
+                      errorBuilder:
+                          (_, __, ___) => Icon(
+                            Icons.support_agent_rounded,
+                            color: primaryDark,
+                            size: 20,
                           ),
-                          if (!isEmployee && status != null) ...[
-                            const SizedBox(width: 4),
-                            Icon(
-                              status == 'delivered'
-                                  ? Icons.done_all
-                                  : status == 'sent'
-                                  ? Icons.done
-                                  : Icons.access_time_rounded,
-                              size: 14,
-                              color:
-                                  status == 'delivered'
-                                      ? accentColor
-                                      : Colors.white.withOpacity(0.7),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // User avatar (FAR RIGHT - last in row for user messages)
-            if (!isEmployee && showAvatar) ...[
-              const SizedBox(width: 8),
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [primaryDark, primaryLight]),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryDark.withOpacity(0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
                     ),
-                  ],
+                  ),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child:
-                      _userProfilePhotoUrl != null &&
-                              _userProfilePhotoUrl!.isNotEmpty
-                          ? CachedNetworkImage(
-                            imageUrl: _userProfilePhotoUrl!,
-                            width: 36,
-                            height: 36,
-                            fit: BoxFit.cover,
-                            placeholder:
-                                (context, url) => const Center(
-                                  child: Icon(
-                                    Icons.person_rounded,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                            errorWidget:
-                                (context, url, error) => const Center(
-                                  child: Icon(
-                                    Icons.person_rounded,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                          )
-                          : const Center(
-                            child: Icon(
-                              Icons.person_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
+                const SizedBox(width: 8),
+              ] else if (isEmployee) ...[
+                const SizedBox(width: 44),
+              ],
+
+              // Message bubble
+              Flexible(
+                child: GestureDetector(
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    _showMessageOptions(message);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient:
+                          !isEmployee
+                              ? LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [primaryDark, primaryLight],
+                              )
+                              : null,
+                      color: isEmployee ? Colors.white : null,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(18),
+                        topRight: const Radius.circular(18),
+                        // User on right: small bottom-right, Employee on left: small bottom-left
+                        bottomRight: Radius.circular(isEmployee ? 18 : 4),
+                        bottomLeft: Radius.circular(isEmployee ? 4 : 18),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isEmployee ? Colors.grey : primaryDark)
+                              .withOpacity(0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                          isEmployee
+                              ? CrossAxisAlignment.start
+                              : CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          text,
+                          style: TextStyle(
+                            color: isEmployee ? Colors.black87 : Colors.white,
+                            fontSize: 15,
+                            height: 1.5,
+                            fontFamily: 'Cairo',
                           ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              time,
+                              style: TextStyle(
+                                color:
+                                    isEmployee
+                                        ? Colors.grey[500]
+                                        : Colors.white.withOpacity(0.8),
+                                fontSize: 11,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                            if (!isEmployee && status != null) ...[
+                              const SizedBox(width: 4),
+                              Icon(
+                                status == 'delivered'
+                                    ? Icons.done_all
+                                    : status == 'sent'
+                                    ? Icons.done
+                                    : Icons.access_time_rounded,
+                                size: 14,
+                                color:
+                                    status == 'delivered'
+                                        ? accentColor
+                                        : Colors.white.withOpacity(0.7),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ] else if (!isEmployee) ...[
-              const SizedBox(width: 44),
+
+              // User avatar (FAR RIGHT - last in row for user messages)
+              if (!isEmployee && showAvatar) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryDark, primaryLight],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryDark.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child:
+                        _userProfilePhotoUrl != null &&
+                                _userProfilePhotoUrl!.isNotEmpty
+                            ? CachedNetworkImage(
+                              imageUrl: _userProfilePhotoUrl!,
+                              width: 36,
+                              height: 36,
+                              fit: BoxFit.cover,
+                              placeholder:
+                                  (context, url) => const Center(
+                                    child: Icon(
+                                      Icons.person_rounded,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                              errorWidget:
+                                  (context, url, error) => const Center(
+                                    child: Icon(
+                                      Icons.person_rounded,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                            )
+                            : const Center(
+                              child: Icon(
+                                Icons.person_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                  ),
+                ),
+              ] else if (!isEmployee) ...[
+                const SizedBox(width: 44),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

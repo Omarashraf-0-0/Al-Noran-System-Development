@@ -601,7 +601,14 @@ class _MyExportsPageState extends State<MyExportsPage>
             // Main Content
             Column(
               children: [
-                UnifiedTopBar(showBackButton: true, showMenu: false),
+                UnifiedTopBar(
+                  showBackButton: true,
+                  showMenu: false,
+                  title: 'الصادر',
+                  subtitle: 'شحنات التصدير الخاصة بك',
+                  titleIcon: Icons.upload_rounded,
+                  showWelcome: false,
+                ),
                 Expanded(
                   child: SafeArea(
                     top: false,

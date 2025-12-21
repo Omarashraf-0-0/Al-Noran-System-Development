@@ -549,7 +549,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'أدخل رقم الشحنة أو رقم ACID للتتبع',
+                    'ابحث في شحنات الوارد والصادر معاً',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.7),
                       fontSize: 13,
@@ -604,7 +604,7 @@ class _HomePageState extends State<HomePage> {
                               fontSize: 15,
                             ),
                             decoration: InputDecoration(
-                              hintText: 'رقم الشحنة أو ACID...',
+                              hintText: 'ACID أو UCR أو وصف الشحنة...',
                               hintStyle: TextStyle(
                                 color: Colors.grey[400],
                                 fontFamily: 'Cairo',
@@ -761,21 +761,26 @@ class _HomePageState extends State<HomePage> {
     );
 
     try {
-      // Get all shipments from API
-      final response = await ApiService.getAllShipments();
+      // Get all import shipments from API
+      final importResponse = await ApiService.getAllShipments();
+
+      // Get all export shipments from API
+      final exportResponse = await ApiService.getMyExportShipments();
 
       if (!mounted) return;
       context.pop(); // Close loading
 
-      if (response['success'] == true) {
-        final allShipments = List<Map<String, dynamic>>.from(
-          response['shipments'] ?? [],
+      final List<Map<String, dynamic>> allMatchingShipments = [];
+
+      // Search in import shipments
+      if (importResponse['success'] == true) {
+        final importShipments = List<Map<String, dynamic>>.from(
+          importResponse['shipments'] ?? [],
         );
 
-        // Filter shipments that match the search query
         final searchLower = trackingNumber.toLowerCase();
-        final matchingShipments =
-            allShipments.where((shipment) {
+        final matchingImports =
+            importShipments.where((shipment) {
               final acid = (shipment['acid'] ?? '').toString().toLowerCase();
               final number46 =
                   (shipment['number46'] ?? '').toString().toLowerCase();
@@ -789,22 +794,58 @@ class _HomePageState extends State<HomePage> {
                   description.contains(searchLower);
             }).toList();
 
-        if (matchingShipments.isEmpty) {
-          AlNoranPopups.showError(
-            context: context,
-            message: 'لم يتم العثور على شحنات تطابق: $trackingNumber',
-          );
-          return;
+        // Mark as import shipments
+        for (var shipment in matchingImports) {
+          allMatchingShipments.add({...shipment, '_sourceType': 'import'});
         }
+      }
 
-        // Show results in popup
-        _showSearchResultsPopup(matchingShipments, trackingNumber);
-      } else {
+      // Search in export shipments
+      if (exportResponse['success'] == true) {
+        final exportShipments = List<Map<String, dynamic>>.from(
+          exportResponse['data'] ?? [],
+        );
+
+        final searchLower = trackingNumber.toLowerCase();
+        final matchingExports =
+            exportShipments.where((shipment) {
+              final ucrNumber =
+                  (shipment['ucrNumber'] ?? '').toString().toLowerCase();
+              final shipmentCode =
+                  (shipment['shipmentCode'] ?? '').toString().toLowerCase();
+              final description =
+                  (shipment['productDescription'] ??
+                          shipment['generalDescription'] ??
+                          '')
+                      .toString()
+                      .toLowerCase();
+              final destinationCountry =
+                  (shipment['destinationCountry'] ?? '')
+                      .toString()
+                      .toLowerCase();
+
+              return ucrNumber.contains(searchLower) ||
+                  shipmentCode.contains(searchLower) ||
+                  description.contains(searchLower) ||
+                  destinationCountry.contains(searchLower);
+            }).toList();
+
+        // Mark as export shipments
+        for (var shipment in matchingExports) {
+          allMatchingShipments.add({...shipment, '_sourceType': 'export'});
+        }
+      }
+
+      if (allMatchingShipments.isEmpty) {
         AlNoranPopups.showError(
           context: context,
-          message: 'حدث خطأ أثناء البحث',
+          message: 'لم يتم العثور على شحنات تطابق: $trackingNumber',
         );
+        return;
       }
+
+      // Show results in popup
+      _showSearchResultsPopup(allMatchingShipments, trackingNumber);
     } catch (e) {
       if (!mounted) return;
       context.pop(); // Close loading if still open
@@ -917,18 +958,48 @@ class _HomePageState extends State<HomePage> {
     Map<String, dynamic> shipment,
     BuildContext homeContext,
   ) {
-    final acid = shipment['acid'] ?? 'N/A';
-    final polNumber = shipment['number46'] ?? 'غير محدد';
-    final status = shipment['status'] ?? 'غير محدد';
-    final description = shipment['shipmentDescription'] ?? 'شحنة';
+    // Determine if this is an export or import shipment
+    final isExport = shipment['_sourceType'] == 'export';
+
+    // Get identifier based on shipment type
+    final identifier =
+        isExport
+            ? (shipment['ucrNumber'] ?? shipment['shipmentCode'] ?? 'N/A')
+            : (shipment['acid'] ?? 'N/A');
+
+    // Get secondary info
+    final secondaryInfo =
+        isExport
+            ? (shipment['destinationCountry'] ?? 'غير محدد')
+            : (shipment['number46'] ?? 'غير محدد');
+
+    final secondaryLabel = isExport ? 'البلد' : 'رقم البوليصة';
+
+    // Get status
+    final status =
+        isExport
+            ? _translateExportStatus(shipment['currentStatus'])
+            : (shipment['status'] ?? 'غير محدد');
+
+    // Get description
+    final description =
+        isExport
+            ? (shipment['productDescription'] ??
+                shipment['generalDescription'] ??
+                'شحنة صادر')
+            : (shipment['shipmentDescription'] ?? 'شحنة');
+
     final isUrgent = _isUrgent(status);
 
     return InkWell(
       onTap: () {
         Navigator.pop(context); // Close dialog using dialog context
-        homeContext.push(
-          '/shipment-details/$acid',
-        ); // Navigate using home context
+        // Navigate based on shipment type
+        if (isExport) {
+          homeContext.push('/export-shipment-details/${shipment['_id']}');
+        } else {
+          homeContext.push('/shipment-details/$identifier');
+        }
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -954,16 +1025,41 @@ class _HomePageState extends State<HomePage> {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF690000),
+                        color: isExport ? accentColor : const Color(0xFF690000),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        acid,
+                        identifier,
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'Cairo',
                           color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Type badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            isExport
+                                ? Colors.green.withOpacity(0.1)
+                                : Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isExport ? 'صادر' : 'وارد',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cairo',
+                          color:
+                              isExport ? Colors.green[700] : Colors.blue[700],
                         ),
                       ),
                     ),
@@ -1012,17 +1108,17 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 8),
 
-            // POL Number
+            // Secondary Info (POL Number or Country)
             Row(
               children: [
                 Icon(
-                  Icons.description_outlined,
+                  isExport ? Icons.public : Icons.description_outlined,
                   size: 14,
                   color: Colors.grey[600],
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'رقم البوليصة: ',
+                  '$secondaryLabel: ',
                   style: TextStyle(
                     fontSize: 11,
                     fontFamily: 'Cairo',
@@ -1030,7 +1126,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 Text(
-                  polNumber,
+                  secondaryInfo,
                   style: const TextStyle(
                     fontSize: 11,
                     fontFamily: 'Cairo',

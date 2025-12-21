@@ -482,7 +482,14 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
             // Main Content
             Column(
               children: [
-                UnifiedTopBar(showBackButton: true, showMenu: false),
+                UnifiedTopBar(
+                  showBackButton: true,
+                  showMenu: false,
+                  title: 'الوارد',
+                  subtitle: 'شحنات الاستيراد الخاصة بك',
+                  titleIcon: Icons.download_rounded,
+                  showWelcome: false,
+                ),
                 Expanded(
                   child: SafeArea(
                     top: false,

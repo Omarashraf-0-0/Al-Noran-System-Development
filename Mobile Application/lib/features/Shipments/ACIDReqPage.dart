@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 import '../../core/services/document_verification_service.dart';
@@ -19,13 +20,18 @@ class AcidRequestPage extends StatefulWidget {
 }
 
 class _AcidRequestPageState extends State<AcidRequestPage> {
-  // Colors
+  // Premium Colors
   static const Color primaryDark = Color(0xFF690000);
+  static const Color primaryLight = Color(0xFF8B0000);
   static const Color accent = Color(0xFF1BA3B6);
+  static const Color bgColor = Color(0xFFF8F9FA);
 
-  // Form controllers
-  final TextEditingController _weightController = TextEditingController();
+  // Form controllers - Required fields
   final TextEditingController _itemDescController = TextEditingController();
+  final TextEditingController _customsItemController = TextEditingController();
+
+  // Form controllers - Optional fields
+  final TextEditingController _weightController = TextEditingController();
   final TextEditingController _supplierNameController = TextEditingController();
   final TextEditingController _countryController = TextEditingController();
   final TextEditingController _taxNumberController = TextEditingController();
@@ -33,10 +39,10 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
       TextEditingController();
   final TextEditingController _supplierEmailController =
       TextEditingController();
-  final TextEditingController _customsItemController = TextEditingController();
 
   // State
   bool _isSubmitting = false;
+  bool _showSupplierSection = false;
 
   // Document verification
   final DocumentVerificationService _docVerification =
@@ -175,23 +181,19 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
       return;
     }
 
-    // Validate
-    if (_supplierNameController.text.trim().isEmpty ||
-        _taxNumberController.text.trim().isEmpty ||
-        _countryController.text.trim().isEmpty ||
-        _supplierEmailController.text.trim().isEmpty ||
-        _supplierPhoneController.text.trim().isEmpty ||
-        _itemDescController.text.trim().isEmpty ||
-        _weightController.text.trim().isEmpty ||
-        _customsItemController.text.trim().isEmpty) {
+    // Validate only required fields (customsItem, description, invoice)
+    if (_customsItemController.text.trim().isEmpty ||
+        _itemDescController.text.trim().isEmpty) {
+      HapticFeedback.mediumImpact();
       AlNoranPopups.showError(
         context: context,
-        message: 'يرجى ملء جميع الحقول المطلوبة',
+        message: 'يرجى ملء البند الجمركي ووصف البضاعة',
       );
       return;
     }
 
     if (_uploadedFileId == null) {
+      HapticFeedback.mediumImpact();
       AlNoranPopups.showError(
         context: context,
         message: 'يرجى رفع الفاتورة المبدئية',
@@ -200,6 +202,7 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
     }
 
     setState(() => _isSubmitting = true);
+    HapticFeedback.lightImpact();
 
     try {
       final requestData = {
@@ -212,7 +215,10 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
         },
         'goods': {
           'description': _itemDescController.text.trim(),
-          'weight': double.parse(_weightController.text.trim()),
+          'weight':
+              _weightController.text.trim().isNotEmpty
+                  ? double.tryParse(_weightController.text.trim())
+                  : null,
           'customsItem': _customsItemController.text.trim(),
         },
         'uploads': [_uploadedFileId],
@@ -223,21 +229,19 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
 
       if (mounted) {
         if (result['success'] == true) {
+          HapticFeedback.heavyImpact();
           AlNoranPopups.showSuccess(
             context: context,
             message: 'تم إرسال الطلب بنجاح',
           );
 
           // Refresh notifications to update badge count
-          print(
-            '🔔 [ACIDReq] Refreshing notifications after successful request...',
-          );
           await NotificationService().refresh();
-          print('🔔 [ACIDReq] Notifications refreshed!');
 
           // Clear form
           _clearForm();
         } else {
+          HapticFeedback.mediumImpact();
           AlNoranPopups.showError(
             context: context,
             message: result['message'] ?? 'فشل إرسال الطلب',
@@ -246,6 +250,7 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
       }
     } catch (e) {
       if (mounted) {
+        HapticFeedback.mediumImpact();
         AlNoranPopups.showError(
           context: context,
           message: 'حدث خطأ أثناء إرسال الطلب',
@@ -312,9 +317,9 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
                         child: Column(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(50),
                               ),
                               child: const Icon(
@@ -512,9 +517,9 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -581,6 +586,7 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
       _uploadedFileName = null;
       _uploadedFileId = null;
       selectedType = 'بحري';
+      _showSupplierSection = false;
     });
   }
 
@@ -589,41 +595,71 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: bgColor,
         body: Column(
           children: [
-            UnifiedTopBar(showBackButton: true, showMenu: false),
+            UnifiedTopBar(
+              showBackButton: true,
+              showMenu: false,
+              title: 'طلب رقم ACID',
+              subtitle: 'تسجيل مسبق للوارد',
+              titleIcon: Icons.receipt_long_rounded,
+              showWelcome: false,
+            ),
             Expanded(
               child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 24),
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
 
-                    // Logo and Title
-                    _buildHeader(),
+                      // Shipment Type Toggle
+                      _buildPremiumTypeToggle(),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // Shipment Type Toggle
-                    _buildTypeToggle(),
+                      // Invoice Upload Section (Required)
+                      _buildSectionHeader(
+                        'الفاتورة المبدئية',
+                        Icons.receipt_rounded,
+                        isRequired: true,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildPremiumInvoiceUpload(),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 28),
 
-                    // Invoice Upload Section
-                    _buildInvoiceUpload(),
+                      // Goods Information Section (Required)
+                      _buildSectionHeader(
+                        'بيانات البضاعة',
+                        Icons.inventory_2_rounded,
+                        isRequired: true,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildGoodsSection(),
 
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 28),
 
-                    // Form Fields
-                    _buildFormFields(),
+                      // Supplier Information Section (Optional)
+                      _buildSupplierToggle(),
+                      if (_showSupplierSection) ...[
+                        const SizedBox(height: 12),
+                        _buildSupplierInfoBox(),
+                        const SizedBox(height: 12),
+                        _buildSupplierSection(),
+                      ],
 
-                    const SizedBox(height: 32),
+                      const SizedBox(height: 32),
 
-                    // Submit Button
-                    _buildSubmitButton(),
+                      // Submit Button
+                      _buildPremiumSubmitButton(),
 
-                    const SizedBox(height: 24),
-                  ],
+                      const SizedBox(height: 32),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -633,115 +669,110 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [primaryDark, primaryDark.withOpacity(0.8)],
+  Widget _buildSectionHeader(
+    String title,
+    IconData icon, {
+    bool isRequired = false,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: primaryDark.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: primaryDark, size: 20),
         ),
-        borderRadius: BorderRadius.circular(20),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: primaryDark,
+            fontFamily: 'Cairo',
+          ),
+        ),
+        if (isRequired) ...[
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              'مطلوب',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.red.shade700,
+                fontFamily: 'Cairo',
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPremiumTypeToggle() {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: primaryDark.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.receipt_long,
-              color: Colors.white,
-              size: 36,
+          Expanded(
+            child: _buildPremiumTypeButton(
+              'بحري',
+              Icons.directions_boat_rounded,
             ),
           ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'طلب رقم ACID',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontFamily: 'Cairo',
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'املأ البيانات المطلوبة بدقة',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                    fontFamily: 'Cairo',
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(width: 6),
+          Expanded(child: _buildPremiumTypeButton('جوي', Icons.flight_rounded)),
         ],
       ),
     );
   }
 
-  Widget _buildTypeToggle() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Expanded(child: _buildTypeButton('جوي', Icons.flight)),
-            const SizedBox(width: 4),
-            Expanded(child: _buildTypeButton('بحري', Icons.directions_boat)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeButton(String type, IconData icon) {
+  Widget _buildPremiumTypeButton(String type, IconData icon) {
     final isSelected = selectedType == type;
     return GestureDetector(
       onTap: () {
-        setState(() {
-          selectedType = type;
-        });
+        HapticFeedback.selectionClick();
+        setState(() => selectedType = type);
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 56,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        height: 60,
         decoration: BoxDecoration(
           gradient:
               isSelected
                   ? LinearGradient(
-                    colors: [primaryDark, primaryDark.withOpacity(0.8)],
+                    colors: [primaryDark, primaryLight],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   )
                   : null,
           color: isSelected ? null : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           boxShadow:
               isSelected
                   ? [
                     BoxShadow(
-                      color: primaryDark.withOpacity(0.3),
+                      color: primaryDark.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -754,15 +785,15 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
             children: [
               Icon(
                 icon,
-                color: isSelected ? Colors.white : Colors.grey[600],
-                size: 22,
+                color: isSelected ? Colors.white : Colors.grey.shade600,
+                size: 24,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Text(
                 type,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey[700],
-                  fontSize: 16,
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  fontSize: 17,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   fontFamily: 'Cairo',
                 ),
@@ -774,125 +805,272 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
     );
   }
 
-  Widget _buildInvoiceUpload() {
+  Widget _buildPremiumInvoiceUpload() {
     final hasFile = _uploadedFileName != null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.receipt, color: primaryDark, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'فاتورة مبدأية',
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: primaryDark,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Text(
-                '*',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-            ],
+    return GestureDetector(
+      onTap: _pickAndUploadInvoice,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient:
+              hasFile
+                  ? LinearGradient(
+                    colors: [Colors.green.shade50, Colors.green.shade100],
+                  )
+                  : LinearGradient(
+                    colors: [
+                      accent.withValues(alpha: 0.08),
+                      accent.withValues(alpha: 0.15),
+                    ],
+                  ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color:
+                hasFile ? Colors.green.shade400 : accent.withValues(alpha: 0.4),
+            width: 2,
           ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: _pickAndUploadInvoice,
-            child: Container(
-              padding: const EdgeInsets.all(16),
+          boxShadow: [
+            BoxShadow(
+              color: (hasFile ? Colors.green : accent).withValues(alpha: 0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                gradient:
-                    hasFile
-                        ? LinearGradient(
-                          colors: [Colors.green.shade50, Colors.green.shade100],
-                        )
-                        : LinearGradient(
-                          colors: [
-                            accent.withOpacity(0.05),
-                            accent.withOpacity(0.1),
-                          ],
-                        ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: hasFile ? Colors.green : accent.withOpacity(0.3),
-                  width: 2,
-                ),
+                color: hasFile ? Colors.green : accent,
+                borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: (hasFile ? Colors.green : accent).withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: (hasFile ? Colors.green : accent).withValues(
+                      alpha: 0.3,
+                    ),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              child: Row(
+              child: Icon(
+                hasFile
+                    ? Icons.check_circle_rounded
+                    : Icons.cloud_upload_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: hasFile ? Colors.green : accent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      hasFile ? Icons.check_circle : Icons.upload_file,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          hasFile ? 'تم الرفع بنجاح' : 'اضغط لرفع الفاتورة',
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            color:
-                                hasFile
-                                    ? Colors.green.shade700
-                                    : Colors.grey[700],
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Cairo',
-                          ),
-                        ),
-                        if (hasFile) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            _uploadedFileName!,
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                              fontFamily: 'Cairo',
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
+                  Text(
+                    hasFile
+                        ? 'تم الرفع بنجاح ✓'
+                        : 'اضغط لرفع الفاتورة المبدئية',
+                    style: TextStyle(
+                      color:
+                          hasFile
+                              ? Colors.green.shade700
+                              : Colors.grey.shade800,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Cairo',
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Icon(
-                    Icons.camera_alt,
-                    color: hasFile ? Colors.green : accent,
-                    size: 22,
+                  if (hasFile) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _uploadedFileName!,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                        fontFamily: 'Cairo',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'صيغ مدعومة: PDF, صور',
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 12,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(
+              hasFile ? Icons.edit_rounded : Icons.add_photo_alternate_rounded,
+              color: hasFile ? Colors.green.shade600 : accent,
+              size: 26,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoodsSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildPremiumTextField(
+            controller: _customsItemController,
+            label: 'البند الجمركي',
+            placeholder: 'مثال: 8471.30',
+            icon: Icons.category_rounded,
+            isRequired: true,
+          ),
+          const SizedBox(height: 16),
+          _buildPremiumTextField(
+            controller: _itemDescController,
+            label: 'وصف البضاعة',
+            placeholder: 'أدخل وصف تفصيلي للبضاعة',
+            icon: Icons.description_rounded,
+            isRequired: true,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          _buildPremiumTextField(
+            controller: _weightController,
+            label: 'الوزن المبدئي (كجم)',
+            placeholder: '50',
+            icon: Icons.scale_rounded,
+            keyboardType: TextInputType.number,
+            isRequired: false,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSupplierToggle() {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _showSupplierSection = !_showSupplierSection);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color:
+                _showSupplierSection
+                    ? accent.withValues(alpha: 0.5)
+                    : Colors.grey.shade200,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color:
+                    _showSupplierSection
+                        ? accent.withValues(alpha: 0.1)
+                        : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.business_rounded,
+                color: _showSupplierSection ? accent : Colors.grey.shade600,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'بيانات المورد (اختياري)',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                  Text(
+                    'يمكنك إضافة بيانات المورد لاحقاً',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                      fontFamily: 'Cairo',
+                    ),
                   ),
                 ],
+              ),
+            ),
+            AnimatedRotation(
+              turns: _showSupplierSection ? 0.5 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: _showSupplierSection ? accent : Colors.grey.shade500,
+                size: 28,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSupplierInfoBox() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            color: Colors.blue.shade700,
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'يرجى إدخال بيانات المورد (المستورد) وليس بيانات العميل',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.blue.shade800,
               ),
             ),
           ),
@@ -901,143 +1079,109 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
     );
   }
 
-  Widget _buildFormFields() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+  Widget _buildSupplierSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         children: [
           Row(
             children: [
               Expanded(
-                child: _buildTextField(
-                  controller: _weightController,
-                  label: 'الوزن المبدئي *',
-                  placeholder: '50',
-                  icon: Icons.scale,
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildTextField(
-                  controller: _itemDescController,
-                  label: 'وصف البضاعة *',
-                  placeholder: 'وصف البضاعة',
-                  icon: Icons.info_outline,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  controller: _customsItemController,
-                  label: 'بند جمركي *',
-                  placeholder: 'بند رقم 21',
-                  icon: Icons.assignment_outlined,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildTextField(
+                child: _buildPremiumTextField(
                   controller: _supplierNameController,
-                  label: 'اسم المورد *',
-                  placeholder: 'اسم المورد',
-                  icon: Icons.person_outline,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  controller: _taxNumberController,
-                  label: 'الرقم الضريبي *',
-                  placeholder: 'الرقم الضريبي',
-                  icon: Icons.numbers,
+                  label: 'اسم المورد',
+                  placeholder: 'الاسم',
+                  icon: Icons.person_outline_rounded,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildTextField(
-                  controller: _countryController,
-                  label: 'الدولة *',
-                  placeholder: 'الدولة',
-                  icon: Icons.flag_outlined,
+                child: _buildPremiumTextField(
+                  controller: _taxNumberController,
+                  label: 'الرقم الضريبي',
+                  placeholder: 'الرقم الضريبي',
+                  icon: Icons.numbers_rounded,
                 ),
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
           Row(
             children: [
               Expanded(
-                child: _buildTextField(
+                child: _buildPremiumTextField(
+                  controller: _countryController,
+                  label: 'الدولة',
+                  placeholder: 'الدولة',
+                  icon: Icons.flag_rounded,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPremiumTextField(
                   controller: _supplierEmailController,
-                  label: 'ايميل المورد *',
-                  placeholder: 'ايميل المورد',
-                  icon: Icons.email_outlined,
+                  label: 'البريد الإلكتروني',
+                  placeholder: 'البريد',
+                  icon: Icons.email_rounded,
                   keyboardType: TextInputType.emailAddress,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildTextField(
-                  controller: _supplierPhoneController,
-                  label: 'رقم تليفون المورد *',
-                  placeholder: 'رقم تليفون المورد',
-                  icon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone,
-                ),
-              ),
             ],
+          ),
+          const SizedBox(height: 16),
+          _buildPremiumTextField(
+            controller: _supplierPhoneController,
+            label: 'رقم الهاتف',
+            placeholder: '+201234567890',
+            icon: Icons.phone_rounded,
+            keyboardType: TextInputType.phone,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildPremiumTextField({
     required TextEditingController controller,
     required String label,
     required String placeholder,
     required IconData icon,
     TextInputType? keyboardType,
+    bool isRequired = false,
+    int maxLines = 1,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, color: primaryDark, size: 16),
-            const SizedBox(width: 6),
             Text(
-              label.replaceAll(' *', ''),
-              textAlign: TextAlign.right,
-              style: const TextStyle(
+              label,
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: primaryDark,
+                color: Colors.grey.shade700,
                 fontFamily: 'Cairo',
               ),
             ),
-            if (label.contains('*'))
-              const Text(
+            if (isRequired)
+              Text(
                 ' *',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.red,
+                  color: Colors.red.shade600,
                   fontFamily: 'Cairo',
                 ),
               ),
@@ -1046,40 +1190,34 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: bgColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            border: Border.all(color: Colors.grey.shade200),
           ),
           child: TextField(
             controller: controller,
             textAlign: TextAlign.right,
             textDirection: TextDirection.rtl,
             keyboardType: keyboardType,
+            maxLines: maxLines,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 15,
               fontFamily: 'Cairo',
               fontWeight: FontWeight.w500,
             ),
             decoration: InputDecoration(
               hintText: placeholder,
               hintStyle: TextStyle(
-                color: Colors.grey[400],
-                fontSize: 13,
+                color: Colors.grey.shade400,
+                fontSize: 14,
                 fontFamily: 'Cairo',
               ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
-                vertical: 16,
+                vertical: 14,
               ),
-              suffixIcon: Icon(icon, color: Colors.grey[400], size: 20),
+              suffixIcon: Icon(icon, color: Colors.grey.shade400, size: 22),
             ),
           ),
         ),
@@ -1087,81 +1225,80 @@ class _AcidRequestPageState extends State<AcidRequestPage> {
     );
   }
 
-  Widget _buildSubmitButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        width: double.infinity,
-        height: 60,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors:
-                _isSubmitting
-                    ? [Colors.grey, Colors.grey.shade400]
-                    : [primaryDark, primaryDark.withOpacity(0.8)],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow:
+  Widget _buildPremiumSubmitButton() {
+    return Container(
+      width: double.infinity,
+      height: 60,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors:
               _isSubmitting
-                  ? []
-                  : [
-                    BoxShadow(
-                      color: primaryDark.withOpacity(0.4),
-                      blurRadius: 15,
-                      offset: const Offset(0, 6),
+                  ? [Colors.grey.shade400, Colors.grey.shade500]
+                  : [primaryDark, primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow:
+            _isSubmitting
+                ? []
+                : [
+                  BoxShadow(
+                    color: primaryDark.withValues(alpha: 0.4),
+                    blurRadius: 15,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+      ),
+      child: ElevatedButton(
+        onPressed: _isSubmitting ? null : _submitRequest,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        child:
+            _isSubmitting
+                ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    const Text(
+                      'جاري الإرسال...',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                      ),
                     ),
                   ],
-        ),
-        child: ElevatedButton(
-          onPressed: _isSubmitting ? null : _submitRequest,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            foregroundColor: Colors.white,
-            shadowColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          child:
-              _isSubmitting
-                  ? const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2.5,
-                        ),
+                )
+                : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.send_rounded, size: 24),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'إرسال الطلب',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
                       ),
-                      SizedBox(width: 12),
-                      Text(
-                        'جاري الإرسال...',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ],
-                  )
-                  : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'إرسال الطلب',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Icon(Icons.send, size: 22),
-                    ],
-                  ),
-        ),
+                    ),
+                  ],
+                ),
       ),
     );
   }

@@ -16,6 +16,9 @@ class UnifiedTopBar extends StatefulWidget {
   /// Optional subtitle (defaults to user's email)
   final String? subtitle;
 
+  /// Optional icon for title section
+  final IconData? titleIcon;
+
   /// Whether to show the notification icon
   final bool showNotification;
 
@@ -50,6 +53,7 @@ class UnifiedTopBar extends StatefulWidget {
     super.key,
     this.title,
     this.subtitle,
+    this.titleIcon,
     this.showNotification = true,
     this.showMenu = true,
     this.showBackButton = false,
@@ -215,36 +219,6 @@ class _UnifiedTopBarState extends State<UnifiedTopBar>
                             const SizedBox(width: 12),
                           if (widget.showNotification)
                             _buildNotificationButton(),
-                          // Show title in center when no welcome section
-                          if (!widget.showWelcome &&
-                              !widget.showProfilePhoto) ...[
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.title ?? '',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Cairo',
-                                  ),
-                                ),
-                                if (widget.subtitle != null &&
-                                    widget.subtitle!.isNotEmpty)
-                                  Text(
-                                    widget.subtitle!,
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.7,
-                                      ),
-                                      fontSize: 13,
-                                      fontFamily: 'Cairo',
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
                         ],
                       ),
 
@@ -258,10 +232,13 @@ class _UnifiedTopBarState extends State<UnifiedTopBar>
                     ],
                   ),
 
-                  // Welcome Section
+                  // Welcome Section or Title Section
                   if (widget.showWelcome) ...[
                     const SizedBox(height: 16),
                     _buildWelcomeSection(),
+                  ] else if (widget.title != null) ...[
+                    const SizedBox(height: 16),
+                    _buildTitleSection(),
                   ],
                 ],
               ),
@@ -269,6 +246,54 @@ class _UnifiedTopBarState extends State<UnifiedTopBar>
           ),
         ),
       ),
+    );
+  }
+
+  /// Title Section for pages with title (not welcome)
+  Widget _buildTitleSection() {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(
+            widget.titleIcon ?? Icons.receipt_long_rounded,
+            color: goldAccent,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.title ?? '',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+              if (widget.subtitle != null && widget.subtitle!.isNotEmpty)
+                const SizedBox(height: 4),
+              if (widget.subtitle != null && widget.subtitle!.isNotEmpty)
+                Text(
+                  widget.subtitle!,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 13,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

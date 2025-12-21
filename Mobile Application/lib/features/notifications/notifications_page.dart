@@ -582,10 +582,7 @@ class _NotificationsPageState extends State<NotificationsPage>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        isSelected
-                            ? primaryDark.withOpacity(0.1)
-                            : Colors.transparent,
+                    color: isSelected ? primaryDark : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -594,13 +591,13 @@ class _NotificationsPageState extends State<NotificationsPage>
                       Icon(
                         f['icon'],
                         size: 16,
-                        color: isSelected ? primaryDark : Colors.grey[400],
+                        color: isSelected ? Colors.white : Colors.grey[400],
                       ),
                       const SizedBox(width: 6),
                       Text(
                         f['label'],
                         style: TextStyle(
-                          color: isSelected ? primaryDark : Colors.grey[600],
+                          color: isSelected ? Colors.white : Colors.grey[600],
                           fontWeight:
                               isSelected ? FontWeight.bold : FontWeight.normal,
                           fontFamily: 'Cairo',
@@ -616,13 +613,13 @@ class _NotificationsPageState extends State<NotificationsPage>
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: primaryDark,
+                            color: isSelected ? Colors.white : primaryDark,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             '${_notificationService.unreadCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: isSelected ? primaryDark : Colors.white,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
