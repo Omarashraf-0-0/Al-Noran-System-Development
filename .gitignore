@@ -1,24 +1,29 @@
 node_modules
-*.env
 logs 
 uploads/
 Web/backend/package-lock.json
-*/*.env
-*/*/*.env
-*.env
-./Web/backend/package-lock.json
 
-Web/frontend/.env
+# Environment files (SENSITIVE - Never push to GitHub!)
+*.env
+*.env.local
+*.env.production
+*.env.development
+*/.env
+*/.env.*
+*/*/.env
+*/*/.env.*
+**/.env
+**/.env.*
 
 # Firebase Service Account (SENSITIVE - Never push to GitHub!)
 **/firebase-service-account.json
 **/firebase-adminsdk*.json
 Web/backend/src/config/firebase-service-account.json
+
+# Mobile Application
 Mobile Application/pubspec.lock
 Mobile Application/macos/Flutter/GeneratedPluginRegistrant.swift
 Mobile Application/linux/flutter/generated_plugins.cmake
 Mobile Application/linux/flutter/generated_plugin_registrant.cc
-Mobile Application/linux/flutter/generated_plugin_registrant.cc
 /Mobile Application/linux
 /Mobile Application/macos
-Mobile Application/pubspec.lock
