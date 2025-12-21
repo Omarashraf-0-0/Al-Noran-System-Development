@@ -8,8 +8,10 @@ import SearchFilterSort from "../components/SearchFilterSort";
 import ShipmentsTable from "../components/ShipmentsTable";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { useTheme } from "../context/ThemeContext";
 
 export default function ShipmentsList() {
+	const { isDarkMode } = useTheme();
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [isSortOpen, setIsSortOpen] = useState(false);
@@ -180,13 +182,13 @@ export default function ShipmentsList() {
 	});
 
 	return (
-		<div className="flex flex-col min-h-screen bg-gray-50 font-sans relative">
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#0a0505] text-white" : "bg-gray-50 text-gray-900"}`}>
 			<Header />
 			<WelcomeBanner />
 
-			<section className="flex-grow w-full bg-white py-12 px-8 shadow-inner relative">
+			<section className={`flex-grow w-full py-12 px-8 shadow-inner relative transition-colors duration-300 ${isDarkMode ? "bg-[#1a1010] border-t border-[#3d1a1a]" : "bg-white"}`}>
 				<div className="max-w-6xl mx-auto">
-					<h1 className="text-3xl font-bold text-right text-red-800 mb-8">
+					<h1 className={`text-3xl font-bold text-right mb-8 ${isDarkMode ? "text-red-500" : "text-red-800"}`}>
 						شحناتي
 					</h1>
 
