@@ -8,8 +8,53 @@ import Datafield from "../components/DataField";
 import contractIcon from "../assets/images/contract.png";
 import mainIllustration from "../assets/images/Untitled design (7) 1.png";
 import { useTheme } from "../context/ThemeContext";
-import { ArrowRight, FileText, Eye } from "lucide-react";
+import { ArrowRight, FileText, Eye, Download } from "lucide-react";
 import FileViewerModal from "../components/FileViewerModal";
+
+// Proxy download function to handle S3 files securely
+const handleProxyDownload = async (fileId, fileName) => {
+	if (!fileId) {
+		toast.error("لا يمكن تحميل هذا الملف");
+		return;
+	}
+	const toastId = toast.loading("جاري بدء التحميل...");
+	try {
+		const token = localStorage.getItem("token");
+		const response = await fetch(`${import.meta.env.VITE_API_URL}/api/uploads/${fileId}/download`, {
+			headers: { Authorization: `Bearer ${token}` }
+		});
+
+		if (!response.ok) throw new Error("Download failed");
+
+		// Extract filename from Content-Disposition header if available
+		let downloadName = fileName || "document";
+		const disposition = response.headers.get('Content-Disposition');
+		if (disposition) {
+			const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+			const matches = filenameRegex.exec(disposition);
+			if (matches != null && matches[1]) { 
+				downloadName = decodeURIComponent(matches[1].replace(/['"]/g, ''));
+			}
+		}
+
+		const blob = await response.blob();
+		const blobUrl = window.URL.createObjectURL(blob);
+		
+		// Use a temporary anchor to trigger download
+		const link = document.createElement('a');
+		link.href = blobUrl;
+		link.setAttribute('download', downloadName);
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		window.URL.revokeObjectURL(blobUrl);
+		
+		toast.success("تم التحميل بنجاح", { id: toastId });
+	} catch (error) {
+		console.error("Download error:", error);
+		toast.error("فشل التحميل", { id: toastId });
+	}
+};
 
 // UCR Status configurations
 const STATUS_CONFIG = {
@@ -484,23 +529,31 @@ const UCRRequestDetailsPage = () => {
 						isDarkMode ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100"
 					}`}>
 						<h2 className={`text-xl font-bold text-center mb-4 ${isDarkMode ? "text-red-400" : "text-red-900"}`}>
-							📊 حالة الطلب
+							حالة الطلب
 						</h2>
 						<UCRStepper currentStatus={request.status} isDarkMode={isDarkMode} />
 					</div>
 
 					{/* Rejection/Revision Reason */}
 					{request.status === "rejected" && request.rejectionReason && (
-						<div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6">
-							<p className="font-bold text-red-800 mb-2">❌ سبب الرفض:</p>
-							<p className="text-red-700">{request.rejectionReason}</p>
+						<div className={`border-2 rounded-xl p-4 mb-6 ${
+							isDarkMode 
+								? "bg-red-900/20 border-red-700/50" 
+								: "bg-red-50 border-red-200"
+						}`}>
+							<p className={`font-bold mb-2 ${isDarkMode ? "text-red-400" : "text-red-800"}`}>سبب الرفض:</p>
+							<p className={isDarkMode ? "text-red-300" : "text-red-700"}>{request.rejectionReason}</p>
 						</div>
 					)}
 
 					{request.status === "needs_revision" && (
-						<div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-6">
-							<p className="font-bold text-orange-800 mb-2">
-								⚠️ مطلوب تعديل المستندات التالية:
+						<div className={`border-2 rounded-xl p-4 mb-6 ${
+							isDarkMode 
+								? "bg-orange-900/20 border-orange-700/50" 
+								: "bg-orange-50 border-orange-200"
+						}`}>
+							<p className={`font-bold mb-2 ${isDarkMode ? "text-orange-400" : "text-orange-800"}`}>
+								مطلوب تعديل المستندات التالية:
 							</p>
 							
 							{/* Show specific documents that need revision */}
@@ -516,17 +569,21 @@ const UCRRequestDetailsPage = () => {
 											? DOCUMENT_LABELS[upload.documentType] || upload.documentType 
 											: "مستند";
 										return (
-											<div key={idx} className="bg-white rounded-lg p-3 border border-orange-200">
-												<p className="text-orange-700 font-bold">📄 {docName}</p>
+											<div key={idx} className={`rounded-lg p-3 border ${
+												isDarkMode 
+													? "bg-orange-900/30 border-orange-700/40" 
+													: "bg-white border-orange-200"
+											}`}>
+												<p className={`font-bold ${isDarkMode ? "text-orange-300" : "text-orange-700"}`}>{docName}</p>
 												{ds.employeeNotes && (
-													<p className="text-orange-600 text-sm mt-1 mr-4">💬 {ds.employeeNotes}</p>
+													<p className={`text-sm mt-1 mr-4 ${isDarkMode ? "text-orange-400" : "text-orange-600"}`}>{ds.employeeNotes}</p>
 												)}
 											</div>
 										);
 									})}
 								</div>
 							) : request.employeeNotes ? (
-								<p className="text-orange-700 mb-4">{request.employeeNotes}</p>
+								<p className={`mb-4 ${isDarkMode ? "text-orange-300" : "text-orange-700"}`}>{request.employeeNotes}</p>
 							) : null}
 
 							{userType === "client" && (
@@ -534,7 +591,7 @@ const UCRRequestDetailsPage = () => {
 									onClick={() => navigate(`/ucr-request/${requestId}/edit`)}
 									className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-bold"
 								>
-									✏️ تعديل الطلب الآن
+									تعديل الطلب الآن
 								</button>
 							)}
 						</div>
@@ -542,14 +599,18 @@ const UCRRequestDetailsPage = () => {
 
 					{/* UCR Number Display (when issued) */}
 					{request.status === "ucr_issued" && request.ucrNumber && (
-						<div className="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 mb-6 text-center">
-							<p className="font-bold text-indigo-800 mb-2">
-								📋 رقم UCR الصادر
+						<div className={`rounded-xl p-4 mb-6 text-center border-2 transition-colors ${
+							isDarkMode 
+								? "bg-indigo-900/30 border-indigo-700/50" 
+								: "bg-indigo-50 border-indigo-200"
+						}`}>
+							<p className={`font-bold mb-2 ${isDarkMode ? "text-indigo-300" : "text-indigo-800"}`}>
+								رقم UCR الصادر
 							</p>
-							<p className="text-3xl font-mono text-indigo-900">
+							<p className={`text-3xl font-mono ${isDarkMode ? "text-indigo-200" : "text-indigo-900"}`}>
 								{request.ucrNumber}
 							</p>
-							<p className="text-sm text-indigo-600 mt-2">
+							<p className={`text-sm mt-2 ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}>
 								صدر بتاريخ: {formatDate(request.ucrIssuedAt)}
 							</p>
 						</div>
@@ -870,28 +931,17 @@ const UCRRequestDetailsPage = () => {
 															<Eye className="w-3 h-3" />
 															عرض
 														</button>
-														<a
-															href={doc.url}
-															download={doc.originalname || doc.filename || "document"}
-															className={`px-3 py-1 rounded text-sm transition ${
+														<button
+															onClick={() => handleProxyDownload(doc._id, doc.originalname || doc.filename || "document")}
+															className={`px-3 py-1 rounded text-sm transition flex items-center gap-1 ${
 																isDarkMode
 																	? "bg-gray-700 hover:bg-gray-600 text-white"
 																	: "bg-gray-600 hover:bg-gray-700 text-white"
 															}`}
-															onClick={(e) => {
-																e.preventDefault();
-																// Create a temporary link to force download
-																const link = document.createElement('a');
-																link.href = doc.url;
-																link.download = doc.originalname || doc.filename || "document";
-																link.target = "_blank";
-																document.body.appendChild(link);
-																link.click();
-																document.body.removeChild(link);
-															}}
 														>
-															⬇️ تحميل
-														</a>
+															<Download className="w-3 h-3" />
+															تحميل
+														</button>
 													</div>
 												)}
 												
@@ -942,19 +992,25 @@ const UCRRequestDetailsPage = () => {
 
 					{/* No documents message */}
 					{(!request.uploads || request.uploads.length === 0) && (
-						<div className="bg-gray-50 rounded-xl p-6 mb-6 text-center">
+						<div className={`rounded-xl p-6 mb-6 text-center ${
+							isDarkMode ? "bg-gray-800/50" : "bg-gray-50"
+						}`}>
 							<span className="text-3xl mb-2 block">📭</span>
-							<p className="text-gray-600">لم يتم رفع أي مستندات بعد</p>
+							<p className={isDarkMode ? "text-gray-400" : "text-gray-600"}>لم يتم رفع أي مستندات بعد</p>
 						</div>
 					)}
 
 					{/* Client Notes */}
 					{request.clientNotes && (
-						<div className="bg-yellow-50 rounded-xl p-6 mb-6">
-							<h3 className="font-bold text-yellow-800 mb-3">
-								💬 ملاحظات العميل
+						<div className={`rounded-xl p-6 mb-6 border transition-colors ${
+							isDarkMode 
+								? "bg-amber-900/20 border-amber-700/30" 
+								: "bg-yellow-50 border-yellow-200"
+						}`}>
+							<h3 className={`font-bold mb-3 ${isDarkMode ? "text-amber-300" : "text-yellow-800"}`}>
+								ملاحظات العميل
 							</h3>
-							<p className="text-gray-700">{request.clientNotes}</p>
+							<p className={isDarkMode ? "text-gray-300" : "text-gray-700"}>{request.clientNotes}</p>
 						</div>
 					)}
 

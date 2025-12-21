@@ -77,8 +77,9 @@ export default function ShipmentsList() {
 				}));
 
 				setShipments(formattedShipments);
-				console.error("Error fetching shipments:", error);
-				const errorMessage = error.response?.data?.message || "Failed to fetch shipments";
+			} catch (err) {
+				console.error("Error fetching shipments:", err);
+				const errorMessage = err?.response?.data?.message || err?.message || "Failed to fetch shipments";
 				setError(errorMessage);
 				toast.error(errorMessage);
 			} finally {

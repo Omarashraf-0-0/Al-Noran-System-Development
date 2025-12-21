@@ -11,11 +11,59 @@ import contractIcon from "../assets/images/contract.png";
 import Datafield from "../components/DataField";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { useTheme } from "../context/ThemeContext";
+import { Download, Eye } from "lucide-react";
+
+// Proxy download function to handle S3 files securely
+const handleProxyDownload = async (fileId, fileName) => {
+	if (!fileId) {
+		toast.error("لا يمكن تحميل هذا الملف");
+		return;
+	}
+	const toastId = toast.loading("جاري بدء التحميل...");
+	try {
+		const token = localStorage.getItem("token");
+		const response = await fetch(`${import.meta.env.VITE_API_URL}/api/uploads/${fileId}/download`, {
+			headers: { Authorization: `Bearer ${token}` }
+		});
+
+		if (!response.ok) throw new Error("Download failed");
+
+		// Extract filename from Content-Disposition header if available
+		let downloadName = fileName || "document";
+		const disposition = response.headers.get('Content-Disposition');
+		if (disposition) {
+			const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+			const matches = filenameRegex.exec(disposition);
+			if (matches != null && matches[1]) { 
+				downloadName = decodeURIComponent(matches[1].replace(/['"]/g, ''));
+			}
+		}
+
+		const blob = await response.blob();
+		const blobUrl = window.URL.createObjectURL(blob);
+		
+		// Use a temporary anchor to trigger download
+		const link = document.createElement('a');
+		link.href = blobUrl;
+		link.setAttribute('download', downloadName);
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		window.URL.revokeObjectURL(blobUrl);
+		
+		toast.success("تم التحميل بنجاح", { id: toastId });
+	} catch (error) {
+		console.error("Download error:", error);
+		toast.error("فشل التحميل", { id: toastId });
+	}
+};
 
 // Helper function to add notifications
 const addNotification = (shipmentId, notification) => {
 	const stored = localStorage.getItem(`notifications_${shipmentId}`);
 	const notifications = stored ? JSON.parse(stored) : [];
+
 
 	const newNotif = {
 		id: Date.now(),
@@ -40,6 +88,7 @@ const addNotification = (shipmentId, notification) => {
 const ShipmentStatus = () => {
 	const { shipmentId } = useParams();
 	const navigate = useNavigate();
+	const { isDarkMode } = useTheme();
 
 	const [shipment, setShipment] = useState(null);
 	const [fileItems, setFileItems] = useState([]);
@@ -247,25 +296,25 @@ const ShipmentStatus = () => {
 
 	return (
 		// Full page wrapper
-		<div className="bg-gray-50 min-h-screen text-gray-800">
+		<div className={`min-h-screen transition-colors ${isDarkMode ? "bg-[#0a0505] text-gray-200" : "bg-gray-50 text-gray-800"}`}>
 			{/*  Header Section */}
 			<Header />
 
 			{/*  Main content area */}
 			<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
 				{/* Centered content card */}
-				<div className="max-w-5xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-sm">
+				<div className={`max-w-5xl mx-auto p-6 sm:p-10 rounded-2xl shadow-sm transition-colors ${isDarkMode ? "bg-[#1a1010]/80" : "bg-white"}`}>
 					{/* Loading State */}
 					{loading ? (
 						<div className="flex justify-center items-center py-12 gap-4">
-							<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
-							<span className="text-gray-600 text-lg">
+							<div className={`spinner border-4 rounded-full w-12 h-12 animate-spin ${isDarkMode ? "border-gray-700 border-t-red-700" : "border-gray-300 border-t-red-800"}`}></div>
+							<span className={`text-lg ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
 								جاري تحميل بيانات الشحنة...
 							</span>
 						</div>
 					) : error ? (
-						<div className="bg-red-50 border border-red-300 rounded-lg p-4 text-right">
-							<p className="text-red-800 font-medium">❌ حدث خطأ: {error}</p>
+						<div className={`border rounded-lg p-4 text-right ${isDarkMode ? "bg-red-900/20 border-red-700/50" : "bg-red-50 border-red-300"}`}>
+							<p className={`font-medium ${isDarkMode ? "text-red-400" : "text-red-800"}`}>حدث خطأ: {error}</p>
 							<button
 								onClick={() => window.location.reload()}
 								className="mt-2 bg-red-800 text-white px-4 py-2 rounded hover:bg-red-700 transition"
@@ -395,28 +444,35 @@ const ShipmentStatus = () => {
 							{/* Proforma Invoice Section - من طلب ACID */}
 							{shipment.acid_request_id?.uploads &&
 								shipment.acid_request_id.uploads.length > 0 && (
-									<div className="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
-										<h2 className="text-2xl font-bold text-red-900 flex items-center gap-2 mb-6">
-											<span>📄</span>
+									<div className={`mt-12 border-2 rounded-xl p-6 ${
+										isDarkMode 
+											? "bg-blue-900/20 border-blue-700/30" 
+											: "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200"
+									}`}>
+										<h2 className={`text-2xl font-bold flex items-center gap-2 mb-6 ${isDarkMode ? "text-red-400" : "text-red-900"}`}>
 											<span>الفاتورة المبدئية</span>
 										</h2>
 										<div className="space-y-3">
 											{shipment.acid_request_id.uploads.map((upload, index) => (
 												<div
 													key={upload._id || index}
-													className="flex items-center justify-between bg-white border border-blue-200 rounded-lg p-4 hover:shadow-md transition"
+													className={`flex items-center justify-between rounded-lg p-4 hover:shadow-md transition border ${
+														isDarkMode 
+															? "bg-blue-900/30 border-blue-700/40" 
+															: "bg-white border-blue-200"
+													}`}
 												>
 													<div className="flex items-center gap-3">
-														<div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+														<div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDarkMode ? "bg-blue-900/50" : "bg-blue-100"}`}>
 															<span className="text-2xl">📄</span>
 														</div>
 														<div className="text-right">
-															<p className="font-medium text-gray-800">
+															<p className={`font-medium ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
 																{upload.originalname ||
 																	upload.filename ||
 																	"فاتورة مبدئية"}
 															</p>
-															<p className="text-sm text-gray-500">
+															<p className={`text-sm ${isDarkMode ? "text-gray-500" : "text-gray-500"}`}>
 																{upload.createdAt
 																	? new Date(
 																			upload.createdAt
@@ -507,10 +563,13 @@ const ShipmentStatus = () => {
 
 							{/* Required Documents Section */}
 							{requiredDocuments.length > 0 && (
-								<div className="mt-12 bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl p-6">
+								<div className={`mt-12 border-2 rounded-xl p-6 ${
+									isDarkMode 
+										? "bg-orange-900/20 border-orange-700/40" 
+										: "bg-gradient-to-r from-orange-50 to-red-50 border-orange-200"
+								}`}>
 									<div className="flex items-center justify-between mb-6">
-										<h2 className="text-2xl font-bold text-red-900 flex items-center gap-2">
-											<span>📋</span>
+										<h2 className={`text-2xl font-bold flex items-center gap-2 ${isDarkMode ? "text-red-400" : "text-red-900"}`}>
 											<span>مستندات الشحنه</span>
 										</h2>
 										{requiredDocuments.filter((doc) => !doc.uploaded).length >
@@ -539,8 +598,12 @@ const ShipmentStatus = () => {
 													key={doc._id || index}
 													className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
 														doc.uploaded
-															? "bg-green-50 border-green-300"
-															: "bg-white border-orange-300 hover:border-orange-400"
+															? isDarkMode 
+																? "bg-green-900/20 border-green-700/40" 
+																: "bg-green-50 border-green-300"
+															: isDarkMode 
+																? "bg-[#1a1010] border-orange-700/50 hover:border-orange-600/70" 
+																: "bg-white border-orange-300 hover:border-orange-400"
 													}`}
 												>
 													<div className="flex items-center gap-3 flex-1">
@@ -550,10 +613,10 @@ const ShipmentStatus = () => {
 															<span className="text-2xl animate-pulse">⏳</span>
 														)}
 														<div>
-															<p className="font-bold text-gray-800">
+															<p className={`font-bold ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
 																{doc.name}
 															</p>
-															<p className="text-sm text-gray-500">
+															<p className={`text-sm ${isDarkMode ? "text-gray-500" : "text-gray-500"}`}>
 																{doc.uploaded
 																	? `تم الرفع: ${new Date(
 																			doc.uploadedAt
@@ -567,73 +630,71 @@ const ShipmentStatus = () => {
 
 													<div className="flex gap-2">
 														{doc.uploaded && doc.fileId ? (
-															<button
-																onClick={async () => {
-																	try {
-																		console.log(
-																			"Fetching file with ID:",
-																			doc.fileId
-																		);
-																		toast.loading("جاري تحميل الملف...");
-																		const fileResponse = await axios.get(
-																			`${
-																				import.meta.env.VITE_API_URL
-																			}/api/uploads/${doc.fileId}`,
-																			{
-																				headers: {
-																					Authorization: `Bearer ${token}`,
-																				},
+															<>
+																<button
+																	onClick={async () => {
+																		try {
+																			console.log(
+																				"Fetching file with ID:",
+																				doc.fileId
+																			);
+																			toast.loading("جاري تحميل الملف...");
+																			const fileResponse = await axios.get(
+																				`${
+																					import.meta.env.VITE_API_URL
+																				}/api/uploads/${doc.fileId}`,
+																				{
+																					headers: {
+																						Authorization: `Bearer ${token}`,
+																					},
+																				}
+																			);
+																			console.log(
+																				"File response:",
+																				fileResponse.data
+																			);
+																			toast.dismiss();
+																			const fileUrl =
+																				fileResponse.data?.upload?.presignedUrl ||
+																				fileResponse.data?.presignedUrl;
+																			console.log("Presigned URL:", fileUrl);
+																			if (fileUrl) {
+																				window.open(fileUrl, "_blank");
+																			} else {
+																				toast.error(
+																					"لم يتم العثور على رابط الملف"
+																				);
+																				console.error(
+																					"No presigned URL found in response"
+																				);
 																			}
-																		);
-																		console.log(
-																			"File response:",
-																			fileResponse.data
-																		);
-																		toast.dismiss();
-																		const fileUrl =
-																			fileResponse.data?.upload?.presignedUrl ||
-																			fileResponse.data?.presignedUrl;
-																		console.log("Presigned URL:", fileUrl);
-																		if (fileUrl) {
-																			window.open(fileUrl, "_blank");
-																		} else {
-																			toast.error(
-																				"لم يتم العثور على رابط الملف"
-																			);
-																			console.error(
-																				"No presigned URL found in response"
-																			);
+																		} catch (error) {
+																			toast.dismiss();
+																			const errorMsg =
+																				error.response?.data?.message ||
+																				error.message;
+																			toast.error(`فشل تحميل الملف: ${errorMsg}`);
+																			console.error("File fetch error:", {
+																				fileId: doc.fileId,
+																				error:
+																					error.response?.data || error.message,
+																				fullError: error,
+																			});
 																		}
-																	} catch (error) {
-																		toast.dismiss();
-																		const errorMsg =
-																			error.response?.data?.message ||
-																			error.message;
-																		toast.error(`فشل تحميل الملف: ${errorMsg}`);
-																		console.error("File fetch error:", {
-																			fileId: doc.fileId,
-																			error:
-																				error.response?.data || error.message,
-																			fullError: error,
-																		});
-																	}
-																}}
-																className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-1"
-															>
-																<span>عرض</span>
-																<svg
-																	className="w-4 h-4"
-																	fill="currentColor"
-																	viewBox="0 0 20 20"
+																	}}
+																	className="bg-blue-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-1"
+																	title="عرض"
 																>
-																	<path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-																	<path
-																		fillRule="evenodd"
-																		d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-																		clipRule="evenodd"
-																	/>
-																</svg>
-															</button>
+																	<Eye className="w-4 h-4" />
+																</button>
+																<button
+																	onClick={() => handleProxyDownload(doc.fileId, doc.name || "document")}
+																	className="bg-green-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-green-700 transition flex items-center gap-1"
+																	title="تحميل"
+																>
+																	<Download className="w-4 h-4" />
+																</button>
+															</>
 														) : (
 															<button
 																onClick={() => {
@@ -652,9 +713,13 @@ const ShipmentStatus = () => {
 
 									{requiredDocuments.filter((doc) => !doc.uploaded).length >
 										0 && (
-										<div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
-											<p className="text-sm text-yellow-800 text-center">
-												⚠️ يرجى رفع المستندات المطلوبة لتجنب أي تأخير في معالجة
+										<div className={`mt-4 p-4 border rounded-lg ${
+											isDarkMode 
+												? "bg-yellow-900/20 border-yellow-700/40" 
+												: "bg-yellow-50 border-yellow-300"
+										}`}>
+											<p className={`text-sm text-center ${isDarkMode ? "text-yellow-400" : "text-yellow-800"}`}>
+												يرجى رفع المستندات المطلوبة لتجنب أي تأخير في معالجة
 												شحنتك
 											</p>
 										</div>
@@ -719,14 +784,16 @@ const ShipmentStatus = () => {
 			{/* Required Documents Upload Modal */}
 			{showRequiredDocsModal && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-					<div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+					<div className={`rounded-2xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto ${
+						isDarkMode ? "bg-[#1a1010]" : "bg-white"
+					}`}>
 						<div className="flex justify-between items-center mb-6">
-							<h3 className="text-2xl font-bold text-gray-800">
-								📤 رفع المستندات المطلوبة
+							<h3 className={`text-2xl font-bold ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
+								رفع المستندات المطلوبة
 							</h3>
 							<button
 								onClick={() => setShowRequiredDocsModal(false)}
-								className="text-gray-400 hover:text-gray-600"
+								className={`${isDarkMode ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600"}`}
 							>
 								<svg
 									className="w-6 h-6"
@@ -869,11 +936,13 @@ const ShipmentStatus = () => {
 									return (
 										<div
 											key={doc._id || index}
-											className="border-2 border-orange-200 rounded-lg p-4"
+											className={`border-2 rounded-lg p-4 ${
+												isDarkMode ? "border-orange-700/50 bg-orange-900/20" : "border-orange-200"
+											}`}
 										>
 											<div className="flex items-center justify-between mb-3">
-												<h4 className="font-bold text-gray-800">{doc.name}</h4>
-												<span className="text-xs text-gray-500">
+												<h4 className={`font-bold ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>{doc.name}</h4>
+												<span className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
 													مطلوب منذ{" "}
 													{new Date(doc.requestedAt).toLocaleDateString("ar-EG")}
 												</span>
@@ -882,11 +951,13 @@ const ShipmentStatus = () => {
 											{pendingFile ? (
 												// Show selected file with save/delete buttons
 												<div className="space-y-3">
-													<div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+													<div className={`flex items-center gap-2 p-3 rounded-lg ${
+														isDarkMode ? "bg-blue-900/30 border border-blue-700/50" : "bg-blue-50 border border-blue-200"
+													}`}>
 														<span className="text-xl">📄</span>
 														<div className="flex-1 min-w-0">
-															<p className="font-medium text-gray-800 truncate">{pendingFile.name}</p>
-															<p className="text-xs text-gray-500">
+															<p className={`font-medium truncate ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>{pendingFile.name}</p>
+															<p className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
 																{(pendingFile.size / 1024).toFixed(1)} KB
 															</p>
 														</div>
@@ -944,7 +1015,7 @@ const ShipmentStatus = () => {
 								0 && (
 								<div className="text-center py-8">
 									<span className="text-6xl">✅</span>
-									<p className="text-gray-600 mt-4">
+									<p className={`mt-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
 										تم رفع جميع المستندات المطلوبة
 									</p>
 								</div>
@@ -954,7 +1025,11 @@ const ShipmentStatus = () => {
 						<div className="mt-6 flex justify-end">
 							<button
 								onClick={() => setShowRequiredDocsModal(false)}
-								className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition"
+								className={`px-6 py-2 rounded-lg font-medium transition ${
+									isDarkMode 
+										? "bg-gray-700 text-gray-200 hover:bg-gray-600" 
+										: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+								}`}
 							>
 								إغلاق
 							</button>
