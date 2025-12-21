@@ -25,7 +25,7 @@ class ApiService {
         'x-flutter-app': 'true',
         'User-Agent': 'Flutter/AlNoran Mobile App',
       };
-      
+
       print('🔐 [API] Login request to: $baseUrl/api/auth/login');
       print('🔐 [API] Headers being sent: $headers');
 
@@ -33,7 +33,11 @@ class ApiService {
           .post(
             Uri.parse('$baseUrl/api/auth/login'),
             headers: headers,
-            body: jsonEncode({'email': email, 'password': password}),
+            body: jsonEncode({
+              'email': email,
+              'password': password,
+              'platform': 'mobile',
+            }),
           )
           .timeout(
             const Duration(seconds: 15),

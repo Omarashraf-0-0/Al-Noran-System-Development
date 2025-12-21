@@ -8,24 +8,23 @@ const { verifyCaptcha } = require("../services/captchaService");
 // @route   POST /api/auth/login
 // @access  Public
 const login = asyncHandler(async (req, res) => {
-	const { email, password, captchaToken } = req.body;
+	const { email, password, captchaToken, platform } = req.body;
 	
 	// Log all headers for debugging
 	console.log(`🔍 [Auth] Login attempt for: ${email}`);
-	console.log(`🔍 [Auth] All headers:`, JSON.stringify(req.headers, null, 2));
+	console.log(`🔍 [Auth] Platform from body: ${platform}`);
 	
-	// Check if request is from mobile app (case-insensitive header check)
+	// Check if request is from mobile app (check body first, then headers)
 	const clientType = req.headers['x-client-type'] || req.headers['X-Client-Type'] || '';
 	const flutterApp = req.headers['x-flutter-app'] || req.headers['X-Flutter-App'] || '';
 	const userAgent = req.headers['user-agent'] || '';
 	
-	const isMobileApp = clientType.toLowerCase() === 'mobile' || 
+	const isMobileApp = platform === 'mobile' ||
+	                    clientType.toLowerCase() === 'mobile' || 
 	                    userAgent.toLowerCase().includes('flutter') ||
 	                    flutterApp.toLowerCase() === 'true' ||
-	                    userAgent.toLowerCase().includes('dart') ||
-	                    userAgent.toLowerCase().includes('alnoran');
+	                    userAgent.toLowerCase().includes('dart');
 	
-	console.log(`🔍 [Auth] Client-Type: ${clientType}, Flutter-App: ${flutterApp}, User-Agent: ${userAgent.substring(0, 60)}`);
 	console.log(`🔍 [Auth] Is mobile app: ${isMobileApp}`);
 
 	// Validation
