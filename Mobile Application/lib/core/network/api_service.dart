@@ -21,8 +21,9 @@ class ApiService {
       final headers = {
         'Content-Type': 'application/json',
         'ngrok-skip-browser-warning': 'true',
-        'X-Client-Type': 'mobile',
-        'X-Flutter-App': 'true',
+        'x-client-type': 'mobile',
+        'x-flutter-app': 'true',
+        'User-Agent': 'Flutter/AlNoran Mobile App',
       };
       
       print('🔐 [API] Login request to: $baseUrl/api/auth/login');

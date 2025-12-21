@@ -12,17 +12,20 @@ const login = asyncHandler(async (req, res) => {
 	
 	// Log all headers for debugging
 	console.log(`🔍 [Auth] Login attempt for: ${email}`);
-	console.log(`🔍 [Auth] Headers received:`, {
-		'x-client-type': req.headers['x-client-type'],
-		'x-flutter-app': req.headers['x-flutter-app'],
-		'user-agent': req.headers['user-agent']?.substring(0, 50) // First 50 chars
-	});
+	console.log(`🔍 [Auth] All headers:`, JSON.stringify(req.headers, null, 2));
 	
-	// Check if request is from mobile app
-	const isMobileApp = req.headers['x-client-type'] === 'mobile' || 
-	                    req.headers['user-agent']?.includes('Flutter') ||
-	                    req.headers['x-flutter-app'] === 'true';
+	// Check if request is from mobile app (case-insensitive header check)
+	const clientType = req.headers['x-client-type'] || req.headers['X-Client-Type'] || '';
+	const flutterApp = req.headers['x-flutter-app'] || req.headers['X-Flutter-App'] || '';
+	const userAgent = req.headers['user-agent'] || '';
 	
+	const isMobileApp = clientType.toLowerCase() === 'mobile' || 
+	                    userAgent.toLowerCase().includes('flutter') ||
+	                    flutterApp.toLowerCase() === 'true' ||
+	                    userAgent.toLowerCase().includes('dart') ||
+	                    userAgent.toLowerCase().includes('alnoran');
+	
+	console.log(`🔍 [Auth] Client-Type: ${clientType}, Flutter-App: ${flutterApp}, User-Agent: ${userAgent.substring(0, 60)}`);
 	console.log(`🔍 [Auth] Is mobile app: ${isMobileApp}`);
 
 	// Validation
