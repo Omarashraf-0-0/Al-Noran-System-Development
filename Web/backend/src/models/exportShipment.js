@@ -99,7 +99,8 @@ const exportShipmentSchema = new mongoose.Schema(
 		},
 		packagesCount: {
 			type: Number,
-			required: true,
+			required: false, // Not required for FCL (full container load)
+			default: null,
 		},
 		valueInEGP: {
 			type: Number,
@@ -351,7 +352,7 @@ exportShipmentSchema.index({ assignedEmployee: 1 });
 exportShipmentSchema.statics.generateShipmentNumber = async function (shippingMethod) {
 	const year = new Date().getFullYear();
 	const prefix = shippingMethod === "air" ? `EXP-AIR-${year}-` : `EXP-SEA-${year}-`;
-	
+
 	// Find the last shipment of this year and type
 	const lastShipment = await this.findOne({
 		shipmentNumber: new RegExp(`^${prefix}`),
@@ -377,7 +378,7 @@ exportShipmentSchema.methods.addStatusHistory = function (status, userId, notes 
 		notes,
 	});
 	this.currentStatus = status;
-	
+
 	// Set timestamp based on status
 	switch (status) {
 		case "goods_loaded":
@@ -408,10 +409,10 @@ exportShipmentSchema.methods.getProgressPercentage = function () {
 		"delivered",
 		"completed",
 	];
-	
+
 	const currentIndex = statusOrder.indexOf(this.currentStatus);
 	if (currentIndex === -1) return 0;
-	
+
 	return Math.round(((currentIndex + 1) / statusOrder.length) * 100);
 };
 

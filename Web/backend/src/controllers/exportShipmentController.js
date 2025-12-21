@@ -1,6 +1,7 @@
 const ExportShipment = require("../models/exportShipment");
 const UCRRequest = require("../models/ucrRequest");
 const { getPresignedUrl } = require("../utils/s3Helpers");
+const notificationService = require("../services/notificationService");
 
 // Helper function to add presigned URLs to documents array
 const addPresignedUrlsToDocuments = async (documents) => {
@@ -314,10 +315,29 @@ const updateExportShipmentStatus = async (req, res) => {
 			});
 		}
 
-		// Add to status history
+		// Save old status BEFORE updating
+		const oldStatus = shipment.currentStatus;
+
+		// Add to status history (this changes currentStatus)
 		shipment.addStatusHistory(status, employeeId, notes);
 
 		await shipment.save();
+
+		// 📬 Send notification for status change
+		if (shipment.userId && status !== oldStatus) {
+			try {
+				await notificationService.notifyExportShipmentStatusChange(
+					shipment.userId,
+					shipment._id,
+					shipment.exportNumber || shipment._id.toString().slice(-6),
+					oldStatus,
+					status
+				);
+				console.log(`📬 Export shipment status notification sent to user: ${shipment.userId}`);
+			} catch (notifError) {
+				console.error("Failed to send export shipment status notification:", notifError.message);
+			}
+		}
 
 		res.json({
 			success: true,
@@ -352,8 +372,30 @@ const assignEmployeeToShipment = async (req, res) => {
 			});
 		}
 
-		shipment.assignedEmployee = employeeId || req.user._id;
+		const assignedEmployeeId = employeeId || req.user._id;
+		shipment.assignedEmployee = assignedEmployeeId;
 		await shipment.save();
+
+		// 📬 Notify employee about new customer/shipment assignment
+		try {
+			await notificationService.createNotification({
+				userId: assignedEmployeeId,
+				type: "shipment_created",
+				title: "تم تعيين عميل تصدير جديد لك",
+				message: `تم تعيين شحنة تصدير جديدة لك برقم ${shipment.exportNumber}`,
+				data: {
+					shipmentId: shipment._id,
+					exportNumber: shipment.exportNumber,
+					clientId: shipment.userId,
+					actionUrl: `/employee/export-shipments/${shipment._id}`,
+				},
+				sendPush: true,
+				priority: "high",
+			});
+			console.log(`📬 Employee ${assignedEmployeeId} notified about export shipment assignment`);
+		} catch (notifError) {
+			console.error("Failed to send employee assignment notification:", notifError.message);
+		}
 
 		res.json({
 			success: true,
@@ -518,6 +560,30 @@ const uploadRequiredDocument = async (req, res) => {
 
 		await shipment.save();
 
+		// 📬 Notify assigned employee about client document upload
+		if (shipment.assignedEmployee && req.user && req.user.type === "client") {
+			try {
+				const document = shipment.requiredDocuments[docIndex];
+				await notificationService.createNotification({
+					userId: shipment.assignedEmployee,
+					type: "document_uploaded",
+					title: "العميل قام برفع مستند تصدير",
+					message: `قام العميل برفع مستند "${document.documentName}" لشحنة التصدير ${shipment.exportNumber}`,
+					data: {
+						shipmentId: shipment._id,
+						exportNumber: shipment.exportNumber,
+						documentName: document.documentName,
+						actionUrl: `/employee/export-shipments/${shipment._id}`,
+					},
+					sendPush: true,
+					priority: "medium",
+				});
+				console.log(`📬 Employee notified about export document upload: ${document.documentName}`);
+			} catch (notifError) {
+				console.error("Failed to send export document upload notification:", notifError.message);
+			}
+		}
+
 		res.json({
 			success: true,
 			message: "تم رفع المستند بنجاح",
@@ -681,6 +747,90 @@ const getShipmentStatusHistory = async (req, res) => {
 	}
 };
 
+/**
+ * Reset uploaded document (Employee can delete a document so client can re-upload)
+ * @route DELETE /api/export-shipments/employee/:id/required-documents/:documentId
+ * @access Private (Employee)
+ */
+const resetUploadedDocument = async (req, res) => {
+	try {
+		const { id, documentId } = req.params;
+
+		const shipment = await ExportShipment.findById(id);
+
+		if (!shipment) {
+			return res.status(404).json({
+				success: false,
+				message: "شحنة التصدير غير موجودة",
+			});
+		}
+
+		const document = shipment.requiredDocuments.id(documentId);
+
+		if (!document) {
+			return res.status(404).json({
+				success: false,
+				message: "المستند غير موجود",
+			});
+		}
+
+		// Remove the document request entirely
+		shipment.requiredDocuments.pull(documentId);
+
+		await shipment.save();
+
+		res.json({
+			success: true,
+			message: "تم حذف طلب المستند بنجاح",
+			shipment,
+		});
+	} catch (error) {
+		console.error("Error resetting uploaded document:", error);
+		res.status(500).json({
+			success: false,
+			message: "خطأ في حذف المستند",
+		});
+	}
+};
+
+/**
+ * Get distinct document names for export shipments (predefined list)
+ * @route GET /api/export-shipments/document-names
+ * @access Private (Employee)
+ */
+const getDistinctDocumentNames = async (req, res) => {
+	try {
+		// Return predefined list of common export document names
+		const predefinedDocumentNames = [
+			"شهادة المنشأ",
+			"فاتورة تصدير",
+			"قائمة التعبئة",
+			"إعفاء بنكي",
+			"تصريح الشحن",
+			"شهادة الجودة",
+			"شهادة الصحة",
+			"شهادة المطابقة",
+			"رخصة التصدير",
+			"بوليصة الشحن",
+			"شهادة التفتيش",
+			"بيان جمركي",
+			"شهادة الوزن",
+			"شهادة التحليل",
+		];
+
+		res.json({
+			success: true,
+			documentNames: predefinedDocumentNames,
+		});
+	} catch (error) {
+		console.error("Error getting document names:", error);
+		res.status(500).json({
+			success: false,
+			message: "خطأ في جلب أسماء المستندات",
+		});
+	}
+};
+
 module.exports = {
 	// Client
 	getMyExportShipments,
@@ -693,6 +843,8 @@ module.exports = {
 	assignEmployeeToShipment,
 	addEmployeeNotes,
 	requestDocumentFromClient,
+	resetUploadedDocument,
+	getDistinctDocumentNames,
 	markPaymentCleared,
 	uploadForm46,
 	uploadCertificateOfOrigin,

@@ -60,34 +60,25 @@ export default function EmployeeShipments() {
 				);
 
 				console.log("Fetched shipments:", response.data);
+			console.log("Sample shipment user_id:", response.data[0]?.user_id);
 
-				const formattedShipments = (response.data || []).map((shipment) => ({
-					id: shipment._id,
-					userId: shipment.user_id, // For client profile link
-					clientName: shipment.employerName || "Unknown Client",
-					shipmentNo: shipment.number46 || shipment.shipmentNumber || "N/A",
-					acid: shipment.acid || "N/A",
-					status: shipment.status || "pending",
-					createdAt: shipment.createdAt, // Keep raw date for sorting
-					date: new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
-						day: "numeric",
-						month: "long",
-						year: "numeric",
-					}),
-				}));
+			const formattedShipments = (response.data || []).map((shipment) => ({
+				id: shipment._id,
+				userId: shipment.user_id?._id || shipment.user_id, // For client profile link
+				clientName: shipment.user_id?.fullname || shipment.user_id?.username || "غير محدد",
+				shipmentNo: shipment.number46 || shipment.shipmentNumber || "N/A",
+				acid: shipment.acid || "N/A",
+				status: shipment.status || "pending",
+				shipmentType: shipment.shipment_type || "بحري",
+				date: shipment.createdAt ? new Date(shipment.createdAt).toLocaleDateString("ar-EG") : "غير محدد",
+			}));
 
-				setShipments(formattedShipments);
+			setShipments(formattedShipments);
 
-				if (formattedShipments.length === 0) {
-					toast("لا توجد شحنات");
-				}
-			} catch (error) {
-				console.error("Error fetching shipments:", error);
-				const errorMessage =
-					error.response?.data?.message ||
-					error.message ||
-					"Failed to fetch shipments";
-				setError(errorMessage);
+			if (formattedShipments.length === 0) {
+				toast("لا توجد شحنات");
+			}
+		} catch (error) {
 				toast.error(errorMessage);
 			} finally {
 				setLoading(false);
@@ -318,6 +309,16 @@ export default function EmployeeShipments() {
 					) : (
 						<div className="overflow-x-auto">
 							<table className="w-full text-right border-separate border-spacing-y-3">
+								<thead>
+									<tr className="bg-red-800 text-white">
+										<th className="py-3 px-4 text-right rounded-tr-lg">العميل / التاريخ</th>
+										<th className="py-3 px-4 text-right">رقم الشحنة</th>
+										<th className="py-3 px-4 text-right">رقم ACID</th>
+										<th className="py-3 px-4 text-right">نوع الشحن</th>
+										<th className="py-3 px-4 text-right">الحالة</th>
+										<th className="py-3 px-4 text-right rounded-tl-lg">الإجراءات</th>
+									</tr>
+								</thead>
 								<tbody>
 									{filteredShipments.map((shipment) => (
 										<tr
@@ -359,6 +360,12 @@ export default function EmployeeShipments() {
 											</td>
 
 											<td className="py-3 px-4 align-top">
+												<span className={`text-sm font-semibold px-3 py-1 rounded-full ${shipment.shipmentType === "جوي" ? "bg-sky-100 text-sky-800" : "bg-cyan-100 text-cyan-800"}`}>
+													{shipment.shipmentType === "جوي" ? "✈️ جوي" : "🚢 بحري"}
+												</span>
+											</td>
+
+											<td className="py-3 px-4 align-top">
 												<span
 													className="bg-blue-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit"
 													style={{ color: "#690000" }}
@@ -374,9 +381,9 @@ export default function EmployeeShipments() {
 
 											<td className="py-3 px-4 align-top">
 												<a href={`/employee-shipment/${shipment.id}`}>
-													<span className="text-blue-600 text-sm font-medium underline cursor-pointer">
+													<button className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition text-sm font-medium">
 														إدارة الشحنة
-													</span>
+													</button>
 												</a>
 											</td>
 										</tr>

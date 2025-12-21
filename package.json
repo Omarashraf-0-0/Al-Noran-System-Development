@@ -26,6 +26,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "cypress": "^15.8.1",
     "nodemon": "^3.1.10"
   }
 }

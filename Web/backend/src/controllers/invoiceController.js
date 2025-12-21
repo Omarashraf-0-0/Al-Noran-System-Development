@@ -1,10 +1,36 @@
 const Invoice = require('../models/invoice');
+const notificationService = require('../services/notificationService');
 
 const addInvoice = async (req, res) => {
   try {
 
     const invoice = new Invoice(req.body);
     const savedInvoice = await invoice.save();
+
+    // 📬 Send notification for new invoice
+    if (savedInvoice.userId) {
+      try {
+        // Calculate total
+        let total = 0;
+        savedInvoice.invoiceItems.forEach(item => {
+          if (item.currencyType === "USD") {
+            total += item.itemPrice * 50;
+          } else {
+            total += item.itemPrice;
+          }
+        });
+        
+        await notificationService.notifyInvoiceCreated(
+          savedInvoice.userId,
+          savedInvoice._id,
+          savedInvoice.invoiceNumber,
+          total
+        );
+        console.log(`📬 Invoice creation notification sent to user: ${savedInvoice.userId}`);
+      } catch (notifError) {
+        console.error("Failed to send invoice notification:", notifError.message);
+      }
+    }
 
     res.status(201).json({
       message: "Invoice created successfully",
@@ -162,6 +188,18 @@ const payInvoice = async (req, res) => {
 
     invoice.status = "تم الدفع";
     await invoice.save();
+
+    // 📬 Send notification for successful payment
+    try {
+      await notificationService.notifyInvoicePaid(
+        userId,
+        invoice._id,
+        invoice.invoiceNumber
+      );
+      console.log(`📬 Invoice paid notification sent to user: ${userId}`);
+    } catch (notifError) {
+      console.error("Failed to send invoice paid notification:", notifError.message);
+    }
 
     res.json({ message: "Payment successful", invoice, newBalance: user.wallet });
 

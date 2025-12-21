@@ -60,6 +60,7 @@ const uploadSchema = new mongoose.Schema(
 
 				// Personal documents (فردي)
 				"personal_id", // البطاقة الشخصية
+				"passport", // جواز السفر
 				"sample_document", // مستند داعم
 
 				// Shipment documents (Import)
@@ -231,7 +232,7 @@ uploadSchema.statics.getRequiredDocuments = function (clientType) {
 			"personal_id_of_representative",
 			"trade_certificates",
 		],
-		personal: ["power_of_attorney", "personal_id", "sample_document"],
+		personal: ["power_of_attorney", "personal_id"],
 	};
 	return requiredDocs[clientType] || [];
 };
@@ -249,7 +250,14 @@ uploadSchema.statics.checkRequiredUploads = async function (
 		approvalStatus: "approved",
 	}).distinct("documentType");
 
-	const missing = required.filter((doc) => !uploaded.includes(doc));
+	const missing = required.filter((doc) => {
+		// Special handling for identity document (personal_id OR passport)
+		if (doc === "personal_id") {
+			return !uploaded.includes("personal_id") && !uploaded.includes("passport");
+		}
+		return !uploaded.includes(doc);
+	});
+
 	return {
 		completed: missing.length === 0,
 		missing,

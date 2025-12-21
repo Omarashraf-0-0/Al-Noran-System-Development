@@ -1,6 +1,7 @@
 const { Chat, Message } = require("../models/chat");
 const User = require("../models/user");
 const Shipment = require("../models/shipment");
+const UCRRequest = require("../models/ucrRequest");
 const notificationService = require("../services/notificationService");
 
 // Get all chats for a user (client sees their chats, employee sees chats for their assigned shipments)
@@ -548,7 +549,7 @@ const getOnlineEmployees = async (req, res) => {
 	}
 };
 
-// Get customers for an employee (based on assigned shipments)
+// Get customers for an employee (based on assigned shipments and UCR requests)
 const getMyCustomers = async (req, res) => {
 	try {
 		const userId = req.user._id;
@@ -561,13 +562,20 @@ const getMyCustomers = async (req, res) => {
 			});
 		}
 
-		// Find all shipments assigned to this employee
+		// Find all ACID shipments assigned to this employee
 		const shipments = await Shipment.find({ employee_id: userId })
 			.populate("user_id", "fullname username email")
 			.select("acid status country user_id");
 
-		// Extract unique customers
+		// Find all UCR requests assigned to this employee
+		const ucrRequests = await UCRRequest.find({ reviewingBy: userId })
+			.populate("userId", "fullname username email")
+			.select("requestNumber ucrNumber status destinationCountry userId");
+
+		// Extract unique customers and combine their shipments and UCRs
 		const customersMap = new Map();
+		
+		// Process ACID shipments
 		shipments.forEach((shipment) => {
 			if (shipment.user_id) {
 				const clientId = shipment.user_id._id.toString();
@@ -578,6 +586,7 @@ const getMyCustomers = async (req, res) => {
 						username: shipment.user_id.username,
 						email: shipment.user_id.email,
 						shipments: [],
+						ucrRequests: [],
 					});
 				}
 				customersMap.get(clientId).shipments.push({
@@ -585,6 +594,32 @@ const getMyCustomers = async (req, res) => {
 					acid: shipment.acid,
 					status: shipment.status,
 					country: shipment.country,
+					type: 'acid',
+				});
+			}
+		});
+
+		// Process UCR requests
+		ucrRequests.forEach((ucr) => {
+			if (ucr.userId) {
+				const clientId = ucr.userId._id.toString();
+				if (!customersMap.has(clientId)) {
+					customersMap.set(clientId, {
+						_id: ucr.userId._id,
+						fullname: ucr.userId.fullname,
+						username: ucr.userId.username,
+						email: ucr.userId.email,
+						shipments: [],
+						ucrRequests: [],
+					});
+				}
+				customersMap.get(clientId).ucrRequests.push({
+					_id: ucr._id,
+					requestNumber: ucr.requestNumber,
+					ucrNumber: ucr.ucrNumber,
+					status: ucr.status,
+					country: ucr.destinationCountry,
+					type: 'ucr',
 				});
 			}
 		});

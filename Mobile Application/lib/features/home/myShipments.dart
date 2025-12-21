@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
 import '../../core/services/shipments_cache_service.dart';
+import '../../core/services/recent_shipments_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
 
 class MyShipmentsPage extends StatefulWidget {
@@ -593,47 +594,37 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     List<Map<String, dynamic>> shipments,
     bool isCurrent,
   ) {
-    // Combine shipments and ACID requests
-    final combinedList = <Map<String, dynamic>>[];
+    // Only show SHIPMENTS in this list, not ACID requests
+    final shipmentsList = <Map<String, dynamic>>[];
 
     // If a type filter is selected (بحري/جوي), show from both current and completed
     if (_selectedFilter == 'بحري' || _selectedFilter == 'جوي') {
       // Add filtered shipments from both current and completed
-      combinedList.addAll(_currentShipments);
-      combinedList.addAll(_completedShipments);
+      shipmentsList.addAll(_currentShipments);
+      shipmentsList.addAll(_completedShipments);
       print(
-        '🔍 [MyShipments] Type Filter "$_selectedFilter" - Total: ${combinedList.length}',
+        '🔍 [MyShipments] Type Filter "$_selectedFilter" - Shipments: ${shipmentsList.length}',
       );
     } else if (isCurrent) {
-      combinedList.addAll(_currentShipments);
-      combinedList.addAll(_currentAcidRequests);
-      print(
-        '🔍 [MyShipments] Current - Shipments: ${_currentShipments.length}, ACID Requests: ${_currentAcidRequests.length}',
-      );
+      shipmentsList.addAll(_currentShipments);
+      print('🔍 [MyShipments] Current Shipments: ${_currentShipments.length}');
     } else {
-      combinedList.addAll(_completedShipments);
-      combinedList.addAll(_completedAcidRequests);
+      shipmentsList.addAll(_completedShipments);
       print(
-        '🔍 [MyShipments] Completed - Shipments: ${_completedShipments.length}, ACID Requests: ${_completedAcidRequests.length}',
+        '🔍 [MyShipments] Completed Shipments: ${_completedShipments.length}',
       );
     }
 
     print(
-      '🔍 [MyShipments] Combined list total: ${combinedList.length}, Filter: $_selectedFilter',
+      '🔍 [MyShipments] Total shipments: ${shipmentsList.length}, Filter: $_selectedFilter',
     );
 
-    if (combinedList.isEmpty) {
+    if (shipmentsList.isEmpty) {
       // Determine the empty message based on filter
       String emptyMessage;
       IconData emptyIcon;
 
-      if (_selectedFilter == 'طلبات ACID') {
-        emptyIcon = Icons.receipt_long_outlined;
-        emptyMessage =
-            isCurrent
-                ? 'لا توجد طلبات ACID جارية'
-                : 'لا توجد طلبات ACID مكتملة';
-      } else if (_selectedFilter == 'بحري') {
+      if (_selectedFilter == 'بحري') {
         emptyIcon = Icons.directions_boat_outlined;
         emptyMessage =
             isCurrent
@@ -648,9 +639,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
       } else {
         emptyIcon = Icons.inventory_2_outlined;
         emptyMessage =
-            isCurrent
-                ? 'لا توجد شحنات أو طلبات جارية'
-                : 'لا توجد شحنات أو طلبات مكتملة';
+            isCurrent ? 'لا توجد شحنات جارية' : 'لا توجد شحنات مكتملة';
       }
 
       return RefreshIndicator(
@@ -697,14 +686,9 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
       color: const Color(0xFF690000),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: combinedList.length,
+        itemCount: shipmentsList.length,
         itemBuilder: (context, index) {
-          final item = combinedList[index];
-          if (item['itemType'] == 'acidRequest') {
-            return _buildAcidRequestCard(item);
-          } else {
-            return _buildShipmentCard(item);
-          }
+          return _buildShipmentCard(shipmentsList[index]);
         },
       ),
     );
@@ -790,9 +774,13 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     final statusColor = _getStatusColor(shipment['status']);
 
     return InkWell(
-      onTap: () {
+      onTap: () async {
+        // Save to recent shipments before navigating
+        await RecentShipmentsService.addRecentShipment(shipment);
         // Navigate to shipment details page
-        context.push('/shipment-details/${shipment['id']}');
+        if (mounted) {
+          context.push('/shipment-details/${shipment['id']}');
+        }
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -1443,13 +1431,13 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
               },
             );
           } else if (index == 3) {
-            // الفواتير (don't change state)
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('قسم الفواتير قيد التطوير'),
-                backgroundColor: Color(0xFF1ba3b6),
-                duration: Duration(seconds: 2),
-              ),
+            // الفواتير - navigate to payments page
+            context.go(
+              '/payments',
+              extra: {
+                'userName': widget.userName,
+                'userEmail': widget.userEmail,
+              },
             );
           }
         },

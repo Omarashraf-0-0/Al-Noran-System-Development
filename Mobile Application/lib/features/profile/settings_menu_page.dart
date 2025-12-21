@@ -4,6 +4,7 @@ import 'user_settings_page.dart';
 import 'documents_settings_page.dart';
 import 'change_password_page.dart';
 import '../../core/storage/secure_storage.dart';
+import '../../core/services/firebase_push_service.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 
 class SettingsMenuPage extends StatefulWidget {
@@ -20,11 +21,13 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
   late Animation<Offset> _slideAnimation;
   String _userName = 'مستخدم';
   bool _notificationsEnabled = true;
+  bool _isTogglingNotifications = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadNotificationSettings();
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -60,81 +63,225 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
     }
   }
 
+  Future<void> _loadNotificationSettings() async {
+    try {
+      final enabled = await SecureStorage.getNotificationsEnabled();
+      if (mounted) {
+        setState(() => _notificationsEnabled = enabled);
+      }
+    } catch (e) {
+      print('Error loading notification settings: $e');
+    }
+  }
+
+  Future<void> _toggleNotifications(bool enabled) async {
+    if (_isTogglingNotifications) return;
+
+    setState(() => _isTogglingNotifications = true);
+
+    try {
+      // Save preference locally
+      await SecureStorage.setNotificationsEnabled(enabled);
+
+      // Update FCM subscription based on setting
+      final pushService = FirebasePushService();
+      if (enabled) {
+        // Re-enable notifications by refreshing token
+        await pushService.refreshToken();
+        print('✅ Notifications enabled');
+      } else {
+        // Unsubscribe from notifications (delete token from server)
+        await pushService.unsubscribeFromNotifications();
+        print('🔕 Notifications disabled');
+      }
+
+      if (mounted) {
+        setState(() => _notificationsEnabled = enabled);
+        AlNoranPopups.showSuccess(
+          context: context,
+          message: enabled ? 'تم تفعيل الإشعارات' : 'تم إيقاف الإشعارات',
+        );
+      }
+    } catch (e) {
+      print('Error toggling notifications: $e');
+      if (mounted) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'حدث خطأ في تغيير إعدادات الإشعارات',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isTogglingNotifications = false);
+      }
+    }
+  }
+
   void _handleLogout() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder:
           (context) => Directionality(
             textDirection: TextDirection.rtl,
-            child: AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              title: Row(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Handle bar
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.logout,
-                      color: Colors.white,
-                      size: 28,
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const SizedBox(width: 12),
+
+                  // Warning icon with animation
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.logout_rounded,
+                          color: Colors.red,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Title
                   const Text(
                     'تسجيل الخروج',
                     style: TextStyle(
                       fontFamily: 'Cairo',
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D2D2D),
                     ),
                   ),
+
+                  const SizedBox(height: 12),
+
+                  // Message
+                  Text(
+                    'هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 15,
+                      color: Colors.grey[600],
+                      height: 1.5,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    'سيتم إزالة جميع البيانات المحفوظة',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 13,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Buttons
+                  Row(
+                    children: [
+                      // Cancel button
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            side: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          child: Text(
+                            'إلغاء',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      // Logout button
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            Navigator.pop(context);
+                            await SecureStorage.clearAll();
+                            if (mounted) {
+                              context.go('/login');
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.logout, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'خروج',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Bottom padding for safe area
+                  SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
                 ],
               ),
-              content: const Text(
-                'هل أنت متأكد من تسجيل الخروج؟',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 15),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => context.pop(),
-                  child: Text(
-                    'إلغاء',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    context.pop();
-                    await SecureStorage.clearAll();
-                    if (mounted) {
-                      context.go('/login');
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'تسجيل الخروج',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
     );
@@ -420,10 +567,14 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
                         _buildToggleCard(
                           icon: Icons.notifications_outlined,
                           title: 'الإشعارات',
-                          subtitle: 'تلقي إشعارات حول حالة الشحنات',
+                          subtitle:
+                              _notificationsEnabled
+                                  ? 'تلقي إشعارات حول حالة الشحنات'
+                                  : 'الإشعارات متوقفة',
                           value: _notificationsEnabled,
+                          isLoading: _isTogglingNotifications,
                           onChanged: (value) {
-                            setState(() => _notificationsEnabled = value);
+                            _toggleNotifications(value);
                           },
                           activeColor: const Color(0xFF4CAF50),
                         ),
@@ -534,87 +685,330 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
   }
 
   void _showAboutDialog() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder:
           (context) => Directionality(
             textDirection: TextDirection.rtl,
-            child: AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF690000),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.info_outline,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'عن التطبيق',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              content: Column(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'النوران لخدمات الشحن',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  // Handle bar
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'الإصدار: 1.0.0',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 14,
-                      color: Colors.grey[600],
+
+                  // Header with gradient
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 24,
+                      horizontal: 20,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: [
+                          const Color(0xFF690000).withOpacity(0.1),
+                          const Color(0xFF1ba3b6).withOpacity(0.1),
+                        ],
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        // Logo
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF690000).withOpacity(0.2),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.asset(
+                              'assets/img/logo.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF690000),
+                                        Color(0xFF8B0000),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Icon(
+                                    Icons.local_shipping,
+                                    color: Colors.white,
+                                    size: 40,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'النوران لخدمات الشحن',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D2D2D),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1ba3b6).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'الإصدار 1.0.0',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1ba3b6),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'تطبيق شامل لإدارة الشحنات وتتبعها وطلب رقم ACID',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 13,
-                      color: Colors.grey[700],
-                      height: 1.5,
+
+                  // Content
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        // Description
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'تطبيق شامل لإدارة الشحنات وتتبعها',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF2D2D2D),
+                                  height: 1.6,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'نساعدك في متابعة شحناتك وطلب رقم ACID وإدارة المدفوعات بكل سهولة ويسر',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 13,
+                                  color: Colors.grey[600],
+                                  height: 1.6,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Features
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildFeatureChip(
+                                Icons.local_shipping,
+                                'إدارة الشحنات',
+                                const Color(0xFF690000),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildFeatureChip(
+                                Icons.qr_code,
+                                'طلب ACID',
+                                const Color(0xFF1ba3b6),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildFeatureChip(
+                                Icons.payment,
+                                'المدفوعات',
+                                const Color(0xFF4CAF50),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Contact info
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF690000).withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFF690000).withOpacity(0.1),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF690000),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.support_agent,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'الدعم الفني',
+                                      style: TextStyle(
+                                        fontFamily: 'Cairo',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2D2D2D),
+                                      ),
+                                    ),
+                                    Text(
+                                      'support@alnoran.com',
+                                      style: TextStyle(
+                                        fontFamily: 'Cairo',
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Close button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF690000),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'حسناً',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // Copyright
+                        Text(
+                          '© 2024 النوران. جميع الحقوق محفوظة',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 11,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+
+                  // Bottom padding for safe area
+                  SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
                 ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => context.pop(),
-                  child: const Text(
-                    'حسناً',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
+    );
+  }
+
+  Widget _buildFeatureChip(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
@@ -625,6 +1019,7 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
     required bool value,
     required ValueChanged<bool> onChanged,
     required Color activeColor,
+    bool isLoading = false,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -680,11 +1075,22 @@ class _SettingsMenuPageState extends State<SettingsMenuPage>
                 ],
               ),
             ),
-            Switch(
-              value: value,
-              onChanged: onChanged,
-              activeColor: activeColor,
-            ),
+            isLoading
+                ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFF4CAF50),
+                    ),
+                  ),
+                )
+                : Switch(
+                  value: value,
+                  onChanged: onChanged,
+                  activeColor: activeColor,
+                ),
           ],
         ),
       ),

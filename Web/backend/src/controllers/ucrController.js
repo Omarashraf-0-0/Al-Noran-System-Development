@@ -38,10 +38,23 @@ const createUCRRequest = async (req, res) => {
 		} = req.body;
 
 		// Validate required fields
-		if (!generalDescription || !totalWeight || !packagesCount || !valueInEGP || !originalInvoiceNumber || !invoiceDate) {
+		// Note: packagesCount is only required for air, sea parcels, or sea LCL shipments
+		const seaShipmentType = req.body.seaShipmentType;
+		const needsPackagesCount = shippingMethod === "air" || 
+			(shippingMethod === "sea" && (seaShipmentType === "parcels" || seaShipmentType === "lcl"));
+		
+		if (!generalDescription || !totalWeight || !valueInEGP || !originalInvoiceNumber || !invoiceDate) {
 			return res.status(400).json({
 				success: false,
 				message: "جميع الحقول الإلزامية مطلوبة",
+			});
+		}
+
+		// Validate packagesCount only when required
+		if (needsPackagesCount && (!packagesCount || packagesCount < 1)) {
+			return res.status(400).json({
+				success: false,
+				message: "عدد الطرود مطلوب لهذا النوع من الشحن",
 			});
 		}
 
@@ -66,9 +79,8 @@ const createUCRRequest = async (req, res) => {
 			});
 		}
 
-		// Validate sea shipment fields - only require containers if seaShipmentType is 'containers'
-		const seaShipmentType = req.body.seaShipmentType;
-		if (shippingMethod === "sea" && seaShipmentType === "containers") {
+		// Validate sea shipment fields - only require containers if seaShipmentType is 'fcl' (containers)
+		if (shippingMethod === "sea" && seaShipmentType === "fcl") {
 			if (!containersCount || containersCount < 1) {
 				return res.status(400).json({
 					success: false,
@@ -514,6 +526,27 @@ const lockUCRRequest = async (req, res) => {
 			console.error("Failed to send UCR review notification:", notifError.message);
 		}
 
+		// 📬 Notify employee about assigned UCR request
+		try {
+			await notificationService.createNotification({
+				userId: employeeId,
+				type: "ucr_created",
+				title: "تم تعيين طلب UCR جديد لك",
+				message: `تم تعيين طلب UCR ${request.requestNumber} لك للمراجعة`,
+				data: {
+					ucrRequestId: request._id,
+					requestNumber: request.requestNumber,
+					clientId: request.userId,
+					actionUrl: `/employee/ucr-requests/${request._id}`,
+				},
+				sendPush: true,
+				priority: "high",
+			});
+			console.log(`📬 Employee ${employeeId} notified about UCR assignment`);
+		} catch (notifError) {
+			console.error("Failed to send employee UCR assignment notification:", notifError.message);
+		}
+
 		res.json({
 			success: true,
 			message: "تم قفل الطلب للمراجعة",
@@ -680,6 +713,30 @@ const issueUCRNumber = async (req, res) => {
 			console.log(`📬 UCR issued notification sent to user: ${request.userId}`);
 		} catch (notifError) {
 			console.error("Failed to send UCR issued notification:", notifError.message);
+		}
+
+		// 📬 Notify assigned employee about the new export shipment
+		if (exportShipment && employeeId) {
+			try {
+				await notificationService.createNotification({
+					userId: employeeId,
+					type: "ucr_approved",
+					title: "تم تعيين شحنة تصدير جديدة لك",
+					message: `تم تعيين شحنة تصدير UCR ${ucrNumber} لك`,
+					data: {
+						shipmentId: exportShipment._id,
+						ucrNumber: ucrNumber,
+						requestNumber: request.requestNumber,
+						clientId: request.userId,
+						actionUrl: `/employee/export-shipments/${exportShipment._id}`,
+					},
+					sendPush: true,
+					priority: "high",
+				});
+				console.log(`📬 Employee ${employeeId} notified about UCR shipment assignment`);
+			} catch (notifError) {
+				console.error("Failed to send employee UCR assignment notification:", notifError.message);
+			}
 		}
 	} catch (error) {
 		console.error("Error issuing UCR number:", error);

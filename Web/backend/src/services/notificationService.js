@@ -725,9 +725,9 @@ const notifyChatMessage = async (userId, chatId, senderName) => {
 	});
 };
 
-
-
-
+/**
+ * الحصول على إشعارات الموظف حسب المعرف
+ */
 const getEmployeeNotificationsById = async (employeeId) => {
 	try {
 		if (!employeeId) {
@@ -751,7 +751,133 @@ const getEmployeeNotificationsById = async (employeeId) => {
 	}
 };
 
+/**
+ * إشعار إيصال دفع جديد
+ */
+const notifyPaymentReceiptUploaded = async (userId, paymentId) => {
+	return createNotification({
+		userId,
+		type: "payment_received",
+		title: "تم استلام إيصال الدفع",
+		message: "تم استلام إيصال الدفع الخاص بك وجاري مراجعته",
+		data: { paymentId },
+		sendPush: true,
+		priority: "medium",
+	});
+};
 
+/**
+ * إشعار قبول/رفض إيصال الدفع
+ */
+const notifyPaymentStatus = async (userId, paymentId, status, amount = null) => {
+	const isApproved = status === "APPROVED";
+	const isRejected = status === "REJECTED";
+	
+	let message;
+	let type;
+	
+	if (isApproved) {
+		type = "payment_received";
+		message = amount 
+			? `تم قبول إيصال الدفع بقيمة ${amount} ج.م`
+			: "تم قبول إيصال الدفع الخاص بك";
+	} else if (isRejected) {
+		type = "payment_failed";
+		message = "تم رفض إيصال الدفع. يرجى التواصل مع الدعم للمزيد من المعلومات.";
+	} else {
+		type = "payment_reminder";
+		message = "إيصال الدفع الخاص بك قيد المراجعة";
+	}
+
+	return createNotification({
+		userId,
+		type,
+		message,
+		data: { paymentId, status, amount },
+		sendEmail: isApproved || isRejected,
+		sendPush: true,
+		priority: isRejected ? "high" : "medium",
+	});
+};
+
+/**
+ * إشعار فاتورة جديدة
+ */
+const notifyInvoiceCreated = async (userId, invoiceId, invoiceNumber, total) => {
+	return createNotification({
+		userId,
+		type: "invoice_created",
+		title: "فاتورة جديدة",
+		message: `تم إنشاء فاتورة جديدة رقم ${invoiceNumber} بقيمة ${total} ج.م`,
+		data: { invoiceId, invoiceNumber, total },
+		sendEmail: true,
+		sendPush: true,
+		priority: "medium",
+	});
+};
+
+/**
+ * إشعار دفع فاتورة بنجاح
+ */
+const notifyInvoicePaid = async (userId, invoiceId, invoiceNumber) => {
+	return createNotification({
+		userId,
+		type: "invoice_paid",
+		title: "تم سداد الفاتورة",
+		message: `تم سداد الفاتورة رقم ${invoiceNumber} بنجاح. شكراً لك.`,
+		data: { invoiceId, invoiceNumber },
+		sendEmail: true,
+		sendPush: true,
+		priority: "medium",
+	});
+};
+
+/**
+ * إشعار تذكير بموعد الدفع
+ */
+const notifyPaymentReminder = async (userId, invoiceId, invoiceNumber, dueAmount) => {
+	return createNotification({
+		userId,
+		type: "payment_reminder",
+		title: "تذكير بموعد الدفع",
+		message: `لديك فاتورة مستحقة الدفع رقم ${invoiceNumber} بقيمة ${dueAmount} ج.م`,
+		data: { invoiceId, invoiceNumber, dueAmount },
+		sendEmail: true,
+		sendPush: true,
+		priority: "high",
+	});
+};
+
+/**
+ * إشعار تغيير حالة شحنة التصدير
+ */
+const notifyExportShipmentStatusChange = async (userId, shipmentId, exportNumber, oldStatus, newStatus) => {
+	const statusMessages = {
+		"documents_verification": "التحقق من المستندات",
+		"regulatory_inspection": "الفحص التنظيمي",
+		"payment_cleared": "تم تسوية المدفوعات",
+		"goods_loaded": "تم تحميل البضائع",
+		"in_transit": "في الطريق",
+		"delivered": "تم التسليم",
+		"completed": "مكتملة",
+		"cancelled": "ملغية",
+	};
+
+	const newStatusAr = statusMessages[newStatus] || newStatus;
+	const isCompleted = newStatus === "completed" || newStatus === "delivered";
+	const isDelivered = newStatus === "delivered";
+	const isCancelled = newStatus === "cancelled";
+
+	return createNotification({
+		userId,
+		type: isCompleted ? "export_shipment_completed" : isCancelled ? "export_shipment_cancelled" : "export_shipment_status_changed",
+		message: `تم تحديث حالة شحنة التصدير ${exportNumber} إلى: ${newStatusAr}`,
+		data: { shipmentId, exportNumber, oldStatus, newStatus },
+		sendEmail: isCompleted || isCancelled,
+		sendPush: true,
+		priority: isCompleted || isDelivered || isCancelled ? "high" : "medium",
+	});
+};
 
 // =====================================================
 // EXPORTS
@@ -777,8 +903,13 @@ module.exports = {
 	notifyShipmentDocumentsRequested,
 	notifyUCRStatus,
 	notifyChatMessage,
-
 	getEmployeeNotificationsById,
+	notifyPaymentReceiptUploaded,
+	notifyPaymentStatus,
+	notifyInvoiceCreated,
+	notifyInvoicePaid,
+	notifyPaymentReminder,
+	notifyExportShipmentStatusChange,
 	
 	// Templates (for reference)
 	NOTIFICATION_TEMPLATES,

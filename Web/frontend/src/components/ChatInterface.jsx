@@ -302,11 +302,11 @@ const ChatInterface = ({ preselectedChatId }) => {
 		const otherUser =
 			userType === "client"
 				? chat.employeeId || { fullname: "في انتظار الرد", username: "support" }
-				: chat.clientId;
+				: chat.clientId || { fullname: "عميل", username: "client" };
 
 		return {
 			id: chat._id,
-			name: otherUser.fullname || otherUser.username || "مستخدم",
+			name: otherUser?.fullname || otherUser?.username || "مستخدم",
 			shipmentNumber: chat.shipmentId?.acid || "عام",
 			avatarUrl: AVATAR_URL,
 			isOnline: chat.status === "active",

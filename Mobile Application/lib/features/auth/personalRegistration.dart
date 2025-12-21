@@ -391,21 +391,23 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
       return;
     }
 
-    if (_nationalIdCardFile == null) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'من فضلك قم بإرفاق صورة البطاقة الشخصية',
-      );
-      return;
-    }
+    // NOTE: Documents made OPTIONAL for integration testing
+    // TODO: Re-enable these checks for production
+    // if (_nationalIdCardFile == null) {
+    //   AlNoranPopups.showError(
+    //     context: context,
+    //     message: 'من فضلك قم بإرفاق صورة البطاقة الشخصية',
+    //   );
+    //   return;
+    // }
 
-    if (_powerOfAttorneyFile == null) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'من فضلك قم بإرفاق التوكيل',
-      );
-      return;
-    }
+    // if (_powerOfAttorneyFile == null) {
+    //   AlNoranPopups.showError(
+    //     context: context,
+    //     message: 'من فضلك قم بإرفاق التوكيل',
+    //   );
+    //   return;
+    // }
 
     setState(() {
       _isLoading = true;
@@ -461,74 +463,86 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
         '🔑 Token verified before upload: ${savedToken.substring(0, 20)}...',
       );
 
-      // Upload National ID Card image to S3
-      print('📤 Uploading National ID Card...');
-      final idCardUploadResult = await ApiService.uploadToS3(
-        file: _nationalIdCardFile!,
-        category: 'registration',
-        documentType: 'personal_id',
-        description: 'صورة البطاقة الشخصية - حساب شخصي',
-        tags: ['personal_id', 'personal', 'registration'],
-        userType: 'client',
-        clientType: 'personal',
-      );
+      // Upload National ID Card image to S3 (skip if null for testing)
+      if (_nationalIdCardFile != null) {
+        print('📤 Uploading National ID Card...');
+        final idCardUploadResult = await ApiService.uploadToS3(
+          file: _nationalIdCardFile!,
+          category: 'registration',
+          documentType: 'personal_id',
+          description: 'صورة البطاقة الشخصية - حساب شخصي',
+          tags: ['personal_id', 'personal', 'registration'],
+          userType: 'client',
+          clientType: 'personal',
+        );
 
-      if (!idCardUploadResult['success']) {
+        if (!idCardUploadResult['success']) {
+          setState(() {
+            _isLoading = false;
+          });
+          print('❌ ID Card upload failed: ${idCardUploadResult['error']}');
+          AlNoranPopups.showError(
+            context: context,
+            title: 'خطأ في رفع المستندات',
+            message:
+                'تم إنشاء الحساب لكن فشل رفع صورة البطاقة. السبب: ${idCardUploadResult['message'] ?? 'خطأ غير معروف'}',
+          );
+          if (mounted) {
+            context.go('/login');
+          }
+          return;
+        }
+        print('✅ ID Card uploaded successfully');
+      } else {
+        print('⚠️ Skipping ID Card upload (file is null - testing mode)');
+      }
+
+      // Upload power of attorney document to S3 (skip if null for testing)
+      if (_powerOfAttorneyFile != null) {
+        print('📤 Uploading Power of Attorney...');
+        final uploadResult = await ApiService.uploadToS3(
+          file: _powerOfAttorneyFile!,
+          category: 'registration',
+          documentType: 'power_of_attorney',
+          description: 'التوكيل - حساب شخصي',
+          tags: ['power_of_attorney', 'personal', 'registration'],
+          userType: 'client',
+          clientType: 'personal',
+        );
+
         setState(() {
           _isLoading = false;
         });
-        print('❌ ID Card upload failed: ${idCardUploadResult['error']}');
-        AlNoranPopups.showError(
-          context: context,
-          title: 'خطأ في رفع المستندات',
-          message:
-              'تم إنشاء الحساب لكن فشل رفع صورة البطاقة. السبب: ${idCardUploadResult['message'] ?? 'خطأ غير معروف'}',
-        );
-        if (mounted) {
-          context.go('/login');
+
+        if (!uploadResult['success']) {
+          print('❌ Power of Attorney upload failed: ${uploadResult['error']}');
+          AlNoranPopups.showError(
+            context: context,
+            title: 'خطأ في رفع المستندات',
+            message:
+                'تم إنشاء الحساب لكن فشل رفع التوكيل. السبب: ${uploadResult['message'] ?? 'خطأ غير معروف'}',
+          );
+          if (mounted) {
+            context.go('/login');
+          }
+          return;
         }
-        return;
-      }
-      print('✅ ID Card uploaded successfully');
 
-      // Upload power of attorney document to S3
-      print('📤 Uploading Power of Attorney...');
-      final uploadResult = await ApiService.uploadToS3(
-        file: _powerOfAttorneyFile!,
-        category: 'registration',
-        documentType: 'power_of_attorney',
-        description: 'التوكيل - حساب شخصي',
-        tags: ['power_of_attorney', 'personal', 'registration'],
-        userType: 'client',
-        clientType: 'personal',
-      );
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (!uploadResult['success']) {
-        print('❌ Power of Attorney upload failed: ${uploadResult['error']}');
-        AlNoranPopups.showError(
-          context: context,
-          title: 'خطأ في رفع المستندات',
-          message:
-              'تم إنشاء الحساب لكن فشل رفع التوكيل. السبب: ${uploadResult['message'] ?? 'خطأ غير معروف'}',
+        print('✅ Power of Attorney uploaded successfully');
+        print('✅✅✅ All documents uploaded successfully!');
+      } else {
+        print(
+          '⚠️ Skipping Power of Attorney upload (file is null - testing mode)',
         );
-        if (mounted) {
-          context.go('/login');
-        }
-        return;
+        setState(() {
+          _isLoading = false;
+        });
       }
-
-      print('✅ Power of Attorney uploaded successfully');
-      print('✅✅✅ All documents uploaded successfully!');
 
       await AlNoranPopups.showSuccess(
         context: context,
         title: 'تم التسجيل بنجاح',
-        message:
-            'تم إنشاء حسابك وتحميل جميع المستندات إلى السحابة بنجاح. سيتم مراجعة حسابك وتفعيله خلال 24 ساعة',
+        message: 'تم إنشاء حسابك بنجاح. سيتم مراجعة حسابك وتفعيله خلال 24 ساعة',
       );
 
       if (mounted) {

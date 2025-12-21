@@ -40,11 +40,15 @@ class AlNoranValidators {
     // Pattern 1: 01[0125][0-9]{8} (11 digits starting with 01)
     final pattern1 = RegExp(r'^01[0125][0-9]{8}$');
 
-    // Pattern 2: +2001[0125][0-9]{8} (with +20 country code)
-    final pattern2 = RegExp(r'^\+2001[0125][0-9]{8}$');
+    // Pattern 2: +201[0125][0-9]{8} (with +20 country code)
+    // Format: +20 + 1[0125] + 8 digits = 13 characters total
+    // Example: +201012345678 (Vodafone)
+    final pattern2 = RegExp(r'^\+201[0125][0-9]{8}$');
 
-    // Pattern 3: 002001[0125][0-9]{8} (with 00 international prefix)
-    final pattern3 = RegExp(r'^002001[0125][0-9]{8}$');
+    // Pattern 3: 00201[0125][0-9]{8} (with 0020 international prefix)
+    // Format: 0020 + 1[0125] + 8 digits = 15 characters total
+    // Example: 002010123456778 (Vodafone)
+    final pattern3 = RegExp(r'^00201[0125][0-9]{8}$');
 
     return pattern1.hasMatch(cleanPhone) ||
         pattern2.hasMatch(cleanPhone) ||

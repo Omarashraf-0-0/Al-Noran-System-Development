@@ -82,6 +82,11 @@ const generateS3Key = ({
 		case "payment":
 			fullPath = `${basePath}/payments/${uniqueFilename}`;
 			break;
+		case "export_shipment":
+			if (!relatedId)
+				throw new Error("relatedId required for export_shipment category");
+			fullPath = `${basePath}/export_shipments/${relatedId}/${uniqueFilename}`;
+			break;
 		default:
 			throw new Error(`Invalid category: ${category}`);
 	}

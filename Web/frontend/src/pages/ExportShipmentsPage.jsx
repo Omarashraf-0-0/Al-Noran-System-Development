@@ -1,79 +1,54 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { toast } from "react-hot-toast";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import BackgroundContainer from "../components/BackgroundContainer";
-import FormContainer from "../components/FormContainer";
-import LoadingSpinner from "../components/LoadingSpinner";
+import { Search, Filter, SortAsc, ChevronLeft, ChevronRight, Globe, AlertCircle } from "lucide-react";
+import axios from "axios";
+import { toast } from "react-hot-toast";
+import { useTheme } from "../context/ThemeContext";
+import ShipmentCard from "../components/ShipmentCard";
 
-// Status configurations for export shipments (matching backend model)
+// Status configurations for export shipments
 const STATUS_CONFIG = {
-	documents_verification: {
-		label: "التحقق من المستندات",
-		color: "bg-blue-100 text-blue-800 border-blue-200",
-		icon: "📄",
-		step: 1,
-	},
-	regulatory_inspection: {
-		label: "فحص الجهات الرقابية",
-		color: "bg-purple-100 text-purple-800 border-purple-200",
-		icon: "🔍",
-		step: 2,
-	},
-	payment_cleared: {
-		label: "تم السداد",
-		color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-		icon: "💰",
-		step: 3,
-	},
-	goods_loaded: {
-		label: "تم التحميل",
-		color: "bg-cyan-100 text-cyan-800 border-cyan-200",
-		icon: "📦",
-		step: 4,
-	},
-	in_transit: {
-		label: "في الطريق",
-		color: "bg-indigo-100 text-indigo-800 border-indigo-200",
-		icon: "🚢",
-		step: 5,
-	},
-	delivered: {
-		label: "تم التسليم",
-		color: "bg-green-100 text-green-800 border-green-200",
-		icon: "✅",
-		step: 6,
-	},
-	completed: {
-		label: "مكتمل",
-		color: "bg-green-200 text-green-900 border-green-300",
-		icon: "✨",
-		step: 7,
-	},
-	cancelled: {
-		label: "ملغي",
-		color: "bg-red-100 text-red-800 border-red-200",
-		icon: "❌",
-		step: -1,
-	},
+	documents_verification: { label: "التحقق من المستندات", value: "documents_verification" },
+	regulatory_inspection: { label: "فحص الجهات الرقابية", value: "regulatory_inspection" },
+	payment_cleared: { label: "تم السداد", value: "payment_cleared" },
+	goods_loaded: { label: "تم التحميل", value: "goods_loaded" },
+	in_transit: { label: "في الطريق", value: "in_transit" },
+	delivered: { label: "تم التسليم", value: "delivered" },
+	completed: { label: "مكتمل", value: "completed" },
+	cancelled: { label: "ملغي", value: "cancelled" },
 };
 
-const ExportShipmentsPage = () => {
+export default function ExportShipmentsPage() {
 	const navigate = useNavigate();
-	const [loading, setLoading] = useState(true);
+	const { isDarkMode } = useTheme();
+	const [searchTerm, setSearchTerm] = useState("");
+	const [isFilterOpen, setIsFilterOpen] = useState(false);
+	const [isSortOpen, setIsSortOpen] = useState(false);
 	const [shipments, setShipments] = useState([]);
-	const [filteredShipments, setFilteredShipments] = useState([]);
-	const [statusFilter, setStatusFilter] = useState("all");
-	const [searchQuery, setSearchQuery] = useState("");
-	const [sortBy, setSortBy] = useState("newest");
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
+	const [selectedStatus, setSelectedStatus] = useState("الكل");
+	const [sortOption, setSortOption] = useState("newest");
+
+	// Pagination State
+	const [currentPage, setCurrentPage] = useState(1);
+	const itemsPerPage = 9;
+
+	const token = localStorage.getItem("token");
+
+	// Available shipment statuses for filter
+	const shipmentStatuses = [
+		{ value: "الكل", label: "الكل" },
+		...Object.values(STATUS_CONFIG)
+	];
 
 	// Fetch export shipments
 	const fetchShipments = useCallback(async () => {
 		setLoading(true);
+		setError(null);
 		try {
-			const token = localStorage.getItem("token");
 			if (!token) {
 				toast.error("يجب تسجيل الدخول أولاً");
 				navigate("/login");
@@ -88,357 +63,283 @@ const ExportShipmentsPage = () => {
 			);
 
 			if (response.data.success) {
-				setShipments(response.data.shipments || []);
+				const formattedShipments = (response.data.shipments || []).map((shipment) => ({
+					id: shipment._id,
+					type: "export",
+					shipmentNo: shipment.shipmentNumber || `شحنة #${shipment._id.slice(-6)}`,
+					clientName: shipment.destinationCountry || "وجهة غير محددة", // Display Destination as Client/Primary Info
+					portName: shipment.destinationPort || "—",
+					status: STATUS_CONFIG[shipment.currentStatus]?.label || shipment.currentStatus,
+					ucr: shipment.ucrNumber || shipment.ucrRequestId?.ucrNumber || "—",
+					link: `/export-shipment/${shipment._id}`,
+					createdAt: shipment.createdAt,
+					date: new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
+						day: "numeric",
+						month: "long",
+						year: "numeric",
+					}),
+				}));
+				setShipments(formattedShipments);
 			}
-		} catch (error) {
-			console.error("Error fetching export shipments:", error);
-			if (error.response?.status === 401) {
+		} catch (err) {
+			console.error("Error fetching export shipments:", err);
+			if (err.response?.status === 401) {
 				toast.error("انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى");
 				navigate("/login");
 			} else {
-				toast.error("فشل في جلب الشحنات");
+				setError(err.response?.data?.message || "فشل في جلب الشحنات");
 			}
 		} finally {
 			setLoading(false);
 		}
-	}, [navigate]);
+	}, [navigate, token]);
 
 	useEffect(() => {
 		fetchShipments();
 	}, [fetchShipments]);
 
-	// Filter and sort shipments
-	useEffect(() => {
-		let result = [...shipments];
+	const toggleFilter = () => { setIsFilterOpen(!isFilterOpen); setIsSortOpen(false); };
+	const toggleSort = () => { setIsSortOpen(!isSortOpen); setIsFilterOpen(false); };
 
-		// Apply status filter
-		if (statusFilter !== "all") {
-			result = result.filter((shipment) => shipment.currentStatus === statusFilter);
+	// Filter and Sort Logic
+	let filteredShipments = shipments.filter((shipment) => {
+		const matchesSearch = 
+			shipment.shipmentNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			shipment.ucr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			shipment.clientName.toLowerCase().includes(searchTerm.toLowerCase()); // clientName is destination here
+		
+		const matchesStatus = selectedStatus === "الكل" || shipment.status === STATUS_CONFIG[selectedStatus]?.label || shipment.status === selectedStatus;
+		
+		// Note: The comparison above is tricky because shipment.status is already the LABEL.
+		// STATUS_CONFIG keys are 'in_transit' etc.
+		// If selectedStatus is 'in_transit', we need to check if shipment.status === "في الطريق".
+		
+		// Correction:
+		const selectedLabel = STATUS_CONFIG[selectedStatus]?.label;
+		const statusCheck = selectedStatus === "الكل" || shipment.status === selectedLabel;
+
+		return matchesSearch && statusCheck;
+	});
+
+	filteredShipments = [...filteredShipments].sort((a, b) => {
+		switch (sortOption) {
+			case "newest": return new Date(b.createdAt) - new Date(a.createdAt);
+			case "oldest": return new Date(a.createdAt) - new Date(b.createdAt);
+			default: return 0;
 		}
+	});
 
-		// Apply search filter
-		if (searchQuery) {
-			const query = searchQuery.toLowerCase();
-			result = result.filter(
-				(shipment) =>
-					shipment.shipmentNumber?.toLowerCase().includes(query) ||
-					shipment.destinationCountry?.toLowerCase().includes(query) ||
-					shipment.destinationPort?.toLowerCase().includes(query) ||
-					shipment.ucrRequestId?.ucrNumber?.toLowerCase().includes(query)
-			);
-		}
+	// Pagination Logic
+	const totalPages = Math.ceil(filteredShipments.length / itemsPerPage);
+	const indexOfLastItem = currentPage * itemsPerPage;
+	const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+	const currentItems = filteredShipments.slice(indexOfFirstItem, indexOfLastItem);
 
-		// Apply sorting
-		result.sort((a, b) => {
-			if (sortBy === "newest") {
-				return new Date(b.createdAt) - new Date(a.createdAt);
-			} else if (sortBy === "oldest") {
-				return new Date(a.createdAt) - new Date(b.createdAt);
-			}
-			return 0;
-		});
-
-		setFilteredShipments(result);
-	}, [shipments, statusFilter, searchQuery, sortBy]);
-
-	// Format date
-	const formatDate = (dateStr) => {
-		if (!dateStr) return "—";
-		return new Date(dateStr).toLocaleDateString("ar-EG", {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
-	};
-
-	// Get status count
-	const getStatusCount = (status) => {
-		if (status === "all") return shipments.length;
-		return shipments.filter((s) => s.currentStatus === status).length;
-	};
-
-	// Get active shipments (not completed or cancelled)
-	const activeShipments = shipments.filter(
-		(s) => !["completed", "cancelled"].includes(s.currentStatus)
-	);
+	const paginate = (pageNumber) => setCurrentPage(pageNumber);
+	const nextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+	const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
 
 	return (
-		<div className="min-h-screen flex flex-col bg-gray-50" dir="rtl">
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#0a0505]" : "bg-gray-50"}`}>
+			
+			{/* Animated Background */}
+			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+				{isDarkMode ? (
+					<>
+						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#690000]/10 rounded-full filter blur-[100px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#2b0000]/20 rounded-full filter blur-[120px] animate-float-slow"></div>
+					</>
+				) : (
+					<div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-red-50/50 to-transparent"></div>
+				)}
+			</div>
+
 			<Header />
-
-			<BackgroundContainer>
-				<FormContainer title="شحناتي التصديرية">
+			
+			<section className="flex-grow w-full pt-24 pb-12 px-4 md:px-8 relative z-10">
+				<div className="max-w-7xl mx-auto">
 					{/* Header Section */}
-					<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-						<div className="flex items-center gap-3">
-							<span className="text-3xl">📦</span>
-							<div>
-								<p className="text-gray-600">
-									تتبع شحنات التصدير الخاصة بك
-								</p>
-								<p className="text-sm text-gray-500">
-									{activeShipments.length} شحنة نشطة من أصل {shipments.length}
-								</p>
-							</div>
-						</div>
+					<div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-red-800"}`}>
+							<Globe className={isDarkMode ? "text-blue-500" : "text-red-800"} size={32} />
+							شحناتي التصديرية
+							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-red-100 text-red-800"}`}>
+								{filteredShipments.length} شحنة
+							</span>
+						</h1>
 					</div>
 
-					{/* Quick Stats */}
-					<div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-						<div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-							<div className="flex items-center gap-2">
-								<span className="text-2xl">📄</span>
-								<div>
-									<p className="text-xs text-blue-600">قيد المعالجة</p>
-									<p className="text-xl font-bold text-blue-800">
-										{getStatusCount("documents_verification") +
-											getStatusCount("regulatory_inspection")}
-									</p>
-								</div>
-							</div>
+					{/* 🔍 Search + Filter + Sort */}
+					<div className={`mb-10 p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 shadow-lg border relative z-20 ${
+						isDarkMode ? "bg-[#1a1010]/80 backdrop-blur-xl border-white/10" : "bg-white/80 backdrop-blur-xl border-white/40"
+					}`}>
+						{/* Search Bar */}
+						<div className="relative flex-1 w-full">
+							<input
+								type="text"
+								placeholder="ابحث برقم الشحنة، UCR، أو الوجهة..."
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								className={`w-full rounded-xl py-3 px-4 pr-12 focus:outline-none focus:ring-2 transition-all ${
+									isDarkMode 
+										? "bg-black/30 border-white/10 text-white placeholder-gray-500 focus:ring-blue-500/50" 
+										: "bg-gray-100 border-transparent text-gray-900 placeholder-gray-400 focus:ring-red-500/30"
+								}`}
+							/>
+							<Search className={`absolute left-4 top-3.5 w-5 h-5 ${isDarkMode ? "text-gray-500" : "text-gray-400"}`} />
 						</div>
-						<div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-							<div className="flex items-center gap-2">
-								<span className="text-2xl">💰</span>
-								<div>
-									<p className="text-xs text-yellow-600">في انتظار السداد</p>
-									<p className="text-xl font-bold text-yellow-800">
-										{getStatusCount("payment_cleared")}
-									</p>
-								</div>
-							</div>
-						</div>
-						<div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
-							<div className="flex items-center gap-2">
-								<span className="text-2xl">🚢</span>
-								<div>
-									<p className="text-xs text-cyan-600">في الطريق</p>
-									<p className="text-xl font-bold text-cyan-800">
-										{getStatusCount("goods_loaded") + getStatusCount("in_transit")}
-									</p>
-								</div>
-							</div>
-						</div>
-						<div className="bg-green-50 p-4 rounded-lg border border-green-200">
-							<div className="flex items-center gap-2">
-								<span className="text-2xl">✨</span>
-								<div>
-									<p className="text-xs text-green-600">مكتمل</p>
-									<p className="text-xl font-bold text-green-800">
-										{getStatusCount("delivered") + getStatusCount("completed")}
-									</p>
-								</div>
-							</div>
-						</div>
-					</div>
 
-					{/* Filters */}
-					<div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							{/* Search */}
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									بحث
-								</label>
-								<input
-									type="text"
-									value={searchQuery}
-									onChange={(e) => setSearchQuery(e.target.value)}
-									placeholder="رقم الشحنة، الوجهة..."
-									className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-red-500 focus:border-red-500"
-								/>
-							</div>
+						{/* Buttons */}
+						<div className="flex items-center gap-3 w-full md:w-auto">
+							<button onClick={toggleFilter} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+								isFilterOpen || isDarkMode ? "bg-red-600 text-white hover:bg-red-700" : "bg-red-50 text-red-800 hover:bg-red-100"
+							}`}>
+								<Filter size={20} />
+								<span className="hidden sm:inline">تصفية</span>
+							</button>
+							<button onClick={toggleSort} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+								isSortOpen || isDarkMode ? "bg-[#2b1515] text-red-400 border border-red-900/30 hover:bg-[#3d1a1a]" : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+							}`}>
+								<SortAsc size={20} />
+								<span className="hidden sm:inline">ترتيب</span>
+							</button>
+						</div>
 
-							{/* Status Filter */}
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									الحالة
-								</label>
-								<select
-									value={statusFilter}
-									onChange={(e) => setStatusFilter(e.target.value)}
-									className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-red-500 focus:border-red-500"
-								>
-									<option value="all">الكل ({getStatusCount("all")})</option>
-									{Object.entries(STATUS_CONFIG).map(([key, config]) => (
-										<option key={key} value={key}>
-											{config.icon} {config.label} ({getStatusCount(key)})
-										</option>
+						{/* Filter Dropdown */}
+						{isFilterOpen && (
+							<div className={`absolute top-full left-0 mt-2 w-64 p-4 rounded-xl shadow-2xl border z-30 ${isDarkMode ? "bg-[#1e1e1e] border-white/10 text-gray-200" : "bg-white border-gray-100 text-gray-700"}`} dir="rtl">
+								<h4 className="font-bold mb-3 text-sm opacity-70">تصفية حسب الحالة</h4>
+								<div className="max-h-60 overflow-y-auto space-y-1">
+									{shipmentStatuses.map((status) => (
+										<button
+											key={status.value}
+											onClick={() => { setSelectedStatus(status.value); setIsFilterOpen(false); }}
+											className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
+												selectedStatus === status.value 
+													? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-50 text-red-800")
+													: "hover:bg-gray-500/10"
+											}`}
+										>
+											{status.label}
+										</button>
 									))}
-								</select>
+								</div>
 							</div>
+						)}
 
-							{/* Sort */}
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									ترتيب حسب
-								</label>
-								<select
-									value={sortBy}
-									onChange={(e) => setSortBy(e.target.value)}
-									className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-red-500 focus:border-red-500"
-								>
-									<option value="newest">الأحدث أولاً</option>
-									<option value="oldest">الأقدم أولاً</option>
-								</select>
+						{/* Sort Dropdown */}
+						{isSortOpen && (
+							<div className={`absolute top-full left-32 mt-2 w-56 p-4 rounded-xl shadow-2xl border z-30 ${isDarkMode ? "bg-[#1e1e1e] border-white/10 text-gray-200" : "bg-white border-gray-100 text-gray-700"}`} dir="rtl">
+								<h4 className="font-bold mb-3 text-sm opacity-70">ترتيب حسب</h4>
+								{[
+									{ v: "newest", l: "الأحدث أولاً" },
+									{ v: "oldest", l: "الأقدم أولاً" }
+								].map((opt) => (
+									<button
+										key={opt.v}
+										onClick={() => { setSortOption(opt.v); setIsSortOpen(false); }}
+										className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
+											sortOption === opt.v
+												? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-50 text-red-800")
+												: "hover:bg-gray-500/10"
+										}`}
+									>
+										{opt.l}
+									</button>
+								))}
 							</div>
-						</div>
+						)}
 					</div>
 
-					{/* Shipments List */}
+					{/* 📦 Shipments Grid */}
 					{loading ? (
-						<div className="flex justify-center items-center py-12">
-							<LoadingSpinner />
+						<div className="flex flex-col items-center justify-center py-20">
+							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4"></div>
+							<p className={isDarkMode ? "text-gray-400" : "text-gray-600"}>جاري تحميل شحنات الصادر...</p>
+						</div>
+					) : error ? (
+						<div className={`bg-red-50 border border-red-300 rounded-lg p-4 text-right ${isDarkMode ? "bg-red-900/20 border-red-700" : ""}`}>
+							<p className={`font-medium mb-3 flex items-center gap-2 ${isDarkMode ? "text-red-400" : "text-red-800"}`}>
+								<AlertCircle size={20} /> حدث خطأ: {error}
+							</p>
+							<button onClick={() => fetchShipments()} className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-700 transition">
+								إعادة محاولة
+							</button>
 						</div>
 					) : filteredShipments.length === 0 ? (
-						<div className="text-center py-12">
-							<span className="text-5xl mb-4 block">📭</span>
-							<p className="text-gray-600 mb-4">
-								{shipments.length === 0
-									? "لا توجد شحنات تصديرية بعد"
-									: "لا توجد شحنات تطابق معايير البحث"}
-							</p>
-							{shipments.length === 0 && (
-								<p className="text-sm text-gray-500">
-									ستظهر الشحنات هنا بعد الموافقة على طلبات UCR الخاصة بك
-								</p>
-							)}
+						<div className={`text-center py-20 rounded-3xl border border-dashed ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+							<div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${isDarkMode ? "bg-white/5" : "bg-gray-50"}`}>
+								<Inbox className={isDarkMode ? "text-gray-600" : "text-gray-300"} size={40} />
+							</div>
+							<h3 className={`text-xl font-bold mb-2 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>لا توجد شحنات تصديرية</h3>
+							<p className="text-gray-500">لم يتم العثور على شحنات تطابق بحثك</p>
 						</div>
 					) : (
-						<div className="space-y-4">
-							{filteredShipments.map((shipment) => {
-								const statusConfig =
-									STATUS_CONFIG[shipment.currentStatus] || STATUS_CONFIG.documents_verification;
+						<>
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+								{currentItems.map((shipment) => (
+									<ShipmentCard key={shipment.id} shipment={shipment} />
+								))}
+							</div>
 
-								return (
-									<div
-										key={shipment._id}
-										className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+							{/* Pagination Controls */}
+							{totalPages > 1 && (
+								<div className="flex justify-center items-center gap-4 mt-8" dir="ltr">
+									<button
+										onClick={prevPage}
+										disabled={currentPage === 1}
+										className={`p-2 rounded-full transition-colors ${
+											currentPage === 1 
+												? (isDarkMode ? "text-gray-600 cursor-not-allowed" : "text-gray-300 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-700")
+										}`}
 									>
-										<div className="p-4">
-											{/* Header */}
-											<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-3">
-												<div className="flex items-center gap-3">
-													<span className="text-xl">
-														{shipment.shippingMethod === "air" ? "✈️" : "🚢"}
-													</span>
-													<div>
-														<h3 className="font-bold text-gray-800">
-															{shipment.shipmentNumber ||
-																`شحنة #${shipment._id.slice(-6)}`}
-														</h3>
-														<p className="text-sm text-gray-500">
-															{formatDate(shipment.createdAt)}
-														</p>
-													</div>
-												</div>
-												<span
-													className={`px-3 py-1 text-sm rounded-full border ${statusConfig.color}`}
-												>
-													{statusConfig.icon} {statusConfig.label}
-												</span>
-											</div>
-
-											{/* Progress Bar */}
-											<div className="mb-4">
-												<div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-													<div
-														className="h-full bg-gradient-to-l from-green-500 to-green-400 transition-all duration-500"
-														style={{
-															width: `${Math.max(
-																(statusConfig.step / 7) * 100,
-																5
-															)}%`,
-														}}
-													/>
-												</div>
-												<div className="flex justify-between text-xs text-gray-500 mt-1">
-													<span>بداية</span>
-													<span>{Math.round((statusConfig.step / 7) * 100)}%</span>
-													<span>مكتمل</span>
-												</div>
-											</div>
-
-											{/* Details */}
-											<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-												<div>
-													<p className="text-xs text-gray-500">الوجهة</p>
-													<p className="font-medium">
-														{shipment.destinationCountry || "—"}
-													</p>
-												</div>
-												<div>
-													<p className="text-xs text-gray-500">الميناء/المطار</p>
-													<p className="font-medium">
-														{shipment.destinationPort || "—"}
-													</p>
-												</div>
-												<div>
-													<p className="text-xs text-gray-500">رقم UCR</p>
-													<p className="font-medium text-blue-600">
-														{shipment.ucrRequestId?.ucrNumber || "—"}
-													</p>
-												</div>
-												<div>
-													<p className="text-xs text-gray-500">شهادة المنشأ</p>
-													<p className="font-medium">
-														{shipment.certificateOfOriginStatus === "issued" ? (
-															<span className="text-green-600">✅ صادرة</span>
-														) : shipment.certificateOfOriginStatus === "pending" ? (
-															<span className="text-yellow-600">⏳ قيد الإصدار</span>
-														) : shipment.certificateOfOriginStatus === "not_required" ? (
-															<span className="text-gray-400">غير مطلوبة</span>
-														) : (
-															<span className="text-gray-400">—</span>
-														)}
-													</p>
-												</div>
-											</div>
-
-											{/* Sea Shipment Container Info */}
-											{shipment.shippingMethod === "sea" &&
-												shipment.containerWeights &&
-												shipment.containerWeights.length > 0 && (
-													<div className="bg-blue-50 p-2 rounded mb-3 text-sm">
-														<span className="text-blue-700">
-															🚢 {shipment.containersCount || shipment.containerWeights.length} حاوية
-														</span>
-													</div>
-												)}
-
-											{/* Actions */}
-											<div className="flex justify-end gap-2 border-t pt-3">
-												<button
-													onClick={() =>
-														navigate(`/export-shipment/${shipment._id}`)
-													}
-													className="px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-50 rounded transition-colors"
-												>
-													عرض التفاصيل
-												</button>
-												{shipment.ucrRequestId?._id && (
-													<button
-														onClick={() =>
-															navigate(`/ucr-request/${shipment.ucrRequestId._id}`)
-														}
-														className="px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 rounded transition-colors"
-													>
-														عرض UCR
-													</button>
-												)}
-											</div>
-										</div>
+										<ChevronLeft size={24} />
+									</button>
+									
+									<div className={`px-4 py-2 rounded-lg font-medium ${isDarkMode ? "bg-white/5 text-gray-300" : "bg-gray-100 text-gray-700"}`}>
+										Page {currentPage} of {totalPages}
 									</div>
-								);
-							})}
-						</div>
+
+									<button
+										onClick={nextPage}
+										disabled={currentPage === totalPages}
+										className={`p-2 rounded-full transition-colors ${
+											currentPage === totalPages 
+												? (isDarkMode ? "text-gray-600 cursor-not-allowed" : "text-gray-300 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-700")
+										}`}
+									>
+										<ChevronRight size={24} />
+									</button>
+								</div>
+							)}
+						</>
 					)}
-				</FormContainer>
-			</BackgroundContainer>
+				</div>
+			</section>
 
 			<Footer />
 		</div>
 	);
-};
+}
 
-export default ExportShipmentsPage;
+function Inbox({ className, size }) {
+	return (
+		<svg 
+			xmlns="http://www.w3.org/2000/svg" 
+			width={size} 
+			height={size} 
+			viewBox="0 0 24 24" 
+			fill="none" 
+			stroke="currentColor" 
+			strokeWidth="2" 
+			strokeLinecap="round" 
+			strokeLinejoin="round" 
+			className={className}
+		>
+			<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline>
+			<path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+		</svg>
+	);
+}

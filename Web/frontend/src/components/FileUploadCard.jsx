@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 
 const FileUploadCard = ({
 	selectedFile,
@@ -13,6 +13,20 @@ const FileUploadCard = ({
 	maxSizeMB = 10,
 	required = false,
 }) => {
+	// Create a local preview URL for the selected file
+	const localPreviewUrl = useMemo(() => {
+		if (selectedFile && !uploadedFile) {
+			return URL.createObjectURL(selectedFile);
+		}
+		return null;
+	}, [selectedFile, uploadedFile]);
+
+	// Handle local file preview
+	const handleLocalPreview = () => {
+		if (localPreviewUrl) {
+			window.open(localPreviewUrl, "_blank");
+		}
+	};
 	return (
 		<div
 			className={`border-2 rounded-lg p-4 mb-6 transition-all ${
@@ -39,7 +53,8 @@ const FileUploadCard = ({
 
 				{selectedFile || uploadedFile ? (
 					<div className="flex gap-2">
-						{uploadedFile && (
+						{/* Preview button - works for both uploaded and locally selected files */}
+						{uploadedFile ? (
 							<button
 								type="button"
 								onClick={onViewDocument}
@@ -47,7 +62,15 @@ const FileUploadCard = ({
 							>
 								👁️ عرض
 							</button>
-						)}
+						) : selectedFile && localPreviewUrl ? (
+							<button
+								type="button"
+								onClick={handleLocalPreview}
+								className="btn btn-sm btn-info text-white"
+							>
+								👁️ معاينة
+							</button>
+						) : null}
 						<button
 							type="button"
 							onClick={onDeleteUpload}

@@ -3,25 +3,26 @@ package noran.desktop.models;
 import javafx.beans.property.*;
 
 public class InvoiceItem {
-    private final SimpleStringProperty description; // الوصف
-    private final SimpleDoubleProperty price;       // السعر
-    private final SimpleStringProperty date;        // الحالة or التاريخ
+    private final StringProperty description;
+    private final DoubleProperty price;
+    private final StringProperty currency; // "EGP" or "USD"
+    private final StringProperty type; // "Manual"
 
-    public InvoiceItem(String description, double price, String date) {
+    public InvoiceItem(String description, double price, String currency, String type) {
         this.description = new SimpleStringProperty(description);
         this.price = new SimpleDoubleProperty(price);
-        this.date = new SimpleStringProperty(date);
+        this.currency = new SimpleStringProperty(currency);
+        this.type = new SimpleStringProperty(type);
     }
 
     public String getDescription() { return description.get(); }
-    public void setDescription(String desc) { description.set(desc); }
-    public SimpleStringProperty descriptionProperty() { return description; }
+    public StringProperty descriptionProperty() { return description; }
 
     public double getPrice() { return price.get(); }
-    public void setPrice(double p) { price.set(p); }
-    public SimpleDoubleProperty priceProperty() { return price; }
+    public DoubleProperty priceProperty() { return price; }
 
-    public String getDate() { return date.get(); }
-    public void setDate(String d) { date.set(d); }
-    public SimpleStringProperty dateProperty() { return date; }
+    public String getCurrency() { return currency.get(); }
+    public StringProperty currencyProperty() { return currency; }
+
+    public String getType() { return type.get(); }
 }

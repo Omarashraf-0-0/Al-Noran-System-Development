@@ -95,6 +95,7 @@ const uploadFile = async (req, res) => {
 			"archive",
 			"ucr_request",
 			"payment",
+			"export_shipment",
 		];
 		if (!validCategories.includes(category)) {
 			console.log("❌ Invalid category:", category);
@@ -106,7 +107,7 @@ const uploadFile = async (req, res) => {
 		}
 
 		// Validate relatedId for specific categories
-		if (["acid", "shipment", "invoice"].includes(category) && !relatedId) {
+		if (["acid", "shipment", "invoice", "export_shipment"].includes(category) && !relatedId) {
 			console.log("❌ relatedId required for category:", category);
 			return res.status(400).json({
 				message: `relatedId is required for category: ${category}`,
@@ -123,7 +124,8 @@ const uploadFile = async (req, res) => {
 			clientType = reqClientType || user.clientDetails?.clientType;
 
 			// For registration category, validate required documents
-			if (category === "registration" && !clientType) {
+			// Skip check for profilePhoto as it doesn't depend on client type
+			if (category === "registration" && !clientType && documentType !== "profilePhoto") {
 				console.log("❌ clientType required for registration");
 				return res.status(400).json({
 					message:
