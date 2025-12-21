@@ -1,9 +1,12 @@
 package noran.desktop.Controllers;
 
 import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import noran.desktop.models.Client;
+import java.util.function.Function;
 
 public class ClientPopupController {
 
@@ -12,10 +15,17 @@ public class ClientPopupController {
     @FXML private TextField ssnField;
     @FXML private TextField phoneField;
     @FXML private TextField passwordField;
-    @FXML private javafx.scene.control.ComboBox<String> clientTypeField;
+    @FXML private ComboBox<String> clientTypeField;
 
     private Client originalClient;
     private boolean saved = false;
+
+    // Handler function: Takes a Client, returns Boolean (Success/Fail)
+    private Function<Client, Boolean> saveHandler;
+
+    public void setSaveHandler(Function<Client, Boolean> saveHandler) {
+        this.saveHandler = saveHandler;
+    }
 
     public void loadClient(Client client) {
         this.originalClient = client;
@@ -30,6 +40,7 @@ public class ClientPopupController {
 
     @FXML
     private void save() {
+        // Validation
         if (fullnameField.getText().isBlank() ||
                 emailField.getText().isBlank() ||
                 ssnField.getText().isBlank() ||
@@ -37,12 +48,11 @@ public class ClientPopupController {
                 clientTypeField.getValue() == null ||
                 passwordField.getText().isBlank()) {
 
-            System.out.println("❌ Cannot save empty fields.");
+            showAlert("خطأ: يرجى ملء جميع الحقول.");
             return;
         }
 
-        saved = true;
-
+        // Update Model
         originalClient.setFullname(fullnameField.getText());
         originalClient.setEmail(emailField.getText());
         originalClient.setSsn(ssnField.getText());
@@ -50,7 +60,16 @@ public class ClientPopupController {
         originalClient.setClientType(clientTypeField.getValue());
         originalClient.setPassword(passwordField.getText());
 
-        close();
+        // Call Main Controller to Save
+        if (saveHandler != null) {
+            boolean success = saveHandler.apply(originalClient);
+
+            if (success) {
+                saved = true;
+                close(); // ✅ Close ONLY if save was successful
+            }
+            // 🛑 If false, do nothing. The alert is shown by the main controller.
+        }
     }
 
     @FXML
@@ -59,12 +78,14 @@ public class ClientPopupController {
         close();
     }
 
-    public boolean isSaved() {
-        return saved;
-    }
+    public boolean isSaved() { return saved; }
 
     private void close() {
         Stage stage = (Stage) fullnameField.getScene().getWindow();
         stage.close();
+    }
+
+    private void showAlert(String msg) {
+        new Alert(Alert.AlertType.WARNING, msg).show();
     }
 }

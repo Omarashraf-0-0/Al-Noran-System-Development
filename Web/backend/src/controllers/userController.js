@@ -570,11 +570,18 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 		user.phone = phone;
 		user.email = email;
 
-		// Update profile photo if provided
+		// Update profile photo if provided (explicit check for null/empty to allow deletion)
 		if (profilePhoto !== undefined) {
 			console.log("📸 Updating profile photo to:", profilePhoto);
-			user.profilePhoto = profilePhoto;
+			if (profilePhoto === "" || profilePhoto === null) {
+				user.profilePhoto = null;
+			} else {
+				user.profilePhoto = profilePhoto;
+			}
 		}
+
+		// Handle active status (if admin/employee updates their own profile, keep as is unless specified)
+		// Usually profile update doesn't change active status, so we skip it here.
 
 		const updatedUser = await user.save();
 

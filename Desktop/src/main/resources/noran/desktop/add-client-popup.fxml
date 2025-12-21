@@ -7,6 +7,9 @@
 <?import javafx.scene.layout.*?>
 
 <VBox alignment="CENTER" prefHeight="563.0" prefWidth="350.0" spacing="15" style="-fx-padding: 25; -fx-background-color: #f5f5f5; -fx-background-radius: 15; -fx-border-radius: 15;" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.ClientPopupController">
+    <stylesheets>
+        <String fx:value="@combo-style.css" />
+    </stylesheets>
    <ImageView fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true">
       <image>
          <Image url="@images/Untitled%20design%20(10).png" />
