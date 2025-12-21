@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { io } from "socket.io-client";
 
 const NotificationBell = () => {
 	const [notifications, setNotifications] = useState([]);
@@ -9,13 +10,27 @@ const NotificationBell = () => {
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
+	const socketRef = useRef(null);
 
 	// Get token from localStorage
 	const token = localStorage.getItem("token");
 	const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3500";
+	
+	// Safely parse user object
+	let user = {};
+	try {
+		const userStr = localStorage.getItem("user");
+		if (userStr) {
+			user = JSON.parse(userStr);
+		}
+	} catch (e) {
+		console.error("Error parsing user from localStorage:", e);
+	}
 
 	// Fetch notifications from API
 	const fetchNotifications = useCallback(async () => {
+		if (!token) return;
+		
 		try {
 			setLoading(true);
 			const response = await axios.get(`${apiUrl}/api/notifications`, {
@@ -63,16 +78,67 @@ const NotificationBell = () => {
 	}, [apiUrl, token]);
 
 	useEffect(() => {
-		if (!token) return;
+		if (!token || !user._id) {
+			console.log('NotificationBell: No token or user ID available');
+			return;
+		}
+
+		console.log('NotificationBell: Initializing with user:', user._id);
 
 		// Initial fetch
 		fetchNotifications();
 
-		// Poll for new notifications every 30 seconds
-		const interval = setInterval(fetchUnreadCount, 30000);
+		// Connect to Socket.IO
+		const socket = io(apiUrl, {
+			autoConnect: true,
+			reconnection: true,
+			reconnectionDelay: 1000,
+			reconnectionAttempts: 5,
+		});
 
-		return () => clearInterval(interval);
-	}, [token, fetchNotifications, fetchUnreadCount]);
+		socketRef.current = socket;
+
+		// Authenticate user with socket
+		socket.on('connect', () => {
+			console.log('Socket connected for notifications');
+			socket.emit('identify', { odI: user._id, userType: user.role || 'customer' });
+		});
+
+		// Listen for new notifications
+		socket.on('new_notification', (data) => {
+			console.log('New notification received:', data);
+			
+			// Add notification to the list
+			setNotifications(prev => [data.notification, ...prev]);
+			
+			// Update unread count
+			if (!data.notification.read) {
+				setUnreadCount(prev => prev + 1);
+			}
+			
+			// Show toast notification
+			toast.success(data.notification.title, {
+				icon: getNotificationIcon(data.notification.type),
+				duration: 4000,
+			});
+		});
+
+		socket.on('disconnect', () => {
+			console.log('Socket disconnected from notifications');
+		});
+
+		socket.on('connect_error', (error) => {
+			console.error('Socket connection error:', error);
+		});
+
+		// Cleanup on unmount
+		return () => {
+			if (socketRef.current) {
+				socketRef.current.disconnect();
+			}
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [token, user._id, apiUrl]);
 
 	// Handle notification click - delete notification and navigate to notification page
 	const handleNotificationClick = async (notifId) => {

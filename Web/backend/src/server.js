@@ -123,6 +123,10 @@ const { Chat, Message } = require("./models/chat");
 const onlineUsers = new Map(); // Map<socketId, { odI, userType }>
 const userSockets = new Map(); // Map<odI, Set<socketId>>
 
+// Make io globally accessible for notification service
+global.io = io;
+global.userSockets = userSockets;
+
 io.on("connection", (socket) => {
 	console.log(`User connected: ${socket.id}`);
 
