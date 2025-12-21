@@ -3,11 +3,11 @@ it('Login with correct credintials', () => {
     cy.visit('http://localhost:5173/login');
     cy.wait(5000)
     cy.get('#email')
-  .type('ialy24405@gmail.com')
-  .should('have.value', 'ialy24405@gmail.com');
+  .type('ialy24407@gmail.com')
+  .should('have.value', 'ialy24407@gmail.com');
     cy.get('#password')
-  .type('123456')
-  .should('have.value', '123456');
+  .type('111111')
+  .should('have.value', '111111');
     cy.get('button[type="submit"]' ).click();
     // cy.get('.go3958317564').should('contain', "تم تسجيل الدخول بنجاح");
     cy.contains('تم تسجيل الدخول بنجاح', { timeout: 10000 }).should('be.visible');
@@ -30,13 +30,27 @@ it('Login with correct credintials', () => {
 
     cy.get('button[type="submit"]').click();
 
-    cy.contains('فشل تسجيل الدخول. رجاءً تحقق من بياناتك وحاول مرة أخرى.', { timeout: 10000 })
+    cy.contains('البريد الإلكتروني أو كلمة المرور غير صحيحة', { timeout: 10000 })
       .should('be.visible');
       
     // cy.url().should('include', '/login'); 
     // later
   });
 
+  it('test', function() {
+      cy.visit('http://localhost:5173/login')
+      
+      
+      cy.get('#email').click();
+      cy.get('#email').type('ialy24405@gmail.com');
+      cy.get('#password').type('111111');
+      cy.get('#root button.w-full').click();
+      cy.get('#root div.go3958317564').should('be.visible')
+      cy.get('#root img.rounded-full').click();
+      cy.get('#root a.px-4').click();
+     })
+
+});
 
 
-})
+     

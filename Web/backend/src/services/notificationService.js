@@ -725,6 +725,34 @@ const notifyChatMessage = async (userId, chatId, senderName) => {
 	});
 };
 
+
+
+
+const getEmployeeNotificationsById = async (employeeId) => {
+	try {
+		if (!employeeId) {
+			throw new Error("employeeId is required");
+		}
+
+		const notifications = await Notification.find({ userId: employeeId })
+			.sort({ createdAt: -1 }); // latest first
+
+		console.log(`📬 [NotificationService] Fetched ${notifications.length} notifications for employee: ${employeeId}`);
+
+		// ✅ ALWAYS return array
+		return notifications;
+
+	} catch (error) {
+		console.error(
+			"❌ [NotificationService] Error fetching notifications:",
+			error.message
+		);
+		throw error;
+	}
+};
+
+
+
 // =====================================================
 // EXPORTS
 // =====================================================
@@ -749,6 +777,8 @@ module.exports = {
 	notifyShipmentDocumentsRequested,
 	notifyUCRStatus,
 	notifyChatMessage,
+
+	getEmployeeNotificationsById,
 	
 	// Templates (for reference)
 	NOTIFICATION_TEMPLATES,
