@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
-import '../../core/widgets/widgets.dart';
-import '../../theme/theme.dart';
+import '../../core/widgets/enhanced_popups.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;
@@ -68,70 +67,124 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.primary.withValues(alpha: 0.08),
-              AppColors.background,
-              AppColors.background,
-            ],
-            stops: const [0.0, 0.3, 1.0],
+      body: Stack(
+        children: [
+          // ============= PREMIUM GRADIENT BACKGROUND =============
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF690000),
+                  Color(0xFF8B0000),
+                  Color(0xFF4A0000),
+                ],
+                stops: [0.0, 0.5, 1.0],
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Padding(
-                  padding: AppSpacing.paddingHorizontalLG,
-                  child: Column(
-                    children: [
-                      AppSpacing.gapVerticalSM,
 
-                      // Back Button - على الشمال ويبص للشمال
-                      _buildBackButton(),
+          // ============= DECORATIVE CIRCLES =============
+          Positioned(
+            top: -80,
+            right: -60,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -100,
+            left: -80,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
 
-                      AppSpacing.gapVerticalXL,
+          // ============= GOLDEN ACCENT LINE =============
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 3,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Color(0xFFD4AF37),
+                    Color(0xFFF5E7A3),
+                    Color(0xFFD4AF37),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
 
-                      // Icon
-                      _buildIcon(),
+          // ============= MAIN CONTENT =============
+          SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
 
-                      AppSpacing.gapVerticalLG,
+                        // Back Button
+                        _buildBackButton(),
 
-                      // Title & Description
-                      _buildHeader(),
+                        const SizedBox(height: 32),
 
-                      AppSpacing.gapVerticalXL,
+                        // Icon
+                        _buildIcon(),
 
-                      // Form Card
-                      _buildFormCard(),
+                        const SizedBox(height: 24),
 
-                      AppSpacing.gapVerticalMD,
+                        // Title & Description
+                        _buildHeader(),
 
-                      // Password Requirements
-                      _buildPasswordRequirements(),
+                        const SizedBox(height: 32),
 
-                      AppSpacing.gapVerticalXL,
-                    ],
+                        // Form Card
+                        _buildFormCard(),
+
+                        const SizedBox(height: 20),
+
+                        // Password Requirements
+                        _buildPasswordRequirements(),
+
+                        const SizedBox(height: 40),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  // ============= BACK BUTTON =============
+  // ============= PREMIUM BACK BUTTON =============
   Widget _buildBackButton() {
     return Align(
       alignment: Alignment.centerLeft,
@@ -139,23 +192,20 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
         color: Colors.transparent,
         child: InkWell(
           onTap: () => context.pop(),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           child: Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                width: 1.5,
+              ),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.arrow_forward_rounded,
-              color: AppColors.primary,
+              color: Colors.white,
               size: 24,
             ),
           ),
@@ -164,7 +214,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
     );
   }
 
-  // ============= ICON =============
+  // ============= PREMIUM ICON WITH GOLD RING =============
   Widget _buildIcon() {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
@@ -177,20 +227,35 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: Colors.white,
               shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFF5E7A3),
+                  Color(0xFFD4AF37),
+                ],
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  blurRadius: 30,
-                  spreadRadius: 5,
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                  blurRadius: 25,
+                  spreadRadius: 3,
                 ),
               ],
             ),
-            child: Icon(
-              Icons.lock_reset_rounded,
-              size: 60,
-              color: AppColors.primary,
+            child: Container(
+              margin: const EdgeInsets.all(5),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF690000),
+              ),
+              child: const Icon(
+                Icons.lock_reset_rounded,
+                size: 55,
+                color: Color(0xFFD4AF37),
+              ),
             ),
           ),
         );
@@ -198,44 +263,95 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
     );
   }
 
-  // ============= HEADER =============
+  // ============= PREMIUM HEADER WITH GOLD TEXT =============
   Widget _buildHeader() {
     return Column(
       children: [
-        Text(
-          'تعيين كلمة مرور جديدة',
-          style: AppTypography.h1.copyWith(
-            color: AppColors.primary,
-            fontSize: 28,
+        ShaderMask(
+          shaderCallback:
+              (bounds) => const LinearGradient(
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFF5E7A3),
+                  Color(0xFFD4AF37),
+                ],
+              ).createShader(bounds),
+          child: const Text(
+            'تعيين كلمة مرور جديدة',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+            textAlign: TextAlign.center,
           ),
         ),
-        AppSpacing.gapVerticalXS,
+        const SizedBox(height: 12),
         Text(
           'أدخل كلمة مرور قوية لحسابك',
-          style: AppTypography.body.copyWith(color: AppColors.textLight),
+          style: TextStyle(
+            fontSize: 15,
+            color: Colors.white.withValues(alpha: 0.8),
+            height: 1.5,
+          ),
+          textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
-  // ============= FORM CARD =============
+  // ============= PREMIUM FORM CARD =============
   Widget _buildFormCard() {
     return Container(
-      padding: AppSpacing.paddingLG,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: AppSpacing.borderRadiusLG,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Premium badge
+          Container(
+            margin: const EdgeInsets.only(bottom: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF690000).withValues(alpha: 0.1),
+                  const Color(0xFFD4AF37).withValues(alpha: 0.1),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+              ),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.shield_rounded, size: 18, color: Color(0xFF690000)),
+                SizedBox(width: 8),
+                Text(
+                  'كلمة مرور محمية',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF690000),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           // Password Field
           _buildLabeledTextField(
             label: 'كلمة المرور الجديدة',
@@ -249,7 +365,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
             prefixIcon: Icons.lock_rounded,
           ),
 
-          AppSpacing.gapVerticalMD,
+          const SizedBox(height: 20),
 
           // Confirm Password Field
           _buildLabeledTextField(
@@ -266,21 +382,16 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
             prefixIcon: Icons.lock_rounded,
           ),
 
-          AppSpacing.gapVerticalLG,
+          const SizedBox(height: 28),
 
-          // Submit Button
-          AppPrimaryButton(
-            text: 'تأكيد',
-            onPressed: _resetPassword,
-            isLoading: _isLoading,
-            icon: Icons.check_circle_rounded,
-          ),
+          // Premium Submit Button
+          _buildPremiumSubmitButton(),
         ],
       ),
     );
   }
 
-  // ============= LABELED TEXT FIELD =============
+  // ============= PREMIUM TEXT FIELD =============
   Widget _buildLabeledTextField({
     required String label,
     required TextEditingController controller,
@@ -292,46 +403,65 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // Label خارج الـ TextField
+        // Label with gold accent
         Padding(
-          padding: const EdgeInsets.only(bottom: 8, right: 4),
-          child: Text(
-            label,
-            style: AppTypography.body.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
+          padding: const EdgeInsets.only(bottom: 10, right: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF690000),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFD4AF37), Color(0xFFF5E7A3)],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  prefixIcon ?? Icons.lock_rounded,
+                  size: 14,
+                  color: const Color(0xFF690000),
+                ),
+              ),
+            ],
           ),
         ),
 
         // TextField
         Container(
           decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: AppSpacing.borderRadiusMD,
+            color: const Color(0xFFF8F8F8),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color:
                   controller.text.isNotEmpty
-                      ? AppColors.primary.withValues(alpha: 0.3)
-                      : AppColors.greyBorder,
+                      ? const Color(0xFFD4AF37)
+                      : const Color(0xFFD4AF37).withValues(alpha: 0.3),
+              width: controller.text.isNotEmpty ? 2 : 1.5,
             ),
           ),
           child: TextField(
             controller: controller,
             obscureText: isPassword ? obscureText : false,
-            style: AppTypography.body.copyWith(color: AppColors.textDark),
+            style: const TextStyle(fontSize: 16, color: Color(0xFF2D2D2D)),
             decoration: InputDecoration(
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 16,
               ),
-              // Icon على اليمين في RTL (قبل النص)
-              prefixIcon:
-                  prefixIcon != null
-                      ? Icon(prefixIcon, color: AppColors.primary, size: 22)
-                      : null,
-              // Toggle visibility على الشمال في RTL (بعد النص)
+              hintText: label,
+              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+              // Toggle visibility
               suffixIcon:
                   isPassword
                       ? IconButton(
@@ -339,7 +469,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
                           obscureText
                               ? Icons.visibility_off_rounded
                               : Icons.visibility_rounded,
-                          color: AppColors.textGrey,
+                          color: const Color(0xFF690000),
                           size: 22,
                         ),
                         onPressed: onToggleVisibility,
@@ -353,20 +483,79 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
     );
   }
 
-  // ============= PASSWORD REQUIREMENTS =============
+  // ============= PREMIUM SUBMIT BUTTON =============
+  Widget _buildPremiumSubmitButton() {
+    return SizedBox(
+      height: 56,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _resetPassword,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF690000), Color(0xFF8B0000), Color(0xFF690000)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF690000).withValues(alpha: 0.4),
+                blurRadius: 15,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Container(
+            alignment: Alignment.center,
+            child:
+                _isLoading
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                    : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_rounded, color: Colors.white),
+                        SizedBox(width: 10),
+                        Text(
+                          'تأكيد',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============= PREMIUM PASSWORD REQUIREMENTS =============
   Widget _buildPasswordRequirements() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -374,22 +563,38 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text(
-                'متطلبات كلمة المرور',
-                style: AppTypography.body.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+              ShaderMask(
+                shaderCallback:
+                    (bounds) => const LinearGradient(
+                      colors: [Color(0xFFD4AF37), Color(0xFFF5E7A3)],
+                    ).createShader(bounds),
+                child: const Text(
+                  'متطلبات كلمة المرور',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 15,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                Icons.info_outline_rounded,
-                color: AppColors.primary,
-                size: 20,
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFD4AF37), Color(0xFFF5E7A3)],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.info_outline_rounded,
+                  color: Color(0xFF690000),
+                  size: 16,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           _buildRequirement(
             '6 أرقام على الأقل',
             _passwordController.text.length >= 6,
@@ -407,16 +612,33 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
         children: [
           Text(
             text,
-            style: AppTypography.small.copyWith(
-              color: isMet ? Colors.green : AppColors.textGrey,
+            style: TextStyle(
+              fontSize: 14,
+              color:
+                  isMet
+                      ? const Color(0xFF4CAF50)
+                      : Colors.white.withValues(alpha: 0.7),
               fontWeight: isMet ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
           const SizedBox(width: 8),
-          Icon(
-            isMet ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: isMet ? Colors.green : AppColors.greyBorder,
-            size: 18,
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color:
+                  isMet
+                      ? const Color(0xFF4CAF50).withValues(alpha: 0.2)
+                      : Colors.white.withValues(alpha: 0.1),
+            ),
+            child: Icon(
+              isMet ? Icons.check_circle : Icons.radio_button_unchecked,
+              color:
+                  isMet
+                      ? const Color(0xFF4CAF50)
+                      : Colors.white.withValues(alpha: 0.5),
+              size: 16,
+            ),
           ),
         ],
       ),
