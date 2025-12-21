@@ -60,7 +60,7 @@ const ShipmentCard = ({ shipment }) => {
 	const StatusIcon = statusStyle.icon;
 
 	// Determine link destination
-	const linkDestination = shipment.link || `/shipmentstatus/${shipment.acid}`;
+	const linkDestination = shipment.link || `/shipmentstatus/${(shipment.shipmentNo && shipment.shipmentNo !== "N/A") ? shipment.shipmentNo : shipment.acid || shipment.id || ""}`;
 
 	return (
 		<Link

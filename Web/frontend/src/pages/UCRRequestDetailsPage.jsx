@@ -7,6 +7,9 @@ import Footer from "../components/Footer";
 import Datafield from "../components/DataField";
 import contractIcon from "../assets/images/contract.png";
 import mainIllustration from "../assets/images/Untitled design (7) 1.png";
+import { useTheme } from "../context/ThemeContext";
+import { ArrowRight, FileText, Eye } from "lucide-react";
+import FileViewerModal from "../components/FileViewerModal";
 
 // UCR Status configurations
 const STATUS_CONFIG = {
@@ -59,7 +62,7 @@ const DOCUMENT_LABELS = {
 };
 
 // UCR Progress Stepper Component
-const UCRStepper = ({ currentStatus }) => {
+const UCRStepper = ({ currentStatus, isDarkMode }) => {
 	const steps = [
 		{ key: "pending", label: "قيد المراجعة" },
 		{ key: "under_review", label: "قيد التدقيق" },
@@ -83,11 +86,17 @@ const UCRStepper = ({ currentStatus }) => {
 	if (currentStatus === "rejected" || currentStatus === "needs_revision") {
 		return (
 			<div className="w-full py-4">
-				<div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+				<div className={`border rounded-lg p-4 text-center ${
+					isDarkMode 
+						? "bg-red-900/20 border-red-800" 
+						: "bg-red-50 border-red-200"
+				}`}>
 					<span className="text-3xl mb-2 block">
 						{currentStatus === "rejected" ? "❌" : "⚠️"}
 					</span>
-					<p className="text-red-800 font-bold">
+					<p className={`font-bold ${
+						isDarkMode ? "text-red-400" : "text-red-800"
+					}`}>
 						{currentStatus === "rejected" ? "تم رفض الطلب" : "يحتاج تعديل"}
 					</p>
 				</div>
@@ -103,17 +112,24 @@ const UCRStepper = ({ currentStatus }) => {
 					const isCurrent = index === activeStepIndex;
 					const isLastStep = index === steps.length - 1;
 
+					// Circle Color
 					const circleClass = isActive
 						? isCurrent
-							? "bg-red-900 ring-4 ring-red-200"
-							: "bg-red-900"
-						: "bg-gray-300";
+							? isDarkMode ? "bg-red-600 ring-4 ring-red-900" : "bg-red-900 ring-4 ring-red-200"
+							: isDarkMode ? "bg-red-800" : "bg-red-900"
+						: isDarkMode ? "bg-gray-700" : "bg-gray-300";
+
+					// Text Color
 					const textClass = isActive
-						? "text-red-900 font-bold"
-						: "text-gray-400";
+						? isDarkMode ? "text-red-400 font-bold" : "text-red-900 font-bold"
+						: isDarkMode ? "text-gray-500" : "text-gray-400";
+					
+					// Line Color
 					const nextStepIsActive =
 						index < steps.length - 1 && index + 1 <= activeStepIndex;
-					const lineClass = nextStepIsActive ? "bg-red-900" : "bg-gray-300";
+					const lineClass = nextStepIsActive 
+						? isDarkMode ? "bg-red-800" : "bg-red-900" 
+						: isDarkMode ? "bg-gray-700" : "bg-gray-300";
 
 					return (
 						<React.Fragment key={step.key}>
@@ -156,9 +172,11 @@ const UCRStepper = ({ currentStatus }) => {
 const UCRRequestDetailsPage = () => {
 	const { requestId } = useParams();
 	const navigate = useNavigate();
+	const { isDarkMode } = useTheme();
 	const [loading, setLoading] = useState(true);
 	const [request, setRequest] = useState(null);
 	const [userType, setUserType] = useState("client");
+	const [viewerData, setViewerData] = useState({ open: false, url: null, name: null, type: null });
 	
 	// Document review state (for employees)
 	const [docReviewModal, setDocReviewModal] = useState({ open: false, doc: null, action: null });
@@ -337,13 +355,15 @@ const UCRRequestDetailsPage = () => {
 
 	if (loading) {
 		return (
-			<div className="bg-gray-50 min-h-screen text-gray-800">
+			<div className={`min-h-screen flex flex-col transition-colors duration-300 ${isDarkMode ? "bg-[#0a0505]" : "bg-gray-50"}`}>
 				<Header />
 				<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-					<div className="max-w-5xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-sm">
+					<div className={`max-w-5xl mx-auto p-6 sm:p-10 rounded-3xl shadow-sm ${
+						isDarkMode ? "bg-[#1a1010]/80 border border-white/10" : "bg-white"
+					}`}>
 						<div className="flex justify-center items-center py-12 gap-4">
 							<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
-							<span className="text-gray-600 text-lg">
+							<span className={`text-lg ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
 								جاري تحميل بيانات الطلب...
 							</span>
 						</div>
@@ -356,12 +376,14 @@ const UCRRequestDetailsPage = () => {
 
 	if (!request) {
 		return (
-			<div className="bg-gray-50 min-h-screen text-gray-800">
+			<div className={`min-h-screen flex flex-col transition-colors duration-300 ${isDarkMode ? "bg-[#0a0505]" : "bg-gray-50"}`}>
 				<Header />
 				<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-					<div className="max-w-5xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-sm text-center">
+					<div className={`max-w-5xl mx-auto p-6 sm:p-10 rounded-3xl shadow-sm text-center ${
+						isDarkMode ? "bg-[#1a1010]/80 border border-white/10" : "bg-white"
+					}`}>
 						<span className="text-6xl mb-4 block">❌</span>
-						<p className="text-gray-600 mb-4 text-lg">الطلب غير موجود</p>
+						<p className={`mb-4 text-lg ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>الطلب غير موجود</p>
 						<button
 							onClick={() =>
 								navigate(
@@ -384,11 +406,31 @@ const UCRRequestDetailsPage = () => {
 	const statusConfig = STATUS_CONFIG[request.status] || STATUS_CONFIG.pending;
 
 	return (
-		<div className="bg-gray-50 min-h-screen text-gray-800">
+		<div className={`min-h-screen flex flex-col transition-colors duration-300 relative overflow-hidden ${isDarkMode ? "bg-[#0a0505]" : "bg-gray-50"}`}>
+			{/* Animated Background Elements */}
+			<div className="fixed inset-0 pointer-events-none overflow-hidden">
+				{isDarkMode ? (
+					<>
+						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#690000]/20 rounded-full filter blur-[100px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#2b0000]/30 rounded-full filter blur-[120px] animate-float-slow"></div>
+					</>
+				) : (
+					<>
+						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#ffcccc]/40 rounded-full filter blur-[100px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#ffe6e6]/60 rounded-full filter blur-[120px] animate-float-slow"></div>
+					</>
+				)}
+			</div>
+
 			<Header />
 
-			<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-				<div className="max-w-5xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-sm">
+			<main className="flex-grow relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+				<div className={`max-w-5xl mx-auto p-6 sm:p-10 rounded-3xl shadow-2xl border backdrop-blur-xl transition-all duration-300 ${
+					isDarkMode 
+						? "bg-[#1a1010]/80 border-white/10 text-gray-200" 
+						: "bg-white/90 border-white/40 text-gray-800"
+				}`}>
+					{/* Back Button */}
 					{/* Back Button */}
 					<button
 						onClick={() =>
@@ -398,9 +440,11 @@ const UCRRequestDetailsPage = () => {
 									: "/ucr-requests"
 							)
 						}
-						className="mb-6 text-red-800 hover:text-red-600 flex items-center gap-2 font-medium"
+						className={`mb-6 flex items-center gap-2 font-medium transition-colors ${
+							isDarkMode ? "text-red-400 hover:text-red-300" : "text-red-800 hover:text-red-600"
+						}`}
 					>
-						<span>→</span>
+						<ArrowRight className="w-5 h-5" />
 						<span>العودة للطلبات</span>
 					</button>
 
@@ -411,10 +455,10 @@ const UCRRequestDetailsPage = () => {
 								{request.shippingMethod === "air" ? "✈️" : "🚢"}
 							</span>
 							<div>
-								<h1 className="text-2xl font-bold text-gray-800">
+								<h1 className={`text-2xl font-bold ${isDarkMode ? "text-gray-100" : "text-gray-800"}`}>
 									طلب UCR - {request.shippingMethod === "air" ? "جوي" : "بحري"}
 								</h1>
-								<p className="text-gray-500 text-sm">
+								<p className={`${isDarkMode ? "text-gray-400" : "text-gray-500"} text-sm`}>
 									رقم الطلب: {request.ucrNumber || `#${request._id?.slice(-8)}`}
 								</p>
 							</div>
@@ -436,11 +480,13 @@ const UCRRequestDetailsPage = () => {
 					</div>
 
 					{/* UCR Progress Stepper */}
-					<div className="bg-gray-50 rounded-xl p-6 mb-8">
-						<h2 className="text-xl font-bold text-center text-red-900 mb-4">
+					<div className={`rounded-3xl p-6 mb-8 border transition-colors ${
+						isDarkMode ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100"
+					}`}>
+						<h2 className={`text-xl font-bold text-center mb-4 ${isDarkMode ? "text-red-400" : "text-red-900"}`}>
 							📊 حالة الطلب
 						</h2>
-						<UCRStepper currentStatus={request.status} />
+						<UCRStepper currentStatus={request.status} isDarkMode={isDarkMode} />
 					</div>
 
 					{/* Rejection/Revision Reason */}
@@ -604,28 +650,34 @@ const UCRRequestDetailsPage = () => {
 					</div>
 
 					{/* Goods Description */}
-					<div className="bg-gray-50 rounded-xl p-6 mb-6">
-						<h3 className="font-bold text-gray-800 mb-3">📦 وصف البضاعة</h3>
-						<p className="text-gray-700 bg-white p-4 rounded-lg border">
+					<div className={`rounded-3xl p-6 mb-6 border transition-colors ${
+						isDarkMode ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100"
+					}`}>
+						<h3 className={`font-bold mb-3 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>📦 وصف البضاعة</h3>
+						<p className={`p-4 rounded-xl border ${
+							isDarkMode ? "bg-black/20 border-white/5 text-gray-300" : "bg-white border-gray-200 text-gray-700"
+						}`}>
 							{request.generalDescription || "لا يوجد وصف"}
 						</p>
 					</div>
 
 					{/* Sea Shipment Type Info */}
 					{request.shippingMethod === "sea" && request.seaShipmentType && (
-						<div className="bg-blue-50 rounded-xl p-4 mb-6">
+						<div className={`rounded-3xl p-4 mb-6 border ${
+							isDarkMode ? "bg-blue-900/20 border-blue-800" : "bg-blue-50 border-blue-100"
+						}`}>
 							<div className="flex items-center gap-3">
 								<span className="text-2xl">
 									{request.seaShipmentType === "fcl" || request.seaShipmentType === "containers" ? "🚢" : 
 									 request.seaShipmentType === "lcl" ? "📦🚢" : "📦"}
 								</span>
 								<div>
-									<p className="font-bold text-blue-800">
+									<p className={`font-bold ${isDarkMode ? "text-blue-400" : "text-blue-800"}`}>
 										{request.seaShipmentType === "fcl" || request.seaShipmentType === "containers" ? "حاويات (FCL) - Full Container Load" : 
 										 request.seaShipmentType === "lcl" ? "بضايع عامة (LCL) - Less than Container Load" : 
 										 "طرود"}
 									</p>
-									<p className="text-sm text-blue-600">
+									<p className={`text-sm ${isDarkMode ? "text-blue-300" : "text-blue-600"}`}>
 										{request.seaShipmentType === "fcl" || request.seaShipmentType === "containers" ? "شحن بحاوية كاملة أو أكثر" : 
 										 request.seaShipmentType === "lcl" ? "شحن بضاعة أقل من حاوية كاملة" : 
 										 "شحن بالطرود والكراتين"}
@@ -637,8 +689,10 @@ const UCRRequestDetailsPage = () => {
 
 					{/* Sea Shipment: Container Info */}
 					{request.shippingMethod === "sea" && request.containersCount > 0 && (
-						<div className="bg-blue-50 rounded-xl p-6 mb-6">
-							<h3 className="font-bold text-blue-800 mb-3">
+						<div className={`rounded-3xl p-6 mb-6 border transition-colors ${
+							isDarkMode ? "bg-blue-900/10 border-blue-900/30" : "bg-blue-50 border-blue-100"
+						}`}>
+							<h3 className={`font-bold mb-3 ${isDarkMode ? "text-blue-400" : "text-blue-800"}`}>
 								🚢 معلومات الحاويات ({request.containersCount} حاوية)
 							</h3>
 							{request.containerWeights && request.containerWeights.length > 0 ? (
@@ -646,14 +700,16 @@ const UCRRequestDetailsPage = () => {
 									{request.containerWeights.map((container, index) => (
 										<div
 											key={index}
-											className="bg-white p-3 rounded-lg border border-blue-200"
+											className={`p-3 rounded-xl border ${
+												isDarkMode ? "bg-[#1a1010] border-white/10" : "bg-white border-blue-200"
+											}`}
 										>
-											<p className="text-xs text-gray-500">حاوية {index + 1}</p>
-											<p className="font-medium">
+											<p className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>حاوية {index + 1}</p>
+											<p className={`font-medium ${isDarkMode ? "text-gray-200" : "text-gray-900"}`}>
 												{container.containerNumber || `#${index + 1}`}
 											</p>
 											{container.size && (
-												<p className="text-sm text-blue-600 font-medium">
+												<p className={`text-sm font-medium ${isDarkMode ? "text-blue-400" : "text-blue-600"}`}>
 													{container.size === "20ft" ? "20 قدم" : 
 													 container.size === "40ft" ? "40 قدم" : 
 													 container.size === "40ft-hc" ? "40 قدم HC" : 
@@ -661,7 +717,7 @@ const UCRRequestDetailsPage = () => {
 												</p>
 											)}
 											{container.weight && (
-												<p className="text-sm text-gray-600">
+												<p className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
 													{container.weight}{" "}
 													{container.unit === "tons" ? "طن" : "كجم"}
 												</p>
@@ -670,20 +726,24 @@ const UCRRequestDetailsPage = () => {
 									))}
 								</div>
 							) : (
-								<p className="text-gray-600">عدد الحاويات: {request.containersCount}</p>
+								<p className={isDarkMode ? "text-gray-400" : "text-gray-600"}>عدد الحاويات: {request.containersCount}</p>
 							)}
 						</div>
 					)}
 
 					{/* Items List */}
 					{request.items && request.items.length > 0 && (
-						<div className="bg-gray-50 rounded-xl p-6 mb-6">
-							<h3 className="font-bold text-gray-800 mb-3">
+						<div className={`rounded-3xl p-6 mb-6 border transition-colors ${
+							isDarkMode ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100"
+						}`}>
+							<h3 className={`font-bold mb-3 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
 								📋 تفاصيل البنود ({request.items.length})
 							</h3>
 							<div className="overflow-x-auto">
-								<table className="w-full text-sm bg-white rounded-lg overflow-hidden">
-									<thead className="bg-red-800 text-white">
+								<table className={`w-full text-sm rounded-xl overflow-hidden ${
+									isDarkMode ? "bg-[#1a1010] text-gray-300" : "bg-white"
+								}`}>
+									<thead className={`${isDarkMode ? "bg-red-900/50 text-gray-200" : "bg-red-800 text-white"}`}>
 										<tr>
 											<th className="p-3 text-right">الوصف</th>
 											<th className="p-3 text-right">البند الجمركي</th>
@@ -692,16 +752,18 @@ const UCRRequestDetailsPage = () => {
 											<th className="p-3 text-right">القيمة</th>
 										</tr>
 									</thead>
-									<tbody>
+									<tbody className={`divide-y ${isDarkMode ? "divide-gray-800" : "divide-gray-200"}`}>
 										{request.items.map((item, index) => (
-											<tr key={index} className="border-t hover:bg-gray-50">
+											<tr key={index} className={`transition-colors ${
+												isDarkMode ? "hover:bg-white/5" : "hover:bg-gray-50"
+											}`}>
 												<td className="p-3">{item.description || "—"}</td>
-												<td className="p-3 font-mono">{item.hsCode || "—"}</td>
+												<td className="p-3 font-mono opacity-80">{item.hsCode || "—"}</td>
 												<td className="p-3">
 													{item.quantity} {item.unit || ""}
 												</td>
 												<td className="p-3">{item.weight || "—"} كجم</td>
-												<td className="p-3">{formatCurrency(item.value)}</td>
+												<td className="p-3 font-medium">{formatCurrency(item.value)}</td>
 											</tr>
 										))}
 									</tbody>
@@ -712,8 +774,10 @@ const UCRRequestDetailsPage = () => {
 
 					{/* Documents Section */}
 					{request.uploads && request.uploads.length > 0 && (
-						<div className="bg-green-50 rounded-xl p-6 mb-6">
-							<h3 className="font-bold text-green-800 mb-3">
+						<div className={`rounded-3xl p-6 mb-6 border transition-colors ${
+							isDarkMode ? "bg-green-900/10 border-green-900/30" : "bg-green-50 border-green-100"
+						}`}>
+							<h3 className={`font-bold mb-3 ${isDarkMode ? "text-green-400" : "text-green-800"}`}>
 								📄 المستندات المرفقة ({request.uploads.length})
 							</h3>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -723,41 +787,64 @@ const UCRRequestDetailsPage = () => {
 										(ds) => ds.uploadId === doc._id || ds.uploadId === doc.id
 									);
 									const status = docStatus?.status || "pending";
-									const statusConfig = {
-										pending: { color: "bg-yellow-100 border-yellow-300", icon: "⏳", label: "قيد المراجعة" },
-										approved: { color: "bg-green-100 border-green-300", icon: "✅", label: "معتمد" },
-										rejected: { color: "bg-red-100 border-red-300", icon: "❌", label: "مرفوض" },
-										needs_revision: { color: "bg-orange-100 border-orange-300", icon: "⚠️", label: "يحتاج تعديل" },
+									
+									// Dynamic Status Colors
+									const getStatusStyles = (s) => {
+										const styles = {
+											pending: isDarkMode ? "bg-yellow-900/20 border-yellow-700 text-yellow-400" : "bg-yellow-100 border-yellow-300 text-yellow-800",
+											approved: isDarkMode ? "bg-green-900/20 border-green-700 text-green-400" : "bg-green-100 border-green-300 text-green-800",
+											rejected: isDarkMode ? "bg-red-900/20 border-red-700 text-red-400" : "bg-red-100 border-red-300 text-red-800",
+											needs_revision: isDarkMode ? "bg-orange-900/20 border-orange-700 text-orange-400" : "bg-orange-100 border-orange-300 text-orange-800",
+										};
+										return styles[s] || styles.pending;
 									};
-									const config = statusConfig[status] || statusConfig.pending;
+									
+									const statusStyle = getStatusStyles(status);
+									const statusLabel = {
+										pending: "قيد المراجعة",
+										approved: "معتمد",
+										rejected: "مرفوض",
+										needs_revision: "يحتاج تعديل"
+									}[status] || "قيد المراجعة";
+									
+									const statusIcon = {
+										pending: "⏳",
+										approved: "✅",
+										rejected: "❌",
+										needs_revision: "⚠️"
+									}[status] || "⏳";
 
 									return (
 										<div
 											key={index}
-											className={`p-3 rounded-lg border-2 ${config.color}`}
+											className={`p-3 rounded-lg border-2 ${statusStyle}`}
 										>
 											<div className="flex items-center justify-between mb-2">
 												<div className="flex items-center gap-2">
 													<span className="text-xl">📄</span>
 													<div>
-														<p className="font-medium text-sm">
+														<p className={`font-medium text-sm ${isDarkMode ? "text-gray-200" : "text-gray-900"}`}>
 															{DOCUMENT_LABELS[doc.documentType] || doc.documentType}
 														</p>
-														<p className="text-xs text-gray-500 truncate max-w-[200px]">
+														<p className={`text-xs truncate max-w-[200px] ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
 															{doc.originalname || doc.filename || "مستند"}
 														</p>
 													</div>
 												</div>
-												<span className="text-xs px-2 py-1 rounded-full bg-white whitespace-nowrap flex-shrink-0">
-													{config.icon} {config.label}
+												<span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 font-bold ${
+													isDarkMode ? "bg-black/40" : "bg-white/50"
+												}`}>
+													{statusIcon} {statusLabel}
 												</span>
 											</div>
 											
 											{/* Employee notes if any */}
 											{docStatus?.employeeNotes && (
-												<div className="mt-2 p-2 bg-white rounded text-sm">
-													<span className="text-gray-600">💬 ملاحظة: </span>
-													<span className="text-gray-800">{docStatus.employeeNotes}</span>
+												<div className={`mt-2 p-2 rounded text-sm ${
+													isDarkMode ? "bg-black/20 text-gray-300" : "bg-white text-gray-800"
+												}`}>
+													<span className="opacity-70">💬 ملاحظة: </span>
+													<span>{docStatus.employeeNotes}</span>
 												</div>
 											)}
 
@@ -766,18 +853,31 @@ const UCRRequestDetailsPage = () => {
 												{/* View and Download buttons */}
 												{doc.url && (
 													<div className="flex gap-2">
-														<a
-															href={doc.url}
-															target="_blank"
-															rel="noopener noreferrer"
-															className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition"
+														<button
+															onClick={() => setViewerData({
+																open: true,
+																url: doc.url,
+																name: doc.originalname || doc.filename || "المستند",
+																type: doc.mimetype || (doc.filename?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
+																fileId: doc._id
+															})}
+															className={`px-3 py-1 rounded text-sm transition flex items-center gap-1 ${
+																isDarkMode 
+																	? "bg-blue-600 hover:bg-blue-500 text-white" 
+																	: "bg-blue-600 hover:bg-blue-700 text-white"
+															}`}
 														>
-															عرض ↗
-														</a>
+															<Eye className="w-3 h-3" />
+															عرض
+														</button>
 														<a
 															href={doc.url}
 															download={doc.originalname || doc.filename || "document"}
-															className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700 transition"
+															className={`px-3 py-1 rounded text-sm transition ${
+																isDarkMode
+																	? "bg-gray-700 hover:bg-gray-600 text-white"
+																	: "bg-gray-600 hover:bg-gray-700 text-white"
+															}`}
 															onClick={(e) => {
 																e.preventDefault();
 																// Create a temporary link to force download
@@ -859,7 +959,7 @@ const UCRRequestDetailsPage = () => {
 					)}
 
 					{/* Action Buttons */}
-					<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-8 pt-6 border-t-2">
+					<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-8 pt-6 border-t border-gray-200/20">
 						{/* Back to list */}
 						<button
 							onClick={() =>
@@ -869,7 +969,9 @@ const UCRRequestDetailsPage = () => {
 										: "/ucr-requests"
 								)
 							}
-							className="w-full sm:w-auto px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition"
+							className={`w-full sm:w-auto px-6 py-3 font-bold rounded-lg transition ${
+								isDarkMode ? "bg-gray-800 text-gray-300 hover:bg-gray-700" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+							}`}
 						>
 							← العودة للطلبات
 						</button>
@@ -892,7 +994,9 @@ const UCRRequestDetailsPage = () => {
 						{(request.status === "pending" || request.status === "needs_revision") && userType === "client" && (
 							<button
 								onClick={handleDelete}
-								className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition"
+								className={`w-full sm:w-auto px-6 py-3 font-bold rounded-lg transition ${
+									isDarkMode ? "bg-red-900/50 text-red-200 hover:bg-red-900/80" : "bg-red-600 text-white hover:bg-red-700"
+								}`}
 							>
 								🗑️ حذف الطلب
 							</button>
@@ -911,7 +1015,9 @@ const UCRRequestDetailsPage = () => {
 
 						{/* Waiting for UCR message */}
 						{request.status === "approved" && !request.hasExportShipment && (
-							<span className="w-full sm:w-auto px-6 py-3 bg-yellow-100 text-yellow-800 font-bold rounded-lg flex items-center justify-center gap-2">
+							<span className={`w-full sm:w-auto px-6 py-3 font-bold rounded-lg flex items-center justify-center gap-2 ${
+								isDarkMode ? "bg-yellow-900/30 text-yellow-400" : "bg-yellow-100 text-yellow-800"
+							}`}>
 								<span>⏳</span>
 								<span>في انتظار إصدار UCR</span>
 							</span>
@@ -922,8 +1028,10 @@ const UCRRequestDetailsPage = () => {
 
 			{/* Document Review Modal (for employees) */}
 			{docReviewModal.open && docReviewModal.doc && (
-				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-					<div className="bg-white rounded-lg max-w-md w-full p-6">
+				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+					<div className={`rounded-2xl max-w-md w-full p-6 shadow-2xl ${
+						isDarkMode ? "bg-[#1a1010] border border-white/10 text-gray-200" : "bg-white text-gray-800"
+					}`}>
 						<h3 className="text-lg font-bold mb-4">
 							{docReviewModal.action === "approve" && "✅ اعتماد المستند"}
 							{docReviewModal.action === "reject" && "❌ رفض المستند"}
@@ -931,9 +1039,9 @@ const UCRRequestDetailsPage = () => {
 							{docReviewModal.action === "reset" && "🔄 إعادة تعيين حالة المستند"}
 						</h3>
 
-						<p className="text-sm text-gray-600 mb-4">
+						<p className={`text-sm mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
 							المستند:{" "}
-							<span className="font-medium">
+							<span className={`font-medium ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
 								{DOCUMENT_LABELS[docReviewModal.doc.documentType] || docReviewModal.doc.documentType}
 							</span>
 						</p>
@@ -947,14 +1055,14 @@ const UCRRequestDetailsPage = () => {
 									rel="noopener noreferrer"
 									className="text-blue-600 hover:text-blue-800 underline text-sm"
 								>
-									�️ عرض
+									👁️ عرض
 								</a>
 							</div>
 						)}
 
 						{docReviewModal.action !== "reset" && (
 							<div className="mb-4">
-								<label className="block text-sm font-medium text-gray-700 mb-1">
+								<label className={`block text-sm font-medium mb-1 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
 									{docReviewModal.action === "approve" && "ملاحظات (اختياري)"}
 									{docReviewModal.action === "reject" && "سبب الرفض *"}
 									{docReviewModal.action === "revision" && "ملاحظات التعديل المطلوب *"}
@@ -963,7 +1071,11 @@ const UCRRequestDetailsPage = () => {
 									value={docReviewNotes}
 									onChange={(e) => setDocReviewNotes(e.target.value)}
 									rows={3}
-									className="w-full p-2 border border-gray-300 rounded-lg bg-white text-black focus:ring-2 focus:ring-red-500 focus:border-red-500"
+									className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+										isDarkMode 
+											? "bg-black/30 border-white/10 text-white placeholder-gray-500" 
+											: "bg-white border-gray-300 text-black"
+									}`}
 									placeholder={
 										docReviewModal.action === "approve"
 											? "أضف أي ملاحظات (اختياري)..."
@@ -974,8 +1086,8 @@ const UCRRequestDetailsPage = () => {
 						)}
 
 						{docReviewModal.action === "reset" && (
-							<div className="mb-4 p-3 bg-gray-100 rounded-lg">
-								<p className="text-gray-700 text-sm">
+							<div className={`mb-4 p-3 rounded-lg ${isDarkMode ? "bg-white/5" : "bg-gray-100"}`}>
+								<p className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-700"}`}>
 									سيتم إعادة تعيين حالة المستند إلى "قيد المراجعة" وإزالة أي ملاحظات سابقة.
 								</p>
 							</div>
@@ -985,7 +1097,11 @@ const UCRRequestDetailsPage = () => {
 							<button
 								onClick={closeDocReviewModal}
 								disabled={processingDocReview}
-								className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+								className={`px-4 py-2 border rounded-lg disabled:opacity-50 ${
+									isDarkMode 
+										? "border-white/20 text-gray-300 hover:bg-white/5" 
+										: "border-gray-300 text-gray-700 hover:bg-gray-50"
+								}`}
 							>
 								إلغاء
 							</button>
@@ -1021,6 +1137,15 @@ const UCRRequestDetailsPage = () => {
 			)}
 
 			<Footer />
+			
+			<FileViewerModal
+				isOpen={viewerData.open}
+				onClose={() => setViewerData(prev => ({ ...prev, open: false }))}
+				fileUrl={viewerData.url}
+				fileName={viewerData.name}
+				fileType={viewerData.type}
+				fileId={viewerData.fileId}
+			/>
 		</div>
 	);
 };

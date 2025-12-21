@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import Tesseract from "tesseract.js";
 import { useTheme } from "../context/ThemeContext";
 import { AlertCircle, FileText, UploadCloud, Save, X, CheckCircle } from "lucide-react";
+import FileViewerModal from "../components/FileViewerModal";
 
 const DocumentUploadPage = () => {
 	const navigate = useNavigate();
@@ -21,6 +22,7 @@ const DocumentUploadPage = () => {
 	const [uploads, setUploads] = useState({});
 	const [uploading, setUploading] = useState({});
 	const [progress, setProgress] = useState({});
+	const [viewerData, setViewerData] = useState({ open: false, url: null, name: null, type: null });
 
 	// Document requirements based on client type
 	const documentRequirements = {
@@ -184,19 +186,26 @@ const DocumentUploadPage = () => {
 				}
 			);
 
-			if (response.data.success) {
-				setUploads((prev) => ({
-					...prev,
-					[documentKey]: {
-						id: response.data.upload.id,
-						filename: response.data.upload.filename,
-						url: response.data.upload.url,
-						uploadedAt: response.data.upload.uploadedAt,
-					},
-				}));
-				toast.success(`تم رفع ${documentType} بنجاح`);
+			if (response.status === 200 || response.data.success) {
+				const uploadedFile = response.data.file || response.data.upload;
+				if (uploadedFile) {
+					setUploads((prev) => ({
+						...prev,
+						[documentKey]: {
+							id: uploadedFile.id || uploadedFile._id,
+							filename: uploadedFile.filename || uploadedFile.originalname,
+							url: uploadedFile.url || uploadedFile.location,
+							uploadedAt: uploadedFile.createdAt || uploadedFile.uploadedAt || new Date().toISOString(),
+							// Preserve existing approval status if available, otherwise pending
+							approvalStatus: uploadedFile.approvalStatus || "pending", 
+							rejectionReason: uploadedFile.rejectionReason,
+						},
+					}));
+					toast.success(`تم رفع ${documentType} بنجاح`);
+				}
 			}
 		} catch (error) {
+			console.error("Upload error:", error);
 			toast.error(error.response?.data?.message || "فشل رفع الملف.");
 		} finally {
 			setUploading((prev) => ({ ...prev, [documentKey]: false }));
@@ -235,7 +244,13 @@ const DocumentUploadPage = () => {
 			}
 
 			if (response.data.success && response.data.upload.url) {
-				window.open(response.data.upload.url, "_blank");
+				setViewerData({
+					open: true,
+					url: response.data.upload.url,
+					name: response.data.upload.filename || "المستند",
+					type: response.data.upload.mimetype || (response.data.upload.filename?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
+					fileId: uploadId
+				});
 			} else {
 				toast.error("فشل في الحصول على رابط الملف");
 			}
@@ -395,6 +410,15 @@ const DocumentUploadPage = () => {
 					</FormContainer>
 				</div>
 			</BackgroundContainer>
+
+			<FileViewerModal
+				isOpen={viewerData.open}
+				onClose={() => setViewerData(prev => ({ ...prev, open: false }))}
+				fileUrl={viewerData.url}
+				fileName={viewerData.name}
+				fileType={viewerData.type}
+				fileId={viewerData.fileId}
+			/>
 		</>
 	);
 };

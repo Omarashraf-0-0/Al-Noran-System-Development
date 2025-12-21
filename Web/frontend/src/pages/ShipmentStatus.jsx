@@ -65,32 +65,69 @@ const ShipmentStatus = () => {
 					return;
 				}
 
-				console.log("Fetching shipment with ID:", shipmentId);
+				console.log("Fetching shipment with key:", shipmentId);
 
-				// Fetch shipment details by ID
-				const shipmentResponse = await axios.get(
-					`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
-					{
-						headers: {
-							Authorization: `Bearer ${token}`,
-						},
+				let fetchedShipment = null;
+
+				// 1. Check if shipmentId is a valid Mongo ID (24 hex chars)
+				const isMongoId = /^[0-9a-fA-F]{24}$/.test(shipmentId);
+
+				if (isMongoId) {
+					// Fetch by ID directly
+					try {
+						const response = await axios.get(
+							`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
+							{ headers: { Authorization: `Bearer ${token}` } }
+						);
+						fetchedShipment = response.data;
+					} catch (err) {
+						if (err.response?.status === 404) {
+							// If not found by ID, might be a 24-char code? Fallback to search
+							console.Warn("Not found by ID, trying search...");
+						} else {
+							throw err;
+						}
 					}
-				);
+				}
 
-				console.log("Fetched shipment:", shipmentResponse.data);
-				setShipment(shipmentResponse.data);
+				// 2. If not MongoID or not found by ID, search by Code/ACID/Number46
+				if (!fetchedShipment) {
+					// We need the user ID to fetch their shipments
+					const user = JSON.parse(localStorage.getItem("user"));
+					const userId = user?.id || user?._id;
+
+					if (!userId) {
+						throw new Error("User ID not found");
+					}
+
+					const response = await axios.get(
+						`${import.meta.env.VITE_API_URL}/api/shipments/user/${userId}`,
+						{ headers: { Authorization: `Bearer ${token}` } }
+					);
+
+					const allShipments = response.data || [];
+					fetchedShipment = allShipments.find(s => 
+						s.shipmentCode === shipmentId || 
+						s.acid === shipmentId || 
+						s.number46 === shipmentId
+					);
+				}
+
+				if (!fetchedShipment) {
+					throw new Error("لم يتم العثور على الشحنة");
+				}
+
+				console.log("✅ Fetched shipment:", fetchedShipment);
+				setShipment(fetchedShipment);
+				const realId = fetchedShipment._id;
+
+				// --- Fetch Related Data (Required Docs & Files) ---
 
 				// Fetch required documents
 				try {
 					const requiredDocsResponse = await axios.get(
-						`${import.meta.env.VITE_API_URL}/api/shipments/id/${
-							shipmentResponse.data._id
-						}/required-documents`,
-						{
-							headers: {
-								Authorization: `Bearer ${token}`,
-							},
-						}
+						`${import.meta.env.VITE_API_URL}/api/shipments/id/${realId}/required-documents`,
+						{ headers: { Authorization: `Bearer ${token}` } }
 					);
 
 					const docs = requiredDocsResponse.data?.data?.requiredDocuments || [];
@@ -105,39 +142,25 @@ const ShipmentStatus = () => {
 						});
 					}
 				} catch (reqDocsError) {
-					console.log(
-						"Note: Could not fetch required documents:",
-						reqDocsError.message
-					);
+					console.log("Note: Could not fetch required documents:", reqDocsError.message);
 					setRequiredDocuments([]);
 				}
 
 				// Fetch shipment files/uploads
 				try {
 					const filesResponse = await axios.get(
-						`${
-							import.meta.env.VITE_API_URL
-						}/api/uploads?category=shipment&relatedId=${
-							shipmentResponse.data._id
-						}`,
-						{
-							headers: {
-								Authorization: `Bearer ${token}`,
-							},
-						}
+						`${import.meta.env.VITE_API_URL}/api/uploads?category=shipment&relatedId=${realId}`,
+						{ headers: { Authorization: `Bearer ${token}` } }
 					);
 
 					console.log("Fetched files:", filesResponse.data);
 
 					// API returns { success, count, uploads: [...] }
-					const uploads =
-						filesResponse.data?.uploads || filesResponse.data || [];
+					const uploads = filesResponse.data?.uploads || filesResponse.data || [];
 
 					const shipmentFiles = uploads.map((file) => ({
 						name: file.filename || file.originalname || "ملف",
-						date: new Date(
-							file.uploadedAt || file.createdAt
-						).toLocaleDateString("ar-EG", {
+						date: new Date(file.uploadedAt || file.createdAt).toLocaleDateString("ar-EG", {
 							day: "numeric",
 							month: "long",
 							year: "numeric",
@@ -148,22 +171,15 @@ const ShipmentStatus = () => {
 						description: file.description,
 					}));
 
-					console.log("Formatted shipment files:", shipmentFiles);
 					setFileItems(shipmentFiles);
-
-					if (shipmentFiles.length === 0) {
-						console.log("No files found for this shipment");
-					}
 				} catch (fileError) {
 					console.log("Note: Could not fetch files:", fileError.message);
 					setFileItems([]);
 				}
+
 			} catch (error) {
 				console.error("Error fetching shipment data:", error);
-				const errorMessage =
-					error.response?.data?.message ||
-					error.message ||
-					"فشل تحميل بيانات الشحنة";
+				const errorMessage = error.response?.data?.message || error.message || "فشل تحميل بيانات الشحنة";
 				setError(errorMessage);
 				toast.error(errorMessage);
 			} finally {

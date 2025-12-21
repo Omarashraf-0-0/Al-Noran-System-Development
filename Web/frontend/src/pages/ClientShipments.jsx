@@ -14,7 +14,7 @@ export default function ShipmentsList() {
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [isSortOpen, setIsSortOpen] = useState(false);
 	const [shipments, setShipments] = useState([]);
-	const [loading, setLoading] = useState(true);
+	const [loading, setLoading] = useState(true);	
 	const [error, setError] = useState(null);
 	const [selectedStatus, setSelectedStatus] = useState("الكل");
 	const [sortOption, setSortOption] = useState("newest");
@@ -64,7 +64,7 @@ export default function ShipmentsList() {
 				const formattedShipments = (response.data || []).map((shipment) => ({
 					id: shipment._id,
 					clientName: shipment.importerName || "غير محدد",
-					shipmentNo: shipment.number46 || shipment.shipmentCode || shipment.acid || "N/A",
+					shipmentNo: shipment.shipmentCode || shipment.acid || shipment.number46 || "N/A",
 					status: shipment.status || "pending",
 					acid: shipment.acid,
 					createdAt: shipment.createdAt,

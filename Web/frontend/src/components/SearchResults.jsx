@@ -83,7 +83,7 @@ const SearchResults = ({ results, onClose, searchQuery }) => {
 
 									<div className="mt-4 flex justify-end">
 										<a
-											href={`/shipmentstatus/${shipment.acid}`}
+											href={`/shipmentstatus/${shipment.shipmentCode || shipment.acid || shipment.number46 || shipment._id}`}
 											className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 transition flex items-center gap-2"
 										>
 											<span>عرض التفاصيل</span>

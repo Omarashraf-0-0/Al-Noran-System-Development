@@ -72,7 +72,8 @@ const HomePage = () => {
 	};
 
 	const handleSelectShipment = (shipment) => {
-		window.location.href = `/shipmentstatus/${shipment.acid}`;
+		const identifier = shipment.shipmentCode || shipment.acid || shipment.number46 || shipment._id;
+		window.location.href = `/shipmentstatus/${identifier}`;
 	};
 
 	const closeSearchResults = () => {

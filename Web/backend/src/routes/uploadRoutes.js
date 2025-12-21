@@ -76,6 +76,10 @@ router.get("/", uploadController.getAllUploads);
 // @desc    Get upload statistics
 router.get("/stats/summary", uploadController.getUploadStats);
 
+// @route   GET /api/upload/:id/download
+// @desc    Secure proxy download (hides S3 URL)
+router.get("/:id/download", protect, uploadController.proxyDownload);
+
 // @route   GET /api/upload/:id
 // @desc    Get upload by ID (protected route)
 router.get("/:id", protect, uploadController.getUploadById);

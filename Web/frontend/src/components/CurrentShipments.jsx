@@ -44,12 +44,12 @@ const CurrentShipments = () => {
 					const imports = (importRes.value.data || []).map(shipment => ({
 						id: shipment._id,
 						type: "import", // وارد
-						shipmentNo: shipment.number46 || shipment.shipmentCode || shipment.acid || "N/A",
+						shipmentNo: shipment.shipmentCode || shipment.acid || shipment.number46 || "N/A",
 						clientName: shipment.importerName || "غير محدد",
 						portName: shipment.port_name || "غير محدد",
 						status: shipment.status || "pending",
 						date: new Date(shipment.createdAt),
-						link: `/shipmentstatus/${shipment.acid}`,
+						link: `/shipmentstatus/${shipment.shipmentCode || shipment.acid || shipment.number46 || shipment._id}`,
 						acid: shipment.acid // Fallback
 					}));
 					combinedShipments = [...combinedShipments, ...imports];

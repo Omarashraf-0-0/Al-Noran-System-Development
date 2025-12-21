@@ -72,6 +72,7 @@ app.use(
 		},
 		credentials: true,
 		optionsSuccessStatus: 200,
+		exposedHeaders: ["Content-Disposition"],
 	})
 );
 app.use(logger);
