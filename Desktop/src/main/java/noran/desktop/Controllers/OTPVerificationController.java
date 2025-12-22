@@ -96,7 +96,8 @@ public class OTPVerificationController {
         try {
             Parent root = FXMLLoader.load(getClass().getResource("/noran/desktop/email-for-otp-ar.fxml"));
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setScene(new Scene(root));
+            Scene currentScene = stage.getScene();
+            stage.setScene(new Scene(root, currentScene.getWidth(), currentScene.getHeight()));
             stage.show();
         } catch (IOException e) {
             showCustomAlert("خطأ", "تعذر الرجوع إلى الصفحة السابقة", AlertType.ERROR);
@@ -145,7 +146,8 @@ public class OTPVerificationController {
                     controller.setUserEmail(this.userEmail);
 
                     Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-                    stage.setScene(new Scene(root));
+                    Scene currentScene = stage.getScene();
+                    stage.setScene(new Scene(root, currentScene.getWidth(), currentScene.getHeight()));
                     stage.show();
                     return;
                 } catch (IOException e) {
@@ -215,7 +217,8 @@ public class OTPVerificationController {
                 try {
                     Parent root = FXMLLoader.load(getClass().getResource("/noran/desktop/login-view-ar.fxml"));
                     Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-                    stage.setScene(new Scene(root));
+                    Scene currentScene = stage.getScene();
+                    stage.setScene(new Scene(root, currentScene.getWidth(), currentScene.getHeight()));
                     stage.show();
                 } catch (IOException ioEx) {
                     showCustomAlert("خطأ", "تعذر فتح صفحة تسجيل الدخول", AlertType.ERROR);

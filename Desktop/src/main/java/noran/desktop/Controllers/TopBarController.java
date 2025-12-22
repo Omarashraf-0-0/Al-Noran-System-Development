@@ -44,7 +44,7 @@ public class TopBarController implements Initializable {
     // Sidebar reference and state
     private VBox sidebar;
     private boolean sidebarVisible = false; // Default: sidebar is CLOSED
-    private static final double SIDEBAR_WIDTH = 260;
+    private static final double SIDEBAR_WIDTH = 280;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -100,26 +100,47 @@ public class TopBarController implements Initializable {
         }
     }
 
+    // Track if animation is currently running
+    private TranslateTransition currentTransition;
+    private boolean isAnimating = false;
+
     @FXML
     private void toggleSidebar(MouseEvent event) {
         if (sidebar == null)
             return;
 
-        TranslateTransition transition = new TranslateTransition(Duration.millis(300), sidebar);
+        // If animation is running, stop it and complete immediately
+        if (isAnimating && currentTransition != null) {
+            currentTransition.stop();
+            // Set to target position immediately
+            if (sidebarVisible) {
+                sidebar.setTranslateX(0);
+            } else {
+                sidebar.setTranslateX(-SIDEBAR_WIDTH);
+                sidebar.setManaged(false);
+            }
+        }
+
+        isAnimating = true;
+        currentTransition = new TranslateTransition(Duration.millis(250), sidebar);
 
         if (sidebarVisible) {
             // Slide out (hide)
-            transition.setToX(-SIDEBAR_WIDTH);
-            transition.setOnFinished(e -> {
+            currentTransition.setToX(-SIDEBAR_WIDTH);
+            currentTransition.setOnFinished(e -> {
                 sidebar.setManaged(false);
+                isAnimating = false;
             });
         } else {
             // Slide in (show)
             sidebar.setManaged(true);
-            transition.setToX(0);
+            currentTransition.setToX(0);
+            currentTransition.setOnFinished(e -> {
+                isAnimating = false;
+            });
         }
 
-        transition.play();
+        currentTransition.play();
         sidebarVisible = !sidebarVisible;
     }
 
