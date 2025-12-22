@@ -7,7 +7,6 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.shape.Circle;
 import noran.desktop.AppSession;
 
 public class ProfileController {
@@ -28,8 +27,7 @@ public class ProfileController {
     private Label roleBadge;
     @FXML
     private Label statusLabel;
-    @FXML
-    private Circle statusIndicator;
+
     @FXML
     private ImageView profileImage;
     @FXML
@@ -52,14 +50,6 @@ public class ProfileController {
     private Label phoneLabel;
     @FXML
     private Label verifiedLabel;
-
-    // Account Info Card
-    @FXML
-    private Label createdAtLabel;
-    @FXML
-    private Label updatedAtLabel;
-    @FXML
-    private Label activeLabel;
 
     @FXML
     public void initialize() {
@@ -127,11 +117,9 @@ public class ProfileController {
 
         // Status
         if (active) {
-            statusLabel.setText("نشط");
-            statusIndicator.setStyle("-fx-fill: #10b981;");
+            statusLabel.setText("نشط ✓");
         } else {
             statusLabel.setText("غير نشط");
-            statusIndicator.setStyle("-fx-fill: #ef4444;");
         }
 
         // Personal Info Card
@@ -149,18 +137,6 @@ public class ProfileController {
         } else {
             verifiedLabel.setText("غير موثق");
             verifiedLabel.setStyle("-fx-font-size: 16; -fx-font-weight: 600; -fx-text-fill: #f59e0b;");
-        }
-
-        // Account Info Card - Dates not cached, show placeholder
-        createdAtLabel.setText("-");
-        updatedAtLabel.setText("-");
-
-        if (active) {
-            activeLabel.setText("نشط ✓");
-            activeLabel.setStyle("-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #10b981;");
-        } else {
-            activeLabel.setText("غير نشط");
-            activeLabel.setStyle("-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #ef4444;");
         }
 
         // Profile Photo

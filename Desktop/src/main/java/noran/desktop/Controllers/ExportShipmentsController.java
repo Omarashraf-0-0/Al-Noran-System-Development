@@ -55,6 +55,14 @@ public class ExportShipmentsController {
     @FXML
     private TopBarController topBarController;
 
+    // Stat card labels
+    @FXML
+    private Label totalExportsLabel;
+    @FXML
+    private Label inProgressExportsLabel;
+    @FXML
+    private Label completedExportsLabel;
+
     @FXML
     public void initialize() {
         // Setup Columns
@@ -198,6 +206,8 @@ public class ExportShipmentsController {
             if (exports.isEmpty()) {
                 exportsTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بيانات"));
             }
+            // Update stat cards
+            updateExportStats();
         });
 
         fetchDataTask.setOnFailed(event -> {
@@ -205,6 +215,34 @@ public class ExportShipmentsController {
         });
 
         new Thread(fetchDataTask).start();
+    }
+
+    /**
+     * Update the stat card labels based on current exports data
+     */
+    private void updateExportStats() {
+        int total = exports.size();
+        int completed = 0;
+        int inProgress = 0;
+
+        for (ExportShipment e : exports) {
+            String status = e.getCurrentStatus();
+            if (status != null && (status.contains("تم التسليم") || status.equalsIgnoreCase("Delivered"))) {
+                completed++;
+            } else {
+                inProgress++;
+            }
+        }
+
+        if (totalExportsLabel != null) {
+            totalExportsLabel.setText(String.valueOf(total));
+        }
+        if (inProgressExportsLabel != null) {
+            inProgressExportsLabel.setText(String.valueOf(inProgress));
+        }
+        if (completedExportsLabel != null) {
+            completedExportsLabel.setText(String.valueOf(completed));
+        }
     }
 
     @FXML

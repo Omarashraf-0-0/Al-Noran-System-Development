@@ -89,6 +89,14 @@ public class AdminInvoicesController {
     @FXML
     private TopBarController topBarController;
 
+    // Stat card labels
+    @FXML
+    private Label pendingCountLabel;
+    @FXML
+    private Label acceptedCountLabel;
+    @FXML
+    private Label rejectedCountLabel;
+
     private final ObservableList<InvoiceAdminModel> invoicesList = FXCollections.observableArrayList();
     private javafx.collections.transformation.FilteredList<InvoiceAdminModel> filteredData;
     private String currentSearchText = "";
@@ -317,6 +325,8 @@ public class AdminInvoicesController {
             if (invoicesList.isEmpty()) {
                 adminInvoicesTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بيانات"));
             }
+            // Update stat cards
+            updateInvoiceStats();
         });
 
         loadTask.setOnFailed(event -> {
@@ -324,6 +334,38 @@ public class AdminInvoicesController {
         });
 
         new Thread(loadTask).start();
+    }
+
+    /**
+     * Update the stat card labels based on current invoices data
+     */
+    private void updateInvoiceStats() {
+        int pending = 0;
+        int accepted = 0;
+        int rejected = 0;
+
+        for (InvoiceAdminModel inv : invoicesList) {
+            String status = inv.getStatus();
+            if (status != null) {
+                if (status.contains("انتظار") || status.equalsIgnoreCase("pending")) {
+                    pending++;
+                } else if (status.contains("مقبول") || status.equalsIgnoreCase("accepted")) {
+                    accepted++;
+                } else if (status.contains("مرفوض") || status.equalsIgnoreCase("rejected")) {
+                    rejected++;
+                }
+            }
+        }
+
+        if (pendingCountLabel != null) {
+            pendingCountLabel.setText(String.valueOf(pending));
+        }
+        if (acceptedCountLabel != null) {
+            acceptedCountLabel.setText(String.valueOf(accepted));
+        }
+        if (rejectedCountLabel != null) {
+            rejectedCountLabel.setText(String.valueOf(rejected));
+        }
     }
 
     private void showInvoiceDetailsDialog(InvoiceAdminModel invoice) {

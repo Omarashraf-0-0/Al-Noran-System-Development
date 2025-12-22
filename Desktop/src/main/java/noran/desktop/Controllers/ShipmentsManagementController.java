@@ -61,6 +61,14 @@ public class ShipmentsManagementController {
     @FXML
     private TopBarController topBarController;
 
+    // Stat card labels
+    @FXML
+    private Label totalShipmentsLabel;
+    @FXML
+    private Label inProgressLabel;
+    @FXML
+    private Label completedLabel;
+
     @FXML
     public void initialize() {
         // Setup Columns
@@ -186,6 +194,8 @@ public class ShipmentsManagementController {
             if (shipments.isEmpty()) {
                 clientTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بيانات"));
             }
+            // Update stat cards
+            updateShipmentStats();
         });
 
         fetchDataTask.setOnFailed(event -> {
@@ -194,6 +204,34 @@ public class ShipmentsManagementController {
 
         // Run the task
         new Thread(fetchDataTask).start();
+    }
+
+    /**
+     * Update the stat card labels based on current shipments data
+     */
+    private void updateShipmentStats() {
+        int total = shipments.size();
+        int completed = 0;
+        int inProgress = 0;
+
+        for (Shipment s : shipments) {
+            String status = s.getStatus();
+            if (status != null && (status.contains("تم التسليم") || status.equalsIgnoreCase("Delivered"))) {
+                completed++;
+            } else {
+                inProgress++;
+            }
+        }
+
+        if (totalShipmentsLabel != null) {
+            totalShipmentsLabel.setText(String.valueOf(total));
+        }
+        if (inProgressLabel != null) {
+            inProgressLabel.setText(String.valueOf(inProgress));
+        }
+        if (completedLabel != null) {
+            completedLabel.setText(String.valueOf(completed));
+        }
     } // --- OTHER METHODS (Add/Edit/Delete) ---
       // You should update these to use MongoConnection directly instead of
       // RestMongoSyncClient later

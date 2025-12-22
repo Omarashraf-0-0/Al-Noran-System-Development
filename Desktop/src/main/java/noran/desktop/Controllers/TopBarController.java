@@ -90,6 +90,7 @@ public class TopBarController implements Initializable {
     /**
      * Set the sidebar reference so it can be toggled from the menu icon.
      * Sidebar starts hidden by default.
+     * Also registers Ctrl+Tab keyboard shortcut for toggling.
      */
     public void setSidebar(VBox sidebar) {
         this.sidebar = sidebar;
@@ -97,6 +98,20 @@ public class TopBarController implements Initializable {
         if (sidebar != null) {
             sidebar.setTranslateX(-SIDEBAR_WIDTH);
             sidebar.setManaged(false);
+
+            // Register Ctrl+Tab shortcut when scene becomes available
+            javafx.application.Platform.runLater(() -> {
+                if (sidebar.getScene() != null) {
+                    registerSidebarShortcut(sidebar.getScene());
+                } else {
+                    // If scene is not yet available, wait for it
+                    sidebar.sceneProperty().addListener((obs, oldScene, newScene) -> {
+                        if (newScene != null) {
+                            registerSidebarShortcut(newScene);
+                        }
+                    });
+                }
+            });
         }
     }
 
@@ -106,6 +121,13 @@ public class TopBarController implements Initializable {
 
     @FXML
     private void toggleSidebar(MouseEvent event) {
+        toggleSidebarAction();
+    }
+
+    /**
+     * Public method to toggle sidebar (can be called from keyboard shortcut)
+     */
+    public void toggleSidebarAction() {
         if (sidebar == null)
             return;
 
@@ -142,6 +164,21 @@ public class TopBarController implements Initializable {
 
         currentTransition.play();
         sidebarVisible = !sidebarVisible;
+    }
+
+    /**
+     * Register Ctrl+Tab shortcut to toggle sidebar
+     */
+    public void registerSidebarShortcut(javafx.scene.Scene scene) {
+        if (scene == null)
+            return;
+
+        scene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, e -> {
+            if (e.isControlDown() && e.getCode() == javafx.scene.input.KeyCode.TAB) {
+                toggleSidebarAction();
+                e.consume();
+            }
+        });
     }
 
     private void createUserMenu() {

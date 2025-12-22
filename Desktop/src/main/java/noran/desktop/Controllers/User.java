@@ -20,6 +20,8 @@ public class User implements Serializable {
     private String employeeType;
     private boolean verified;
     private boolean active;
+    private double wallet;
+    private boolean suspended;
     private Date createdAt;
     private Date updatedAt;
     private String profilePhoto;
@@ -148,6 +150,22 @@ public class User implements Serializable {
 
     public void setProfilePhoto(String profilePhoto) {
         this.profilePhoto = profilePhoto;
+    }
+
+    public double getWallet() {
+        return wallet;
+    }
+
+    public void setWallet(double wallet) {
+        this.wallet = wallet;
+    }
+
+    public boolean isSuspended() {
+        return suspended;
+    }
+
+    public void setSuspended(boolean suspended) {
+        this.suspended = suspended;
     }
 
     /**

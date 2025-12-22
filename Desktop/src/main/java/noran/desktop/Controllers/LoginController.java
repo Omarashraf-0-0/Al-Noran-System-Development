@@ -86,6 +86,8 @@ public class LoginController {
                 String username = "";
                 boolean verified = false;
                 boolean active = false;
+                double wallet = 0;
+                boolean suspended = false;
                 String profilePhoto = "";
 
                 try {
@@ -108,7 +110,9 @@ public class LoginController {
                             JSONObject empDetails = u.getJSONObject("employeeDetails");
                             employeeType = empDetails.optString("employeeType", "");
                             verified = empDetails.optBoolean("verified", false);
+                            suspended = empDetails.optBoolean("suspended", false);
                         }
+                        wallet = u.optDouble("wallet", 0);
                     } else {
                         extractedId = json.optString("id", json.optString("_id", ""));
                         extractedName = json.optString("name", json.optString("username", ""));
@@ -165,6 +169,8 @@ public class LoginController {
                     loggedInUser.setVerified(verified);
                     loggedInUser.setActive(active);
                     loggedInUser.setProfilePhoto(profilePhoto);
+                    loggedInUser.setWallet(wallet);
+                    loggedInUser.setSuspended(suspended);
                     noran.desktop.AppSession.getInstance().setCurrentUser(loggedInUser);
 
                 } catch (Exception ex) {
@@ -273,17 +279,11 @@ public class LoginController {
         container.setMaxWidth(380);
         container.setMinHeight(300);
 
-        // Add shadow effect
-        DropShadow shadow = new DropShadow();
-        shadow.setColor(Color.rgb(0, 0, 0, 0.35));
-        shadow.setRadius(30);
-        shadow.setSpread(0.15);
-        container.setEffect(shadow);
+        // No heavy shadow - clean modern look
 
         // Icon circle with symbol - larger for visibility
         Circle iconCircle = new Circle(50);
         iconCircle.setFill(getIconColor(type));
-        iconCircle.setEffect(new DropShadow(15, getIconColor(type).darker()));
 
         Label iconLabel = new Label(getIcon(type));
         iconLabel.setFont(Font.font("Segoe UI Emoji", FontWeight.BOLD, 42));
@@ -391,8 +391,7 @@ public class LoginController {
         return "-fx-background-color: " + bgColor + "; " +
                 "-fx-text-fill: white; " +
                 "-fx-background-radius: 25; " +
-                "-fx-border-radius: 25; " +
-                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);";
+                "-fx-border-radius: 25;";
     }
 
     private String getButtonHoverStyle(AlertType type) {
@@ -405,7 +404,6 @@ public class LoginController {
         return "-fx-background-color: " + bgColor + "; " +
                 "-fx-text-fill: white; " +
                 "-fx-background-radius: 25; " +
-                "-fx-border-radius: 25; " +
-                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 3);";
+                "-fx-border-radius: 25;";
     }
 }

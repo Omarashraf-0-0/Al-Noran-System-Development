@@ -90,14 +90,7 @@
                         </HBox>
 
                         <!-- Status Badge -->
-                        <HBox alignment="CENTER" spacing="10" style="-fx-background-color: rgba(255,255,255,0.1); -fx-background-radius: 25; -fx-padding: 10 28;">
-                            <Circle fx:id="statusIndicator" radius="6" style="-fx-fill: #22c55e;">
-                                <effect>
-                                    <DropShadow color="#22c55e" radius="10" spread="0.4" />
-                                </effect>
-                            </Circle>
-                            <Label fx:id="statusLabel" style="-fx-text-fill: rgba(255,255,255,0.95); -fx-font-size: 14px; -fx-font-weight: 600;" text="نشط" />
-                        </HBox>
+                        <Label fx:id="statusLabel" style="-fx-text-fill: rgba(255,255,255,0.95); -fx-font-size: 14px; -fx-font-weight: 600;" text="نشط" />
                     </VBox>
                     
                     <!-- Shadow -->
@@ -229,46 +222,7 @@
                </rowConstraints>
                 </GridPane>
 
-                <!-- ==================== ACCOUNT INFO CARD ==================== -->
-                <VBox spacing="0" style="-fx-background-color: white; -fx-background-radius: 28; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 40, 0, 0, 12);">
-                    <!-- Card Header with Dark Maroon -->
-                    <HBox alignment="CENTER_LEFT" spacing="14" style="-fx-background-color: linear-gradient(to left, #690000, #4a0000, #2d0000); -fx-background-radius: 28 28 0 0; -fx-padding: 20 28;">
-                        <StackPane style="-fx-background-color: rgba(255,255,255,0.15); -fx-background-radius: 12; -fx-padding: 12;">
-                            <Label style="-fx-font-size: 22px;" text="📊" />
-                        </StackPane>
-                        <Label style="-fx-font-family: 'Segoe UI'; -fx-font-size: 18px; -fx-font-weight: 700; -fx-text-fill: white;" text="معلومات الحساب" />
-                    </HBox>
-                    
-                    <!-- Card Content - Horizontal Layout -->
-                    <HBox spacing="0" style="-fx-padding: 44 36;">
-                        <!-- Created At -->
-                        <VBox alignment="CENTER" spacing="14" style="-fx-border-color: transparent #e9ecef transparent transparent; -fx-border-width: 0 2 0 0; -fx-padding: 0 32 0 0;" HBox.hgrow="ALWAYS">
-                            <StackPane style="-fx-background-color: #1ba3b6; -fx-background-radius: 18; -fx-padding: 20;">
-                                <Label style="-fx-font-size: 30px;" text="🗓" />
-                            </StackPane>
-                            <Label style="-fx-text-fill: #6c757d; -fx-font-size: 14px; -fx-font-weight: 600;" text="تاريخ الإنشاء" />
-                            <Label fx:id="createdAtLabel" style="-fx-font-family: 'Segoe UI'; -fx-font-size: 17px; -fx-font-weight: 700; -fx-text-fill: #1a1a2e;" text="30 نوفمبر 2025" />
-                        </VBox>
 
-                        <!-- Last Update -->
-                        <VBox alignment="CENTER" spacing="14" style="-fx-border-color: transparent #e9ecef transparent transparent; -fx-border-width: 0 2 0 0; -fx-padding: 0 32;" HBox.hgrow="ALWAYS">
-                            <StackPane style="-fx-background-color: #D4AF37; -fx-background-radius: 18; -fx-padding: 20;">
-                                <Label style="-fx-font-size: 30px;" text="🕐" />
-                            </StackPane>
-                            <Label style="-fx-text-fill: #6c757d; -fx-font-size: 14px; -fx-font-weight: 600;" text="آخر تحديث" />
-                            <Label fx:id="updatedAtLabel" style="-fx-font-family: 'Segoe UI'; -fx-font-size: 17px; -fx-font-weight: 700; -fx-text-fill: #1a1a2e;" text="14 ديسمبر 2025" />
-                        </VBox>
-
-                        <!-- Account Status -->
-                        <VBox alignment="CENTER" spacing="14" style="-fx-padding: 0 0 0 32;" HBox.hgrow="ALWAYS">
-                            <StackPane style="-fx-background-color: #10b981; -fx-background-radius: 18; -fx-padding: 20;">
-                                <Label style="-fx-font-size: 30px;" text="⚡" />
-                            </StackPane>
-                            <Label style="-fx-text-fill: #6c757d; -fx-font-size: 14px; -fx-font-weight: 600;" text="حالة الحساب" />
-                            <Label fx:id="activeLabel" style="-fx-font-family: 'Segoe UI'; -fx-font-size: 17px; -fx-font-weight: 700; -fx-text-fill: #10b981;" text="نشط" />
-                        </VBox>
-                    </HBox>
-                </VBox>
 
                 <!-- Footer Divider (matching login style) -->
                 <HBox alignment="CENTER" spacing="15">

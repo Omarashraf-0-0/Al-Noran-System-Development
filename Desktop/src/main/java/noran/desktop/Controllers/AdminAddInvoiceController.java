@@ -73,6 +73,11 @@ public class AdminAddInvoiceController {
         colPrice.setCellValueFactory(new PropertyValueFactory<>("price"));
         invoiceTable.setItems(items);
 
+        // Set column widths: description is 2/3, price is 1/3 (description is double
+        // the price)
+        colDesc.prefWidthProperty().bind(invoiceTable.widthProperty().multiply(0.66));
+        colPrice.prefWidthProperty().bind(invoiceTable.widthProperty().multiply(0.33));
+
         invoiceNumberLabel.setText("INV-" + System.currentTimeMillis());
         invoiceDateLabel.setText(new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
 
