@@ -57,7 +57,7 @@
                         <!-- Client Name Field -->
                         <HBox alignment="CENTER_RIGHT" spacing="12" HBox.hgrow="ALWAYS">
                             <Label style="-fx-font-weight: 600; -fx-font-size: 14px; -fx-text-fill: #374151;" text="اسم العميل:" />
-                            <TextField fx:id="clientNameField" HBox.hgrow="ALWAYS" promptText="أدخل اسم العميل"
+                            <TextField fx:id="clientNameField" HBox.hgrow="ALWAYS" promptText="أدخل اسم العميل" maxWidth="Infinity"
                                 style="-fx-background-radius: 8; -fx-background-color: #f9fafb; -fx-border-color: #e5e7eb; -fx-border-radius: 8; -fx-padding: 10 14;" />
                         </HBox>
                         
@@ -65,18 +65,18 @@
                         <Label text="|" style="-fx-text-fill: #e5e7eb; -fx-font-size: 24px;" />
                         
                         <!-- Invoice Number -->
-                        <HBox spacing="8" alignment="CENTER_RIGHT">
+                        <HBox spacing="8" alignment="CENTER_RIGHT" HBox.hgrow="ALWAYS">
                             <Label style="-fx-font-weight: 600; -fx-text-fill: #6b7280; -fx-font-size: 13px;" text="رقم الفاتورة:" />
-                            <Label fx:id="invoiceNumberLabel" style="-fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #a40000;" text="INV-XXXXXX" />
+                            <Label fx:id="invoiceNumberLabel" maxWidth="Infinity" HBox.hgrow="ALWAYS" style="-fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #a40000;" text="INV-XXXXXX" />
                         </HBox>
                         
                         <!-- Separator -->
                         <Label text="|" style="-fx-text-fill: #e5e7eb; -fx-font-size: 24px;" />
                         
                         <!-- Date -->
-                        <HBox spacing="8" alignment="CENTER_RIGHT">
+                        <HBox spacing="8" alignment="CENTER_RIGHT" HBox.hgrow="ALWAYS">
                             <Label style="-fx-font-weight: 600; -fx-text-fill: #6b7280; -fx-font-size: 13px;" text="التاريخ:" />
-                            <Label fx:id="invoiceDateLabel" style="-fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #1a1a2e;" text="00/00/0000" />
+                            <Label fx:id="invoiceDateLabel" maxWidth="Infinity" HBox.hgrow="ALWAYS" style="-fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #1a1a2e;" text="00/00/0000" />
                         </HBox>
                     </HBox>
                 </VBox>

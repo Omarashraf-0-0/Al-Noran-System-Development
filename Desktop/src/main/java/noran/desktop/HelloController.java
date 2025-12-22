@@ -80,7 +80,7 @@ public class HelloController implements Initializable {
         setupComboBox();
 
         invoiceItems.addListener((ListChangeListener<InvoiceItem>) c -> updateTotal());
-        invoiceDateLabel.setText("التاريخ: " + new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
+        invoiceDateLabel.setText(new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
 
         if (sidebarController != null)
             sidebarController.setActivePage("invoices");
@@ -105,6 +105,9 @@ public class HelloController implements Initializable {
         SortedList<InvoiceItem> sortedData = new SortedList<>(filteredData);
         sortedData.comparatorProperty().bind(invoicesTable.comparatorProperty());
         invoicesTable.setItems(sortedData);
+
+        // Auto-resize columns
+        invoicesTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     }
 
     private void setupComboBox() {
@@ -122,9 +125,9 @@ public class HelloController implements Initializable {
             id = id.trim();
         this.selectedClientId = id;
 
-        clientNameLabel.setText("اسم العميل: " + (name != null ? name : "غير محدد"));
+        clientNameLabel.setText(name != null ? name : "غير محدد");
         taxNumberLabel
-                .setText("الرقم الضريبي: " + (taxNumber != null && !taxNumber.equals("-") ? taxNumber : "غير متوفر"));
+                .setText(taxNumber != null && !taxNumber.equals("-") ? taxNumber : "غير متوفر");
 
         invoiceItems.clear();
         shipmentList.clear();

@@ -9,6 +9,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.effect.BlurType;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
@@ -50,12 +52,15 @@ public class AlertUtils {
         container.setMaxWidth(380);
         container.setMinHeight(300);
 
+        // Add soft drop shadow
+        container.setEffect(new DropShadow(BlurType.GAUSSIAN, Color.rgb(0, 0, 0, 0.15), 20, 0.3, 0, 8));
+
         // Logo at top
         try {
             ImageView logo = new ImageView(new Image(
                     AlertUtils.class.getResourceAsStream("/noran/desktop/images/Logo.png")));
-            logo.setFitHeight(45);
-            logo.setFitWidth(65);
+            logo.setFitHeight(70);
+            logo.setFitWidth(100);
             logo.setPreserveRatio(true);
             logo.setOpacity(0.9);
             container.getChildren().add(logo);
@@ -110,9 +115,9 @@ public class AlertUtils {
 
         container.getChildren().addAll(iconPane, titleLabel, messageLabel, okBtn);
 
-        // Create scene with semi-transparent backdrop
+        // Create scene with transparent backdrop
         StackPane root = new StackPane(container);
-        root.setStyle("-fx-background-color: rgba(0, 0, 0, 0.25);");
+        root.setStyle("-fx-background-color: transparent;");
         root.setOnMouseClicked(e -> {
             if (e.getTarget() == root) {
                 okBtn.fire();

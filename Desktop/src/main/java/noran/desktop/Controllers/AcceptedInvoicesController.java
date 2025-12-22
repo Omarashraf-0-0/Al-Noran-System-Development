@@ -97,6 +97,9 @@ public class AcceptedInvoicesController {
         colTotalAmount.setCellValueFactory(new PropertyValueFactory<>("totalAmount"));
         colDate.setCellValueFactory(new PropertyValueFactory<>("createdAt"));
 
+        // Make columns fill the table width
+        acceptedInvoicesTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
         colActions.setCellFactory(param -> new TableCell<>() {
             private final Button viewBtn = new Button("عرض PDF");
             {
