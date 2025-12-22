@@ -28,6 +28,8 @@ public class SidebarController {
     private Button addInvoicesBtn;
     @FXML
     private Button invoiceCompletionBtn;
+    @FXML
+    private Button acceptedInvoicesBtn;
 
     // CSS style class names
     private final String ACTIVE_CLASS = "sidebar-button-active";
@@ -42,13 +44,14 @@ public class SidebarController {
             hideButtonWithParent(invoiceCompletionBtn);
             hideButtonWithParent(clientsBtn);
             hideButtonWithParent(employeesBtn);
+            hideButtonWithParent(acceptedInvoicesBtn);
         }
     }
 
     private void hideButtonWithParent(Button btn) {
-        if (btn != null && btn.getParent() != null) {
-            btn.getParent().setVisible(false);
-            btn.getParent().setManaged(false);
+        if (btn != null) {
+            btn.setVisible(false);
+            btn.setManaged(false);
         }
     }
 
@@ -87,6 +90,9 @@ public class SidebarController {
             case "invoice completion":
                 setButtonActive(invoiceCompletionBtn);
                 break;
+            case "accepted invoices":
+                setButtonActive(acceptedInvoicesBtn);
+                break;
         }
     }
 
@@ -114,7 +120,9 @@ public class SidebarController {
         setButtonInactive(shipmentsBtn);
         setButtonInactive(exportShipmentsBtn);
         setButtonInactive(addInvoicesBtn);
+        setButtonInactive(addInvoicesBtn);
         setButtonInactive(invoiceCompletionBtn);
+        setButtonInactive(acceptedInvoicesBtn);
     }
 
     // --- Navigation Methods ---
@@ -157,6 +165,11 @@ public class SidebarController {
     @FXML
     public void navigateToTa5lees(ActionEvent event) throws IOException {
         loadPage(event, "/noran/desktop/AdminInvoices.fxml");
+    }
+
+    @FXML
+    public void navigateToAcceptedInvoices(ActionEvent event) throws IOException {
+        loadPage(event, "/noran/desktop/AcceptedInvoicesView.fxml");
     }
 
     // Helper method to avoid repeating code

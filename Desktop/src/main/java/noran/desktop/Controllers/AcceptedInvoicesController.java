@@ -87,7 +87,7 @@ public class AcceptedInvoicesController {
         }
 
         if (sidebarController != null) {
-            sidebarController.setActivePage("invoice completion");
+            sidebarController.setActivePage("accepted invoices");
         }
     }
 

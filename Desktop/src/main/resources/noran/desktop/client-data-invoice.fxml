@@ -50,23 +50,12 @@
                     </Button>
                 </HBox>
 
-                <!-- Action Button -->
-                <HBox alignment="CENTER" spacing="16">
-                    <Button fx:id="btnViewAcceptedInvoices" onAction="#openAcceptedInvoices" styleClass="success-button">
-                        <graphic>
-                            <HBox alignment="CENTER" spacing="8">
-                                <Label text="📋" style="-fx-font-size: 16px;"/>
-                                <Label text="عرض الفواتير المقبولة والمرسلة" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
-                            </HBox>
-                        </graphic>
-                    </Button>
-                </HBox>
+
 
                 <!-- Table Section -->
                 <VBox spacing="0" styleClass="table-container" VBox.vgrow="ALWAYS">
                     <!-- Table Header -->
                     <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-background-color: linear-gradient(to left, #a40000, #7a0000); -fx-background-radius: 16 16 0 0; -fx-padding: 16 24;">
-                        <Region HBox.hgrow="ALWAYS"/>
                         <Label text="قائمة العملاء" style="-fx-font-size: 16px; -fx-font-weight: 600; -fx-text-fill: white;"/>
                         <Label text="👤" style="-fx-font-size: 18px;"/>
                     </HBox>

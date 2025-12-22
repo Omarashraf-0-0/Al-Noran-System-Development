@@ -49,7 +49,6 @@
                 <!-- Client Name Input -->
                 <VBox spacing="0" style="-fx-background-color: white; -fx-background-radius: 16; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0, 0, 4);">
                     <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-background-color: linear-gradient(to left, #a40000, #7a0000); -fx-background-radius: 16 16 0 0; -fx-padding: 14 24;">
-                        <Region HBox.hgrow="ALWAYS"/>
                         <Label text="بيانات الفاتورة" style="-fx-font-size: 15px; -fx-font-weight: 600; -fx-text-fill: white;"/>
                         <Label text="📋" style="-fx-font-size: 16px;"/>
                     </HBox>
@@ -107,7 +106,6 @@
                 <!-- Table with Logo Watermark -->
                 <VBox spacing="0" styleClass="table-container" VBox.vgrow="ALWAYS">
                     <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-background-color: linear-gradient(to left, #a40000, #7a0000); -fx-background-radius: 16 16 0 0; -fx-padding: 16 24;">
-                        <Region HBox.hgrow="ALWAYS"/>
                         <Label text="بنود الفاتورة" style="-fx-font-size: 16px; -fx-font-weight: 600; -fx-text-fill: white;"/>
                         <Label text="📋" style="-fx-font-size: 18px;"/>
                     </HBox>

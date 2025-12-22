@@ -16,9 +16,9 @@
         <fx:include fx:id="topBar" source="TopBar.fxml" />
     </top>
 
-    <right>
+    <left>
         <fx:include fx:id="sidebar" source="Sidebar.fxml"/>
-    </right>
+    </left>
 
     <center>
         <ScrollPane fitToWidth="true" hbarPolicy="NEVER" style="-fx-background: transparent; -fx-background-color: transparent;">
@@ -56,7 +56,6 @@
                 <VBox spacing="0" styleClass="table-container" VBox.vgrow="ALWAYS">
                     <!-- Table Header -->
                     <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-background-color: linear-gradient(to left, #10b981, #059669); -fx-background-radius: 16 16 0 0; -fx-padding: 16 24;">
-                        <Region HBox.hgrow="ALWAYS"/>
                         <Label text="الفواتير المقبولة" style="-fx-font-size: 16px; -fx-font-weight: 600; -fx-text-fill: white;"/>
                         <Label text="📋" style="-fx-font-size: 18px;"/>
                     </HBox>

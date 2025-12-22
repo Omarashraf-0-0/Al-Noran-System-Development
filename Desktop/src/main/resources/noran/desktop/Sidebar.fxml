@@ -15,8 +15,8 @@
       fx:controller="noran.desktop.Controllers.SidebarController">
     
     <!-- Logo Section -->
-    <VBox alignment="CENTER" spacing="8" style="-fx-padding: 24 20 20 20;">
-        <ImageView fitHeight="90" fitWidth="90" preserveRatio="true" smooth="true">
+    <VBox alignment="CENTER" spacing="6" style="-fx-padding: 16 20 10 20;">
+        <ImageView fitHeight="80" fitWidth="80" preserveRatio="true" smooth="true">
             <effect>
                 <DropShadow color="rgba(0,0,0,0.3)" radius="15"/>
             </effect>
@@ -40,7 +40,7 @@
     </VBox>
 
     <!-- Navigation Section -->
-    <VBox alignment="TOP_CENTER" spacing="6" style="-fx-padding: 16 16 16 16;" VBox.vgrow="ALWAYS">
+    <VBox alignment="TOP_CENTER" spacing="4" style="-fx-padding: 8 16 8 16;" VBox.vgrow="ALWAYS">
         
         <!-- Dashboard -->
         <Button fx:id="dashboardBtn" maxWidth="Infinity" onAction="#navigateToDashboard" 
@@ -53,19 +53,23 @@
         <!-- Invoice Completion -->
         <Button fx:id="invoiceCompletionBtn" maxWidth="Infinity" onAction="#navigateToTa5lees" 
                 styleClass="sidebar-button" text="📋  تخليص الفواتير"/>
-        
-        <!-- Clients Management -->
-        <Button fx:id="clientsBtn" maxWidth="Infinity" onAction="#navigateToClients" 
-                styleClass="sidebar-button" text="👥  إدارة العملاء"/>
+
+        <!-- Accepted Invoices -->
+        <Button fx:id="acceptedInvoicesBtn" maxWidth="Infinity" onAction="#navigateToAcceptedInvoices"
+                styleClass="sidebar-button" text="✅  الفواتير المقبولة"/>
         
         <!-- Invoices Management -->
-        <Button fx:id="invoicesBtn" maxWidth="Infinity" onAction="#navigateToInvoices" 
+        <Button fx:id="invoicesBtn" maxWidth="Infinity" onAction="#navigateToInvoices"
                 styleClass="sidebar-button" text="📄  إدارة الفواتير"/>
-        
+
         <!-- Add New Invoice -->
-        <Button fx:id="addInvoicesBtn" maxWidth="Infinity" onAction="#navigateToAddInvoices" 
+        <Button fx:id="addInvoicesBtn" maxWidth="Infinity" onAction="#navigateToAddInvoices"
                 styleClass="sidebar-button" text="➕  اضافه فاتورة جديدة"/>
-        
+
+        <!-- Clients Management -->
+        <Button fx:id="clientsBtn" maxWidth="Infinity" onAction="#navigateToClients"
+                styleClass="sidebar-button" text="👥  إدارة العملاء"/>
+
         <!-- Employee Management -->
         <Button fx:id="employeesBtn" maxWidth="Infinity" onAction="#navigateToEmployees" 
                 styleClass="sidebar-button" text="🔐  إدارة الصلاحيات"/>
