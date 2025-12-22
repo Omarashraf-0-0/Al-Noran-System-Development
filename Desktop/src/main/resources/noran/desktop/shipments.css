@@ -46,7 +46,7 @@
 .secondary-button {
     -fx-background-color: linear-gradient(to bottom, #3b82f6, #2563eb);
     -fx-background-radius: 12;
-    -fx-padding: 14 28;
+    -fx-padding: 14 24;
     -fx-cursor: hand;
     -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.3), 10, 0, 0, 4);
 }
@@ -63,7 +63,7 @@
 .danger-button {
     -fx-background-color: linear-gradient(to bottom, #a40000, #7a0000);
     -fx-background-radius: 12;
-    -fx-padding: 14 28;
+    -fx-padding: 14 24;
     -fx-cursor: hand;
     -fx-effect: dropshadow(gaussian, rgba(164, 0, 0, 0.3), 10, 0, 0, 4);
 }
@@ -80,7 +80,7 @@
 .success-button {
     -fx-background-color: linear-gradient(to bottom, #10b981, #059669);
     -fx-background-radius: 12;
-    -fx-padding: 14 28;
+    -fx-padding: 14 24;
     -fx-cursor: hand;
     -fx-effect: dropshadow(gaussian, rgba(16, 185, 129, 0.3), 10, 0, 0, 4);
 }
