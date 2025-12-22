@@ -184,6 +184,7 @@
                         </HBox>
                         
                         <!-- Card Content -->
+                        <!-- jessy -->
                         <VBox spacing="20" style="-fx-padding: 28;">
                             <!-- Email Row -->
                             <HBox alignment="CENTER_LEFT" spacing="16">
