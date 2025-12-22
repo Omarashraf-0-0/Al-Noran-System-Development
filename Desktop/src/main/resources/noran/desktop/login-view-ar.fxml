@@ -120,7 +120,7 @@
                         <Label text="📧" style="-fx-font-size: 16px; -fx-padding: 0 0 0 15;"/>
                         <TextField fx:id="usernameField" 
                                    promptText="example@email.com"
-                                   prefHeight="50" prefWidth="280"
+                                   prefHeight="50" maxWidth="Infinity" HBox.hgrow="ALWAYS"
                                    nodeOrientation="LEFT_TO_RIGHT"
                                    style="-fx-background-color: transparent; -fx-font-size: 15px; -fx-padding: 0 15 0 10; -fx-border-width: 0;"/>
                     </HBox>
@@ -135,7 +135,7 @@
                         <Label text="🔒" style="-fx-font-size: 16px; -fx-padding: 0 0 0 15;"/>
                         <PasswordField fx:id="passwordField"
                                        promptText="••••••••"
-                                       prefHeight="50" prefWidth="280"
+                                       prefHeight="50" maxWidth="Infinity" HBox.hgrow="ALWAYS"
                                        nodeOrientation="LEFT_TO_RIGHT"
                                        style="-fx-background-color: transparent; -fx-font-size: 15px; -fx-padding: 0 15 0 10; -fx-border-width: 0;"/>
                     </HBox>

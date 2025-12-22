@@ -50,11 +50,11 @@
                             <HBox alignment="CENTER_RIGHT" spacing="10">
                                 <Label style="-fx-text-fill: #6b7280; -fx-font-size: 13px; -fx-font-weight: 500;" text="إجمالي الإيرادات"/>
                                 <StackPane prefWidth="40" prefHeight="40">
-                                    <Circle radius="20" style="-fx-fill: linear-gradient(to bottom right, #10b981, #059669);"/>
+                                    <Circle radius="20" style="-fx-fill: linear-gradient(to bottom right, #a40000, #7a0000);"/>
                                     <Label text="💰" style="-fx-font-size: 18px;"/>
                                 </StackPane>
                             </HBox>
-                            <Label fx:id="totalRevenueLabel" style="-fx-font-size: 32px; -fx-font-weight: 700; -fx-text-fill: #10b981;" text="0.00"/>
+                            <Label fx:id="totalRevenueLabel" style="-fx-font-size: 32px; -fx-font-weight: 700; -fx-text-fill: #a40000;" text="0.00"/>
                             <HBox alignment="CENTER_RIGHT" spacing="6">
                                 <Label style="-fx-text-fill: #9ca3af; -fx-font-size: 12px;" text="جنيه مصري"/>
                                 <Label text="📈" style="-fx-font-size: 12px;"/>
@@ -68,11 +68,11 @@
                             <HBox alignment="CENTER_RIGHT" spacing="10">
                                 <Label style="-fx-text-fill: #6b7280; -fx-font-size: 13px; -fx-font-weight: 500;" text="الفواتير المعلقة"/>
                                 <StackPane prefWidth="40" prefHeight="40">
-                                    <Circle radius="20" style="-fx-fill: linear-gradient(to bottom right, #a40000, #7a0000);"/>
+                                    <Circle radius="20" style="-fx-fill: linear-gradient(to bottom right, #D4AF37, #b8941f);"/>
                                     <Label text="⏳" style="-fx-font-size: 18px;"/>
                                 </StackPane>
                             </HBox>
-                            <Label fx:id="pendingInvoicesLabel" style="-fx-font-size: 32px; -fx-font-weight: 700; -fx-text-fill: #a40000;" text="0"/>
+                            <Label fx:id="pendingInvoicesLabel" style="-fx-font-size: 32px; -fx-font-weight: 700; -fx-text-fill: #D4AF37;" text="0"/>
                             <HBox alignment="CENTER_RIGHT" spacing="6">
                                 <Label style="-fx-text-fill: #9ca3af; -fx-font-size: 12px;" text="فاتورة"/>
                             </HBox>
@@ -85,11 +85,11 @@
                             <HBox alignment="CENTER_RIGHT" spacing="10">
                                 <Label style="-fx-text-fill: #6b7280; -fx-font-size: 13px; -fx-font-weight: 500;" text="الشهادات المكتملة"/>
                                 <StackPane prefWidth="40" prefHeight="40">
-                                    <Circle radius="20" style="-fx-fill: linear-gradient(to bottom right, #D4AF37, #b8941f);"/>
+                                    <Circle radius="20" style="-fx-fill: linear-gradient(to bottom right, #10b981, #059669);"/>
                                     <Label text="✅" style="-fx-font-size: 18px;"/>
                                 </StackPane>
                             </HBox>
-                            <Label fx:id="completedInvoicesLabel" style="-fx-font-size: 32px; -fx-font-weight: 700; -fx-text-fill: #D4AF37;" text="0"/>
+                            <Label fx:id="completedInvoicesLabel" style="-fx-font-size: 32px; -fx-font-weight: 700; -fx-text-fill: #10b981;" text="0"/>
                             <HBox alignment="CENTER_RIGHT" spacing="6">
                                 <Label style="-fx-text-fill: #9ca3af; -fx-font-size: 12px;" text="شهادة"/>
                             </HBox>
@@ -121,8 +121,8 @@
                 <!-- CHARTS SECTION -->
                 <VBox spacing="0" styleClass="charts-container">
                     <!-- Header -->
-                    <HBox alignment="CENTER" spacing="12" style="-fx-background-color: linear-gradient(to left, #a40000, #7a0000, #520000); -fx-background-radius: 20 20 0 0; -fx-padding: 20 32;">
-                        <Region HBox.hgrow="ALWAYS"/>
+                    <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-background-color: linear-gradient(to left, #a40000, #7a0000, #520000); -fx-background-radius: 20 20 0 0; -fx-padding: 20 32;">
+
                         <Label style="-fx-font-size: 20px; -fx-font-weight: 700; -fx-text-fill: white;" text="الإحصائيات والتقارير"/>
                         <Label text="📊" style="-fx-font-size: 24px;"/>
                     </HBox>

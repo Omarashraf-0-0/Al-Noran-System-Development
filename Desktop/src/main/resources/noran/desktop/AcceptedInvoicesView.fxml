@@ -16,6 +16,10 @@
         <fx:include fx:id="topBar" source="TopBar.fxml" />
     </top>
 
+    <right>
+        <fx:include fx:id="sidebar" source="Sidebar.fxml"/>
+    </right>
+
     <center>
         <ScrollPane fitToWidth="true" hbarPolicy="NEVER" style="-fx-background: transparent; -fx-background-color: transparent;">
             <VBox spacing="24" style="-fx-padding: 32 40;">
@@ -46,17 +50,7 @@
                     </Button>
                 </HBox>
 
-                <!-- Back Button -->
-                <HBox alignment="CENTER_LEFT">
-                    <Button onAction="#goBack" styleClass="secondary-button">
-                        <graphic>
-                            <HBox alignment="CENTER" spacing="8">
-                                <Label text="⬅️" style="-fx-font-size: 16px;"/>
-                                <Label text="رجوع إلى إنشاء الفواتير" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
-                            </HBox>
-                        </graphic>
-                    </Button>
-                </HBox>
+
 
                 <!-- Table Section -->
                 <VBox spacing="0" styleClass="table-container" VBox.vgrow="ALWAYS">
