@@ -1,63 +1,101 @@
 /* ===============================
-   TableView Custom Styling (Red Header)
+   TableView Custom Styling - Modern Design
    =============================== */
 
 /* Force override the header background */
 .table-view .column-header-background,
 .table-view .column-header-background .nested-column-header {
-    -fx-background-color: #a40000 !important;
-    /* solid red header */
+    -fx-background-color: linear-gradient(to bottom, #a40000, #7a0000);
     -fx-background-insets: 0;
-    -fx-background-radius: 8 8 0 0;
+    -fx-background-radius: 0;
 }
 
-/* Each individual header cell (no gray gradient) */
+/* Each individual header cell */
 .table-view .column-header {
-    -fx-background-color: #a40000 !important;
-    -fx-border-color: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-width: 0 0 0 1;
 }
 
 /* Header text style */
 .table-view .column-header .label {
     -fx-text-fill: white;
-    -fx-font-weight: bold;
+    -fx-font-weight: 700;
     -fx-font-size: 14px;
     -fx-alignment: CENTER;
+    -fx-padding: 12 8;
 }
 
-/* Remove gray filler area on right if table is empty */
+/* Remove gray filler area */
 .table-view .filler {
-    -fx-background-color: #a40000 !important;
+    -fx-background-color: linear-gradient(to bottom, #a40000, #7a0000);
 }
 
 /* Table body */
 .table-view {
     -fx-background-color: white;
-    -fx-border-color: #a40000;
-    -fx-background-radius: 8;
-    -fx-table-cell-border-color: #e0e0e0;
+    -fx-border-color: transparent;
+    -fx-background-radius: 0;
+    -fx-table-cell-border-color: #f3f4f6;
+    -fx-selection-bar: #a40000;
+    -fx-selection-bar-non-focused: #fce8ea;
 }
 
-/* Normal rows */
+/* Remove scroll bar background */
+.table-view .scroll-bar:vertical {
+    -fx-background-color: #f8f9fa;
+}
+
+.table-view .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(164, 0, 0, 0.4);
+    -fx-background-radius: 8;
+}
+
+.table-view .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: rgba(164, 0, 0, 0.6);
+}
+
+/* Normal rows - Alternating colors */
 .table-row-cell {
     -fx-background-color: white;
-    -fx-padding: 6px;
+    -fx-padding: 8 0;
+    -fx-border-color: transparent transparent #f0f0f0 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #fafafa;
 }
 
 /* Hovered row */
 .table-row-cell:hover {
-    -fx-background-color: #fce8ea;
+    -fx-background-color: #fef2f2;
 }
 
 /* Selected row */
 .table-row-cell:selected {
-    -fx-background-color: #a40000;
+    -fx-background-color: linear-gradient(to right, #a40000, #c41e1e);
+}
+
+.table-row-cell:selected .table-cell {
     -fx-text-fill: white;
+}
+
+.table-row-cell:selected:hover {
+    -fx-background-color: linear-gradient(to right, #7a0000, #a40000);
 }
 
 /* Cell text */
 .table-cell {
-    -fx-text-fill: black;
+    -fx-text-fill: #374151;
     -fx-font-size: 13px;
-    -fx-alignment: CENTER_LEFT;
+    -fx-font-weight: 500;
+    -fx-alignment: CENTER;
+    -fx-padding: 8 12;
+}
+
+/* Empty table placeholder */
+.table-view .placeholder .label {
+    -fx-text-fill: #9ca3af;
+    -fx-font-size: 14px;
 }

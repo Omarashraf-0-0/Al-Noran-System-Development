@@ -76,7 +76,7 @@
         
         <!-- Export Shipments -->
         <Button fx:id="exportShipmentsBtn" maxWidth="Infinity" onAction="#navigateToExportShipments" 
-                styleClass="sidebar-button" text="🚢  إدارة شحنات التصدير"/>
+                styleClass="sidebar-button" text="📤  إدارة شحنات التصدير"/>
         
         <!-- Spacer -->
         <Region VBox.vgrow="ALWAYS"/>
