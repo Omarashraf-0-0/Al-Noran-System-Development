@@ -249,7 +249,6 @@ public class ShipmentsManagementController {
             MongoDatabase db = MongoConnection.getDatabase();
             db.getCollection("shipments").deleteOne(new Document("_id", new ObjectId(selected.getId())));
             shipments.remove(selected);
-            System.out.println("Deleted from MongoDB");
         } catch (Exception e) {
             showAlert("Failed to delete: " + e.getMessage());
         }
@@ -358,7 +357,6 @@ public class ShipmentsManagementController {
                 collection.updateOne(
                         new Document("_id", new ObjectId(id)),
                         new Document("$set", doc));
-                System.out.println("✔ تم تحديث شحنة الاستيراد: " + id);
             }
             return true;
 
@@ -388,13 +386,11 @@ public class ShipmentsManagementController {
                 // INSERT NEW
                 doc.append("createdAt", new java.util.Date());
                 collection.insertOne(doc);
-                System.out.println("Inserted new shipment");
             } else {
                 // UPDATE EXISTING
                 collection.updateOne(
                         new Document("_id", new ObjectId(s.getId())),
                         new Document("$set", doc));
-                System.out.println("Updated shipment: " + s.getId());
             }
         } catch (Exception e) {
             e.printStackTrace();

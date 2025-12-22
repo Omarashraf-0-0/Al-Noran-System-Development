@@ -7,13 +7,36 @@ import io.github.cdimascio.dotenv.Dotenv;
 
 public class MongoDirectConnection {
 
-    // Point to the specific folder containing your .env file
-    private static final String ENV_PATH = "C:\\Users\\fcbmo\\IdeaProjects\\Al-Noran-System-Development\\Web\\backend";
+    // Try to find .env from multiple possible locations
+    private static final Dotenv dotenv = loadDotenv();
 
-    private static final Dotenv dotenv = Dotenv.configure()
-            .directory(ENV_PATH)
-            .ignoreIfMissing()
-            .load();
+    private static Dotenv loadDotenv() {
+        // Try relative paths first, then fall back to environment variable
+        String[] possiblePaths = {
+                "./config",
+                "../Web/backend",
+                "../../Web/backend",
+                System.getenv("NORAN_ENV_PATH")
+        };
+
+        for (String path : possiblePaths) {
+            if (path == null)
+                continue;
+            try {
+                Dotenv env = Dotenv.configure()
+                        .directory(path)
+                        .ignoreIfMissing()
+                        .load();
+                if (env.get("DATABASE_URI") != null) {
+                    return env;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        // Fallback: try loading from classpath or current directory
+        return Dotenv.configure().ignoreIfMissing().load();
+    }
 
     // Read the connection string from .env file
     private static final String CONNECTION_STRING = dotenv.get("DATABASE_URI");
@@ -21,20 +44,20 @@ public class MongoDirectConnection {
 
     private static MongoClient client;
 
-    public static MongoDatabase connect() {
+    public static synchronized MongoDatabase connect() {
         if (CONNECTION_STRING == null || CONNECTION_STRING.isEmpty()) {
-            System.err.println("❌ Error: DATABASE_URI not found! Checked path: " + ENV_PATH);
             return null;
         }
 
         try {
-            client = MongoClients.create(CONNECTION_STRING);
+            // Reuse existing client if available
+            if (client == null) {
+                client = MongoClients.create(CONNECTION_STRING);
+            }
             MongoDatabase db = client.getDatabase(DATABASE_NAME);
-            db.listCollectionNames().first();
-            System.out.println("✅ MongoDB connected using secure .env");
+            db.listCollectionNames().first(); // Test connection
             return db;
         } catch (Exception e) {
-            System.err.println("❌ MongoDB connection failed: " + e.getMessage());
             return null;
         }
     }
@@ -42,7 +65,7 @@ public class MongoDirectConnection {
     public static void close() {
         if (client != null) {
             client.close();
-            System.out.println("🔒 MongoDB closed");
+            client = null;
         }
     }
 }

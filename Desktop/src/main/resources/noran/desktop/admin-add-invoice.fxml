@@ -113,13 +113,13 @@
                         <Label text="📋" style="-fx-font-size: 18px;"/>
                     </HBox>
                     
-                    <StackPane style="-fx-background-color: white; -fx-background-radius: 0 0 16 16;" VBox.vgrow="ALWAYS">
+                    <StackPane style="-fx-background-color: white; -fx-background-radius: 0 0 16 16; -fx-padding: 0;" VBox.vgrow="ALWAYS">
                         <ImageView fitWidth="350" mouseTransparent="true" opacity="0.06" preserveRatio="true">
                             <image>
                                 <Image url="@/noran/desktop/images/Logo.png" />
                             </image>
                         </ImageView>
-                        <TableView fx:id="invoiceTable" prefHeight="340" style="-fx-background-color: transparent; -fx-padding: 0; -fx-background-insets: 0;" stylesheets="@invoices-table.css">
+                        <TableView fx:id="invoiceTable" style="-fx-background-color: transparent; -fx-padding: 0; -fx-background-insets: 0;" stylesheets="@invoices-table.css">
                             <columns>
                                 <TableColumn fx:id="colDesc" text="الوصف" />
                                 <TableColumn fx:id="colPrice" text="السعر" />

@@ -83,7 +83,6 @@ public class DashboardController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         User currentUser = AppSession.getInstance().getCurrentUser();
-        System.out.println(currentUser.toString());
         loadDashboardData();
         sidebarController.setActivePage("dashboard");
         if (topBarController != null && currentUser != null) {
@@ -93,11 +92,8 @@ public class DashboardController implements Initializable {
             topBarController.setSidebar(sidebar); // Pass sidebar for toggle
             // Load profile photo
             String profilePhoto = currentUser.getProfilePhoto();
-            System.out.println("[DashboardController] Profile photo from user: '" + profilePhoto + "'");
             if (profilePhoto != null && !profilePhoto.isEmpty()) {
                 topBarController.setProfilePhoto(profilePhoto);
-            } else {
-                System.out.println("[DashboardController] No profile photo set for user");
             }
         }
         topBarController.setSearchBarVisible(false);
@@ -218,7 +214,6 @@ public class DashboardController implements Initializable {
 
             int status = conn.getResponseCode();
             if (status == 401) {
-                System.err.println("❌ 401 Unauthorized: Token expired or invalid");
                 return null;
             }
 
@@ -232,11 +227,9 @@ public class DashboardController implements Initializable {
                 br.close();
                 return sb.toString();
             } else {
-                System.err.println("❌ API Error: " + status);
                 return null;
             }
         } catch (Exception e) {
-            System.err.println("❌ Failed to fetch from API: " + e.getMessage());
             return null;
         }
     }

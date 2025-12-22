@@ -73,8 +73,11 @@ public class AdminAddInvoiceController {
         colPrice.setCellValueFactory(new PropertyValueFactory<>("price"));
         invoiceTable.setItems(items);
 
-        // Set column widths: description is 2/3, price is 1/3 (description is double
-        // the price)
+        // Make columns fill the table width
+        invoiceTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        // Set relative column widths: description is 2/3, price is 1/3
+        colDesc.setMaxWidth(Double.MAX_VALUE);
+        colPrice.setMaxWidth(Double.MAX_VALUE);
         colDesc.prefWidthProperty().bind(invoiceTable.widthProperty().multiply(0.66));
         colPrice.prefWidthProperty().bind(invoiceTable.widthProperty().multiply(0.33));
 

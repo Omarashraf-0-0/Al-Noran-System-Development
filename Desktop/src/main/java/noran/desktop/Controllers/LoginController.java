@@ -151,11 +151,9 @@ public class LoginController {
                             if (profileJson.optBoolean("success", false) && profileJson.has("user")) {
                                 JSONObject profileUser = profileJson.getJSONObject("user");
                                 profilePhoto = profileUser.optString("profilePhoto", "");
-                                System.out.println(
-                                        "[LoginController] Fetched profilePhoto from profile: " + profilePhoto);
                             }
                         } catch (Exception pe) {
-                            System.err.println("[LoginController] Error parsing profile response: " + pe.getMessage());
+                            // Silent fail - use default profile photo
                         }
                     }
 

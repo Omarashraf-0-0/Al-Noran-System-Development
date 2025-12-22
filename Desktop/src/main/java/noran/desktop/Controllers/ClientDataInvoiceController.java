@@ -27,9 +27,8 @@ import org.bson.types.ObjectId;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ResourceBundle;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class ClientDataInvoiceController implements Initializable {
 
@@ -63,9 +62,12 @@ public class ClientDataInvoiceController implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         // 1. Setup Table Columns
         colClientName.setCellValueFactory(data -> data.getValue().usernameProperty());
-        colClientNumber.setCellValueFactory(data -> data.getValue().taxNumberProperty());
+        colClientNumber.setCellValueFactory(data -> data.getValue().shipmentCountProperty());
         colClientType.setCellValueFactory(data -> data.getValue().clientTypeProperty());
         colClientRank.setCellValueFactory(data -> data.getValue().rankProperty());
+
+        // Make columns fill the table width
+        invoicesTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         // 2. Setup Search/Filter
         filteredData = new FilteredList<>(userList, p -> true);
@@ -110,7 +112,7 @@ public class ClientDataInvoiceController implements Initializable {
                         return true;
                     String lower = searchText.toLowerCase();
                     return (user.getUsername() != null && user.getUsername().toLowerCase().contains(lower)) ||
-                            (user.getTaxNumber() != null && user.getTaxNumber().contains(lower));
+                            (user.getClientType() != null && user.getClientType().toLowerCase().contains(lower));
                 });
             });
         }
@@ -119,47 +121,68 @@ public class ClientDataInvoiceController implements Initializable {
     // ✅ LOAD LOGIC: Only get users who actually have shipments (ASYNC)
     private void loadUsersWithShipments() {
         // Show loading indicator
-        invoicesTable.setPlaceholder(new javafx.scene.control.Label("جاري تحميل البيانات..."));
+        invoicesTable.setPlaceholder(new Label("جاري تحميل البيانات..."));
         userList.clear();
 
-        javafx.concurrent.Task<java.util.List<UserRow>> loadTask = new javafx.concurrent.Task<>() {
+        javafx.concurrent.Task<List<UserRow>> loadTask = new javafx.concurrent.Task<>() {
             @Override
-            protected java.util.List<UserRow> call() {
-                java.util.List<UserRow> loadedList = new java.util.ArrayList<>();
+            protected List<UserRow> call() {
+                List<UserRow> loadedList = new ArrayList<>();
                 try {
                     MongoDatabase db = MongoConnection.getDatabase();
                     MongoCollection<Document> shipmentsCol = db.getCollection("shipments");
                     MongoCollection<Document> usersCol = db.getCollection("users");
 
-                    // 1. Find all distinct User IDs that exist in the 'shipments' collection
-                    List<ObjectId> distinctUserIds = shipmentsCol.distinct("user_id", ObjectId.class)
-                            .into(new ArrayList<>());
+                    // OPTIMIZED: Use aggregation to count shipments per user in ONE query
+                    Map<ObjectId, Long> shipmentCountMap = new HashMap<>();
 
-                    if (distinctUserIds.isEmpty()) {
-                        System.out.println("No shipments found, list will be empty.");
+                    // Aggregation pipeline: group by user_id and count
+                    List<Document> pipeline = new ArrayList<>();
+                    pipeline.add(new Document("$group", new Document("_id", "$user_id")
+                            .append("count", new Document("$sum", 1))));
+
+                    for (Document result : shipmentsCol.aggregate(pipeline)) {
+                        ObjectId userId = result.getObjectId("_id");
+                        Long count = 0L;
+
+                        // Handle potential mixed types for count
+                        Object countObj = result.get("count");
+                        if (countObj instanceof Number) {
+                            count = ((Number) countObj).longValue();
+                        }
+
+                        if (userId != null) {
+                            shipmentCountMap.put(userId, count);
+                        }
+                    }
+
+                    if (shipmentCountMap.isEmpty()) {
                         return loadedList;
                     }
 
-                    // 2. Find User details ONLY for those IDs
-                    // Query: WHERE _id IN (id1, id2, id3...) AND active = true
+                    // 2. Find User details ONLY for users with shipments
+                    // Get Set of IDs
+                    List<ObjectId> userIds = new ArrayList<>(shipmentCountMap.keySet());
+
                     List<Document> usersFound = usersCol.find(
                             Filters.and(
-                                    Filters.in("_id", distinctUserIds),
-                                    Filters.eq("active", true) // Optional: Ensure user is active
-                    )).into(new ArrayList<>());
+                                    Filters.in("_id", userIds),
+                                    Filters.eq("active", true)))
+                            .into(new ArrayList<>());
 
                     for (Document doc : usersFound) {
-                        String id = doc.getObjectId("_id").toString();
+                        ObjectId objId = doc.getObjectId("_id");
+                        String id = objId.toString();
                         String fullname = doc.getString("fullname");
-                        String taxNumber = doc.getString("taxNumber");
                         String clientType = doc.getString("clientType");
                         String rank = doc.getString("rank");
 
+                        // Get shipment count from pre-computed map (O(1) lookup)
+                        long shipmentCount = shipmentCountMap.getOrDefault(objId, 0L);
+
                         // Normalize Data
                         if (fullname == null)
-                            fullname = doc.getString("username"); // Fallback
-                        if (taxNumber == null)
-                            taxNumber = "-";
+                            fullname = doc.getString("username");
                         if (clientType == null)
                             clientType = "عادي";
 
@@ -176,7 +199,7 @@ public class ClientDataInvoiceController implements Initializable {
                                 rank = "high";
                         }
 
-                        loadedList.add(new UserRow(fullname, clientType, taxNumber, rank, id));
+                        loadedList.add(new UserRow(fullname, clientType, String.valueOf(shipmentCount), rank, id));
                     }
 
                 } catch (Exception e) {
@@ -189,12 +212,13 @@ public class ClientDataInvoiceController implements Initializable {
         loadTask.setOnSucceeded(event -> {
             userList.setAll(loadTask.getValue());
             if (userList.isEmpty()) {
-                invoicesTable.setPlaceholder(new javafx.scene.control.Label("لا توجد بيانات"));
+                invoicesTable.setPlaceholder(new Label("لا توجد بيانات"));
             }
         });
 
         loadTask.setOnFailed(event -> {
-            invoicesTable.setPlaceholder(new javafx.scene.control.Label("خطأ في تحميل البيانات"));
+            invoicesTable.setPlaceholder(new Label("خطأ في تحميل البيانات"));
+            loadTask.getException().printStackTrace();
         });
 
         new Thread(loadTask).start();
@@ -211,7 +235,7 @@ public class ClientDataInvoiceController implements Initializable {
             // Pass Data to HelloController
             controller.setSelectedClient(
                     user.getUsername(),
-                    user.getTaxNumber(),
+                    user.getShipmentCount(),
                     user.getClientType(),
                     user.getId(),
                     user.getRank());
@@ -259,14 +283,14 @@ public class ClientDataInvoiceController implements Initializable {
     public static class UserRow {
         private final SimpleStringProperty username;
         private final SimpleStringProperty clientType;
-        private final SimpleStringProperty taxNumber;
+        private final SimpleStringProperty shipmentCount;
         private final SimpleStringProperty rank;
         private final SimpleStringProperty id;
 
-        public UserRow(String username, String clientType, String taxNumber, String rank, String id) {
+        public UserRow(String username, String clientType, String shipmentCount, String rank, String id) {
             this.username = new SimpleStringProperty(username);
             this.clientType = new SimpleStringProperty(clientType);
-            this.taxNumber = new SimpleStringProperty(taxNumber);
+            this.shipmentCount = new SimpleStringProperty(shipmentCount);
             this.rank = new SimpleStringProperty(rank);
             this.id = new SimpleStringProperty(id);
         }
@@ -283,8 +307,8 @@ public class ClientDataInvoiceController implements Initializable {
             return clientType.get();
         }
 
-        public String getTaxNumber() {
-            return taxNumber.get();
+        public String getShipmentCount() {
+            return shipmentCount.get();
         }
 
         public String getRank() {
@@ -299,8 +323,8 @@ public class ClientDataInvoiceController implements Initializable {
             return clientType;
         }
 
-        public StringProperty taxNumberProperty() {
-            return taxNumber;
+        public StringProperty shipmentCountProperty() {
+            return shipmentCount;
         }
 
         public StringProperty rankProperty() {

@@ -256,11 +256,7 @@ public class TopBarController implements Initializable {
     }
 
     public void setProfilePhoto(String photoPath) {
-        System.out.println("[TopBarController] setProfilePhoto called with path: " + photoPath);
-
         if (avatarImage == null || photoPath == null || photoPath.isEmpty()) {
-            System.out.println("[TopBarController] setProfilePhoto: avatarImage=" + (avatarImage != null)
-                    + ", photoPath=" + photoPath);
             return;
         }
 
@@ -270,31 +266,19 @@ public class TopBarController implements Initializable {
                 String fullUrl;
                 if (photoPath.startsWith("http://") || photoPath.startsWith("https://")) {
                     fullUrl = photoPath; // Already a full URL
-                    System.out.println("[TopBarController] Using direct URL: " + fullUrl);
                 } else {
                     // S3 path - need to fetch presigned URL from backend
-                    System.out.println("[TopBarController] Fetching presigned URL for S3 path: " + photoPath);
                     fullUrl = noran.desktop.Services.APIService.getPresignedUrl(photoPath);
                     if (fullUrl == null) {
-                        System.err.println("[TopBarController] Failed to get presigned URL for: " + photoPath);
                         return;
                     }
-                    System.out.println("[TopBarController] Got presigned URL successfully");
                 }
 
                 // Load image on background thread
-                System.out.println("[TopBarController] Loading image from URL...");
                 javafx.scene.image.Image image = new javafx.scene.image.Image(fullUrl, true);
-
-                image.errorProperty().addListener((obs, oldVal, newVal) -> {
-                    if (newVal) {
-                        System.err.println("[TopBarController] Image loading ERROR: " + image.getException());
-                    }
-                });
 
                 image.progressProperty().addListener((obs, oldVal, newVal) -> {
                     if (newVal.doubleValue() >= 1.0 && !image.isError()) {
-                        System.out.println("[TopBarController] Image loaded successfully - caching to session");
                         // Cache the image in AppSession
                         AppSession.getInstance().setCachedProfileImage(image);
                         javafx.application.Platform.runLater(() -> {
@@ -308,9 +292,7 @@ public class TopBarController implements Initializable {
                     }
                 });
             } catch (Exception e) {
-                // Keep default avatar
-                System.err.println("[TopBarController] Exception in setProfilePhoto: " + e.getMessage());
-                e.printStackTrace();
+                // Keep default avatar - silent fail
             }
         }).start();
     }

@@ -43,12 +43,9 @@ public class RestMongoSyncClient {
     // ---------------------------------------------------
 
     public static void syncShipmentsWithRemote() {
-        System.out.println("📦 Syncing Shipments: Fetching from remote...");
-
         JSONArray remoteShipments = fetchJsonArray(SHIPMENTS_GET_ALL);
 
         if (remoteShipments == null) {
-            System.err.println("⚠ Could not fetch remote shipments. Skipping sync.");
             return;
         }
 
@@ -121,10 +118,9 @@ public class RestMongoSyncClient {
                 psInsert.executeBatch();
                 conn.commit();
             }
-            System.out.println("✔ Shipments Synced: " + remoteShipments.length() + " records inserted.");
 
         } catch (Exception e) {
-            e.printStackTrace();
+            // Silent fail
         }
     }
 
@@ -132,7 +128,6 @@ public class RestMongoSyncClient {
     // 2. USERS SYNC
     // ---------------------------------------------------
     public static void syncUsersWithRemote() throws Exception {
-        System.out.println("Starting user sync...");
         JSONArray remoteUsers = fetchJsonArray(REMOTE_USERS_GET_URL);
         if (remoteUsers == null)
             return;
@@ -202,10 +197,8 @@ public class RestMongoSyncClient {
                     psDel.setString(1, delId);
                     psDel.executeUpdate();
                 }
-                System.out.println("🧹 Cleaned " + localIdsToDelete.size() + " orphan users.");
             }
         }
-        System.out.println("✔ User Sync Complete.");
     }
 
     // ---------------------------------------------------
@@ -218,16 +211,13 @@ public class RestMongoSyncClient {
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Accept", "application/json");
 
-            // 🔴 FIX: ATTACH TOKEN TO HEADER
+            // Attach token
             String token = noran.desktop.AppSession.getInstance().getAuthToken();
             if (token != null && !token.isBlank()) {
                 conn.setRequestProperty("Authorization", "Bearer " + token);
-            } else {
-                System.out.println("⚠ Warning: No auth token found in session!");
             }
 
             if (conn.getResponseCode() == 401) {
-                System.err.println("❌ 401 Unauthorized: Check if token is valid/expired.");
                 return null;
             }
 
@@ -240,7 +230,6 @@ public class RestMongoSyncClient {
             return new JSONArray(sb.toString());
 
         } catch (Exception e) {
-            System.err.println("❌ Failed to fetch: " + urlString + " (" + e.getMessage() + ")");
             return null;
         }
     }
@@ -264,7 +253,7 @@ public class RestMongoSyncClient {
             if (r.has("user"))
                 return r.getJSONObject("user").optString("id", r.getJSONObject("user").optString("_id", null));
         } catch (Exception e) {
-            e.printStackTrace();
+            // Silent fail
         }
         return null;
     }
@@ -305,7 +294,7 @@ public class RestMongoSyncClient {
             if (r.has("user"))
                 return r.getJSONObject("user").optString("id", r.getJSONObject("user").optString("_id", null));
         } catch (Exception e) {
-            e.printStackTrace();
+            // Silent fail
         }
         return null;
     }

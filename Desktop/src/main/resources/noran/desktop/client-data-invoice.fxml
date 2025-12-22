@@ -21,7 +21,7 @@
     </top>
 
     <center>
-        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" style="-fx-background: transparent; -fx-background-color: transparent;">
+        <ScrollPane fitToWidth="true" fitToHeight="true" hbarPolicy="NEVER" style="-fx-background: transparent; -fx-background-color: transparent;">
             <VBox spacing="24" style="-fx-padding: 32 40;">
                 
                 <!-- Page Header -->
@@ -62,10 +62,10 @@
                     
                     <!-- Table -->
                     <StackPane style="-fx-background-color: white; -fx-background-radius: 0 0 16 16; -fx-padding: 0;" VBox.vgrow="ALWAYS">
-                        <TableView fx:id="invoicesTable" prefHeight="400" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css">
+                        <TableView fx:id="invoicesTable" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css" VBox.vgrow="ALWAYS">
                             <columns>
                                 <TableColumn fx:id="colClientName" text="اسم العميل" />
-                                <TableColumn fx:id="colClientNumber" text="الرقم الضريبي" />
+                                <TableColumn fx:id="colClientNumber" text="عدد الشحنات" />
                                 <TableColumn fx:id="colClientType" text="نوع العميل" />
                                 <TableColumn fx:id="colClientRank" text="رتبة العميل" />
                             </columns>

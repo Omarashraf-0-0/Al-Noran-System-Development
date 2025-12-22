@@ -33,15 +33,15 @@ public class APIService {
 
     // GET request (authenticated)
     public static String get(String urlString) {
-        System.out.println("[APIService] GET request to: " + urlString);
         HttpURLConnection conn = null;
         try {
             URL url = new URL(urlString);
             conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(15000);
 
             // Attach token if available
             String token = AppSession.getInstance().getAuthToken();
-            System.out.println("[APIService] GET - Token available: " + (token != null && !token.isBlank()));
             if (token != null && !token.isBlank()) {
                 conn.setRequestProperty("Authorization", "Bearer " + token);
             }
@@ -51,14 +51,12 @@ public class APIService {
             conn.setDoInput(true);
 
             int status = conn.getResponseCode();
-            System.out.println("[APIService] GET - Response status: " + status);
 
             InputStream inputStream = (status >= 200 && status < 300)
                     ? conn.getInputStream()
                     : conn.getErrorStream();
 
             if (inputStream == null) {
-                System.out.println("[APIService] GET - inputStream is null");
                 return null;
             }
 
@@ -71,8 +69,6 @@ public class APIService {
                 return response.toString();
             }
         } catch (IOException e) {
-            System.out.println("[APIService] GET - IOException: " + e.getMessage());
-            e.printStackTrace();
             return null;
         } finally {
             if (conn != null)
@@ -88,37 +84,25 @@ public class APIService {
      */
     public static String getPresignedUrl(String s3Key) {
         if (s3Key == null || s3Key.isEmpty()) {
-            System.out.println("[APIService] getPresignedUrl: s3Key is null or empty");
             return null;
         }
-
-        System.out.println("[APIService] getPresignedUrl: Fetching presigned URL for s3Key: " + s3Key);
 
         try {
             String encodedKey = java.net.URLEncoder.encode(s3Key, StandardCharsets.UTF_8);
             String url = noran.desktop.AppConfig.API_PRESIGNED_URL + encodedKey;
-            System.out.println("[APIService] getPresignedUrl: Calling URL: " + url);
 
             String response = get(url);
-            System.out.println("[APIService] getPresignedUrl: Response: "
-                    + (response != null ? response.substring(0, Math.min(200, response.length())) + "..." : "null"));
 
             if (response == null) {
-                System.out.println("[APIService] getPresignedUrl: Response is null - check if backend is running");
                 return null;
             }
 
             org.json.JSONObject json = new org.json.JSONObject(response);
             if (json.optBoolean("success", false)) {
-                String presignedUrl = json.optString("url", null);
-                System.out.println("[APIService] getPresignedUrl: SUCCESS - Got presigned URL");
-                return presignedUrl;
-            } else {
-                System.out.println("[APIService] getPresignedUrl: Response success=false. Full response: " + response);
+                return json.optString("url", null);
             }
         } catch (Exception e) {
-            System.out.println("[APIService] getPresignedUrl: Exception: " + e.getMessage());
-            e.printStackTrace();
+            // Silent fail - return null
         }
         return null;
     }

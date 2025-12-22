@@ -5,41 +5,56 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import io.github.cdimascio.dotenv.Dotenv;
 
-import java.io.File;
-
 public class MongoConnection {
 
-    // 1. Point to the specific folder containing your .env file
-    // Note: We use double backslashes for Windows paths
-    private static final String ENV_PATH = "C:\\Users\\fcbmo\\IdeaProjects\\Al-Noran-System-Development\\Web\\backend";
+    // Try to find .env from multiple possible locations
+    private static final Dotenv dotenv = loadDotenv();
 
-    private static final Dotenv dotenv = Dotenv.configure()
-            .directory(ENV_PATH) // 👈 Specify the folder here
-            .ignoreIfMissing()
-            .load();
+    private static Dotenv loadDotenv() {
+        // Try relative paths first, then fall back to environment variable
+        String[] possiblePaths = {
+                "./config",
+                "../Web/backend",
+                "../../Web/backend",
+                System.getenv("NORAN_ENV_PATH")
+        };
 
-    // 2. Read the variable name exactly as it is in your .env file
+        for (String path : possiblePaths) {
+            if (path == null)
+                continue;
+            try {
+                Dotenv env = Dotenv.configure()
+                        .directory(path)
+                        .ignoreIfMissing()
+                        .load();
+                if (env.get("DATABASE_URI") != null) {
+                    return env;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        // Fallback: try loading from classpath or current directory
+        return Dotenv.configure().ignoreIfMissing().load();
+    }
+
     private static final String CONNECTION_STRING = dotenv.get("DATABASE_URI");
-
-    // Since the DB name isn't a separate variable in your .env, we can keep it here or extract it
     private static final String DATABASE_NAME = "Al_noran_System";
 
     private static MongoClient client;
     private static MongoDatabase database;
 
-    public static MongoDatabase getDatabase() {
+    public static synchronized MongoDatabase getDatabase() {
         if (client == null) {
             if (CONNECTION_STRING == null || CONNECTION_STRING.isEmpty()) {
-                System.err.println("❌ Error: DATABASE_URI not found! Checked path: " + ENV_PATH);
                 return null;
             }
 
             try {
                 client = MongoClients.create(CONNECTION_STRING);
                 database = client.getDatabase(DATABASE_NAME);
-                System.out.println("✅ Connected to MongoDB successfully using secure .env");
             } catch (Exception e) {
-                System.err.println("❌ Connection failed: " + e.getMessage());
+                return null;
             }
         }
         return database;
