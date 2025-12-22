@@ -35,15 +35,12 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.scene.layout.VBox;
 import noran.desktop.AppSession;
-import noran.desktop.Database.DatabaseConnection;
+// Note: Dashboard now uses MongoDB REST API instead of local SQLite
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+// SQL imports removed - using REST API
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -127,85 +124,80 @@ public class DashboardController implements Initializable {
     }
 
     private void loadDashboardData() {
-        try (Connection conn = DatabaseConnection.connect()) {
-            // إجمالي الإيرادات
-            String sql = "SELECT COALESCE(SUM(Port_fee_price + Clearance_Fees_price + Expense_Tips_price + Sundries_price + Additional_Services_price + COALESCE(unsupportedItemPrice,0)), 0) AS total FROM shipment_fees WHERE invoiceNumber IS NOT NULL";
-            try (PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
-                if (rs.next())
-                    totalRevenueLabel.setText(String.format("%,.2f", rs.getDouble("total")));
+        // Fetch data from MongoDB via REST API
+        try {
+            String token = AppSession.getInstance().getAuthToken();
+            if (token == null || token.isBlank()) {
+                showAlert(Alert.AlertType.WARNING, "تنبيه", "لم يتم تسجيل الدخول. يرجى تسجيل الدخول أولاً.");
+                return;
             }
 
-            // الفواتير المعلقة
-            sql = "SELECT COUNT(*) FROM shipment_fees WHERE invoiceNumber IS NOT NULL AND (invoiceStatus IS NULL OR invoiceStatus = 'pending')";
-            try (PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
-                if (rs.next())
-                    pendingInvoicesLabel.setText(String.valueOf(rs.getInt(1)));
+            // Fetch dashboard stats from API
+            String response = fetchFromAPI(noran.desktop.AppConfig.API_DASHBOARD_STATS, token);
+            if (response == null) {
+                showAlert(Alert.AlertType.ERROR, "خطأ", "فشل في الاتصال بالخادم");
+                return;
             }
 
-            // الفواتير المقبولة
-            sql = "SELECT COUNT(*) FROM shipment_fees WHERE invoiceNumber IS NOT NULL AND invoiceStatus = 'accepted'";
-            try (PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
-                if (rs.next())
-                    completedInvoicesLabel.setText(String.valueOf(rs.getInt(1)));
-            }
+            org.json.JSONObject stats = new org.json.JSONObject(response);
 
-            // الشحنات الجارية
-            sql = "SELECT COUNT(*) FROM shipments WHERE status IN ('pending', 'in_progress', 'processing')";
-            try (PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
-                if (rs.next())
-                    ongoingShipmentsLabel.setText(String.valueOf(rs.getInt(1)));
-            }
+            // Update labels with data from MongoDB
+            double poundRevenue = stats.optDouble("poundRevenue", 0);
+            double dollarRevenue = stats.optDouble("dollarRevenue", 0);
+            double totalRevenue = poundRevenue; // Display pound revenue as main revenue
+            totalRevenueLabel.setText(String.format("%,.2f", totalRevenue));
 
-            loadCharts(conn);
-        } catch (SQLException e) {
+            int ongoingInvoices = stats.optInt("ongoingInvoices", 0);
+            pendingInvoicesLabel.setText(String.valueOf(ongoingInvoices));
+
+            int completedInvoices = stats.optInt("completedInvoices", 0);
+            completedInvoicesLabel.setText(String.valueOf(completedInvoices));
+
+            int ongoingSeaShipments = stats.optInt("ongoingSeaShipments", 0);
+            int ongoingAirShipments = stats.optInt("ongoingAirShipments", 0);
+            int totalOngoing = ongoingSeaShipments + ongoingAirShipments;
+            ongoingShipmentsLabel.setText(String.valueOf(totalOngoing));
+
+            // Load charts with API data
+            loadChartsFromAPI(stats, token);
+
+        } catch (Exception e) {
             e.printStackTrace();
             showAlert(Alert.AlertType.ERROR, "خطأ", "فشل تحميل البيانات: " + e.getMessage());
         }
     }
 
-    private void loadCharts(Connection conn) throws SQLException {
-        // Chart 1: مقبولة vs معلقة
-        String sql = "SELECT SUM(CASE WHEN invoiceStatus = 'accepted' THEN 1 ELSE 0 END) AS a, SUM(CASE WHEN invoiceStatus IS NULL OR invoiceStatus = 'pending' THEN 1 ELSE 0 END) AS p FROM shipment_fees WHERE invoiceNumber IS NOT NULL";
-        try (PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) {
-                int a = rs.getInt("a"), p = rs.getInt("p");
-                chartAcceptedVsPending.setData(FXCollections.observableArrayList(
-                        new PieChart.Data("مقبولة (" + a + ")", a),
-                        new PieChart.Data("معلقة (" + p + ")", p)));
-            }
-        }
+    private void loadChartsFromAPI(org.json.JSONObject stats, String token) {
+        // Chart 1: مقبولة vs معلقة (Completed vs Ongoing invoices)
+        int completedInvoices = stats.optInt("completedInvoices", 0);
+        int ongoingInvoices = stats.optInt("ongoingInvoices", 0);
+        chartAcceptedVsPending.setData(FXCollections.observableArrayList(
+                new PieChart.Data("مقبولة (" + completedInvoices + ")", completedInvoices),
+                new PieChart.Data("معلقة (" + ongoingInvoices + ")", ongoingInvoices)));
 
-        // Chart 2
-        sql = "SELECT COUNT(*) AS t, SUM(CASE WHEN invoiceStatus IS NULL OR invoiceStatus = 'pending' THEN 1 ELSE 0 END) AS p FROM shipment_fees WHERE invoiceNumber IS NOT NULL";
-        try (PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) {
-                int p = rs.getInt("p"), done = rs.getInt("t") - p;
-                chartPendingInvoicesRatio.setData(FXCollections.observableArrayList(
-                        new PieChart.Data("معلقة (" + p + ")", p),
-                        new PieChart.Data("تمت المعالجة (" + done + ")", done)));
-            }
-        }
+        // Chart 2: Pending vs Processed invoices
+        int total = completedInvoices + ongoingInvoices;
+        chartPendingInvoicesRatio.setData(FXCollections.observableArrayList(
+                new PieChart.Data("معلقة (" + ongoingInvoices + ")", ongoingInvoices),
+                new PieChart.Data("تمت المعالجة (" + completedInvoices + ")", completedInvoices)));
 
-        // Chart 3
-        sql = "SELECT version, COUNT(*) AS c FROM users WHERE type = 'client' AND version IS NOT NULL GROUP BY version";
-        ObservableList<PieChart.Data> data = FXCollections.observableArrayList();
-        try (PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                int v = rs.getInt("version");
-                int c = rs.getInt("c");
-                String label = switch (v) {
-                    case 0 -> "جديد";
-                    case 1 -> "قديم";
-                    case 2 -> "محدث";
-                    default -> "إصدار " + v;
-                };
-                data.add(new PieChart.Data(label + " (" + c + ")", c));
-            }
-            if (data.isEmpty())
-                data.add(new PieChart.Data("لا يوجد عملاء", 1));
-            chartClientsByVersion.setData(data);
-        }
+        // Chart 3: Shipments by type (Sea vs Air)
+        int seaShipments = stats.optInt("ongoingSeaShipments", 0);
+        int airShipments = stats.optInt("ongoingAirShipments", 0);
+        int completedShipments = stats.optInt("completedShipments", 0);
 
+        ObservableList<PieChart.Data> shipmentData = FXCollections.observableArrayList();
+        if (seaShipments > 0)
+            shipmentData.add(new PieChart.Data("شحن بحري (" + seaShipments + ")", seaShipments));
+        if (airShipments > 0)
+            shipmentData.add(new PieChart.Data("شحن جوي (" + airShipments + ")", airShipments));
+        if (completedShipments > 0)
+            shipmentData.add(new PieChart.Data("مكتملة (" + completedShipments + ")", completedShipments));
+        if (shipmentData.isEmpty())
+            shipmentData.add(new PieChart.Data("لا توجد شحنات", 1));
+        chartClientsByVersion.setData(shipmentData);
+
+        // Apply styling to all charts
         for (PieChart c : new PieChart[] { chartAcceptedVsPending, chartPendingInvoicesRatio, chartClientsByVersion }) {
             c.setLegendVisible(true);
             c.setLabelsVisible(false);
@@ -213,6 +205,43 @@ public class DashboardController implements Initializable {
             c.setStartAngle(90);
         }
     }
+
+    private String fetchFromAPI(String urlString, String token) {
+        try {
+            java.net.URL url = new java.net.URL(urlString);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+
+            int status = conn.getResponseCode();
+            if (status == 401) {
+                System.err.println("❌ 401 Unauthorized: Token expired or invalid");
+                return null;
+            }
+
+            if (status >= 200 && status < 300) {
+                java.io.BufferedReader br = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(conn.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null)
+                    sb.append(line);
+                br.close();
+                return sb.toString();
+            } else {
+                System.err.println("❌ API Error: " + status);
+                return null;
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Failed to fetch from API: " + e.getMessage());
+            return null;
+        }
+    }
+
+    // Old SQLite loadCharts method removed - now using loadChartsFromAPI()
 
     // ============================== PDF EXPORT - عربي 100% بدون أي خطأ
     // ==============================

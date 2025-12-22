@@ -42,4 +42,11 @@ public class AppConfig {
     // Uploads endpoints
     public static final String API_UPLOADS = BASE_URL + "/api/uploads";
     public static final String API_PRESIGNED_URL = API_UPLOADS + "/presigned-url/";
+
+    // Dashboard stats endpoint
+    public static final String API_DASHBOARD_STATS = API_SHIPMENTS + "/get-dashboard-stats";
+
+    // Invoice endpoints
+    public static final String API_INVOICES = BASE_URL + "/api/invoice";
+    public static final String API_INVOICES_GET_ALL = API_INVOICES + "/getAllInvoices";
 }

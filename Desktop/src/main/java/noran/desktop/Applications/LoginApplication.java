@@ -13,7 +13,8 @@ public class LoginApplication extends Application {
         // Set explicit window size (1250x780) for consistent sizing across the app
         Scene scene = new Scene(fxmlLoader.load(), 1250, 780);
         stage.setTitle("Al Noran");
-        stage.getIcons().add(new javafx.scene.image.Image("/noran/desktop/images/logo.png"));
+        stage.getIcons()
+                .add(new javafx.scene.image.Image(getClass().getResourceAsStream("/noran/desktop/images/Logo.png")));
         stage.setScene(scene);
         stage.show();
     }

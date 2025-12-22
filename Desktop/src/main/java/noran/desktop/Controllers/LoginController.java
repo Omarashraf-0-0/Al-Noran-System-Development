@@ -117,16 +117,26 @@ public class LoginController {
                     }
 
                     // 🛑 ACCESS CONTROL CHECK 🛑
-                    // Only allow employees (type = "employee")
-                    if (!extractedRole.equalsIgnoreCase("employee")) {
+                    // Allow employees and admins (not clients)
+                    if (!extractedRole.equalsIgnoreCase("employee") && !extractedRole.equalsIgnoreCase("admin")) {
                         showCustomAlert("تم رفض الوصول",
-                                "هذا التطبيق مخصص للموظفين فقط\nالدور الحالي: " + extractedRole,
+                                "هذا التطبيق مخصص للموظفين والمسؤولين فقط\nالدور الحالي: " + extractedRole,
                                 AlertType.ERROR);
                         return;
                     }
 
-                    // Use employeeType for role (System Admin = admin)
-                    String userRole = employeeType.equalsIgnoreCase("System Admin") ? "admin" : "employee";
+                    // Determine user role:
+                    // - If type from API is "admin" -> admin role
+                    // - If employeeType is "System Admin" -> admin role
+                    // - Otherwise -> employee role
+                    String userRole;
+                    if (extractedRole.equalsIgnoreCase("admin")) {
+                        userRole = "admin";
+                    } else if (employeeType.equalsIgnoreCase("System Admin")) {
+                        userRole = "admin";
+                    } else {
+                        userRole = "employee";
+                    }
 
                     // Fetch full profile to get profilePhoto (login response doesn't include it)
                     String profileResponse = noran.desktop.Services.APIService
