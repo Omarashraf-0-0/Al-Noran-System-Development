@@ -1,31 +1,18 @@
-<<<<<<< HEAD
-import React, { useState, useEffect } from "react";
-=======
 import React, { useState, useEffect, useRef } from "react";
->>>>>>> main
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { useGoogleLogin } from "@react-oauth/google";
-<<<<<<< HEAD
-
-const LoginPage = () => {
-	const navigate = useNavigate();
-=======
 import ReCAPTCHA from "react-google-recaptcha";
 
 const LoginPage = () => {
 	const navigate = useNavigate();
-	const recaptchaRef = useRef(null);
->>>>>>> main
 	const [isLoading, setIsLoading] = useState(false);
 	const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
 	const [isVisible, setIsVisible] = useState(false);
-<<<<<<< HEAD
-=======
 	const [captchaToken, setCaptchaToken] = useState(null);
->>>>>>> main
+	const recaptchaRef = useRef(null);
 	const [formData, setFormData] = useState({
 		email: "",
 		password: "",
@@ -134,29 +121,22 @@ const LoginPage = () => {
 
 	const handleLogin = async (e) => {
 		e.preventDefault();
-<<<<<<< HEAD
-=======
 
-		// Validate CAPTCHA
+		// Check if CAPTCHA is completed
 		if (!captchaToken) {
-			toast.error('يرجى التحقق من أنك لست روبوت');
+			toast.error("يرجى إكمال التحقق الأمني (reCAPTCHA)");
 			return;
 		}
 
->>>>>>> main
 		setIsLoading(true);
 
 		try {
 			const response = await axios.post(
 				`${import.meta.env.VITE_API_URL}/api/auth/login`,
-<<<<<<< HEAD
-				formData
-=======
 				{
 					...formData,
-					captchaToken, // Send CAPTCHA token to backend
+					captchaToken
 				}
->>>>>>> main
 			);
 
 			toast.success("تم تسجيل الدخول بنجاح");
@@ -186,22 +166,19 @@ const LoginPage = () => {
 			}, 1500);
 		} catch (error) {
 			console.error("Error during login:", error);
+			
+			// Reset reCAPTCHA on error
+			if (recaptchaRef.current) {
+				recaptchaRef.current.reset();
+				setCaptchaToken(null);
+			}
+			
 			if (error.response?.status === 403) {
 				toast.error(error.response?.data?.message || "تم إيقاف حسابك. تواصل مع الإدارة", {
 					duration: 5000,
 				});
 			} else if (error.response?.status === 401) {
 				toast.error("البريد الإلكتروني أو كلمة المرور غير صحيحة");
-<<<<<<< HEAD
-=======
-			} else if (error.response?.status === 400 && error.response?.data?.message?.includes('CAPTCHA')) {
-				toast.error("التحقق الأمني فشل. يرجى المحاولة مرة أخرى");
-				// Reset CAPTCHA on failure
-				if (recaptchaRef.current) {
-					recaptchaRef.current.reset();
-					setCaptchaToken(null);
-				}
->>>>>>> main
 			} else {
 				toast.error(error.response?.data?.message || "فشل تسجيل الدخول");
 			}
@@ -254,12 +231,12 @@ const LoginPage = () => {
 			{/* Left Side - Form */}
 			<div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-16 bg-white overflow-hidden relative">
 				{/* Back to Home Link */}
-				<Link 
-					to="/" 
+				<Link
+					to="/"
 					className="absolute top-6 right-6 flex items-center gap-2 text-gray-500 hover:text-[#690000] transition-colors duration-300 group"
-					style={{ 
+					style={{
 						animation: isVisible ? 'fade-in-up 0.6s ease-out forwards' : 'none',
-						opacity: 0 
+						opacity: 0
 					}}
 				>
 					<svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -270,20 +247,16 @@ const LoginPage = () => {
 
 				<div className={`w-full max-w-md transition-all duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
 					{/* Logo */}
-					<div 
+					<div
 						className="text-center mb-8"
-						style={{ 
+						style={{
 							animation: isVisible ? 'fade-in-up 0.6s ease-out forwards' : 'none',
-							opacity: 0 
+							opacity: 0
 						}}
 					>
 						<Link to="/">
 							<img
-<<<<<<< HEAD
-								src="/src/assets/images/coloredLogo.svg"
-=======
 								src="/images/coloredLogo.svg"
->>>>>>> main
 								alt="النوران"
 								className="h-28 mx-auto mb-6 hover:scale-110 transition-transform duration-300"
 							/>
@@ -299,10 +272,10 @@ const LoginPage = () => {
 					{/* Form */}
 					<form onSubmit={handleLogin} className="space-y-6">
 						{/* Email Field */}
-						<div 
-							style={{ 
+						<div
+							style={{
 								animation: isVisible ? 'fade-in-up 0.6s ease-out 0.1s forwards' : 'none',
-								opacity: 0 
+								opacity: 0
 							}}
 						>
 							<label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -327,10 +300,10 @@ const LoginPage = () => {
 						</div>
 
 						{/* Password Field */}
-						<div 
-							style={{ 
+						<div
+							style={{
 								animation: isVisible ? 'fade-in-up 0.6s ease-out 0.2s forwards' : 'none',
-								opacity: 0 
+								opacity: 0
 							}}
 						>
 							<label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -371,11 +344,11 @@ const LoginPage = () => {
 						</div>
 
 						{/* Forgot Password */}
-						<div 
+						<div
 							className="flex justify-start"
-							style={{ 
+							style={{
 								animation: isVisible ? 'fade-in-up 0.6s ease-out 0.3s forwards' : 'none',
-								opacity: 0 
+								opacity: 0
 							}}
 						>
 							<Link
@@ -386,40 +359,30 @@ const LoginPage = () => {
 							</Link>
 						</div>
 
-<<<<<<< HEAD
-=======
-						{/* Google reCAPTCHA v2 */}
-						<div 
+						{/* reCAPTCHA */}
+						<div
 							className="flex justify-center"
-							style={{ 
+							style={{
 								animation: isVisible ? 'fade-in-up 0.6s ease-out 0.35s forwards' : 'none',
-								opacity: 0 
+								opacity: 0
 							}}
 						>
 							<ReCAPTCHA
 								ref={recaptchaRef}
-								sitekey={import.meta.env.VITE_GOOGLE_RECAPTCHA_SITE_KEY || 'YOUR_SITE_KEY'}
-								onChange={(token) => {
-									setCaptchaToken(token);
-								}}
-								onExpired={() => {
-									setCaptchaToken(null);
-									toast.error('انتهت صلاحية التحقق. يرجى المحاولة مرة أخرى');
-								}}
-								onErrored={() => {
-									setCaptchaToken(null);
-									toast.error('حدث خطأ في التحقق. يرجى المحاولة مرة أخرى');
-								}}
+								sitekey={import.meta.env.VITE_GOOGLE_RECAPTCHA_SITE_KEY}
+								onChange={(token) => setCaptchaToken(token)}
+								onExpired={() => setCaptchaToken(null)}
 								theme="light"
+								hl="ar"
 							/>
 						</div>
 
->>>>>>> main
+
 						{/* Submit Button */}
 						<div
-							style={{ 
+							style={{
 								animation: isVisible ? 'fade-in-up 0.6s ease-out 0.4s forwards' : 'none',
-								opacity: 0 
+								opacity: 0
 							}}
 						>
 							<button
@@ -429,7 +392,7 @@ const LoginPage = () => {
 							>
 								{/* Shimmer Effect */}
 								<div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-								
+
 								{isLoading ? (
 									<span className="flex items-center justify-center gap-2 relative z-10">
 										<svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
@@ -446,11 +409,11 @@ const LoginPage = () => {
 					</form>
 
 					{/* Divider */}
-					<div 
+					<div
 						className="relative my-8"
-						style={{ 
+						style={{
 							animation: isVisible ? 'fade-in-up 0.6s ease-out 0.5s forwards' : 'none',
-							opacity: 0 
+							opacity: 0
 						}}
 					>
 						<div className="absolute inset-0 flex items-center">
@@ -462,11 +425,11 @@ const LoginPage = () => {
 					</div>
 
 					{/* Social Login Buttons */}
-					<div 
+					<div
 						className="space-y-3"
-						style={{ 
+						style={{
 							animation: isVisible ? 'fade-in-up 0.6s ease-out 0.6s forwards' : 'none',
-							opacity: 0 
+							opacity: 0
 						}}
 					>
 						<button
@@ -485,11 +448,7 @@ const LoginPage = () => {
 								</>
 							) : (
 								<>
-<<<<<<< HEAD
-									<img src="/src/assets/images/googleIcon.png" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" onError={(e) => {
-=======
 									<img src="/images/googleIcon.png" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" onError={(e) => {
->>>>>>> main
 										e.target.onerror = null;
 										e.target.src = "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg";
 									}} />
@@ -500,11 +459,11 @@ const LoginPage = () => {
 					</div>
 
 					{/* Register Link */}
-					<p 
+					<p
 						className="text-center text-gray-600 mt-8"
-						style={{ 
+						style={{
 							animation: isVisible ? 'fade-in-up 0.6s ease-out 0.7s forwards' : 'none',
-							opacity: 0 
+							opacity: 0
 						}}
 					>
 						ليس لديك حساب؟{" "}
@@ -524,7 +483,7 @@ const LoginPage = () => {
 				<div className="absolute top-1/4 left-1/4 w-40 h-40 bg-[#1ba3b6] rounded-full filter blur-[100px] animate-pulse-glow"></div>
 				<div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-white rounded-full filter blur-[120px] opacity-10 animate-float-slow"></div>
 				<div className="absolute top-1/2 right-1/3 w-32 h-32 bg-[#1ba3b6] rounded-full filter blur-[80px] animate-float-reverse opacity-30"></div>
-				
+
 				{/* Additional floating shapes */}
 				<div className="absolute top-[15%] right-[20%] w-4 h-4 bg-white/30 rounded-full animate-float"></div>
 				<div className="absolute top-[25%] left-[15%] w-3 h-3 bg-[#1ba3b6]/50 rounded-full animate-float-reverse"></div>
@@ -532,19 +491,15 @@ const LoginPage = () => {
 				<div className="absolute bottom-[20%] right-[30%] w-2 h-2 bg-[#1ba3b6]/40 rounded-full animate-float"></div>
 
 				{/* Content */}
-				<div 
+				<div
 					className="relative z-10 flex flex-col justify-center items-center text-center px-12"
-					style={{ 
+					style={{
 						animation: isVisible ? 'fade-in-right 0.8s ease-out 0.3s forwards' : 'none',
-						opacity: 0 
+						opacity: 0
 					}}
 				>
 					<img
-<<<<<<< HEAD
-						src="/src/assets/images/white logo.svg"
-=======
 						src="/images/white logo.svg"
->>>>>>> main
 						alt="النوران"
 						className="h-44 mb-10 drop-shadow-2xl animate-float-slow"
 					/>

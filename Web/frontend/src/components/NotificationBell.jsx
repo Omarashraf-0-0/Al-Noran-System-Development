@@ -17,20 +17,18 @@ const NotificationBell = ({ isDarkMode }) => {
 	const user = JSON.parse(localStorage.getItem("user") || "{}");
 	const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3500";
 
-<<<<<<< HEAD
-=======
 	// Load cached notifications on mount
 	useEffect(() => {
 		if (!user._id) return;
-		
+
 		try {
 			const CACHE_KEY = `notifications_${user._id}`;
 			const CACHE_TIMESTAMP_KEY = `notifications_timestamp_${user._id}`;
 			const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-			
+
 			const cached = localStorage.getItem(CACHE_KEY);
 			const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-			
+
 			if (cached && timestamp) {
 				const age = Date.now() - parseInt(timestamp);
 				if (age < CACHE_DURATION) {
@@ -48,11 +46,11 @@ const NotificationBell = ({ isDarkMode }) => {
 	// Save notifications to cache
 	const saveToCache = useCallback((notifs, count) => {
 		if (!user._id) return;
-		
+
 		try {
 			const CACHE_KEY = `notifications_${user._id}`;
 			const CACHE_TIMESTAMP_KEY = `notifications_timestamp_${user._id}`;
-			
+
 			localStorage.setItem(CACHE_KEY, JSON.stringify({
 				notifications: notifs,
 				unreadCount: count
@@ -63,7 +61,7 @@ const NotificationBell = ({ isDarkMode }) => {
 			console.error("Error saving notifications to cache:", error);
 		}
 	}, [user._id]);
->>>>>>> main
+
 	// Theme configuration
 	const theme = {
 		dropdownBg: isDarkMode ? "bg-[#1a1010] border-[#3d1a1a]" : "bg-white border-gray-200",
@@ -79,7 +77,7 @@ const NotificationBell = ({ isDarkMode }) => {
 	const fetchNotifications = useCallback(async () => {
 		try {
 			setLoading(true);
-			
+
 			const response = await axios.get(`${apiUrl}/api/notifications`, {
 				headers: {
 					Authorization: `Bearer ${token}`,
@@ -93,10 +91,10 @@ const NotificationBell = ({ isDarkMode }) => {
 			if (response.data.success) {
 				const notifs = response.data.notifications || [];
 				const count = response.data.unreadCount || 0;
-				
+
 				setNotifications(notifs);
 				setUnreadCount(count);
-				
+
 				// Save to cache
 				saveToCache(notifs, count);
 			}
@@ -136,18 +134,18 @@ const NotificationBell = ({ isDarkMode }) => {
 		// Listen for new notifications
 		socket.on('new_notification', (data) => {
 			console.log('New notification received:', data);
-			
+
 			// Add notification to the list and update count
 			setNotifications(prev => {
 				const updated = [data.notification, ...prev];
 				return updated;
 			});
-			
+
 			// Update unread count
 			if (!data.notification.read) {
 				setUnreadCount(prev => prev + 1);
 			}
-			
+
 			// Show toast notification
 			toast.success(data.notification.title, {
 				icon: getNotificationIcon(data.notification.type),
@@ -169,7 +167,7 @@ const NotificationBell = ({ isDarkMode }) => {
 				socketRef.current.disconnect();
 			}
 		};
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [token, user._id, apiUrl, fetchNotifications]);
 
 	// Handle notification click - delete notification and navigate to notification page
@@ -199,13 +197,13 @@ const NotificationBell = ({ isDarkMode }) => {
 				// Remove from local state after successful deletion
 				const updated = notifications.filter((n) => n._id !== notifId);
 				setNotifications(updated);
-				
+
 				// Decrease unread count only if the notification was unread
 				const newCount = wasUnread ? Math.max(0, unreadCount - 1) : unreadCount;
 				if (wasUnread) {
 					setUnreadCount(newCount);
 				}
-				
+
 				// Update cache
 				saveToCache(updated, newCount);
 			}).catch(error => {
@@ -303,9 +301,8 @@ const NotificationBell = ({ isDarkMode }) => {
 									<div
 										key={notif._id}
 										onClick={() => handleNotificationClick(notif._id)}
-										className={`p-4 cursor-pointer transition flex items-start gap-3 ${
-											notif.read ? `bg-transparent ${theme.hoverBg}` : `${theme.unreadBg}`
-										}`}
+										className={`p-4 cursor-pointer transition flex items-start gap-3 ${notif.read ? `bg-transparent ${theme.hoverBg}` : `${theme.unreadBg}`
+											}`}
 									>
 										<span className="text-2xl mt-1 shrink-0">
 											{getNotificationIcon(notif.type)}
@@ -383,7 +380,7 @@ const formatNotificationTime = (timestamp) => {
 	if (diffInMinutes < 60) return `منذ ${diffInMinutes} دقيقة`;
 	if (diffInHours < 24) return `منذ ${diffInHours} ساعة`;
 	if (diffInDays < 7) return `منذ ${diffInDays} يوم`;
-	
+
 	return date.toLocaleDateString("ar-EG", {
 		day: "numeric",
 		month: "short",
