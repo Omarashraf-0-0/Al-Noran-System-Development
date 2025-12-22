@@ -57,7 +57,7 @@
         <!-- Accepted Invoices -->
         <Button fx:id="acceptedInvoicesBtn" maxWidth="Infinity" onAction="#navigateToAcceptedInvoices"
                 styleClass="sidebar-button" text="✅  الفواتير المقبولة"/>
-        
+
         <!-- Invoices Management -->
         <Button fx:id="invoicesBtn" maxWidth="Infinity" onAction="#navigateToInvoices"
                 styleClass="sidebar-button" text="📄  إدارة الفواتير"/>
