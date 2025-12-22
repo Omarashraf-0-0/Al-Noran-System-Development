@@ -86,20 +86,16 @@ const ResetPasswordPage = () => {
 			<div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-16 bg-white overflow-hidden relative">
 				<div className={`w-full max-w-md transition-all duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
 					{/* Logo */}
-					<div 
+					<div
 						className="text-center mb-8"
-						style={{ 
+						style={{
 							animation: isVisible ? 'fade-in-up 0.6s ease-out forwards' : 'none',
-							opacity: 0 
+							opacity: 0
 						}}
 					>
 						<Link to="/">
 							<img
-<<<<<<< HEAD
-								src="/src/assets/images/coloredLogo.svg"
-=======
 								src="/images/coloredLogo.svg"
->>>>>>> main
 								alt="النوران"
 								className="h-28 mx-auto mb-6 hover:scale-110 transition-transform duration-300"
 							/>
@@ -116,9 +112,9 @@ const ResetPasswordPage = () => {
 					<form onSubmit={handleSubmit} className="space-y-5">
 						{/* New Password */}
 						<div
-							style={{ 
+							style={{
 								animation: isVisible ? 'fade-in-up 0.6s ease-out 0.1s forwards' : 'none',
-								opacity: 0 
+								opacity: 0
 							}}
 						>
 							<label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -161,9 +157,9 @@ const ResetPasswordPage = () => {
 
 						{/* Confirm Password */}
 						<div
-							style={{ 
+							style={{
 								animation: isVisible ? 'fade-in-up 0.6s ease-out 0.2s forwards' : 'none',
-								opacity: 0 
+								opacity: 0
 							}}
 						>
 							<label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -224,9 +220,9 @@ const ResetPasswordPage = () => {
 						</div>
 
 						<div
-							style={{ 
+							style={{
 								animation: isVisible ? 'fade-in-up 0.6s ease-out 0.3s forwards' : 'none',
-								opacity: 0 
+								opacity: 0
 							}}
 						>
 							<button
@@ -251,11 +247,11 @@ const ResetPasswordPage = () => {
 					</form>
 
 					{/* Footer */}
-					<p 
+					<p
 						className="text-center text-gray-600 mt-8"
-						style={{ 
+						style={{
 							animation: isVisible ? 'fade-in-up 0.6s ease-out 0.4s forwards' : 'none',
-							opacity: 0 
+							opacity: 0
 						}}
 					>
 						<Link
@@ -274,26 +270,22 @@ const ResetPasswordPage = () => {
 				<div className="absolute top-1/4 left-1/4 w-40 h-40 bg-[#1ba3b6] rounded-full filter blur-[100px] animate-pulse-glow"></div>
 				<div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-white rounded-full filter blur-[120px] opacity-10 animate-float-slow"></div>
 				<div className="absolute top-1/2 right-1/3 w-32 h-32 bg-[#1ba3b6] rounded-full filter blur-[80px] opacity-30"></div>
-				
+
 				{/* Small floating shapes */}
 				<div className="absolute top-[15%] right-[20%] w-4 h-4 bg-white/30 rounded-full animate-float"></div>
 				<div className="absolute top-[25%] left-[15%] w-3 h-3 bg-[#1ba3b6]/50 rounded-full"></div>
 				<div className="absolute bottom-[30%] left-[25%] w-5 h-5 bg-white/20 rounded-full animate-float-slow"></div>
 
 				{/* Content */}
-				<div 
+				<div
 					className="relative z-10 flex flex-col justify-center items-center text-center px-12"
-					style={{ 
+					style={{
 						animation: isVisible ? 'fade-in-right 0.8s ease-out 0.3s forwards' : 'none',
-						opacity: 0 
+						opacity: 0
 					}}
 				>
 					<img
-<<<<<<< HEAD
-						src="/src/assets/images/white logo.svg"
-=======
 						src="/images/white logo.svg"
->>>>>>> main
 						alt="النوران"
 						className="h-44 mb-10 drop-shadow-2xl animate-float-slow"
 					/>

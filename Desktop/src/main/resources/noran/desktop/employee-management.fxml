@@ -5,25 +5,24 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.shape.Circle?>
-<<<<<<< Updated upstream
-<?import javafx.scene.effect.ColorAdjust?>
 <?import java.lang.String?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui; -fx-background-color: #f8f9fa;" stylesheets="@combo-style.css, @shipments.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.EmployeeManagementController">
-=======
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui; -fx-background-color: #f8f9fa;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.EmployeeManagementController">
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" 
-    style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui; -fx-background-color: linear-gradient(to bottom right, #f8f9fa, #eef1f5);" 
-    stylesheets="@shipments.css, @combo-style.css, @invoices-table.css"
-    xmlns="http://javafx.com/javafx/23.0.1" 
-    xmlns:fx="http://javafx.com/fxml/1" 
-    fx:controller="noran.desktop.Controllers.EmployeeManagementController">
->>>>>>> Stashed changes
+    <stylesheets>
+        <String fx:value="@combo-style.css" />
+    </stylesheets>
 
     <left>
         <fx:include fx:id="sidebar" source="Sidebar.fxml" />
@@ -34,200 +33,70 @@
     </top>
 
     <center>
-        <VBox alignment="TOP_CENTER" spacing="24" style="-fx-padding: 32 40;">
-<<<<<<< Updated upstream
-            <!-- Page Header -->
-            <HBox alignment="CENTER" spacing="0">
-                <VBox alignment="CENTER_LEFT" spacing="8" HBox.hgrow="ALWAYS">
-                    <HBox alignment="CENTER_LEFT" spacing="12">
-                        <StackPane prefWidth="50" prefHeight="50">
-                            <Circle radius="25" style="-fx-fill: linear-gradient(to bottom right, #a40000, #7a0000);"/>
-                            <Label text="👨‍💼" style="-fx-font-size: 24px;"/>
-                        </StackPane>
-                        <VBox spacing="4">
-                            <Label text="إدارة الموظفين" style="-fx-font-size: 26px; -fx-font-weight: 700; -fx-text-fill: #1a1a2e;"/>
-=======
-            
-            <!-- Page Header -->
-            <HBox alignment="CENTER" spacing="0">
-                <VBox alignment="CENTER_LEFT" spacing="8" HBox.hgrow="ALWAYS">
-                    <HBox alignment="CENTER_LEFT" spacing="16">
-                        <StackPane prefWidth="56" prefHeight="56">
-                            <Circle radius="28" style="-fx-fill: linear-gradient(to bottom right, #a40000, #7a0000);"/>
-                            <Label text="👨‍💼" style="-fx-font-size: 28px;-fx-text-fill: white"/>
-                        </StackPane>
-                        <VBox spacing="4">
-                            <Label text="إدارة الموظفين" style="-fx-font-size: 28px; -fx-font-weight: 700; -fx-text-fill: #1a1a2e;"/>
->>>>>>> Stashed changes
-                            <Label text="إدارة بيانات وصلاحيات الموظفين" style="-fx-font-size: 14px; -fx-text-fill: #6b7280;"/>
-                        </VBox>
-                    </HBox>
-                </VBox>
-                
-<<<<<<< Updated upstream
-                <!-- Refresh Button -->
-                <Button onAction="#refresh" styleClass="refresh-button">
+        <VBox alignment="TOP_CENTER" spacing="20" style="-fx-padding: 28 24;">
+            <!-- Header with illustration and refresh -->
+            <AnchorPane prefHeight="180.0">
+                <StackPane alignment="CENTER" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0">
+                    <ImageView fitHeight="180.0" fitWidth="320.0" preserveRatio="true">
+                        <image>
+                            <Image url="@images/invoice-illustration.png" />
+                        </image>
+                    </ImageView>
+                </StackPane>
+                <Button onAction="#refresh" style="-fx-background-color: transparent; -fx-cursor: hand;" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0">
                     <graphic>
-                        <HBox alignment="CENTER" spacing="8">
-                            <Label text="🔄" style="-fx-font-size: 18px;"/>
-=======
-                <Button onAction="#refresh" styleClass="refresh-button">
-                    <graphic>
-                        <HBox alignment="CENTER" spacing="8">
-                            <Label text="🔄" style="-fx-font-size: 18px;-fx-text-fill: white"/>
->>>>>>> Stashed changes
-                            <Label text="تحديث" style="-fx-font-size: 15px; -fx-text-fill: white; -fx-font-weight: 700;"/>
-                        </HBox>
+                        <ImageView fitHeight="44.0" fitWidth="56.0" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="@images/cached.png" />
+                            </image>
+                        </ImageView>
                     </graphic>
                 </Button>
+            </AnchorPane>
+
+            <!-- Table Title -->
+            <HBox alignment="CENTER_LEFT" style="-fx-padding: 0 8;">
+                <Label text="👨‍💼 إدارة الموظفين" style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #333;" />
             </HBox>
 
             <!-- Filter Section -->
-<<<<<<< Updated upstream
-            <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-padding: 16 24; -fx-background-color: white; -fx-background-radius: 14; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0, 0, 4);">
-                <Label text="نوع الموظف:" style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #374151;" />
-                <ComboBox fx:id="employeeTypeFilter" prefWidth="160" promptText="الكل" 
-                    style="-fx-background-radius: 10; -fx-border-radius: 10; -fx-background-color: #f9fafb; -fx-border-color: #e5e7eb;" />
+            <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-padding: 12 20; -fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 8, 0, 0, 2);">
+                <Label text="نوع الموظف:" style="-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #555;" />
+                <ComboBox fx:id="employeeTypeFilter" prefWidth="150" promptText="الكل" 
+                    style="-fx-background-radius: 10; -fx-border-radius: 10;" />
                 
-                <Label text="حالة الموظف:" style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #374151;" />
-                <ComboBox fx:id="employeeStatusFilter" prefWidth="140" promptText="الكل" 
-                    style="-fx-background-radius: 10; -fx-border-radius: 10; -fx-background-color: #f9fafb; -fx-border-color: #e5e7eb;" />
-=======
-            <HBox alignment="CENTER_LEFT" spacing="24" style="-fx-padding: 18 28; -fx-background-color: white; -fx-background-radius: 14; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0, 0, 4);">
-                <Label text="نوع الموظف:" style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #374151;" />
-                <ComboBox fx:id="employeeTypeFilter" prefWidth="160" promptText="الكل" />
-                
-                <Label text="حالة الموظف:" style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #374151;" />
-                <ComboBox fx:id="employeeStatusFilter" prefWidth="140" promptText="الكل" />
->>>>>>> Stashed changes
+                <Label text="حالة الموظف:" style="-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #555;" />
+                <ComboBox fx:id="employeeStatusFilter" prefWidth="120" promptText="الكل" 
+                    style="-fx-background-radius: 10; -fx-border-radius: 10;" />
             </HBox>
 
-            <!-- Table Container -->
-            <VBox spacing="0" styleClass="table-container" VBox.vgrow="ALWAYS">
-<<<<<<< Updated upstream
-                <!-- Table Header -->
-                <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-background-color: linear-gradient(to left, #a40000, #7a0000); -fx-background-radius: 16 16 0 0; -fx-padding: 16 24;">
-                    <Label text="قائمة الموظفين" style="-fx-font-size: 16px; -fx-font-weight: 600; -fx-text-fill: white;"/>
-                    <Label text="📋" style="-fx-font-size: 18px;"/>
-=======
-                <!-- Gradient Header -->
-                <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-background-color: linear-gradient(to left, #a40000, #7a0000); -fx-background-radius: 16 16 0 0; -fx-padding: 18 28;">
-                    <Label text="قائمة الموظفين" style="-fx-font-size: 17px; -fx-font-weight: 600; -fx-text-fill: white;"/>
-                    <Label text="📋" style="-fx-font-size: 18px;-fx-text-fill: white"/>
->>>>>>> Stashed changes
-                </HBox>
-                
-                <!-- Table -->
-                <StackPane style="-fx-background-color: white; -fx-background-radius: 0 0 16 16; -fx-padding: 0;" VBox.vgrow="ALWAYS">
-<<<<<<< Updated upstream
-                <TableView fx:id="clientTable" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css, @shipments.css">
-                        <columns>
-                            <TableColumn fx:id="colName" prefWidth="180" text="اسم الموظف" />
-                            <TableColumn fx:id="colEmail" prefWidth="200" text="البريد الالكتروني" />
-                            <TableColumn fx:id="colPhone" prefWidth="150" text="رقم الهاتف" />
-                            <TableColumn fx:id="colType" prefWidth="140" text="نوع الموظف" />
-                            <TableColumn fx:id="colRank" prefWidth="120" text="حالة الموظف" />
-=======
-                    <TableView fx:id="clientTable" style="-fx-background-color: transparent;">
-                        <columns>
-                            <TableColumn fx:id="colName" prefWidth="180" text="اسم الموظف" />
-                            <TableColumn fx:id="colEmail" prefWidth="220" text="البريد الالكتروني" />
-                            <TableColumn fx:id="colPhone" prefWidth="160" text="رقم الهاتف" />
-                            <TableColumn fx:id="colType" prefWidth="150" text="نوع الموظف" />
-                            <TableColumn fx:id="colRank" prefWidth="130" text="حالة الموظف" />
->>>>>>> Stashed changes
-                        </columns>
-                        <columnResizePolicy>
-                            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
-                        </columnResizePolicy>
-                    </TableView>
-                </StackPane>
-            </VBox>
+            <!-- Table container -->
+            <StackPane style="-fx-background-color: white; -fx-background-radius: 16; -fx-padding: 20; -fx-border-color: #e0e0e0; -fx-border-radius: 16; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 4);">
+                <TableView fx:id="clientTable" prefHeight="350" prefWidth="900" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css">
+                    <columns>
+                        <TableColumn fx:id="colName" prefWidth="180" text="اسم الموظف" />
+                        <TableColumn fx:id="colEmail" prefWidth="200" text="البريد الالكتروني" />
+                        <TableColumn fx:id="colPhone" prefWidth="150" text="رقم الهاتف" />
+                        <TableColumn fx:id="colType" prefWidth="140" text="نوع الموظف" />
+                        <TableColumn fx:id="colRank" prefWidth="120" text="حالة الموظف" />
+                    </columns>
+                </TableView>
+            </StackPane>
 
             <!-- Action Buttons -->
-<<<<<<< Updated upstream
-            <HBox alignment="CENTER_RIGHT" spacing="16" style="-fx-padding: 8 0;">
-                <Button fx:id="deleteClientBtn" onAction="#deleteEmployee" styleClass="danger-button">
-                    <graphic>
-                         <HBox alignment="CENTER" spacing="8">
-                             <Label text="🗑️" style="-fx-font-size: 16px;">
-                                 <effect>
-                                     <ColorAdjust brightness="1.0" contrast="0.0" hue="0.0" saturation="0.0" />
-                                 </effect>
-                             </Label>
-                             <Label text="مسح الموظف" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
-                         </HBox>
-                    </graphic>
-                </Button>
-                <Button fx:id="freezeClientBtn" onAction="#freezeEmployee" styleClass="danger-button">
-                     <graphic>
-                         <HBox alignment="CENTER" spacing="8">
-                             <Label text="❄️" style="-fx-font-size: 16px;">
-                                 <effect>
-                                     <ColorAdjust brightness="1.0" contrast="0.0" hue="0.0" saturation="0.0" />
-                                 </effect>
-                             </Label>
-                             <Label text="تجميد الموظف" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
-                         </HBox>
-                    </graphic>
-                </Button>
-                <Button fx:id="updateClientBtn" onAction="#editEmployee" styleClass="secondary-button">
-                     <graphic>
-                         <HBox alignment="CENTER" spacing="8">
-                             <Label text="✏️" style="-fx-font-size: 16px;">
-                                 <effect>
-                                     <ColorAdjust brightness="1.0" contrast="0.0" hue="0.0" saturation="0.0" />
-                                 </effect>
-                             </Label>
-                             <Label text="تعديل الموظف" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
-                         </HBox>
-                    </graphic>
-                </Button>
-                 <Button fx:id="addُEmployeebtn" onAction="#addُEmployee" styleClass="success-button">
-                     <graphic>
-                         <HBox alignment="CENTER" spacing="8">
-                             <Label text="➕" style="-fx-font-size: 16px;">
-                                 <effect>
-                                     <ColorAdjust brightness="1.0" contrast="0.0" hue="0.0" saturation="0.0" />
-                                 </effect>
-                             </Label>
-                             <Label text="إضافة موظف جديد" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
-                         </HBox>
-=======
-            <HBox alignment="CENTER" spacing="20" style="-fx-padding: 8 0;">
-                <Button fx:id="addُEmployeebtn" onAction="#addُEmployee" styleClass="success-button">
-                    <graphic>
-                        <HBox alignment="CENTER_LEFT" spacing="8">
-                            <Label text="➕" style="-fx-font-size: 16px; -fx-text-fill: white;"/>
-                            <Label text="إضافة موظف جديد" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
-                        </HBox>
-                    </graphic>
-                </Button>
-                <Button fx:id="updateClientBtn" onAction="#editEmployee" styleClass="secondary-button">
-                    <graphic>
-                        <HBox alignment="CENTER_LEFT" spacing="8">
-                            <Label text="✏️" style="-fx-font-size: 16px; -fx-text-fill: white;"/>
-                            <Label text="تعديل الموظف" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
-                        </HBox>
-                    </graphic>
-                </Button>
-                <Button fx:id="freezeClientBtn" onAction="#freezeEmployee" styleClass="danger-button">
-                    <graphic>
-                        <HBox alignment="CENTER_LEFT" spacing="8">
-                            <Label text="❄️" style="-fx-font-size: 16px; -fx-text-fill: white;"/>
-                            <Label text="تجميد الموظف" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
-                        </HBox>
-                    </graphic>
-                </Button>
-                <Button fx:id="deleteClientBtn" onAction="#deleteEmployee" styleClass="danger-button">
-                    <graphic>
-                        <HBox alignment="CENTER_LEFT" spacing="8">
-                            <Label text="🗑️" style="-fx-font-size: 16px; -fx-text-fill: white;"/>
-                            <Label text="مسح الموظف" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
-                        </HBox>
->>>>>>> Stashed changes
-                    </graphic>
-                </Button>
+            <HBox alignment="CENTER" spacing="16" style="-fx-padding: 8 0;">
+                <Button fx:id="addُEmployeebtn" onAction="#addُEmployee" 
+                    style="-fx-background-color: linear-gradient(to bottom, #a40000, #690000); -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 12; -fx-font-weight: bold; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 3); -fx-cursor: hand;" 
+                    text="➕ إضافة موظف جديد" />
+                <Button fx:id="updateClientBtn" onAction="#editEmployee" 
+                    style="-fx-background-color: #1ba3b6; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 12; -fx-font-weight: bold; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 3); -fx-cursor: hand;" 
+                    text="✏️ تعديل الموظف" />
+                <Button fx:id="freezeClientBtn" onAction="#freezeEmployee" 
+                    style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 12; -fx-font-weight: bold; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 3); -fx-cursor: hand;" 
+                    text="❄️ تجميد الموظف" />
+                <Button fx:id="deleteClientBtn" onAction="#deleteEmployee" 
+                    style="-fx-background-color: linear-gradient(to bottom, #a40000, #690000); -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 12; -fx-font-weight: bold; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 3); -fx-cursor: hand;" 
+                    text="🗑️ مسح الموظف" />
             </HBox>
         </VBox>
     </center>

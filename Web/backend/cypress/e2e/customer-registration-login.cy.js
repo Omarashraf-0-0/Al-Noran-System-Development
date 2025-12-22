@@ -9,7 +9,7 @@ describe('Customer Registration and Login - Al-Noran', () => {
     email: `testcustomer${timestamp}@test.com`,
     password: 'Test@123456',
     fullname: `Test Customer ${timestamp}`,
-    phoneNumber: `${timestamp.toString().slice(-11)}`
+    phoneNumber: `01${timestamp.toString().slice(-9)}`
   };
 
   let authToken;
@@ -26,8 +26,9 @@ describe('Customer Registration and Login - Al-Noran', () => {
       if (url.includes('/login')) {
         cy.log('Detected login page - logging in...');
         
-        cy.get('input#email', { timeout: 10000 }).should('be.visible').clear().type(customerData.email);
-        cy.get('input#password').should('be.visible').clear().type(customerData.password);
+        // Use placeholder selectors since inputs don't have id attributes
+        cy.get('input[placeholder="example@email.com"]', { timeout: 10000 }).should('be.visible').clear().type(customerData.email);
+        cy.get('input[placeholder="••••••••"]').should('be.visible').clear().type(customerData.password);
         cy.get('button[type="submit"]').click();
         
         cy.wait(3000);
@@ -56,28 +57,34 @@ describe('Customer Registration and Login - Al-Noran', () => {
         }
       });
 
-      // Wait for form to be ready
-      cy.get('input#username', { timeout: 10000 }).should('be.visible');
+      // Wait for form to be ready - use placeholder selector
+      cy.get('input[placeholder="ادخل الاسم الكامل"]', { timeout: 10000 }).should('be.visible');
 
-      // Fill all required fields
-      cy.get('input#username').clear().type(customerData.username);
-      cy.get('input#email').clear().type(customerData.email);
-      cy.get('input#password').clear().type(customerData.password);
-      cy.get('input#confirmPassword').clear().type(customerData.password);
-      cy.get('input#fullname').clear().type(customerData.fullname);
-      cy.get('input#phone').clear().type(customerData.phoneNumber);
+      // Fill all required fields using placeholder selectors
+      cy.get('input[placeholder="ادخل الاسم الكامل"]').clear().type(customerData.fullname);
+      cy.get('input[placeholder="example@email.com"]').clear().type(customerData.email);
+      cy.get('input[placeholder="01xxxxxxxxx"]').clear().type(customerData.phoneNumber);
+      cy.get('input[placeholder="ادخل اسم المستخدم"]').clear().type(customerData.username);
       
-      // Select account type (personal)
-      cy.get('input#personal').check({ force: true });
+      // Password fields (both have same placeholder)
+      cy.get('input[placeholder="••••••••"]').first().clear().type(customerData.password);
+      cy.get('input[placeholder="••••••••"]').last().clear().type(customerData.password);
       
-      // Wait for SSN field to appear and fill it with 14-digit number from timestamp
+      // Select account type (personal) by clicking the label
+      cy.contains('شخصي').click();
+      
+      // Wait for nationality options and select Egyptian
       cy.wait(500);
-      cy.get('input#ssn').should('be.visible');
-      const ssn14digit = Date.now().toString().slice(0, 14).padEnd(14, '0');
-      cy.get('input#ssn').clear().type(ssn14digit);
+      cy.contains('مصري').click();
       
-      // Accept terms and conditions
-      cy.get('input#terms').check({ force: true });
+      // Wait for SSN field to appear and fill it with 14-digit number
+      cy.wait(500);
+      cy.get('input[placeholder="ادخل رقم البطاقة القومية (14 رقم)"]').should('be.visible');
+      const ssn14digit = Date.now().toString().slice(0, 14).padEnd(14, '0');
+      cy.get('input[placeholder="ادخل رقم البطاقة القومية (14 رقم)"]').clear().type(ssn14digit);
+      
+      // Accept terms and conditions (has id="terms")
+      cy.get('#terms').check({ force: true });
       
       // Submit registration
       cy.get('button[type="submit"]').click();
@@ -114,11 +121,11 @@ describe('Customer Registration and Login - Al-Noran', () => {
         }
       });
 
-      // Wait for form to load
-      cy.get('input#email', { timeout: 10000 }).should('be.visible');
+      // Wait for form to load - use placeholder selector
+      cy.get('input[placeholder="example@email.com"]', { timeout: 10000 }).should('be.visible');
 
-      cy.get('input#email').clear().type(customerData.email);
-      cy.get('input#password').clear().type(customerData.password);
+      cy.get('input[placeholder="example@email.com"]').clear().type(customerData.email);
+      cy.get('input[placeholder="••••••••"]').clear().type(customerData.password);
       
       // Intercept the login API call
       cy.intercept('POST', '**/api/auth/login').as('loginRequest');
@@ -249,25 +256,36 @@ describe('Customer Registration and Login - Al-Noran', () => {
       // Wait for form to be ready
       cy.get('form', { timeout: 10000 }).should('be.visible');
 
-      // Create a test PDF file for upload
-      const fileName = 'test-invoice.pdf';
-      cy.fixture(fileName, { encoding: null }).then((fileContent) => {
-        // Find and upload the initial invoice (الفاتورة المبداية)
-        cy.get('input[type="file"]').first().selectFile({
-          contents: fileContent,
-          fileName: fileName,
-          mimeType: 'application/pdf'
-        }, { force: true });
-      });
+      // Create a test PDF content for upload
+      const pdfContent = '%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj\nxref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n0000000058 00000 n\n0000000115 00000 n\ntrailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n195\n%%EOF';
+      
+      // Upload initial invoice
+      cy.get('input[type="file"]').first().selectFile({
+        contents: Cypress.Buffer.from(pdfContent),
+        fileName: 'test-invoice.pdf',
+        mimeType: 'application/pdf'
+      }, { force: true });
 
       cy.wait(1000);
       cy.log('✅ Initial invoice PDF uploaded');
 
-      // Fill in the remaining form fields
-      // Note: Adjust these selectors based on your actual form structure
-      cy.get('input[name="shipmentDescription"]').type('Test shipment description');
-      cy.get('input[name="itemValue"]').type('1000');
-      cy.get('input[name="weight"]').type('5');
+      // Select shipment type (new UI uses clickable divs)
+      cy.contains('شحن بحري').click();
+      cy.log('✅ Shipment type selected');
+
+      // Fill goods information using placeholder selectors
+      cy.get('input[placeholder*="851713"]').clear().type('851713');
+      cy.get('input[placeholder="0.00"]').clear().type('100');
+      cy.get('input[placeholder*="وصف دقيق للبضاعة"]').clear().type('بضائع تجريبية للاختبار');
+      cy.log('✅ Goods information filled');
+
+      // Fill supplier information
+      cy.get('input[placeholder="اسم الشركة الموردة"]').clear().type('شركة الاختبار الدولية');
+      cy.get('input[placeholder="Tax ID Number"]').clear().type('123456789');
+      cy.get('input[placeholder="بلد المنشأ"]').clear().type('الصين');
+      cy.get('input[placeholder="مع مفتاح الدولة"]').clear().type('+8612345678901');
+      cy.get('input[placeholder="supplier@example.com"]').clear().type('test@supplier.com');
+      cy.log('✅ Supplier information filled');
       
       // Submit the form
       cy.get('button[type="submit"]').click();

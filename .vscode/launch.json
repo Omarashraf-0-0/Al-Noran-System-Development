@@ -4,8 +4,20 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-    
-    
+        {
+            "type": "java",
+            "name": "RestMongoSyncClient",
+            "request": "launch",
+            "mainClass": "noran.desktop.Database.RestMongoSyncClient",
+            "projectName": "Desktop"
+        },
+        {
+            "type": "java",
+            "name": "LoginApplication",
+            "request": "launch",
+            "mainClass": "noran.desktop.Applications.LoginApplication",
+            "projectName": "Desktop"
+        },
         {
             "name": "Mobile Application",
             "cwd": "Mobile Application",

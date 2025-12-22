@@ -5,7 +5,6 @@ import Stepper from "../components/Stepper";
 import FileRow from "../components/FileRow";
 import Footer from "../components/Footer";
 import NotificationBell from "../components/NotificationBell";
-import supportAgent from "../assets/images/support_agent.png";
 import mainIllustration from "../assets/images/Untitled design (7) 1.png";
 import contractIcon from "../assets/images/contract.png";
 import Datafield from "../components/DataField";
@@ -91,7 +90,6 @@ const ShipmentStatus = () => {
 	const { isDarkMode } = useTheme();
 
 	const [shipment, setShipment] = useState(null);
-	const [fileItems, setFileItems] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [requiredDocuments, setRequiredDocuments] = useState([]);
@@ -195,7 +193,8 @@ const ShipmentStatus = () => {
 					setRequiredDocuments([]);
 				}
 
-				// Fetch shipment files/uploads
+				// Fetch shipment files/uploads - DISABLED (files section is commented out in UI)
+				/*
 				try {
 					const filesResponse = await axios.get(
 						`${import.meta.env.VITE_API_URL}/api/uploads?category=shipment&relatedId=${realId}`,
@@ -207,6 +206,7 @@ const ShipmentStatus = () => {
 					// API returns { success, count, uploads: [...] }
 					const uploads = filesResponse.data?.uploads || filesResponse.data || [];
 
+					// Files mapping commented out - files section is disabled
 					const shipmentFiles = uploads.map((file) => ({
 						name: file.filename || file.originalname || "ملف",
 						date: new Date(file.uploadedAt || file.createdAt).toLocaleDateString("ar-EG", {
@@ -225,6 +225,7 @@ const ShipmentStatus = () => {
 					console.log("Note: Could not fetch files:", fileError.message);
 					setFileItems([]);
 				}
+				*/
 
 			} catch (error) {
 				console.error("Error fetching shipment data:", error);
@@ -262,7 +263,7 @@ const ShipmentStatus = () => {
 
 			localStorage.setItem(`lastStatus_${shipmentId}`, shipment.status);
 		}
-	}, [shipment?.status, shipmentId]);
+	}, [shipment, shipmentId]);
 
 	// Watch for new required documents
 	useEffect(() => {
@@ -292,7 +293,7 @@ const ShipmentStatus = () => {
 				requiredDocuments.length.toString()
 			);
 		}
-	}, [requiredDocuments.length, shipmentId]);
+	}, [requiredDocuments, shipmentId]);
 
 	return (
 		// Full page wrapper
@@ -834,6 +835,18 @@ const ShipmentStatus = () => {
 										}));
 									};
 									
+									// Handler to cancel/remove pending file
+									const handleCancelFile = () => {
+										setPendingFiles(prev => {
+											const newFiles = { ...prev };
+											delete newFiles[doc._id];
+											return newFiles;
+										});
+										// Clear file input
+										const fileInput = document.getElementById(`file-${doc._id}`);
+										if (fileInput) fileInput.value = "";
+									};
+									
 									// Handler to save/upload the file
 									const handleSaveFile = async () => {
 										if (!pendingFile) return;
@@ -901,7 +914,8 @@ const ShipmentStatus = () => {
 											);
 											setShipment(shipmentRefresh.data);
 
-											// Refresh files list
+											// Refresh files list - DISABLED (files section is commented out in UI)
+											/*
 											const filesResponse = await axios.get(
 												`${import.meta.env.VITE_API_URL}/api/uploads?category=shipment&relatedId=${shipment._id}`,
 												{ headers: { Authorization: `Bearer ${token}` } }
@@ -918,6 +932,7 @@ const ShipmentStatus = () => {
 												description: file.description,
 											}));
 											setFileItems(shipmentFiles);
+											*/
 
 											// Close modal if all docs uploaded
 											const remaining = updatedDocs.filter(d => !d.uploaded);

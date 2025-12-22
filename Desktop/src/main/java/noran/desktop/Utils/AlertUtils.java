@@ -1,6 +1,7 @@
 package noran.desktop.Utils;
 
 import javafx.animation.FadeTransition;
+import javafx.animation.ParallelTransition;
 import javafx.animation.ScaleTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
@@ -8,7 +9,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.effect.DropShadow;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -21,8 +23,8 @@ import javafx.stage.StageStyle;
 import javafx.util.Duration;
 
 /**
- * Utility class for displaying modern styled alerts throughout the application.
- * Provides consistent, animated alert dialogs with type-specific styling.
+ * Modern styled alert dialogs matching Al-Noran login/dashboard theme.
+ * Clean, professional design with brand colors and no heavy shadows.
  */
 public class AlertUtils {
 
@@ -31,19 +33,15 @@ public class AlertUtils {
     }
 
     /**
-     * Show a modern styled alert dialog.
-     * 
-     * @param title   The alert title
-     * @param message The alert message
-     * @param type    The type of alert (SUCCESS, ERROR, WARNING, INFO)
+     * Show a modern styled alert dialog matching app theme.
      */
     public static void show(String title, String message, AlertType type) {
         Stage alertStage = new Stage();
         alertStage.initModality(Modality.APPLICATION_MODAL);
         alertStage.initStyle(StageStyle.TRANSPARENT);
 
-        // Main container with FIXED SIZE for consistency
-        VBox container = new VBox(24);
+        // Main container - clean white card style matching login/dashboard
+        VBox container = new VBox(22);
         container.setAlignment(Pos.CENTER);
         container.setPadding(new Insets(40, 50, 40, 50));
         container.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
@@ -52,74 +50,98 @@ public class AlertUtils {
         container.setMaxWidth(380);
         container.setMinHeight(300);
 
-        // Add shadow effect
-        DropShadow shadow = new DropShadow();
-        shadow.setColor(Color.rgb(0, 0, 0, 0.35));
-        shadow.setRadius(30);
-        shadow.setSpread(0.15);
-        container.setEffect(shadow);
+        // Logo at top
+        try {
+            ImageView logo = new ImageView(new Image(
+                    AlertUtils.class.getResourceAsStream("/noran/desktop/images/Logo.png")));
+            logo.setFitHeight(45);
+            logo.setFitWidth(65);
+            logo.setPreserveRatio(true);
+            logo.setOpacity(0.9);
+            container.getChildren().add(logo);
+        } catch (Exception ignored) {
+        }
 
-        // Icon circle with symbol - larger for visibility
-        Circle iconCircle = new Circle(50);
+        // Icon circle with symbol - clean style
+        Circle iconCircle = new Circle(40);
         iconCircle.setFill(getIconColor(type));
-        iconCircle.setEffect(new DropShadow(15, getIconColor(type).darker()));
 
         Label iconLabel = new Label(getIcon(type));
-        iconLabel.setFont(Font.font("Segoe UI Emoji", FontWeight.BOLD, 42));
+        iconLabel.setFont(Font.font("Segoe UI Emoji", FontWeight.BOLD, 32));
         iconLabel.setTextFill(Color.WHITE);
 
         StackPane iconPane = new StackPane(iconCircle, iconLabel);
 
-        // Title label - larger font
+        // Title label
         Label titleLabel = new Label(title);
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 22));
         titleLabel.setTextFill(getTitleColor(type));
 
-        // Message label - larger and centered
+        // Message label
         Label messageLabel = new Label(message);
-        messageLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 18));
-        messageLabel.setTextFill(Color.web("#444444"));
+        messageLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 15));
+        messageLabel.setTextFill(Color.web("#495057"));
         messageLabel.setWrapText(true);
         messageLabel.setAlignment(Pos.CENTER);
         messageLabel.setMaxWidth(320);
-        messageLabel.setStyle("-fx-text-alignment: center;");
+        messageLabel.setStyle("-fx-text-alignment: center; -fx-line-spacing: 3;");
 
-        // OK Button - larger
+        // OK Button - matching login button style
         Button okBtn = new Button("حسناً");
-        okBtn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
-        okBtn.setPrefWidth(160);
-        okBtn.setPrefHeight(50);
+        okBtn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
+        okBtn.setPrefWidth(130);
+        okBtn.setPrefHeight(46);
         okBtn.setStyle(getButtonStyle(type));
         okBtn.setCursor(javafx.scene.Cursor.HAND);
 
         okBtn.setOnMouseEntered(e -> okBtn.setStyle(getButtonHoverStyle(type)));
         okBtn.setOnMouseExited(e -> okBtn.setStyle(getButtonStyle(type)));
-        okBtn.setOnAction(e -> alertStage.close());
+        okBtn.setOnAction(e -> {
+            // Animate exit
+            ScaleTransition scaleOut = new ScaleTransition(Duration.millis(120), container);
+            scaleOut.setToX(0.95);
+            scaleOut.setToY(0.95);
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(120), container);
+            fadeOut.setToValue(0);
+            ParallelTransition exitAnim = new ParallelTransition(scaleOut, fadeOut);
+            exitAnim.setOnFinished(ev -> alertStage.close());
+            exitAnim.play();
+        });
 
         container.getChildren().addAll(iconPane, titleLabel, messageLabel, okBtn);
 
-        Scene scene = new Scene(container);
+        // Create scene with semi-transparent backdrop
+        StackPane root = new StackPane(container);
+        root.setStyle("-fx-background-color: rgba(0, 0, 0, 0.25);");
+        root.setOnMouseClicked(e -> {
+            if (e.getTarget() == root) {
+                okBtn.fire();
+            }
+        });
+
+        Scene scene = new Scene(root, 480, 380);
         scene.setFill(Color.TRANSPARENT);
         alertStage.setScene(scene);
 
         // Animate entrance
-        container.setScaleX(0.7);
-        container.setScaleY(0.7);
+        container.setScaleX(0.9);
+        container.setScaleY(0.9);
         container.setOpacity(0);
 
-        ScaleTransition scale = new ScaleTransition(Duration.millis(200), container);
+        ScaleTransition scale = new ScaleTransition(Duration.millis(180), container);
         scale.setToX(1);
         scale.setToY(1);
 
-        FadeTransition fade = new FadeTransition(Duration.millis(200), container);
+        FadeTransition fade = new FadeTransition(Duration.millis(180), container);
         fade.setToValue(1);
 
         alertStage.show();
-        scale.play();
-        fade.play();
+
+        ParallelTransition enterAnim = new ParallelTransition(scale, fade);
+        enterAnim.play();
     }
 
-    // Convenience methods for each type
+    // Convenience methods
     public static void showSuccess(String title, String message) {
         show(title, message, AlertType.SUCCESS);
     }
@@ -138,33 +160,34 @@ public class AlertUtils {
 
     private static String getContainerStyle(AlertType type) {
         String borderColor = switch (type) {
-            case SUCCESS -> "#10b981"; // Modern emerald green
-            case ERROR -> "#ef4444"; // Modern red
-            case WARNING -> "#f59e0b"; // Modern amber/gold yellow
-            case INFO -> "#3b82f6"; // Modern blue
+            case SUCCESS -> "#10b981";
+            case ERROR -> "#a40000";
+            case WARNING -> "#f59e0b";
+            case INFO -> "#1ba3b6";
         };
-        return "-fx-background-color: linear-gradient(to bottom, #ffffff, #f8f9fa); " +
+        // Clean white card matching login/dashboard - no heavy shadows
+        return "-fx-background-color: white; " +
                 "-fx-background-radius: 24; " +
                 "-fx-border-radius: 24; " +
                 "-fx-border-color: " + borderColor + "; " +
-                "-fx-border-width: 4;";
+                "-fx-border-width: 2;";
     }
 
     private static Color getIconColor(AlertType type) {
         return switch (type) {
-            case SUCCESS -> Color.web("#10b981"); // Emerald
-            case ERROR -> Color.web("#ef4444"); // Red
-            case WARNING -> Color.web("#f59e0b"); // Amber
-            case INFO -> Color.web("#3b82f6"); // Blue
+            case SUCCESS -> Color.web("#10b981");
+            case ERROR -> Color.web("#a40000");
+            case WARNING -> Color.web("#f59e0b");
+            case INFO -> Color.web("#1ba3b6");
         };
     }
 
     private static Color getTitleColor(AlertType type) {
         return switch (type) {
             case SUCCESS -> Color.web("#059669");
-            case ERROR -> Color.web("#dc2626");
-            case WARNING -> Color.web("#d97706"); // Darker amber
-            case INFO -> Color.web("#2563eb");
+            case ERROR -> Color.web("#690000");
+            case WARNING -> Color.web("#b45309");
+            case INFO -> Color.web("#0e7490");
         };
     }
 
@@ -178,30 +201,29 @@ public class AlertUtils {
     }
 
     private static String getButtonStyle(AlertType type) {
-        String bgColor = switch (type) {
-            case SUCCESS -> "#10b981";
-            case ERROR -> "#ef4444";
-            case WARNING -> "#f59e0b";
-            case INFO -> "#3b82f6";
+        String gradient = switch (type) {
+            case SUCCESS -> "linear-gradient(to bottom, #22c980, #10b981, #059669)";
+            case ERROR -> "linear-gradient(to bottom, #c41e1e, #a40000, #7a0000)";
+            case WARNING -> "linear-gradient(to bottom, #fbbf24, #f59e0b, #d97706)";
+            case INFO -> "linear-gradient(to bottom, #22d3ee, #1ba3b6, #0e7490)";
         };
-        return "-fx-background-color: " + bgColor + "; " +
+        // Clean button style matching login - no shadows
+        return "-fx-background-color: " + gradient + "; " +
                 "-fx-text-fill: white; " +
-                "-fx-background-radius: 25; " +
-                "-fx-border-radius: 25; " +
-                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);";
+                "-fx-background-radius: 14; " +
+                "-fx-border-radius: 14;";
     }
 
     private static String getButtonHoverStyle(AlertType type) {
-        String bgColor = switch (type) {
-            case SUCCESS -> "#059669";
-            case ERROR -> "#dc2626";
-            case WARNING -> "#d97706";
-            case INFO -> "#2563eb";
+        String gradient = switch (type) {
+            case SUCCESS -> "linear-gradient(to bottom, #34d399, #22c980, #10b981)";
+            case ERROR -> "linear-gradient(to bottom, #dc2626, #b91c1c, #991b1b)";
+            case WARNING -> "linear-gradient(to bottom, #fcd34d, #fbbf24, #f59e0b)";
+            case INFO -> "linear-gradient(to bottom, #67e8f9, #22d3ee, #1ba3b6)";
         };
-        return "-fx-background-color: " + bgColor + "; " +
+        return "-fx-background-color: " + gradient + "; " +
                 "-fx-text-fill: white; " +
-                "-fx-background-radius: 25; " +
-                "-fx-border-radius: 25; " +
-                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 3);";
+                "-fx-background-radius: 14; " +
+                "-fx-border-radius: 14;";
     }
 }

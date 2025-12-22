@@ -221,10 +221,7 @@ public class ShipmentsManagementController {
     // Note: In editShipment, ensure you pass the new fields correctly.
 
     private void showAlert(String msg) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setHeaderText(null);
-        alert.setContentText(msg);
-        alert.showAndWait();
+        noran.desktop.Utils.AlertUtils.showInfo("تنبيه", msg);
     }
 
     // --- NAVIGATION HELPERS (Kept same) ---
