@@ -179,11 +179,7 @@ public class TopBarController implements Initializable {
             stage.getScene().setRoot(root);
         } catch (Exception e) {
             e.printStackTrace();
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("خطأ");
-            alert.setHeaderText(null);
-            alert.setContentText("حدث خطأ أثناء فتح الملف الشخصي: " + e.getMessage());
-            alert.showAndWait();
+            noran.desktop.Utils.AlertUtils.showError("خطأ", "حدث خطأ أثناء فتح الملف الشخصي: " + e.getMessage());
         }
     }
 
@@ -211,11 +207,7 @@ public class TopBarController implements Initializable {
 
         } catch (Exception e) {
             e.printStackTrace();
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("خطأ");
-            alert.setHeaderText(null);
-            alert.setContentText("حدث خطأ أثناء تسجيل الخروج: " + e.getMessage());
-            alert.showAndWait();
+            noran.desktop.Utils.AlertUtils.showError("خطأ", "حدث خطأ أثناء تسجيل الخروج: " + e.getMessage());
         }
     }
 

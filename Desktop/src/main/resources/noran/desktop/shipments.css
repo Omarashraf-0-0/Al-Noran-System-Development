@@ -42,21 +42,22 @@
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 16, 0, 0, 6);
 }
 
-/* Secondary Button (Edit) */
+/* Secondary Button (Edit) - Brand Teal */
 .secondary-button {
-    -fx-background-color: linear-gradient(to bottom, #3b82f6, #2563eb);
+    -fx-background-color: linear-gradient(to bottom, #22c4d8, #1ba3b6, #158a9a);
     -fx-background-radius: 12;
     -fx-padding: 14 28;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.3), 10, 0, 0, 4);
+    -fx-effect: dropshadow(gaussian, rgba(27, 163, 182, 0.35), 10, 0, 0, 4);
 }
 
 .secondary-button:hover {
-    -fx-background-color: linear-gradient(to bottom, #60a5fa, #3b82f6);
+    -fx-background-color: linear-gradient(to bottom, #2dd4e8, #22c4d8, #1ba3b6);
+    -fx-effect: dropshadow(gaussian, rgba(27, 163, 182, 0.45), 14, 0, 0, 6);
 }
 
 .secondary-button:pressed {
-    -fx-background-color: linear-gradient(to bottom, #2563eb, #1d4ed8);
+    -fx-background-color: linear-gradient(to bottom, #158a9a, #0e7490);
 }
 
 /* Danger Button (Delete) */

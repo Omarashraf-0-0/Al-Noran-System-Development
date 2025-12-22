@@ -1,4 +1,5 @@
 {
     "cmake.sourceDirectory": "D:/Al Noran system/Al-Noran-System-Development/Mobile Application/linux",
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.debug.settings.onBuildFailureProceed": true
 }
