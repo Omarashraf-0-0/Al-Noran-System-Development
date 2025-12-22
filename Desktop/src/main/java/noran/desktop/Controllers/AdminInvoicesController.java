@@ -109,6 +109,9 @@ public class AdminInvoicesController {
         sortedData.comparatorProperty().bind(adminInvoicesTable.comparatorProperty());
         adminInvoicesTable.setItems(sortedData);
 
+        // Make columns fill the table width evenly
+        adminInvoicesTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
         refreshTable();
 
         if (sidebarController != null)
@@ -326,21 +329,63 @@ public class AdminInvoicesController {
     private void showInvoiceDetailsDialog(InvoiceAdminModel invoice) {
         Dialog<Void> dialog = new Dialog<>();
         dialog.setTitle("تفاصيل الفاتورة: " + invoice.getInvoiceNumber());
-        dialog.setHeaderText("العميل: " + invoice.getClientName() + "\nالحالة الحالية: " + invoice.getStatus());
+
+        // Set app icon on dialog window
+        Stage dialogStage = (Stage) dialog.getDialogPane().getScene().getWindow();
+        dialogStage.getIcons().add(new javafx.scene.image.Image(
+                getClass().getResourceAsStream("/noran/desktop/images/Logo.png")));
+
+        // Remove default header, we'll create a custom one
+        dialog.setHeaderText(null);
+        dialog.setGraphic(null);
 
         ButtonType closeType = new ButtonType("إغلاق", ButtonBar.ButtonData.CANCEL_CLOSE);
         dialog.getDialogPane().getButtonTypes().add(closeType);
 
-        VBox content = new VBox(15);
-        content.setPadding(new Insets(20));
-        content.setStyle("-fx-min-width: 500px;");
+        VBox content = new VBox(0);
+        content.setStyle("-fx-min-width: 550px; -fx-background-color: #f8f9fa;");
+
+        // Custom Header with gradient
+        VBox header = new VBox(8);
+        header.setAlignment(Pos.CENTER_RIGHT);
+        header.setStyle("-fx-background-color: linear-gradient(to left, #a40000, #7a0000); -fx-padding: 20 24;");
+
+        Label titleLabel = new Label("📄 تفاصيل الفاتورة");
+        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: 700; -fx-text-fill: white;");
+
+        HBox clientInfo = new HBox(20);
+        clientInfo.setAlignment(Pos.CENTER_RIGHT);
+
+        Label clientLabel = new Label("👤 العميل: " + invoice.getClientName());
+        clientLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: rgba(255,255,255,0.9);");
+
+        Label statusLabel = new Label("📋 الحالة: " + invoice.getStatus());
+        String statusColor = "pending".equalsIgnoreCase(invoice.getStatus()) ||
+                "في انتظار الموافقة".equals(invoice.getStatus()) ? "#fbbf24"
+                        : "مقبولة".equals(invoice.getStatus()) ? "#10b981" : "#ef4444";
+        statusLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: " + statusColor + "; -fx-font-weight: 600; " +
+                "-fx-background-color: rgba(255,255,255,0.9); -fx-padding: 4 12; -fx-background-radius: 12;");
+
+        clientInfo.getChildren().addAll(statusLabel, clientLabel);
+        header.getChildren().addAll(titleLabel, clientInfo);
+
+        // Table Section
+        VBox tableSection = new VBox(12);
+        tableSection.setStyle("-fx-padding: 20 24;");
+
+        Label itemsTitle = new Label("بنود الفاتورة:");
+        itemsTitle.setStyle("-fx-font-size: 15px; -fx-font-weight: 600; -fx-text-fill: #374151;");
 
         TableView<Document> itemsTable = new TableView<>();
         itemsTable.setPrefHeight(200);
+        itemsTable.setStyle("-fx-background-color: white; -fx-background-radius: 12; " +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 8, 0, 0, 2);");
+        itemsTable.getStylesheets().add(getClass().getResource("/noran/desktop/invoices-table.css").toExternalForm());
+        itemsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         TableColumn<Document, String> colItem = new TableColumn<>("البند");
         colItem.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getString("item")));
-        colItem.setPrefWidth(250);
+        colItem.setStyle("-fx-alignment: CENTER-RIGHT;");
 
         TableColumn<Document, String> colPrice = new TableColumn<>("السعر");
         colPrice.setCellValueFactory(data -> {
@@ -348,7 +393,7 @@ public class AdminInvoicesController {
             String c = data.getValue().getString("currencyType");
             return new SimpleStringProperty(String.format("%.2f %s", p, c));
         });
-        colPrice.setPrefWidth(150);
+        colPrice.setStyle("-fx-alignment: CENTER;");
 
         itemsTable.getColumns().addAll(colItem, colPrice);
 
@@ -356,26 +401,34 @@ public class AdminInvoicesController {
         if (items != null)
             itemsTable.setItems(FXCollections.observableArrayList(items));
 
-        content.getChildren().addAll(new Label("بنود الفاتورة:"), itemsTable);
+        tableSection.getChildren().addAll(itemsTitle, itemsTable);
 
-        HBox actions = new HBox(15);
+        // Actions Section
+        HBox actions = new HBox(12);
         actions.setAlignment(Pos.CENTER);
+        actions.setStyle("-fx-padding: 16 24 24 24;");
 
-        Button acceptBtn = new Button("قبول الفاتورة");
-        acceptBtn.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: bold;");
+        Button acceptBtn = new Button("✅ قبول الفاتورة");
+        acceptBtn.setStyle("-fx-background-color: #059669; " +
+                "-fx-text-fill: white; -fx-font-weight: 800; -fx-font-size: 14px; " +
+                "-fx-padding: 12 28; -fx-background-radius: 10; -fx-cursor: hand; " +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 4, 0, 0, 2);");
 
-        Button rejectBtn = new Button("رفض الفاتورة");
-        rejectBtn.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-weight: bold;");
+        Button rejectBtn = new Button("❌ رفض الفاتورة");
+        rejectBtn.setStyle("-fx-background-color: #dc2626; " +
+                "-fx-text-fill: white; -fx-font-weight: 800; -fx-font-size: 14px; " +
+                "-fx-padding: 12 28; -fx-background-radius: 10; -fx-cursor: hand; " +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 4, 0, 0, 2);");
 
-        Button pdfBtn = new Button("طباعة PDF");
-        pdfBtn.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-font-weight: bold;");
+        Button pdfBtn = new Button("📥 طباعة PDF");
+        pdfBtn.setStyle("-fx-background-color: #2563eb; " +
+                "-fx-text-fill: white; -fx-font-weight: 800; -fx-font-size: 14px; " +
+                "-fx-padding: 12 28; -fx-background-radius: 10; -fx-cursor: hand; " +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 4, 0, 0, 2);");
 
-        if (!"في انتظار الموافقة".equals(invoice.getStatus())) {
-            acceptBtn.setDisable(true);
-            rejectBtn.setDisable(true);
-        }
+        acceptBtn.setOnAction(e ->
 
-        acceptBtn.setOnAction(e -> {
+        {
             updateInvoiceStatus(invoice, "مقبولة");
             dialog.close();
         });
@@ -385,13 +438,24 @@ public class AdminInvoicesController {
             dialog.close();
         });
 
-        pdfBtn.setOnAction(e -> generatePdf(invoice));
+        pdfBtn.setOnAction(e ->
 
-        actions.getChildren().addAll(acceptBtn, rejectBtn, pdfBtn);
-        content.getChildren().add(actions);
+        generatePdf(invoice));
+
+        actions.getChildren().addAll(pdfBtn, rejectBtn, acceptBtn);
+
+        content.getChildren().addAll(header, tableSection, actions);
 
         dialog.getDialogPane().setContent(content);
-        dialog.show();
+        dialog.getDialogPane().setStyle("-fx-background-color: #f8f9fa; -fx-padding: 0;");
+
+        // Style the close button
+        dialog.getDialogPane().lookupButton(closeType).setStyle(
+                "-fx-background-color: linear-gradient(to bottom, #6b7280, #4b5563); " +
+                        "-fx-text-fill: white; -fx-font-weight: 600; -fx-padding: 10 24; " +
+                        "-fx-background-radius: 8; -fx-cursor: hand;");
+
+        dialog.showAndWait();
     }
 
     private void updateInvoiceStatus(InvoiceAdminModel invoice, String newStatus) {

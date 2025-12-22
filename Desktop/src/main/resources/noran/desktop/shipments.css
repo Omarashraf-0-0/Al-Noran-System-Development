@@ -1,0 +1,104 @@
+/* ================================================
+   SHIPMENTS MANAGEMENT STYLES - Al-Noran System
+   ================================================ */
+
+/* Refresh Button - Prominent red style */
+.refresh-button {
+    -fx-background-color: linear-gradient(to bottom, #a40000, #7a0000);
+    -fx-background-radius: 14;
+    -fx-padding: 14 28;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(164, 0, 0, 0.35), 12, 0, 0, 4);
+}
+
+.refresh-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #c41e1e, #a40000);
+    -fx-effect: dropshadow(gaussian, rgba(164, 0, 0, 0.45), 16, 0, 0, 6);
+}
+
+.refresh-button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #7a0000, #520000);
+}
+
+/* Mini Stat Cards - Vibrant with border */
+.mini-stat-card {
+    -fx-background-color: white;
+    -fx-background-radius: 16;
+    -fx-padding: 22 24;
+    -fx-border-color: transparent #a40000 transparent transparent;
+    -fx-border-width: 0 4 0 0;
+    -fx-border-radius: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 16, 0, 0, 6);
+}
+
+.mini-stat-card:hover {
+    -fx-effect: dropshadow(gaussian, rgba(164, 0, 0, 0.2), 20, 0, 0, 8);
+    -fx-border-color: transparent #c41e1e transparent transparent;
+}
+
+/* Table Container */
+.table-container {
+    -fx-background-color: transparent;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 16, 0, 0, 6);
+}
+
+/* Secondary Button (Edit) */
+.secondary-button {
+    -fx-background-color: linear-gradient(to bottom, #3b82f6, #2563eb);
+    -fx-background-radius: 12;
+    -fx-padding: 14 28;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.3), 10, 0, 0, 4);
+}
+
+.secondary-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #60a5fa, #3b82f6);
+}
+
+.secondary-button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #2563eb, #1d4ed8);
+}
+
+/* Danger Button (Delete) */
+.danger-button {
+    -fx-background-color: linear-gradient(to bottom, #a40000, #7a0000);
+    -fx-background-radius: 12;
+    -fx-padding: 14 28;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(164, 0, 0, 0.3), 10, 0, 0, 4);
+}
+
+.danger-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #c41e1e, #a40000);
+}
+
+.danger-button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #7a0000, #520000);
+}
+
+/* Success Button (Add) */
+.success-button {
+    -fx-background-color: linear-gradient(to bottom, #10b981, #059669);
+    -fx-background-radius: 12;
+    -fx-padding: 14 28;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(16, 185, 129, 0.3), 10, 0, 0, 4);
+}
+
+.success-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #34d399, #10b981);
+}
+
+.success-button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #059669, #047857);
+}
+
+/* ScrollPane */
+.scroll-pane {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+}
+
+.scroll-pane>.viewport {
+    -fx-background-color: transparent;
+}

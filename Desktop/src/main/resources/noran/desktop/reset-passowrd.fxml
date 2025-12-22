@@ -1,111 +1,176 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.image.Image?>
-<?import javafx.geometry.Insets?>
+<?import javafx.scene.shape.*?>
 
-<StackPane xmlns="http://javafx.com/javafx"
-            xmlns:fx="http://javafx.com/fxml"
-            style="-fx-background-image: url('noran/desktop/images/background.png');
-                   -fx-background-size: cover;
-                   -fx-background-position: center center;
-                   -fx-background-repeat: no-repeat;"
-            fx:controller="noran.desktop.Controllers.OTPVerificationController">
+<HBox xmlns="http://javafx.com/javafx/17.0.12" 
+      xmlns:fx="http://javafx.com/fxml/1" 
+      fx:controller="noran.desktop.Controllers.OTPVerificationController"
+      stylesheets="@auth-styles.css"
+      prefWidth="1200" prefHeight="700">
 
-    <!-- Background -->
-    <ImageView fitHeight="768.0" fitWidth="1366.0" pickOnBounds="true" preserveRatio="false" StackPane.alignment="CENTER">
-        <image>
-            <Image url="@images/background.png" />
-        </image>
-    </ImageView>
-
-    <!-- Modern Glass Card -->
-    <VBox maxWidth="450" maxHeight="450" prefWidth="450" prefHeight="450" spacing="22"
-          alignment="CENTER"
-          style="-fx-background-color: rgba(255,255,255,0.9);
-                 -fx-background-radius: 24;
-                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 8);"
-          nodeOrientation="RIGHT_TO_LEFT"
-          StackPane.alignment="CENTER">
-
+    <!-- ==================== LEFT BRAND PANEL ==================== -->
+    <VBox HBox.hgrow="ALWAYS" alignment="CENTER" spacing="30" 
+          style="-fx-background-color: linear-gradient(to bottom right, #a40000, #690000, #3d0000);"
+          prefWidth="500">
         <padding>
-            <Insets top="35" right="45" bottom="35" left="45"/>
+            <Insets top="60" right="50" bottom="60" left="50"/>
         </padding>
-
-        <!-- Back Link -->
-        <HBox alignment="TOP_LEFT" prefWidth="380">
-            <Hyperlink text="⬅️ الرجوع" onAction="#onBackClicked"
-                       style="-fx-font-family: 'Segoe UI'; -fx-font-size: 13; -fx-text-fill: #888; -fx-underline: false;" />
-        </HBox>
-
-        <!-- Icon + Title -->
-        <Label text="🔑 إعادة تعيين كلمة المرور"
-               style="-fx-font-family: 'Segoe UI', 'Poppins'; -fx-font-weight: 700;
-                      -fx-font-size: 22; -fx-text-fill: #690000;" />
         
-        <Label text="أدخل كلمة المرور الجديدة"
-               style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14; -fx-text-fill: #666;" />
-
-        <!-- New Password Field -->
-        <GridPane hgap="10" vgap="12" nodeOrientation="RIGHT_TO_LEFT" alignment="CENTER">
-            <Label text="🔐 كلمة المرور الجديدة"
-                   style="-fx-font-family: 'Segoe UI'; -fx-font-weight: 600;
-                          -fx-font-size: 14; -fx-text-fill: #444;
-                          -fx-alignment: CENTER-RIGHT;" GridPane.rowIndex="0" />
-
-            <PasswordField fx:id="newPasswordField" promptText="••••••••"
-                       GridPane.rowIndex="1"
-                       prefWidth="320" prefHeight="42"
-                       nodeOrientation="LEFT_TO_RIGHT"
-                       style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14;
-                              -fx-background-radius: 12;
-                              -fx-background-color: #f5f5f5;
-                              -fx-border-color: #ddd;
-                              -fx-border-radius: 12;
-                              -fx-padding: 10 15;" />
-        </GridPane>
-
-        <!-- Confirm Password Field -->
-        <GridPane hgap="10" vgap="12" nodeOrientation="RIGHT_TO_LEFT" alignment="CENTER">
-            <Label text="🔐 تأكيد كلمة المرور"
-                   style="-fx-font-family: 'Segoe UI'; -fx-font-weight: 600;
-                          -fx-font-size: 14; -fx-text-fill: #444;
-                          -fx-alignment: CENTER-RIGHT;" GridPane.rowIndex="0" />
-
-            <PasswordField fx:id="confirmedNewPassword" promptText="••••••••"
-                       GridPane.rowIndex="1"
-                       prefWidth="320" prefHeight="42"
-                       nodeOrientation="LEFT_TO_RIGHT"
-                       style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14;
-                              -fx-background-radius: 12;
-                              -fx-background-color: #f5f5f5;
-                              -fx-border-color: #ddd;
-                              -fx-border-radius: 12;
-                              -fx-padding: 10 15;" />
-        </GridPane>
-
-        <!-- Save Button with Gradient -->
-        <Button fx:id="sendCodeButton" text="💾 تغيير كلمة المرور" onAction="#onSendCodeClicked"
-                prefWidth="240" prefHeight="48"
-                style="-fx-font-family: 'Segoe UI'; -fx-font-weight: 700;
-                       -fx-font-size: 16; -fx-background-color: linear-gradient(to bottom, #8B0000, #690000);
-                       -fx-background-radius: 14; -fx-text-fill: white;
-                       -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 8, 0, 0, 3);" />
+        <!-- Decorative Background Circles -->
+        <StackPane>
+            <!-- Large circle top-right -->
+            <Circle radius="180" fill="rgba(255,255,255,0.06)" 
+                    translateX="200" translateY="-150"/>
+            <!-- Medium circle bottom-left -->
+            <Circle radius="120" fill="rgba(255,255,255,0.04)" 
+                    translateX="-180" translateY="200"/>
+            <!-- Gold accent circle -->
+            <Circle radius="80" fill="rgba(212,175,55,0.12)" 
+                    translateX="150" translateY="180"/>
+            
+            <!-- Content -->
+            <VBox alignment="CENTER" spacing="25">
+                <!-- Logo -->
+                <ImageView fitHeight="180" fitWidth="180" preserveRatio="true" smooth="true">
+                    <effect>
+                        <DropShadow color="rgba(0,0,0,0.4)" radius="20" spread="0.1"/>
+                    </effect>
+                    <image>
+                        <Image url="@images/white-logo.png"/>
+                    </image>
+                </ImageView>
+                
+                <!-- Brand Text -->
+                <VBox alignment="CENTER" spacing="12">
+                    <Label text="نظام النوران" 
+                           style="-fx-font-family: 'Segoe UI'; -fx-font-size: 36px; -fx-font-weight: 700; -fx-text-fill: white;">
+                        <effect>
+                            <DropShadow color="rgba(0,0,0,0.3)" radius="10"/>
+                        </effect>
+                    </Label>
+                    <Label text="نظام إدارة الفواتير والشحنات"
+                           style="-fx-font-family: 'Segoe UI'; -fx-font-size: 16px; -fx-text-fill: rgba(255,255,255,0.85);"/>
+                </VBox>
+                
+                <!-- Decorative Line -->
+                <HBox alignment="CENTER" spacing="15">
+                    <Rectangle width="40" height="3" fill="rgba(212,175,55,0.8)" arcWidth="3" arcHeight="3"/>
+                    <Circle radius="4" fill="rgba(212,175,55,0.8)"/>
+                    <Rectangle width="40" height="3" fill="rgba(212,175,55,0.8)" arcWidth="3" arcHeight="3"/>
+                </HBox>
+                
+                <!-- Features List -->
+                <VBox spacing="15" alignment="CENTER">
+                    <padding>
+                        <Insets top="20"/>
+                    </padding>
+                    <HBox spacing="12" alignment="CENTER">
+                        <Label text="✓" style="-fx-text-fill: #D4AF37; -fx-font-size: 16px; -fx-font-weight: bold;"/>
+                        <Label text="إدارة الفواتير بكفاءة" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 14px;"/>
+                    </HBox>
+                    <HBox spacing="12" alignment="CENTER">
+                        <Label text="✓" style="-fx-text-fill: #D4AF37; -fx-font-size: 16px; -fx-font-weight: bold;"/>
+                        <Label text="تتبع الشحنات لحظياً" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 14px;"/>
+                    </HBox>
+                    <HBox spacing="12" alignment="CENTER">
+                        <Label text="✓" style="-fx-text-fill: #D4AF37; -fx-font-size: 16px; -fx-font-weight: bold;"/>
+                        <Label text="تقارير وإحصائيات شاملة" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 14px;"/>
+                    </HBox>
+                </VBox>
+            </VBox>
+        </StackPane>
     </VBox>
 
-    <!-- Logo -->
-    <ImageView fitHeight="240.0" fitWidth="230.0"
-               preserveRatio="true" pickOnBounds="true"
-               StackPane.alignment="TOP_LEFT">
-        <image>
-            <Image url="@images/Logo.png" />
-        </image>
-        <StackPane.margin>
-            <Insets top="-10" />
-        </StackPane.margin>
-    </ImageView>
-
-</StackPane>
-
+    <!-- ==================== RIGHT FORM PANEL ==================== -->
+    <VBox HBox.hgrow="ALWAYS" alignment="CENTER" 
+          style="-fx-background-color: #f8f9fa;"
+          prefWidth="700">
+        
+        <!-- Form Card -->
+        <VBox alignment="CENTER" spacing="26" maxWidth="460"
+              style="-fx-background-color: white; -fx-background-radius: 28; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 40, 0, 0, 12);">
+            <padding>
+                <Insets top="45" right="50" bottom="50" left="50"/>
+            </padding>
+            
+            <!-- Back Button -->
+            <HBox alignment="CENTER_RIGHT" prefWidth="360">
+                <Button text="⬅ الرجوع" onAction="#onBackClicked"
+                        style="-fx-background-color: rgba(0,0,0,0.05); -fx-background-radius: 10; -fx-text-fill: #666; -fx-font-size: 13px; -fx-padding: 8 16; -fx-cursor: hand;"/>
+            </HBox>
+            
+            <!-- Header -->
+            <VBox alignment="CENTER" spacing="12" nodeOrientation="RIGHT_TO_LEFT">
+                <Label text="🔐" style="-fx-font-size: 48px;"/>
+                <Label text="كلمة مرور جديدة" 
+                       style="-fx-font-family: 'Segoe UI'; -fx-font-size: 26px; -fx-font-weight: 700; -fx-text-fill: #1a1a2e;"/>
+                <Label text="أنشئ كلمة مرور قوية لحماية حسابك"
+                       style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14px; -fx-text-fill: #6c757d; -fx-text-alignment: center;"/>
+            </VBox>
+            
+            <!-- Password Fields -->
+            <VBox spacing="18" nodeOrientation="RIGHT_TO_LEFT">
+                
+                <!-- New Password -->
+                <VBox spacing="10">
+                    <Label text="كلمة المرور الجديدة" 
+                           style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #495057;"/>
+                    <HBox alignment="CENTER_LEFT" spacing="0"
+                          style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2;">
+                        <Label text="🔒" style="-fx-font-size: 16px; -fx-padding: 0 0 0 15;"/>
+                        <PasswordField fx:id="newPasswordField" 
+                                       promptText="••••••••"
+                                       prefHeight="52" prefWidth="290"
+                                       nodeOrientation="LEFT_TO_RIGHT"
+                                       style="-fx-background-color: transparent; -fx-font-size: 15px; -fx-padding: 0 15 0 10; -fx-border-width: 0;"/>
+                    </HBox>
+                </VBox>
+                
+                <!-- Confirm Password -->
+                <VBox spacing="10">
+                    <Label text="تأكيد كلمة المرور"
+                           style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #495057;"/>
+                    <HBox alignment="CENTER_LEFT" spacing="0"
+                          style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2;">
+                        <Label text="🔒" style="-fx-font-size: 16px; -fx-padding: 0 0 0 15;"/>
+                        <PasswordField fx:id="confirmedNewPassword"
+                                       promptText="••••••••"
+                                       prefHeight="52" prefWidth="290"
+                                       nodeOrientation="LEFT_TO_RIGHT"
+                                       style="-fx-background-color: transparent; -fx-font-size: 15px; -fx-padding: 0 15 0 10; -fx-border-width: 0;"/>
+                    </HBox>
+                </VBox>
+            </VBox>
+            
+            <!-- Password Strength Hints -->
+            <VBox spacing="8" nodeOrientation="RIGHT_TO_LEFT" alignment="CENTER_RIGHT">
+                <Label text="متطلبات كلمة المرور:" style="-fx-font-size: 12px; -fx-text-fill: #6c757d; -fx-font-weight: 600;"/>
+                <HBox spacing="8" alignment="CENTER_RIGHT">
+                    <Label text="✓" style="-fx-text-fill: #10b981; -fx-font-size: 11px;"/>
+                    <Label text="8 أحرف على الأقل" style="-fx-font-size: 11px; -fx-text-fill: #6c757d;"/>
+                </HBox>
+                <HBox spacing="8" alignment="CENTER_RIGHT">
+                    <Label text="✓" style="-fx-text-fill: #10b981; -fx-font-size: 11px;"/>
+                    <Label text="حرف كبير وحرف صغير" style="-fx-font-size: 11px; -fx-text-fill: #6c757d;"/>
+                </HBox>
+                <HBox spacing="8" alignment="CENTER_RIGHT">
+                    <Label text="✓" style="-fx-text-fill: #10b981; -fx-font-size: 11px;"/>
+                    <Label text="رقم واحد على الأقل" style="-fx-font-size: 11px; -fx-text-fill: #6c757d;"/>
+                </HBox>
+            </VBox>
+            
+            <!-- Save Button -->
+            <Button fx:id="sendCodeButton" 
+                    text="💾 تغيير كلمة المرور"
+                    onAction="#onSendCodeClicked"
+                    prefWidth="360" prefHeight="52"
+                    style="-fx-background-color: linear-gradient(to bottom, #c41e1e, #a40000, #7a0000); -fx-background-radius: 14; -fx-text-fill: white; -fx-font-family: 'Segoe UI'; -fx-font-size: 16px; -fx-font-weight: 700; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(164,0,0,0.4), 15, 0, 0, 5);">
+            </Button>
+        </VBox>
+    </VBox>
+</HBox>

@@ -1,41 +1,98 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
 
-<VBox fx:id="sidebar" alignment="TOP_RIGHT" prefWidth="260" spacing="14" style="-fx-background-color: white; -fx-padding: 18;" stylesheets="@sidebar.css" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.SidebarController">
-
-    <VBox alignment="TOP_RIGHT" spacing="8">
-        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
-            <Button fx:id="dashboardBtn" maxWidth="Infinity" onAction="#navigateToDashboard" styleClass="sidebar-button" text="لوحة التحكم" HBox.hgrow="ALWAYS" />
+<VBox fx:id="sidebar" alignment="TOP_CENTER" prefWidth="280" spacing="0" 
+      style="-fx-background-color: linear-gradient(to bottom, #a40000, #7a0000, #520000);" 
+      stylesheets="@sidebar.css" 
+      xmlns="http://javafx.com/javafx/17.0.12" 
+      xmlns:fx="http://javafx.com/fxml/1" 
+      fx:controller="noran.desktop.Controllers.SidebarController">
+    
+    <!-- Logo Section -->
+    <VBox alignment="CENTER" spacing="6" style="-fx-padding: 16 20 10 20;">
+        <ImageView fitHeight="80" fitWidth="80" preserveRatio="true" smooth="true">
+            <effect>
+                <DropShadow color="rgba(0,0,0,0.3)" radius="15"/>
+            </effect>
+            <image>
+                <Image url="@images/white-logo.png"/>
+            </image>
+        </ImageView>
+        <Label text="نظام النوران" 
+               style="-fx-font-family: 'Segoe UI'; -fx-font-size: 20px; -fx-font-weight: 700; -fx-text-fill: white;">
+            <effect>
+                <DropShadow color="rgba(0,0,0,0.2)" radius="5"/>
+            </effect>
+        </Label>
+        
+        <!-- Decorative Line -->
+        <HBox alignment="CENTER" spacing="10" style="-fx-padding: 12 0 0 0;">
+            <Rectangle width="30" height="2" fill="rgba(212,175,55,0.7)" arcWidth="2" arcHeight="2"/>
+            <Circle radius="3" fill="rgba(212,175,55,0.7)"/>
+            <Rectangle width="30" height="2" fill="rgba(212,175,55,0.7)" arcWidth="2" arcHeight="2"/>
         </HBox>
+    </VBox>
 
-        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
-            <Button fx:id="invoiceCompletionBtn" maxWidth="Infinity" onAction="#navigateToTa5lees" styleClass="sidebar-button" text="تخليص الفواتير" HBox.hgrow="ALWAYS" />
-        </HBox>
+    <!-- Navigation Section -->
+    <VBox alignment="TOP_CENTER" spacing="4" style="-fx-padding: 8 16 8 16;" VBox.vgrow="ALWAYS">
+        
+        <!-- Dashboard -->
+        <Button fx:id="dashboardBtn" maxWidth="Infinity" onAction="#navigateToDashboard" 
+                styleClass="sidebar-button" text="📊  لوحة التحكم">
+            <graphic>
+                <Region prefWidth="24" prefHeight="24"/>
+            </graphic>
+        </Button>
+        
+        <!-- Invoice Completion -->
+        <Button fx:id="invoiceCompletionBtn" maxWidth="Infinity" onAction="#navigateToTa5lees" 
+                styleClass="sidebar-button" text="📋  تخليص الفواتير"/>
 
-        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
-            <Button fx:id="clientsBtn" maxWidth="Infinity" onAction="#navigateToClients" styleClass="sidebar-button" text="إدارة العملاء" HBox.hgrow="ALWAYS" />
-        </HBox>
+        <!-- Accepted Invoices -->
+        <Button fx:id="acceptedInvoicesBtn" maxWidth="Infinity" onAction="#navigateToAcceptedInvoices"
+                styleClass="sidebar-button" text="✅  الفواتير المقبولة"/>
+        
+        <!-- Invoices Management -->
+        <Button fx:id="invoicesBtn" maxWidth="Infinity" onAction="#navigateToInvoices"
+                styleClass="sidebar-button" text="📄  إدارة الفواتير"/>
 
-        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
-            <Button fx:id="invoicesBtn" maxWidth="Infinity" onAction="#navigateToInvoices" styleClass="sidebar-button" text="إدارة الفواتير" HBox.hgrow="ALWAYS" />
-        </HBox>
+        <!-- Add New Invoice -->
+        <Button fx:id="addInvoicesBtn" maxWidth="Infinity" onAction="#navigateToAddInvoices"
+                styleClass="sidebar-button" text="➕  اضافه فاتورة جديدة"/>
 
-        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
-            <Button fx:id="addInvoicesBtn" maxWidth="Infinity" onAction="#navigateToAddInvoices" styleClass="sidebar-button" text="اضافه فاتورة جديدة" HBox.hgrow="ALWAYS" />
-        </HBox>
+        <!-- Clients Management -->
+        <Button fx:id="clientsBtn" maxWidth="Infinity" onAction="#navigateToClients"
+                styleClass="sidebar-button" text="👥  إدارة العملاء"/>
 
-        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
-            <Button fx:id="employeesBtn" maxWidth="Infinity" onAction="#navigateToEmployees" styleClass="sidebar-button" text="إدارة الصلاحيات" HBox.hgrow="ALWAYS" />
+        <!-- Employee Management -->
+        <Button fx:id="employeesBtn" maxWidth="Infinity" onAction="#navigateToEmployees" 
+                styleClass="sidebar-button" text="🔐  إدارة الصلاحيات"/>
+        
+        <!-- Import Shipments -->
+        <Button fx:id="shipmentsBtn" maxWidth="Infinity" onAction="#shipments_management" 
+                styleClass="sidebar-button" text="📦  إدارة شحنات الاستيراد"/>
+        
+        <!-- Export Shipments -->
+        <Button fx:id="exportShipmentsBtn" maxWidth="Infinity" onAction="#navigateToExportShipments" 
+                styleClass="sidebar-button" text="📤  إدارة شحنات التصدير"/>
+        
+        <!-- Spacer -->
+        <Region VBox.vgrow="ALWAYS"/>
+        
+    </VBox>
+    
+    <!-- Bottom Section -->
+    <VBox alignment="CENTER" spacing="8" style="-fx-padding: 16 16 24 16; -fx-background-color: rgba(0,0,0,0.15);">
+        <HBox alignment="CENTER" spacing="10">
+            <Rectangle width="60" height="1" fill="rgba(255,255,255,0.2)"/>
         </HBox>
-
-        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
-            <Button fx:id="shipmentsBtn" maxWidth="Infinity" onAction="#shipments_management" styleClass="sidebar-button" text="إدارة شحنات الاستيراد" HBox.hgrow="ALWAYS" />
-        </HBox>
-
-        <HBox alignment="CENTER_RIGHT" maxWidth="Infinity">
-            <Button fx:id="exportShipmentsBtn" maxWidth="Infinity" onAction="#navigateToExportShipments" styleClass="sidebar-button" text="إدارة شحنات التصدير" HBox.hgrow="ALWAYS" />
-        </HBox>
+        <Label text="© 2024 Al-Noran System" 
+               style="-fx-font-size: 10px; -fx-text-fill: rgba(255,255,255,0.5);"/>
     </VBox>
 </VBox>

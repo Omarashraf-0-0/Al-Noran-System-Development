@@ -33,8 +33,7 @@ import java.util.ResourceBundle;
 
 public class ClientDataInvoiceController implements Initializable {
 
-    @FXML
-    private Button btnViewAcceptedInvoices;
+    // Button removed
 
     // Table Setup
     @FXML
@@ -202,19 +201,6 @@ public class ClientDataInvoiceController implements Initializable {
     }
 
     // --- Navigation ---
-
-    @FXML
-    private void openAcceptedInvoices() {
-        try {
-            Stage currentStage = (Stage) btnViewAcceptedInvoices.getScene().getWindow();
-            Parent root = FXMLLoader.load(getClass().getResource("/noran/desktop/AcceptedInvoicesView.fxml"));
-            currentStage.getScene().setRoot(root);
-            currentStage.setTitle("الفواتير المقبولة والمرسلة");
-        } catch (IOException e) {
-            e.printStackTrace();
-            showAlert("خطأ", "فشل في فتح الصفحة: " + e.getMessage());
-        }
-    }
 
     private void openInvoiceManagement(UserRow user) {
         try {

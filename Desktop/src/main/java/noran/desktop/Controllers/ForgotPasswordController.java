@@ -105,7 +105,8 @@ public class ForgotPasswordController {
             OTPVerificationController controller = loader.getController();
             controller.setUserEmail(email);
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setScene(new Scene(root));
+            Scene currentScene = stage.getScene();
+            stage.setScene(new Scene(root, currentScene.getWidth(), currentScene.getHeight()));
             stage.show();
         } catch (IOException e) {
             showCustomAlert("خطأ", "تعذر فتح صفحة رمز التحقق", AlertType.ERROR);
@@ -117,7 +118,8 @@ public class ForgotPasswordController {
         try {
             Parent root = FXMLLoader.load(getClass().getResource("/noran/desktop/login-view-ar.fxml"));
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setScene(new Scene(root));
+            Scene currentScene = stage.getScene();
+            stage.setScene(new Scene(root, currentScene.getWidth(), currentScene.getHeight()));
             stage.show();
         } catch (IOException e) {
             showCustomAlert("خطأ", "تعذر الرجوع إلى صفحة تسجيل الدخول", AlertType.ERROR);

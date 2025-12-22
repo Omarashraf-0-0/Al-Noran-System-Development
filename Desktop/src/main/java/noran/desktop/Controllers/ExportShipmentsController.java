@@ -79,6 +79,9 @@ public class ExportShipmentsController {
         sortedData.comparatorProperty().bind(exportsTable.comparatorProperty());
         exportsTable.setItems(sortedData);
 
+        // Make columns fill the table width evenly
+        exportsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
         // Load Data from MongoDB
         loadExportsFromMongo();
 

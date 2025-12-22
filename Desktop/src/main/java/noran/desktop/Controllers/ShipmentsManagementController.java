@@ -84,6 +84,9 @@ public class ShipmentsManagementController {
         sortedData.comparatorProperty().bind(clientTable.comparatorProperty());
         clientTable.setItems(sortedData);
 
+        // Make columns fill the table width evenly
+        clientTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
         // Load Data directly from MongoDB
         loadShipmentsFromMongo();
 
@@ -227,7 +230,7 @@ public class ShipmentsManagementController {
     // --- NAVIGATION HELPERS (Kept same) ---
     private void setupTopBar() {
         if (topBarController != null) {
-            topBarController.setPageTitle("إدارة الشحنات");
+            topBarController.setPageTitle("إدارة شحنات الاستيراد");
             topBarController.setSidebar(sidebar);
             topBarController.setSearchPlaceholder("البحث بالميناء، اسم العميل، أو ACID...");
             // Search Logic

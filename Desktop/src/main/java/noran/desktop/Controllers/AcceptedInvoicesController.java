@@ -85,6 +85,10 @@ public class AcceptedInvoicesController {
             if (u != null)
                 topBarController.setUserData(u.getName(), u.getEmail() != null ? u.getEmail() : "");
         }
+
+        if (sidebarController != null) {
+            sidebarController.setActivePage("accepted invoices");
+        }
     }
 
     private void setupTableColumns() {
