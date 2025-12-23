@@ -1,48 +1,43 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import AuthNavbar from "../components/AuthNavbar";
-import BackgroundContainer from "../components/BackgroundContainer";
-import FormContainer from "../components/FormContainer";
-import ForgetPasswordForm from "../components/ForgetPasswordForm";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import coloredLogo from "../assets/images/coloredLogo.svg";
 import whiteLogo from "../assets/images/white logo.svg";
 
 const ForgetPasswordPage = () => {
-    const navigate = useNavigate();
-    
-    const handleForgotPassword = (formData) => {
-        console.log("Forgot password attempt:", formData);
-        console.log("API URL:", import.meta.env.VITE_API_URL);
-        
-        // Send email to backend to generate and send OTP
-        axios
-            .post(`${import.meta.env.VITE_API_URL}/api/otp/forgotPassword`, {
-                email: formData.email
-            })
-            .then((response) => {
-                console.log("تم إرسال رمز التحقق إلى بريدك الإلكتروني", response.data);
-                toast.success("تم إرسال رمز التحقق إلى بريدك الإلكتروني");
-                navigate("/verify-otp", { state: { email: formData.email } });
-            })
-            .catch((error) => {
-                console.error("حدث خطأ أثناء إرسال رمز التحقق:", error);
-                console.error("ستجابة خطأ:", error.response);
-                
-                // Show specific error message
-                let errorMsg2 = " حدث خطأ: تأكد من البريد الإلكتروني";
-				let errorMsg;
-                if (error.response?.data?.msg) {
-                    errorMsg = error.response.data.msg;
-                } else if (error.response?.data?.error) {
-                    errorMsg = error.response.data.error;
-                } else if (error.message) {
-                    errorMsg = error.message;
-                }
-                toast.error(errorMsg2);
-            });
-    };
+	const navigate = useNavigate();
+	const [email, setEmail] = useState("");
+	const [isLoading, setIsLoading] = useState(false);
+	const [isVisible, setIsVisible] = useState(false);
+
+	useEffect(() => {
+		setIsVisible(true);
+	}, []);
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+
+		if (!email.trim()) {
+			toast.error("يرجى إدخال البريد الإلكتروني");
+			return;
+		}
+
+		setIsLoading(true);
+
+		try {
+			await axios.post(`${import.meta.env.VITE_API_URL}/api/otp/forgotPassword`, {
+				email: email,
+			});
+			toast.success("تم إرسال رمز التحقق إلى بريدك الإلكتروني");
+			navigate("/verify-otp", { state: { email } });
+		} catch (error) {
+			console.error("Error:", error);
+			toast.error("حدث خطأ: تأكد من البريد الإلكتروني");
+		} finally {
+			setIsLoading(false);
+		}
+	};
 
 	return (
 		<div className="min-h-screen flex" dir="rtl">

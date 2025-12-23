@@ -80,18 +80,12 @@ export default function EmployeeShipments() {
 					}),
 				}));
 
-				setShipments(formattedShipments);
+			setShipments(formattedShipments);
 
-				if (formattedShipments.length === 0) {
-					toast("لا توجد شحنات");
-				}
-			} catch (error) {
-				console.error("Error fetching shipments:", error);
-				const errorMessage =
-					error.response?.data?.message ||
-					error.message ||
-					"Failed to fetch shipments";
-				setError(errorMessage);
+			if (formattedShipments.length === 0) {
+				toast("لا توجد شحنات");
+			}
+		} catch (error) {
 				toast.error(errorMessage);
 			} finally {
 				setLoading(false);

@@ -46,7 +46,7 @@ const EmployeeAcidRequestsPage = () => {
 		country: "",
 		numContainers: 1,
 		containerTypes: ["20ft"],
-		status: "Pending",
+		status: "في انتظار الشحن",
 		policy: "",
 		arrivalDate: "",
 	});
@@ -220,7 +220,7 @@ const EmployeeAcidRequestsPage = () => {
 			country: request.supplier?.country || "",
 			numContainers: 1,
 			containerTypes: ["20ft"],
-			status: "Pending",
+			status: "في انتظار الشحن",
 			policy: "",
 			arrivalDate: "",
 		});

@@ -35,8 +35,11 @@ import ClientProfilePage from "./pages/ClientUserProfilePage";
 import EmployeeProfilePage from "./pages/EmployeeProfilePage";
 import AdminProfilePage from "./pages/AdminProfilePage";
 import MyProfileClient from "./pages/MyProfileClient";
+import MyProfileClient from "./pages/MyProfileClient";
 import PaymentsManagementPage from "./pages/PaymentsManagementPage";
 import ClientPaymentsPage from "./pages/ClientPaymentsPage";
+import NotificationPage from "./pages/NotificationPage";
+import AllNotificationsPage from "./pages/AllNotificationsPage";
 import NotificationPage from "./pages/NotificationPage";
 import AllNotificationsPage from "./pages/AllNotificationsPage";
 
@@ -158,13 +161,19 @@ const ProfileRoute = () => {
 	const employeeType = user?.employeeDetails?.employeeType;
 
 	// Each user type gets their own dedicated profile page
+	// Each user type gets their own dedicated profile page
 	if (userType === "client") {
+		return <MyProfileClient />;
+	} else if (userType === "admin" || (userType === "employee" && employeeType === "System Admin")) {
+		return <AdminProfilePage />;
 		return <MyProfileClient />;
 	} else if (userType === "admin" || (userType === "employee" && employeeType === "System Admin")) {
 		return <AdminProfilePage />;
 	} else if (userType === "employee") {
 		return <EmployeeProfilePage />;
 	}
+	
+	// Default fallback
 	
 	// Default fallback
 	return <EmployeeProfilePage />;

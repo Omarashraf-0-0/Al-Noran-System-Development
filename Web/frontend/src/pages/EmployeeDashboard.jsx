@@ -7,8 +7,10 @@ import SearchFilterSort from "../components/SearchFilterSort";
 import ShipmentsTable from "../components/ShipmentsTable";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { useTheme } from "../context/ThemeContext";
 
 export default function ShipmentsList() {
+	const { isDarkMode } = useTheme();
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [isSortOpen, setIsSortOpen] = useState(false);

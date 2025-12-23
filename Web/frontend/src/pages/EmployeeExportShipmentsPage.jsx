@@ -34,7 +34,7 @@ const STATUS_FLOW = [
 	"completed",
 ];
 
-const EmployeeExportShipmentsPage = () => {
+export default function EmployeeExportShipmentsPage() {
 	const navigate = useNavigate();
     const { isDarkMode } = useTheme();
 
@@ -69,6 +69,7 @@ const EmployeeExportShipmentsPage = () => {
 
 	const fetchShipments = useCallback(async () => {
 		setLoading(true);
+		setError(null);
 		try {
 			if (!token) return;
 
@@ -142,7 +143,6 @@ const EmployeeExportShipmentsPage = () => {
 	// Status Update Logic
 	const getAvailableStatuses = (currentStatus) => {
 		const currentIndex = STATUS_FLOW.indexOf(currentStatus);
-		// Allow moving forward or to cancelled
 		const available = [];
 		if (currentIndex >= 0 && currentIndex < STATUS_FLOW.length - 1) {
 			available.push(...STATUS_FLOW.slice(currentIndex + 1));
@@ -369,6 +369,4 @@ const EmployeeExportShipmentsPage = () => {
             )}
 		</div>
 	);
-};
-
-export default EmployeeExportShipmentsPage;
+}

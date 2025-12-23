@@ -1,9 +1,5 @@
-import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import AuthNavbar from "../components/AuthNavbar";
-import BackgroundContainer from "../components/BackgroundContainer";
-import FormContainer from "../components/FormContainer";
-import OTPForm from "../components/OTPForm";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import coloredLogo from "../assets/images/coloredLogo.svg";
@@ -12,39 +8,100 @@ import whiteLogo from "../assets/images/white logo.svg";
 const OTPPage = () => {
 	const location = useLocation();
 	const navigate = useNavigate();
-	
-	// Get email from location state (passed from ForgetPasswordPage)
 	const email = location.state?.email || "";
 
-	// Redirect to forget-password if no email
-	React.useEffect(() => {
+	const [otp, setOtp] = useState(["", "", "", "", ""]); // 5 digits
+	const [isLoading, setIsLoading] = useState(false);
+	const [isVisible, setIsVisible] = useState(false);
+	const [resendTimer, setResendTimer] = useState(60);
+	const inputRefs = useRef([]);
+
+	useEffect(() => {
+		setIsVisible(true);
 		if (!email) {
 			toast.error("يرجى إدخال البريد الإلكتروني أولاً");
 			navigate("/forgetpassword", { replace: true });
 		}
 	}, [email, navigate]);
 
-	const handleVerifyOTP = (formData) => {
-		console.log("OTP verification attempt:", formData);
-		console.log("API URL:", import.meta.env.VITE_API_URL);
-		
-		// Verify OTP with backend
-		axios
-			.post(`${import.meta.env.VITE_API_URL}/api/otp/verifyOTP`, {
-				email: formData.email,
-				otp: formData.otp
-			})
-			.then((response) => {
-				console.log("OTP verified successfully:", response.data);
-				toast.success("تم التحقق من الرمز بنجاح!");
-				// Navigate to reset password page
-				navigate("/resetpassword", { state: { email: formData.email } });
-			})
-			.catch((error) => {
-				console.error("Error verifying OTP:", error);
-				const errorMsg = "فشل التحقق من الرمز";
-				toast.error(errorMsg);
+	// Resend timer countdown
+	useEffect(() => {
+		if (resendTimer > 0) {
+			const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+			return () => clearTimeout(timer);
+		}
+	}, [resendTimer]);
+
+	const handleChange = (index, value) => {
+		if (value.length > 1) return;
+
+		const newOtp = [...otp];
+		newOtp[index] = value;
+		setOtp(newOtp);
+
+		// Auto-focus next input
+		if (value && index < 4) {
+			inputRefs.current[index + 1]?.focus();
+		}
+	};
+
+	const handleKeyDown = (index, e) => {
+		if (e.key === "Backspace" && !otp[index] && index > 0) {
+			inputRefs.current[index - 1]?.focus();
+		}
+	};
+
+	const handlePaste = (e) => {
+		e.preventDefault();
+		const pastedData = e.clipboardData.getData("text").slice(0, 5);
+		const newOtp = [...otp];
+		for (let i = 0; i < pastedData.length; i++) {
+			if (/^\d$/.test(pastedData[i])) {
+				newOtp[i] = pastedData[i];
+			}
+		}
+		setOtp(newOtp);
+	};
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		const otpString = otp.join("");
+
+		if (otpString.length !== 5) {
+			toast.error("يرجى إدخال رمز التحقق كاملاً");
+			return;
+		}
+
+		setIsLoading(true);
+
+		try {
+			await axios.post(`${import.meta.env.VITE_API_URL}/api/otp/verifyOTP`, {
+				email,
+				otp: otpString,
 			});
+			toast.success("تم التحقق من الرمز بنجاح!");
+			navigate("/resetpassword", { state: { email } });
+		} catch (error) {
+			console.error("Error:", error);
+			toast.error("رمز التحقق غير صحيح");
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const handleResend = async () => {
+		if (resendTimer > 0) return;
+
+		try {
+			await axios.post(`${import.meta.env.VITE_API_URL}/api/otp/forgotPassword`, {
+				email,
+			});
+			toast.success("تم إرسال رمز جديد");
+			setResendTimer(60);
+			setOtp(["", "", "", "", ""]);
+		} catch (error) {
+			toast.error("فشل إرسال الرمز");
+		}
 	};
 
 	return (

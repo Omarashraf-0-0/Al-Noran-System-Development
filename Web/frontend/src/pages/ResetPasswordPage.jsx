@@ -8,38 +8,51 @@ import whiteLogo from "../assets/images/white logo.svg";
 const ResetPasswordPage = () => {
 	const location = useLocation();
 	const navigate = useNavigate();
+	const email = location.state?.email || "";
 
-	// Check if email exists in location.state
+	const [password, setPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [showPassword, setShowPassword] = useState(false);
+	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
+	const [isVisible, setIsVisible] = useState(false);
+
 	useEffect(() => {
-		if (!location.state?.email) {
+		setIsVisible(true);
+		if (!email) {
 			toast.error("جلسة غير صالحة. الرجاء المحاولة مرة أخرى.");
-			navigate("/forgetpassword");
+			navigate("/forgetpassword", { replace: true });
 		}
-	}, [location.state, navigate]);
+	}, [email, navigate]);
 
-	const handleResetPassword = (data) => {
-		console.log("Reset password attempt:", data);
-		console.log("API URL:", import.meta.env.VITE_API_URL);
-		
-		// Reset password with backend
-		axios
-			.patch(`${import.meta.env.VITE_API_URL}/api/otp/resetPassword`, {
-				email: data.email,
-				newPassword: data.password,
-			})
-			.then((response) => {
-				console.log("Password reset successfully:", response.data);
-				toast.success("تم تغيير كلمة المرور بنجاح!");
-				// Navigate to login page after successful reset
-				setTimeout(() => {
-					navigate("/login");
-				}, 2000);
-			})
-			.catch((error) => {
-				console.error("Error resetting password:", error);
-				const errorMsg = error.response?.data?.msg || "حدث خطأ. الرجاء المحاولة مرة أخرى.";
-				toast.error(errorMsg);
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+
+		if (password.length < 6) {
+			toast.error("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+			return;
+		}
+
+		if (password !== confirmPassword) {
+			toast.error("كلمة المرور وتأكيدها غير متطابقين");
+			return;
+		}
+
+		setIsLoading(true);
+
+		try {
+			await axios.patch(`${import.meta.env.VITE_API_URL}/api/otp/resetPassword`, {
+				email,
+				newPassword: password,
 			});
+			toast.success("تم تغيير كلمة المرور بنجاح!");
+			setTimeout(() => navigate("/login"), 2000);
+		} catch (error) {
+			console.error("Error:", error);
+			toast.error(error.response?.data?.msg || "حدث خطأ. الرجاء المحاولة مرة أخرى.");
+		} finally {
+			setIsLoading(false);
+		}
 	};
 
 	return (

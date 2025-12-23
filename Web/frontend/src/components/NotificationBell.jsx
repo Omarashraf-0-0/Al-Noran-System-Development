@@ -1,10 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { io } from "socket.io-client";
 
-const NotificationBell = ({ shipmentId }) => {
+const NotificationBell = ({ isDarkMode }) => {
 	const [notifications, setNotifications] = useState([]);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [unreadCount, setUnreadCount] = useState(0);
+	const [loading, setLoading] = useState(false);
+	const navigate = useNavigate();
+	const socketRef = useRef(null);
+
+	// Get token from localStorage
+	const token = localStorage.getItem("token");
+	const user = JSON.parse(localStorage.getItem("user") || "{}");
+	const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3500";
+
+	// Load cached notifications on mount
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 	const socketRef = useRef(null);
@@ -128,34 +141,152 @@ const NotificationBell = ({ shipmentId }) => {
 				const count = response.data.unreadCount || 0;
 				
 				setNotifications(notifs);
-				setUnreadCount(notifs.filter((n) => !n.read).length);
+				setUnreadCount(count);
+
+				// Save to cache
+				saveToCache(notifs, count);
+			}
+		} catch (error) {
+			console.error("Error fetching notifications:", error);
+			if (error.response?.status !== 401) {
+				// Silent fail for better UX or use toast if critical
+			}
+		} finally {
+			setLoading(false);
+		}
+	}, [apiUrl, token, saveToCache]);
+
+	useEffect(() => {
+		if (!token || !user._id) return;
+
+		// Fetch notifications (cache already loaded in separate useEffect)
+		fetchNotifications();
+
+		// Connect to Socket.IO
+		const socket = io(apiUrl, {
+			autoConnect: true,
+			reconnection: true,
+			reconnectionDelay: 1000,
+			reconnectionAttempts: 5,
+		});
+
+		socketRef.current = socket;
+
+		// Authenticate user with socket
+		const userRole = user.role || 'customer';
+		socket.on('connect', () => {
+			console.log('Socket connected for notifications');
+			socket.emit('identify', { odI: user._id, userType: userRole });
+		});
+
+		// Listen for new notifications
+		socket.on('new_notification', (data) => {
+			console.log('New notification received:', data);
+
+			// Add notification to the list and update count
+			setNotifications(prev => {
+				const updated = [data.notification, ...prev];
+				return updated;
+			});
+
+			// Update unread count
+			if (!data.notification.read) {
+				setUnreadCount(prev => prev + 1);
+			}
+
+			// Show toast notification
+			toast.success(data.notification.title, {
+				icon: getNotificationIcon(data.notification.type),
+				duration: 4000,
+			});
+		});
+
+		socket.on('disconnect', () => {
+			console.log('Socket disconnected from notifications');
+		});
+
+		socket.on('connect_error', (error) => {
+			console.error('Socket connection error:', error);
+		});
+
+		// Cleanup on unmount
+		return () => {
+			if (socketRef.current) {
+				socketRef.current.disconnect();
 			}
 		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [token, user._id, apiUrl, fetchNotifications]);
 
-		checkNotifications();
+	// Handle notification click - delete notification and navigate to notification page
+	const handleNotificationClick = async (notifId) => {
+		try {
+			// Get the notification before deleting to check if it was unread
+			const clickedNotification = notifications.find(n => n._id === notifId);
+			const wasUnread = clickedNotification && !clickedNotification.read;
 
-		// Check every 30 seconds
-		const interval = setInterval(checkNotifications, 30000);
+			// Close dropdown
+			setShowDropdown(false);
 
-		return () => clearInterval(interval);
-	}, [shipmentId]);
+			// Navigate to notification details page with notification data
+			navigate(`/notification/${notifId}`, {
+				state: { notification: clickedNotification }
+			});
 
-	const markAsRead = (notifId) => {
-		const updated = notifications.map((n) =>
-			n.id === notifId ? { ...n, read: true } : n
-		);
-		setNotifications(updated);
-		localStorage.setItem(
-			`notifications_${shipmentId}`,
-			JSON.stringify(updated)
-		);
-		setUnreadCount(updated.filter((n) => !n.read).length);
+			// Delete notification from backend (async, don't wait)
+			axios.delete(
+				`${apiUrl}/api/notifications/${notifId}`,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			).then(() => {
+				// Remove from local state after successful deletion
+				const updated = notifications.filter((n) => n._id !== notifId);
+				setNotifications(updated);
+
+				// Decrease unread count only if the notification was unread
+				const newCount = wasUnread ? Math.max(0, unreadCount - 1) : unreadCount;
+				if (wasUnread) {
+					setUnreadCount(newCount);
+				}
+
+				// Update cache
+				saveToCache(updated, newCount);
+			}).catch(error => {
+				console.error("Error deleting notification:", error);
+			});
+		} catch (error) {
+			console.error("Error handling notification click:", error);
+			setShowDropdown(false);
+		}
 	};
 
-	const clearAll = () => {
-		setNotifications([]);
-		setUnreadCount(0);
-		localStorage.removeItem(`notifications_${shipmentId}`);
+	const markAllAsRead = async () => {
+		try {
+			const response = await axios.put(
+				`${apiUrl}/api/notifications/read-all`,
+				{},
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
+
+			if (response.data.success) {
+				toast.success("تم تمييز الكل كمقروء");
+				setUnreadCount(0);
+				// Update all local notifications to read
+				setNotifications((prev) =>
+					prev.map((n) => ({ ...n, read: true }))
+				);
+			}
+		} catch (error) {
+			console.error("Error marking all as read:", error);
+			toast.error("فشل في تحديث الإشعارات");
+		}
 	};
 
 	return (
@@ -230,8 +361,11 @@ const NotificationBell = ({ shipmentId }) => {
 												{notif.title}
 											</p>
 											<p className={`text-xs mt-1 line-clamp-2 ${theme.textSub}`}>
+											<p className={`text-xs mt-1 line-clamp-2 ${theme.textSub}`}>
 												{notif.message}
 											</p>
+											<p className="text-[10px] text-gray-400 mt-2">
+												{formatNotificationTime(notif.createdAt)}
 											<p className="text-[10px] text-gray-400 mt-2">
 												{formatNotificationTime(notif.createdAt)}
 											</p>
@@ -261,6 +395,50 @@ const NotificationBell = ({ shipmentId }) => {
 			)}
 		</div>
 	);
+};
+
+// Helper function to get icon based on notification type
+const getNotificationIcon = (type) => {
+	const icons = {
+		shipment_created: "📦",
+		shipment_status_changed: "🚚",
+		shipment_arrived: "✅",
+		shipment_completed: "🎉",
+		document_uploaded: "📄",
+		document_approved: "✅",
+		document_rejected: "❌",
+		acid_created: "🆔",
+		acid_issued: "✅",
+		ucr_created: "📋",
+		ucr_approved: "✅",
+		payment_reminder: "💰",
+		payment_received: "✅",
+		chat_message: "💬",
+		general: "📢",
+	};
+	return icons[type] || "📢";
+};
+
+// Helper function to format time
+const formatNotificationTime = (timestamp) => {
+	const date = new Date(timestamp);
+	const now = new Date();
+	const diffInMs = now - date;
+	const diffInMinutes = Math.floor(diffInMs / 60000);
+	const diffInHours = Math.floor(diffInMs / 3600000);
+	const diffInDays = Math.floor(diffInMs / 86400000);
+
+	if (diffInMinutes < 1) return "الآن";
+	if (diffInMinutes < 60) return `منذ ${diffInMinutes} دقيقة`;
+	if (diffInHours < 24) return `منذ ${diffInHours} ساعة`;
+	if (diffInDays < 7) return `منذ ${diffInDays} يوم`;
+
+	return date.toLocaleDateString("ar-EG", {
+		day: "numeric",
+		month: "short",
+		hour: "2-digit",
+		minute: "2-digit",
+	});
 };
 
 export default NotificationBell;

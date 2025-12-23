@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import Header from "../components/Header";
@@ -79,9 +79,9 @@ const EmployeeProfilePage = () => {
 
 	useEffect(() => {
 		fetchUserProfile();
+		setIsVisible(true);
 	}, []);
 
-	// Block navigation if there are unsaved changes
 	useEffect(() => {
 		const handleBeforeUnload = (e) => {
 			if (hasUnsavedChanges) {
@@ -89,7 +89,6 @@ const EmployeeProfilePage = () => {
 				e.returnValue = "";
 			}
 		};
-
 		window.addEventListener("beforeunload", handleBeforeUnload);
 		return () => window.removeEventListener("beforeunload", handleBeforeUnload);
 	}, [hasUnsavedChanges]);
@@ -104,13 +103,8 @@ const EmployeeProfilePage = () => {
 
 			const response = await axios.get(
 				`${import.meta.env.VITE_API_URL}/api/users/profile`,
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
+				{ headers: { Authorization: `Bearer ${token}` } }
 			);
-
-			console.log("👤 User profile data:", response.data.user);
-			console.log("📸 Profile photo from DB:", response.data.user.profilePhoto);
 
 			setUser(response.data.user);
 			const userData = {
@@ -124,89 +118,54 @@ const EmployeeProfilePage = () => {
 			setHasUnsavedChanges(false);
 
 			if (response.data.user.profilePhoto) {
-				const photoKey = response.data.user.profilePhoto;
-				console.log("📸 Profile photo key:", photoKey);
-
-				// If it's an S3 key, get presigned URL
-				if (photoKey && !photoKey.startsWith("http")) {
-					console.log("🔑 Getting presigned URL for S3 key...");
+				const photo = response.data.user.profilePhoto;
+				if (photo.startsWith("http") || photo.startsWith("/uploads")) {
+					setProfilePhoto(photo.startsWith("/uploads") ? `${import.meta.env.VITE_API_URL}${photo}` : photo);
+				} else {
 					try {
 						const photoResponse = await axios.get(
-							`${
-								import.meta.env.VITE_API_URL
-							}/api/uploads/presigned-url/${encodeURIComponent(photoKey)}`,
-							{
-								headers: { Authorization: `Bearer ${token}` },
-							}
+							`${import.meta.env.VITE_API_URL}/api/uploads/presigned-url/${encodeURIComponent(photo)}`,
+							{ headers: { Authorization: `Bearer ${token}` } }
 						);
-						console.log("✅ Got presigned URL:", photoResponse.data.url);
 						setProfilePhoto(photoResponse.data.url);
 					} catch {
 						setProfilePhoto(null);
 					}
-				} else {
-					console.log("🌐 Using direct URL");
-					setProfilePhoto(photoKey);
 				}
-			} else {
-				console.log("❌ No profile photo in user data");
 			}
 			setLoadingPhoto(false);
 			setLoading(false);
 		} catch (error) {
-			console.error("Error fetching profile:", error);
 			toast.error("فشل تحميل البيانات");
-			if (error.response?.status === 401) {
-				navigate("/login");
-			}
+			if (error.response?.status === 401) navigate("/login");
 			setLoading(false);
 		}
 	};
 
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
-		const newFormData = {
-			...formData,
-			[name]: value,
-		};
+		const newFormData = { ...formData, [name]: value };
 		setFormData(newFormData);
-
-		// Check if form has changed from original
-		const hasChanges = Object.keys(newFormData).some(
-			(key) => newFormData[key] !== originalFormData[key]
-		);
-		setHasUnsavedChanges(hasChanges);
+		setHasUnsavedChanges(Object.keys(newFormData).some((key) => newFormData[key] !== originalFormData[key]));
 	};
 
 	const handlePasswordChange = (e) => {
 		const { name, value } = e.target;
-		setPasswordData((prev) => ({
-			...prev,
-			[name]: value,
-		}));
+		setPasswordData((prev) => ({ ...prev, [name]: value }));
 	};
 
 	const handleSave = async () => {
-		if (
-			!formData.fullname ||
-			!formData.username ||
-			!formData.phone ||
-			!formData.email
-		) {
+		if (!formData.fullname || !formData.username || !formData.phone || !formData.email) {
 			toast.error("جميع الحقول مطلوبة");
 			return;
 		}
-
 		try {
 			const token = localStorage.getItem("token");
 			const response = await axios.put(
 				`${import.meta.env.VITE_API_URL}/api/users/profile`,
 				formData,
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
+				{ headers: { Authorization: `Bearer ${token}` } }
 			);
-
 			if (response.data.success) {
 				toast.success("تم تحديث البيانات بنجاح");
 				setIsEditing(false);
@@ -215,88 +174,53 @@ const EmployeeProfilePage = () => {
 				fetchUserProfile();
 			}
 		} catch (error) {
-			console.error("Error updating profile:", error);
-			if (error.response?.data?.message) {
-				toast.error(error.response.data.message);
-			} else {
-				toast.error("فشل تحديث البيانات");
-			}
+			toast.error(error.response?.data?.message || "فشل تحديث البيانات");
 		}
 	};
 
 	const handleChangePasswordSubmit = async () => {
-		if (
-			!passwordData.currentPassword ||
-			!passwordData.newPassword ||
-			!passwordData.confirmPassword
-		) {
+		if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
 			toast.error("جميع حقول كلمة المرور مطلوبة");
 			return;
 		}
-
 		if (passwordData.newPassword.length < 6) {
 			toast.error("كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل");
 			return;
 		}
-
 		if (passwordData.newPassword !== passwordData.confirmPassword) {
 			toast.error("كلمات المرور غير متطابقة");
 			return;
 		}
-
 		try {
 			const token = localStorage.getItem("token");
 			const response = await axios.put(
 				`${import.meta.env.VITE_API_URL}/api/users/change-password`,
-				{
-					currentPassword: passwordData.currentPassword,
-					newPassword: passwordData.newPassword,
-				},
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
+				{ currentPassword: passwordData.currentPassword, newPassword: passwordData.newPassword },
+				{ headers: { Authorization: `Bearer ${token}` } }
 			);
-
 			if (response.data.success) {
 				toast.success("تم تغيير كلمة المرور بنجاح");
 				setShowPasswordModal(false);
-				setPasswordData({
-					currentPassword: "",
-					newPassword: "",
-					confirmPassword: "",
-				});
-				setShowPasswords({
-					currentPassword: false,
-					newPassword: false,
-					confirmPassword: false,
-				});
+				setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+				setShowPasswords({ currentPassword: false, newPassword: false, confirmPassword: false });
 			}
 		} catch (error) {
-			console.error("Error changing password:", error);
-			if (error.response?.data?.message) {
-				toast.error(error.response.data.message);
-			} else {
-				toast.error("فشل تغيير كلمة المرور");
-			}
+			toast.error(error.response?.data?.message || "فشل تغيير كلمة المرور");
 		}
 	};
 
 	const handlePhotoUpload = async (e) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
-
 		const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
 		if (!allowedTypes.includes(file.type)) {
-			toast.error("نوع الملف غير مدعوم. الرجاء رفع صورة فقط");
+			toast.error("نوع الملف غير مدعوم");
 			return;
 		}
-
 		if (file.size > 5 * 1024 * 1024) {
-			toast.error("حجم الملف كبير جداً. الحد الأقصى 5 ميجابايت");
+			toast.error("حجم الملف كبير جداً");
 			return;
 		}
-
-		// Show crop modal
 		const reader = new FileReader();
 		reader.onload = (e) => {
 			setSelectedImage(e.target.result);
@@ -307,9 +231,7 @@ const EmployeeProfilePage = () => {
 		reader.readAsDataURL(file);
 	};
 
-	const onCropComplete = (croppedArea, croppedAreaPixels) => {
-		setCroppedAreaPixels(croppedAreaPixels);
-	};
+	const onCropComplete = (croppedArea, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels);
 
 	const createImage = (url) =>
 		new Promise((resolve, reject) => {
@@ -323,32 +245,11 @@ const EmployeeProfilePage = () => {
 		const image = await createImage(imageSrc);
 		const canvas = document.createElement("canvas");
 		const ctx = canvas.getContext("2d");
-
 		const size = 500;
 		canvas.width = size;
 		canvas.height = size;
-
-		ctx.drawImage(
-			image,
-			pixelCrop.x,
-			pixelCrop.y,
-			pixelCrop.width,
-			pixelCrop.height,
-			0,
-			0,
-			size,
-			size
-		);
-
-		return new Promise((resolve) => {
-			canvas.toBlob(
-				(blob) => {
-					resolve(blob);
-				},
-				"image/jpeg",
-				0.95
-			);
-		});
+		ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, size, size);
+		return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.95));
 	};
 
 	const handleCropConfirm = async () => {
@@ -356,7 +257,6 @@ const EmployeeProfilePage = () => {
 		
 		setUploadingPhoto(true);
 		setShowCropModal(false);
-
 		try {
 			const croppedBlob = await getCroppedImg(selectedImage, croppedAreaPixels);
 			const formDataUpload = new FormData();
@@ -377,16 +277,8 @@ const EmployeeProfilePage = () => {
 			if (photoIdentifier) {
 				await axios.put(
 					`${import.meta.env.VITE_API_URL}/api/users/profile`,
-					{
-						profilePhoto: s3Key,
-						fullname: user.fullname,
-						username: user.username,
-						phone: user.phone,
-						email: user.email,
-					},
-					{
-						headers: { Authorization: `Bearer ${token}` },
-					}
+					{ profilePhoto: photoIdentifier, fullname: user.fullname, username: user.username, phone: user.phone, email: user.email },
+					{ headers: { Authorization: `Bearer ${token}` } }
 				);
 
 				const displayUrl = response.data.upload?.url || response.data.file?.url || (photoIdentifier.startsWith("http") ? photoIdentifier : null);
@@ -398,7 +290,7 @@ const EmployeeProfilePage = () => {
 				}
 				toast.success("تم تحميل الصورة بنجاح");
 			} else {
-				toast.error("فشل الحصول على رابط الصورة");
+				throw new Error("No photo identifier returned");
 			}
 		} catch (error) {
 			console.error("Photo upload error:", error);
@@ -408,35 +300,20 @@ const EmployeeProfilePage = () => {
 		}
 	};
 
-	const handleDeletePhoto = async () => {
-		if (!profilePhoto) return;
-
-		if (!window.confirm("هل أنت متأكد من حذف الصورة الشخصية؟")) {
-			return;
-		}
-
+	const confirmDeletePhoto = async () => {
 		setDeletingPhoto(true);
+		setShowDeleteConfirmModal(false);
 		try {
 			const token = localStorage.getItem("token");
 			await axios.put(
 				`${import.meta.env.VITE_API_URL}/api/users/profile`,
-				{
-					profilePhoto: null,
-					fullname: user.fullname,
-					username: user.username,
-					phone: user.phone,
-					email: user.email,
-				},
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
+				{ profilePhoto: "", fullname: user.fullname, username: user.username, phone: user.phone, email: user.email },
+				{ headers: { Authorization: `Bearer ${token}` } }
 			);
-
 			setProfilePhoto(null);
 			setUser((prev) => ({ ...prev, profilePhoto: null }));
 			toast.success("تم حذف الصورة بنجاح");
-		} catch (error) {
-			console.error("Error deleting photo:", error);
+		} catch {
 			toast.error("فشل حذف الصورة");
 		} finally {
 			setDeletingPhoto(false);
