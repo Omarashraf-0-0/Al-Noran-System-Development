@@ -292,11 +292,37 @@ const getAllRequestsForEmployee = async (req, res) => {
 			.populate("reviewingBy", "username email")
 			.populate("issuedBy", "username email")
 			.populate("shipmentId")
-			.sort({ requestDate: -1 });
+			.sort({ requestDate: -1 })
+			.lean();
+
+		// Generate fresh presigned URLs for uploads
+		const { getPresignedUrl } = require("../utils/s3Helpers");
+		const requestsWithUrls = await Promise.all(
+			requests.map(async (request) => {
+				if (request.uploads && request.uploads.length > 0) {
+					const uploadsWithUrls = await Promise.all(
+						request.uploads.map(async (upload) => {
+							try {
+								if (upload.s3Key) {
+									const presignedUrl = await getPresignedUrl(upload.s3Key, 3600);
+									return { ...upload, s3Url: presignedUrl, url: presignedUrl, presignedUrl };
+								}
+								return upload;
+							} catch (err) {
+								console.error(`Error generating presigned URL for upload ${upload._id}:`, err.message);
+								return upload;
+							}
+						})
+					);
+					return { ...request, uploads: uploadsWithUrls };
+				}
+				return request;
+			})
+		);
 
 		res.json({
 			success: true,
-			requests,
+			requests: requestsWithUrls,
 		});
 	} catch (error) {
 		console.error("Error fetching all ACID requests:", error);

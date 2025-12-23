@@ -71,7 +71,11 @@ const createShipment = async (req, res) => {
 			num_of_containers:
 				shipmentData.num_of_containers || shipmentData.numContainers || 1,
 			type_of_containers:
-				shipmentData.type_of_containers || shipmentData.containerTypes || [],
+				Array.isArray(shipmentData.type_of_containers)
+					? shipmentData.type_of_containers.map(i => (typeof i === 'object' && i.type) ? i.type : i)
+					: (Array.isArray(shipmentData.containerTypes)
+						? shipmentData.containerTypes.map(i => (typeof i === 'object' && i.type) ? i.type : i)
+						: []),
 			status: shipmentData.status || "Pending",
 			policy: shipmentData.policy || "",
 			arrivalDate: shipmentData.arrivalDate,

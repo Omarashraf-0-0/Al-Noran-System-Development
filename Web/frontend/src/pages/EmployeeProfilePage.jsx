@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import Header from "../components/Header";
-import Cropper from "react-easy-crop";
+import { useTheme } from "../context/ThemeContext";
 
 const EmployeeProfilePage = () => {
 	const navigate = useNavigate();
@@ -43,6 +43,39 @@ const EmployeeProfilePage = () => {
 		phone: "",
 		email: "",
 	});
+	const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+
+	// const handleDeletePhoto = () => {
+	// 	if (!profilePhoto) return;
+	// 	setShowDeleteConfirmModal(true);
+	// };
+
+	// Use Global Theme Context
+	const { isDarkMode, toggleTheme } = useTheme();
+
+	// Theme classes - PREMIUM TURQUOISE EMPLOYEE DESIGN
+	const theme = {
+		pageBg: isDarkMode 
+			? "bg-[#050f14]" // Very dark cyan/black tint
+			: "bg-[#F0FEFF]", // Cool minty white
+		headerBg: isDarkMode
+			? "bg-gradient-to-r from-[#1ba3b6] to-[#0e5c66]" // Dark Turquoise Gradient
+			: "bg-gradient-to-r from-[#22d3eb] to-[#1ba3b6]", // Bright Turquoise Gradient
+		card: isDarkMode 
+			? "bg-[#0a1a1f] border-[#163a42]" 
+			: "bg-white border-cyan-50 shadow-sm",
+		textPrimary: isDarkMode ? "text-cyan-50" : "text-gray-900",
+		textSecondary: isDarkMode ? "text-cyan-200/60" : "text-gray-500",
+		input: isDarkMode 
+			? "bg-[#102a30] border-[#1b434d] text-cyan-50 focus:border-cyan-500" 
+			: "bg-cyan-50/50 border-cyan-200/50 text-gray-900 focus:border-cyan-500",
+		buttonPrimary: "bg-gradient-to-r from-[#1ba3b6] to-[#158A9A] text-white hover:shadow-lg hover:shadow-cyan-500/30",
+		buttonSecondary: isDarkMode 
+			? "bg-[#102a30] text-cyan-200 hover:bg-[#163a42]" 
+			: "bg-white text-cyan-700 hover:bg-cyan-50 border border-cyan-200",
+		iconBg: isDarkMode ? "bg-cyan-500/10 text-cyan-400" : "bg-cyan-50 text-cyan-600",
+		modalOverlay: isDarkMode ? "bg-black/80" : "bg-black/50",
+	};
 
 	useEffect(() => {
 		fetchUserProfile();
@@ -89,7 +122,7 @@ const EmployeeProfilePage = () => {
 			setFormData(userData);
 			setOriginalFormData(userData);
 			setHasUnsavedChanges(false);
-			// Fetch profile photo if exists
+
 			if (response.data.user.profilePhoto) {
 				const photoKey = response.data.user.profilePhoto;
 				console.log("📸 Profile photo key:", photoKey);
@@ -108,8 +141,7 @@ const EmployeeProfilePage = () => {
 						);
 						console.log("✅ Got presigned URL:", photoResponse.data.url);
 						setProfilePhoto(photoResponse.data.url);
-					} catch (err) {
-						console.error("❌ Error getting presigned URL:", err);
+					} catch {
 						setProfilePhoto(null);
 					}
 				} else {
@@ -321,36 +353,28 @@ const EmployeeProfilePage = () => {
 
 	const handleCropConfirm = async () => {
 		if (!selectedImage || !croppedAreaPixels) return;
-
+		
 		setUploadingPhoto(true);
 		setShowCropModal(false);
 
 		try {
 			const croppedBlob = await getCroppedImg(selectedImage, croppedAreaPixels);
-			const formData = new FormData();
-			formData.append("file", croppedBlob, "profile-photo.jpg");
-			formData.append("category", "registration");
-			formData.append("documentType", "profilePhoto");
-
+			const formDataUpload = new FormData();
+			formDataUpload.append("file", croppedBlob, "profile-photo.jpg");
+			formDataUpload.append("category", "registration");
+			formDataUpload.append("documentType", "profilePhoto");
+			
 			const token = localStorage.getItem("token");
+			
 			const response = await axios.post(
 				`${import.meta.env.VITE_API_URL}/api/uploads`,
-				formData,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "multipart/form-data",
-					},
-				}
+				formDataUpload,
+				{ headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
 			);
 
-			console.log("📝 Upload response:", response.data);
-
-			if (response.data.upload?.s3Key) {
-				const s3Key = response.data.upload.s3Key;
-
-				console.log("💾 Saving S3 key to profile:", s3Key);
-
+			const photoIdentifier = response.data.upload?.s3Key || response.data.file?.url || response.data.file?.filename || response.data.upload?.url;
+			
+			if (photoIdentifier) {
 				await axios.put(
 					`${import.meta.env.VITE_API_URL}/api/users/profile`,
 					{
@@ -365,18 +389,20 @@ const EmployeeProfilePage = () => {
 					}
 				);
 
-				// Use presigned URL for immediate display
-				const displayUrl =
-					response.data.upload?.url || response.data.upload?.publicUrl;
-				setProfilePhoto(displayUrl);
-				setUser((prev) => ({ ...prev, profilePhoto: s3Key }));
+				const displayUrl = response.data.upload?.url || response.data.file?.url || (photoIdentifier.startsWith("http") ? photoIdentifier : null);
+				
+				if (displayUrl) {
+					setProfilePhoto(displayUrl.startsWith("/uploads") ? `${import.meta.env.VITE_API_URL}${displayUrl}` : displayUrl);
+				} else {
+					fetchUserProfile();
+				}
 				toast.success("تم تحميل الصورة بنجاح");
 			} else {
 				toast.error("فشل الحصول على رابط الصورة");
 			}
 		} catch (error) {
-			console.error("Error uploading photo:", error);
-			toast.error("فشل تحميل الصورة. الرجاء المحاولة مرة أخرى");
+			console.error("Photo upload error:", error);
+			toast.error(error.response?.data?.message || "فشل تحميل الصورة");
 		} finally {
 			setUploadingPhoto(false);
 		}
@@ -417,430 +443,298 @@ const EmployeeProfilePage = () => {
 		}
 	};
 
+	const getEmployeeType = () => {
+		const type = user?.employeeDetails?.employeeType || "موظف";
+		return { label: type, icon: "👔", color: "bg-[#1ba3b6]" };
+	};
+
 	if (loading) {
 		return (
-			<div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50">
-				<Header />
-				<div className="flex items-center justify-center h-screen">
-					<div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-700"></div>
-				</div>
+			<div className={`min-h-screen ${theme.pageBg} flex items-center justify-center`}>
+				<div className="animate-spin rounded-full h-12 w-12 border-4 border-[#1ba3b6] border-t-transparent"></div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="min-h-screen bg-white">
+		<div className={`min-h-screen ${theme.pageBg} relative overflow-hidden transition-colors duration-300 font-sans`} dir="rtl">
+			<style>{`
+				@keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+				@keyframes float-reverse { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(20px); } }
+				@keyframes float-slow { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
+				@keyframes pulse-glow { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } }
+				.animate-float { animation: float 6s ease-in-out infinite; }
+				.animate-float-reverse { animation: float-reverse 8s ease-in-out infinite; }
+				.animate-float-slow { animation: float-slow 10s ease-in-out infinite; }
+				.animate-pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
+			`}</style>
+
+			{/* Animated Backgrounds */}
+			<div className="fixed inset-0 pointer-events-none overflow-hidden">
+				{isDarkMode ? (
+					<>
+						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[150px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#158A9A]/10 rounded-full filter blur-[180px] animate-float-slow"></div>
+						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#22d3eb]/10 rounded-full filter blur-[120px] animate-float-reverse"></div>
+						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#1ba3b6]/20 rounded-xl animate-float rotate-45"></div>
+						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#158A9A]/20 rounded-full animate-float-reverse"></div>
+					</>
+				) : (
+					<>
+						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/5 rounded-full filter blur-[150px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#22d3eb]/10 rounded-full filter blur-[180px] animate-float-slow"></div>
+						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#1ba3b6]/5 rounded-full filter blur-[120px] animate-float-reverse"></div>
+						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#1ba3b6]/20 rounded-xl animate-float rotate-45"></div>
+						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#158A9A]/20 rounded-full animate-float-reverse"></div>
+					</>
+				)}
+			</div>
+
 			<Header />
-			<div className="container mx-auto px-4 py-8 max-w-7xl">
-				{/* Profile Card */}
-				<div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-					<div className="p-8">
-						<div className="flex items-start gap-8">
-							{/* Avatar - Right Side */}
-							<div className="flex flex-col items-center flex-shrink-0">
-								<div className="relative w-56 h-56 rounded-full bg-gradient-to-br from-cyan-100 to-cyan-200 flex items-center justify-center mb-4 shadow-lg overflow-hidden">
-									{loadingPhoto ? (
-										<div className="flex flex-col items-center">
-											<div className="animate-spin rounded-full h-12 w-12 border-b-3 border-cyan-600 mb-2"></div>
-											<p className="text-xs text-cyan-700">جاري التحميل...</p>
-										</div>
-									) : uploadingPhoto ? (
-										<div className="flex flex-col items-center">
-											<div className="animate-spin rounded-full h-12 w-12 border-b-3 border-cyan-600 mb-2"></div>
-											<p className="text-xs text-cyan-700">جاري الرفع...</p>
-										</div>
-									) : profilePhoto ? (
-										<img
-											src={profilePhoto}
-											alt="Profile"
-											className="w-full h-full rounded-full object-cover"
-										/>
-									) : (
-										<svg
-											className="w-20 h-20 text-cyan-700"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-											/>
-										</svg>
-									)}
-								</div>{" "}
-								{/* Photo Actions */}
-								<div className="flex flex-col gap-2 w-56">
-									<input
-										id="photo-upload"
-										type="file"
-										accept="image/jpeg,image/jpg,image/png"
-										onChange={handlePhotoUpload}
-										className="hidden"
-										disabled={uploadingPhoto || loadingPhoto}
-									/>
 
-									{!loadingPhoto && (
-										<>
-											<label
-												htmlFor="photo-upload"
-												className="px-4 py-2 text-center text-sm font-medium rounded-lg cursor-pointer transition-all duration-200 border-2"
-												style={{
-													backgroundColor: uploadingPhoto
-														? "#E0E0E0"
-														: "#1BA3B6",
-													color: "white",
-													borderColor: uploadingPhoto ? "#E0E0E0" : "#1BA3B6",
-													cursor: uploadingPhoto ? "not-allowed" : "pointer",
-												}}
-												onMouseEnter={(e) =>
-													!uploadingPhoto &&
-													(e.target.style.backgroundColor = "#158A9A")
-												}
-												onMouseLeave={(e) =>
-													!uploadingPhoto &&
-													(e.target.style.backgroundColor = "#1BA3B6")
-												}
-											>
-												{uploadingPhoto
-													? "جاري الرفع..."
-													: profilePhoto
-													? "تغيير الصورة"
-													: "إضافة صورة"}
+			{/* Main Content Wrapper */}
+			<main className="relative pt-28 pb-12 px-4 md:px-6 max-w-7xl mx-auto space-y-8">
+				
+				{/* 1. Profile Header Section */}
+				<div className={`relative overflow-hidden rounded-3xl ${theme.card} border transition-all duration-300`}>
+					{/* Decorative Cover Background */}
+					<div className={`h-32 md:h-48 w-full ${theme.headerBg} relative`}>
+						<div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+						<div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+						<div className="absolute top-10 right-10 w-20 h-20 bg-black/10 rounded-full blur-xl"></div>
+					</div>
+
+					<div className="px-6 md:px-10 pb-8">
+						<div className="flex flex-col md:flex-row gap-6 mt-[-3rem] md:mt-[-4rem] items-center md:items-end">
+							
+							{/* Profile Avatar */}
+							<div className="relative group">
+								<div className={`w-32 h-32 md:w-40 md:h-40 rounded-full p-1.5 ${theme.card} shadow-2xl`}>
+									<div className="w-full h-full rounded-full overflow-hidden relative bg-gray-100">
+										{loadingPhoto || uploadingPhoto ? (
+											<div className="w-full h-full flex items-center justify-center bg-gray-100">
+												<div className="animate-spin rounded-full h-8 w-8 border-2 border-[#1ba3b6] border-t-transparent"></div>
+											</div>
+										) : profilePhoto ? (
+											<img src={profilePhoto} alt="Profile" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+										) : (
+											<div className={`w-full h-full flex items-center justify-center ${theme.headerBg} text-white`}>
+												<span className="text-4xl">👤</span>
+											</div>
+										)}
+										
+										{/* Hover Overlay */}
+										<div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+											<label htmlFor="photo-upload" className="cursor-pointer p-2 bg-white/20 hover:bg-white/40 rounded-full backdrop-blur-sm text-white transition-all">
+												<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
 											</label>
-
 											{profilePhoto && (
-												<button
-													onClick={handleDeletePhoto}
-													disabled={deletingPhoto || uploadingPhoto}
-													className="px-4 py-2 text-sm font-medium text-red-600 bg-white border-2 border-red-600 rounded-lg hover:bg-red-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-												>
-													{deletingPhoto ? "جاري الحذف..." : "حذف الصورة"}
+												<button onClick={handleDeletePhoto} className="p-2 bg-red-500/80 hover:bg-red-600 rounded-full text-white transition-all">
+													<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
 												</button>
 											)}
-										</>
-									)}
+										</div>
+									</div>
 								</div>
-								<p className="text-gray-700 font-semibold text-lg mt-3 text-center">
-									{user?.fullname || "اسم الموظف"}
-								</p>
+								<input id="photo-upload" type="file" accept="image/jpeg,image/jpg,image/png" onChange={handlePhotoUpload} className="hidden" />
 							</div>
 
-							{/* Profile Fields - Left Side */}
-							<div className="flex-1 max-w-4xl ml-8">
-								<div className="grid grid-cols-2 gap-4">
-									{/* Row 1 */}
-									<div className="relative">
-										<label className="block text-sm font-medium text-gray-700 mb-2 text-right">
-											اسم الموظف
-										</label>
-										<div className="relative">
-											<input
-												type="text"
-												name="fullname"
-												value={formData.fullname}
-												onChange={handleInputChange}
-												readOnly={!isEditing}
-												className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg text-right ${
-													isEditing ? "bg-white" : "bg-gray-50"
-												} text-gray-700`}
-											/>
-											<div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-												<svg
-													className="w-5 h-5"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-													/>
-												</svg>
-											</div>
-										</div>
-									</div>
-
-									<div className="relative">
-										<label className="block text-sm font-medium text-gray-700 mb-2 text-right">
-											اسم المستخدم
-										</label>
-										<div className="relative">
-											<input
-												type="text"
-												name="username"
-												value={formData.username}
-												onChange={handleInputChange}
-												readOnly={!isEditing}
-												className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg text-right ${
-													isEditing ? "bg-white" : "bg-gray-50"
-												} text-gray-700`}
-											/>
-											<div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-												<svg
-													className="w-5 h-5"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-													/>
-												</svg>
-											</div>
-										</div>
-									</div>
-
-									{/* Row 2 */}
-									<div className="relative">
-										<label className="block text-sm font-medium text-gray-700 mb-2 text-right">
-											البريد الإلكتروني
-										</label>
-										<div className="relative">
-											<input
-												type="email"
-												name="email"
-												value={formData.email}
-												onChange={handleInputChange}
-												readOnly={!isEditing}
-												className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg text-right ${
-													isEditing ? "bg-white" : "bg-gray-50"
-												} text-gray-700`}
-											/>
-											<div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-												<svg
-													className="w-5 h-5"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-													/>
-												</svg>
-											</div>
-										</div>
-									</div>
-
-									<div className="relative">
-										<label className="block text-sm font-medium text-gray-700 mb-2 text-right">
-											رقم التليفون
-										</label>
-										<div className="relative">
-											<input
-												type="tel"
-												name="phone"
-												value={formData.phone}
-												onChange={handleInputChange}
-												readOnly={!isEditing}
-												className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg text-right ${
-													isEditing ? "bg-white" : "bg-gray-50"
-												} text-gray-700`}
-											/>
-											<div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-												<svg
-													className="w-5 h-5"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-													/>
-												</svg>
-											</div>
-										</div>
-									</div>
+							{/* User Info Text */}
+							<div className="flex-1 text-center md:text-right mb-2">
+								<h1 className={`text-3xl font-bold ${theme.textPrimary} mb-1 flex items-center justify-center md:justify-start gap-3`}>
+									{user?.fullname}
+									<span className={`px-3 py-1 text-sm rounded-full ${getEmployeeType().color} text-white shadow-sm flex items-center gap-1`}>
+										{getEmployeeType().icon} {getEmployeeType().label}
+									</span>
+								</h1>
+								<div className={`flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm ${theme.textSecondary}`}>
+									<span className="flex items-center gap-1">@ {user?.username}</span>
+									<span className="hidden md:inline">•</span>
+									<span className="flex items-center gap-1">{user?.email}</span>
 								</div>
+							</div>
 
-								{/* Action Buttons */}
-								<div className="flex gap-3 mt-6">
-									{!isEditing ? (
-										<>
-											<button
-												onClick={() => setIsEditing(true)}
-												className="px-6 py-2.5 text-white rounded-lg transition-colors font-semibold text-sm flex items-center gap-2"
-												style={{ backgroundColor: "#1BA3B6" }}
-												onMouseEnter={(e) =>
-													(e.target.style.backgroundColor = "#158A9A")
-												}
-												onMouseLeave={(e) =>
-													(e.target.style.backgroundColor = "#1BA3B6")
-												}
-											>
-												<svg
-													className="w-4 h-4"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-													/>
-												</svg>
-												تعديل
-											</button>
-											<button
-												onClick={() => setShowPasswordModal(true)}
-												className="px-6 py-2.5 text-white rounded-lg transition-colors font-semibold text-sm"
-												style={{ backgroundColor: "#1BA3B6" }}
-												onMouseEnter={(e) =>
-													(e.target.style.backgroundColor = "#158A9A")
-												}
-												onMouseLeave={(e) =>
-													(e.target.style.backgroundColor = "#1BA3B6")
-												}
-											>
-												تغيير كلمة المرور
-											</button>
-										</>
-									) : (
-										<>
-											<button
-												onClick={() => {
-													if (hasUnsavedChanges) {
-														if (
-															window.confirm(
-																"لديك تغييرات غير محفوظة. هل تريد تجاهلها والإلغاء؟"
-															)
-														) {
-															setIsEditing(false);
-															setFormData(originalFormData);
-															setHasUnsavedChanges(false);
-														}
-													} else {
-														setIsEditing(false);
-														setFormData(originalFormData);
-													}
-												}}
-												className="px-6 py-2.5 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-semibold text-sm"
-											>
-												إلغاء
-											</button>
-											<button
-												onClick={handleSave}
-												disabled={!hasUnsavedChanges}
-												className={`px-6 py-2.5 text-white rounded-lg transition-all duration-300 font-semibold text-sm flex items-center gap-2 ${
-													hasUnsavedChanges
-														? "shadow-lg shadow-cyan-500/50 ring-2 ring-cyan-400 animate-pulse"
-														: "opacity-50 cursor-not-allowed"
-												}`}
-												style={{ backgroundColor: "#1BA3B6" }}
-												onMouseEnter={(e) =>
-													hasUnsavedChanges &&
-													(e.target.style.backgroundColor = "#158A9A")
-												}
-												onMouseLeave={(e) =>
-													hasUnsavedChanges &&
-													(e.target.style.backgroundColor = "#1BA3B6")
-												}
-											>
-												<svg
-													className="w-4 h-4"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M5 13l4 4L19 7"
-													/>
-												</svg>
-												حفظ التغييرات
-											</button>
-										</>
-									)}
-								</div>
+							{/* Action Buttons */}
+							<div className="flex items-center gap-3">
+								<button 
+									onClick={toggleTheme}
+									className={`p-3 rounded-full transition-all ${isDarkMode ? "bg-cyan-400/10 text-cyan-400 hover:bg-cyan-400/20" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+								>
+									{isDarkMode ? "☀️" : "🌙"}
+								</button>
+								{isEditing ? (
+									<>
+										<button onClick={handleSave} className={`px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg ${theme.buttonPrimary}`}>
+											حفظ
+										</button>
+										<button onClick={() => { setIsEditing(false); setFormData(originalFormData); }} className={`px-6 py-2.5 rounded-xl font-bold transition-all ${theme.buttonSecondary}`}>
+											إلغاء
+										</button>
+									</>
+								) : (
+									<button onClick={() => setIsEditing(true)} className={`px-6 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95 ${theme.buttonPrimary}`}>
+										تعديل البيانات
+									</button>
+								)}
 							</div>
 						</div>
 					</div>
 				</div>
-			</div>
 
-			{/* Image Crop Modal */}
+				{/* 2. Employee Quick Stats */}
+				<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+					{[
+						{ label: "أعمالي", value: "لوحة التحكم", icon: "📊", color: "text-blue-500", link: "/employeedashboard" },
+						{ label: "المهام", value: "عرض", icon: "📝", color: "text-[#690000]", link: "#" },
+						{ label: "الشحنات", value: "إدارة", icon: "📦", color: "text-[#1ba3b6]", link: "/employee-shipments" },
+						{ label: "الجدول", value: "الوقت", icon: "📅", color: "text-amber-500", link: "#" },
+					].map((stat, idx) => (
+						<Link key={idx} to={stat.link} className={`p-5 rounded-2xl ${theme.card} border hover:-translate-y-1 transition-transform duration-300 group`}>
+							<div className="flex justify-between items-start">
+								<div>
+									<p className={`text-sm font-medium ${theme.textSecondary} mb-1`}>{stat.label}</p>
+									<p className={`text-xl font-bold ${theme.textPrimary}`}>{stat.value}</p>
+								</div>
+								<div className={`p-3 rounded-xl bg-gray-50/5 group-hover:bg-white/10 transition-colors shadow-sm ${stat.color} text-xl border border-current opacity-80`}>
+									{stat.icon}
+								</div>
+							</div>
+						</Link>
+					))}
+				</div>
+
+				<div className="grid lg:grid-cols-3 gap-8">
+					{/* 3. Personal Info Form */}
+					<div className={`lg:col-span-2 rounded-3xl ${theme.card} border p-6 md:p-8`}>
+						<div className="flex items-center gap-3 mb-8">
+							<div className={`p-2.5 rounded-xl ${theme.iconBg}`}>
+								<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+							</div>
+							<h2 className={`text-xl font-bold ${theme.textPrimary}`}>البيانات الشخصية</h2>
+						</div>
+
+						<div className="grid md:grid-cols-2 gap-6">
+							<div>
+								<label className={`block text-sm font-medium ${theme.textSecondary} mb-2`}>الاسم الكامل</label>
+								<input 
+									type="text" 
+									name="fullname" 
+									value={formData.fullname} 
+									onChange={handleInputChange} 
+									disabled={!isEditing}
+									className={`w-full p-3.5 rounded-xl border transition-all outline-none ${theme.input} disabled:opacity-60`}
+								/>
+							</div>
+							<div>
+								<label className={`block text-sm font-medium ${theme.textSecondary} mb-2`}>البريد الإلكتروني</label>
+								<input 
+									type="email" 
+									name="email" 
+									value={formData.email} 
+									onChange={handleInputChange} 
+									disabled={!isEditing}
+									className={`w-full p-3.5 rounded-xl border transition-all outline-none ${theme.input} disabled:opacity-60`}
+								/>
+							</div>
+							<div>
+								<label className={`block text-sm font-medium ${theme.textSecondary} mb-2`}>رقم الهاتف</label>
+								<input 
+									type="text" 
+									name="phone" 
+									value={formData.phone} 
+									onChange={handleInputChange} 
+									disabled={!isEditing}
+									className={`w-full p-3.5 rounded-xl border transition-all outline-none ${theme.input} disabled:opacity-60`}
+								/>
+							</div>
+							<div>
+								<label className={`block text-sm font-medium ${theme.textSecondary} mb-2`}>اسم المستخدم</label>
+								<input 
+									type="text" 
+									name="username" 
+									value={formData.username} 
+									onChange={handleInputChange} 
+									disabled={!isEditing}
+									className={`w-full p-3.5 rounded-xl border transition-all outline-none ${theme.input} disabled:opacity-60`}
+								/>
+							</div>
+						</div>
+					</div>
+
+					{/* 4. Security & System Status */}
+					<div className="space-y-6">
+						{/* Account Security Card */}
+						<div className={`rounded-3xl ${theme.card} border p-6`}>
+							<h3 className={`text-lg font-bold ${theme.textPrimary} mb-4`}>الأمان والصلاحيات</h3>
+							<div className="space-y-4">
+								<div className={`p-4 rounded-xl flex items-center justify-between ${isDarkMode ? "bg-cyan-500/10 border border-cyan-500/20" : "bg-cyan-50 border border-cyan-200"}`}>
+									<div className="flex items-center gap-3">
+										<div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDarkMode ? "bg-cyan-500/20 text-cyan-500" : "bg-cyan-100 text-cyan-600"}`}>
+											🔑
+										</div>
+										<div>
+											<p className={`font-bold text-sm ${theme.textPrimary}`}>حساب موظف</p>
+											<p className={`text-xs ${theme.textSecondary}`}>صلاحيات محددة حسب الدور</p>
+										</div>
+									</div>
+								</div>
+
+								<button 
+									onClick={() => setShowPasswordModal(true)}
+									className={`w-full py-3.5 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${theme.buttonSecondary}`}
+								>
+									<span>🔒</span> تغيير كلمة المرور
+								</button>
+							</div>
+						</div>
+
+						{/* Quick Links Card */}
+						<div className={`rounded-3xl ${theme.card} border p-6`}>
+							<h3 className={`text-lg font-bold ${theme.textPrimary} mb-4`}>روابط سريعة</h3>
+							<div className="grid grid-cols-2 gap-3">
+								<Link to="/employeedashboard" className={`p-3 rounded-xl text-center text-sm font-bold transition-all ${isDarkMode ? "bg-white/5 hover:bg-white/10 text-white" : "bg-gray-50 hover:bg-gray-100 text-gray-700"}`}>
+									لوحة التحكم
+								</Link>
+								<Link to="/" className={`p-3 rounded-xl text-center text-sm font-bold transition-all ${isDarkMode ? "bg-white/5 hover:bg-white/10 text-white" : "bg-gray-50 hover:bg-gray-100 text-gray-700"}`}>
+									الرئيسية
+								</Link>
+							</div>
+						</div>
+					</div>
+				</div>
+			</main>
+
+			{/* Delete Confirmation Modal */}
+			{showDeleteConfirmModal && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+					<div className={`${theme.card} rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden border p-6 text-center`}>
+						<div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4 text-red-600">
+							<svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+						</div>
+						<h3 className={`text-xl font-bold ${theme.textPrimary} mb-2`}>حذف الصورة؟</h3>
+						<p className={`${theme.textSecondary} mb-6`}>لا يمكن التراجع عن هذا الإجراء، هل أنت متأكد؟</p>
+						<div className="flex gap-3">
+							<button onClick={() => setShowDeleteConfirmModal(false)} className={`flex-1 py-3 rounded-xl font-bold ${theme.buttonSecondary}`}>إلغاء</button>
+							<button onClick={confirmDeletePhoto} className="flex-1 py-3 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/30">حذف</button>
+						</div>
+					</div>
+				</div>
+			)}
+			
+			{/* Crop Modal */}
 			{showCropModal && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-					<div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
-						{/* Header */}
-						<div className="px-6 py-4 border-b">
-							<h2 className="text-xl font-bold text-gray-800 text-center">
-								اقتصاص الصورة
-							</h2>
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+					<div className={`bg-[#0a1a1f] rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-white/10`}>
+						<div className="p-4 border-b border-white/10 flex justify-between items-center">
+							<h3 className="text-lg font-bold text-white">تعديل الصورة</h3>
+							<button onClick={() => setShowCropModal(false)} className="text-gray-400 hover:text-white">✕</button>
 						</div>
-
-						{/* Crop Area */}
-						<div className="p-6">
-							<div
-								className="relative bg-gray-100 rounded-lg overflow-hidden"
-								style={{ height: "400px" }}
-							>
-								<Cropper
-									image={selectedImage}
-									crop={crop}
-									zoom={zoom}
-									aspect={1}
-									cropShape="round"
-									showGrid={false}
-									onCropChange={setCrop}
-									onZoomChange={setZoom}
-									onCropComplete={onCropComplete}
-								/>
-							</div>
-
-							{/* Zoom Control */}
-							<div className="mt-4">
-								<label className="block text-sm font-medium text-gray-700 mb-2 text-right">
-									التكبير
-								</label>
-								<input
-									type="range"
-									min={1}
-									max={3}
-									step={0.1}
-									value={zoom}
-									onChange={(e) => setZoom(Number(e.target.value))}
-									className="w-full"
-								/>
-							</div>
+						<div className="relative h-80 w-full bg-black">
+							<Cropper image={selectedImage} crop={crop} zoom={zoom} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} />
 						</div>
-
-						{/* Footer Buttons */}
-						<div className="px-6 py-4 border-t flex gap-3 justify-end">
-							<button
-								onClick={() => {
-									setShowCropModal(false);
-									setSelectedImage(null);
-								}}
-								className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-semibold"
-							>
-								إلغاء
-							</button>
-							<button
-								onClick={handleCropConfirm}
-								disabled={uploadingPhoto}
-								className="px-6 py-2 text-white rounded-lg font-semibold disabled:opacity-50"
-								style={{ backgroundColor: "#1BA3B6" }}
-							>
-								{uploadingPhoto ? "جاري الرفع..." : "حفظ"}
-							</button>
+						<div className="p-4 flex gap-3 justify-end bg-[#0a1a1f]">
+							<button onClick={() => setShowCropModal(false)} className="px-5 py-2 text-gray-300 hover:text-white font-medium">إلغاء</button>
+							<button onClick={handleCropConfirm} className="px-6 py-2 bg-[#1ba3b6] text-white rounded-xl font-bold hover:bg-[#158A9A]">حفظ</button>
 						</div>
 					</div>
 				</div>
@@ -848,222 +742,38 @@ const EmployeeProfilePage = () => {
 
 			{/* Password Change Modal */}
 			{showPasswordModal && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-					<div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-						<h2 className="text-2xl font-bold text-gray-800 mb-6 text-right">
-							تغيير كلمة المرور
-						</h2>
-
-						<div className="space-y-4">
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2 text-right">
-									كلمة المرور الحالية
-								</label>
-								<div className="relative">
-									<input
-										type={showPasswords.currentPassword ? "text" : "password"}
-										name="currentPassword"
-										value={passwordData.currentPassword}
-										onChange={handlePasswordChange}
-										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-700 focus:border-transparent text-right bg-white text-gray-800"
-									/>
-									<button
-										type="button"
-										onClick={() =>
-											setShowPasswords((prev) => ({
-												...prev,
-												currentPassword: !prev.currentPassword,
-											}))
-										}
-										className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-									>
-										{showPasswords.currentPassword ? (
-											<svg
-												className="w-5 h-5"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-												/>
-											</svg>
-										) : (
-											<svg
-												className="w-5 h-5"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-												/>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-												/>
-											</svg>
-										)}
-									</button>
-								</div>
-							</div>
-
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2 text-right">
-									كلمة المرور الجديدة
-								</label>
-								<div className="relative">
-									<input
-										type={showPasswords.newPassword ? "text" : "password"}
-										name="newPassword"
-										value={passwordData.newPassword}
-										onChange={handlePasswordChange}
-										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-700 focus:border-transparent text-right bg-white text-gray-800"
-									/>
-									<button
-										type="button"
-										onClick={() =>
-											setShowPasswords((prev) => ({
-												...prev,
-												newPassword: !prev.newPassword,
-											}))
-										}
-										className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-									>
-										{showPasswords.newPassword ? (
-											<svg
-												className="w-5 h-5"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-												/>
-											</svg>
-										) : (
-											<svg
-												className="w-5 h-5"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-												/>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-												/>
-											</svg>
-										)}
-									</button>
-								</div>
-							</div>
-
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2 text-right">
-									تأكيد كلمة المرور الجديدة
-								</label>
-								<div className="relative">
-									<input
-										type={showPasswords.confirmPassword ? "text" : "password"}
-										name="confirmPassword"
-										value={passwordData.confirmPassword}
-										onChange={handlePasswordChange}
-										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-700 focus:border-transparent text-right bg-white text-gray-800"
-									/>
-									<button
-										type="button"
-										onClick={() =>
-											setShowPasswords((prev) => ({
-												...prev,
-												confirmPassword: !prev.confirmPassword,
-											}))
-										}
-										className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-									>
-										{showPasswords.confirmPassword ? (
-											<svg
-												className="w-5 h-5"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-												/>
-											</svg>
-										) : (
-											<svg
-												className="w-5 h-5"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-												/>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-												/>
-											</svg>
-										)}
-									</button>
-								</div>
-							</div>
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+					<div className={`${theme.card} rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border`}>
+						<div className={`p-6 ${theme.headerBg} relative overflow-hidden`}>
+							<div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+							<h3 className="text-xl font-bold text-white relative z-10 flex items-center gap-2">
+								<span>🔒</span> تغيير كلمة المرور
+							</h3>
 						</div>
-
-						<div className="flex flex-row-reverse gap-4 mt-6">
-							<button
-								onClick={() => {
-									setShowPasswordModal(false);
-									setPasswordData({
-										currentPassword: "",
-										newPassword: "",
-										confirmPassword: "",
-									});
-									setShowPasswords({
-										currentPassword: false,
-										newPassword: false,
-										confirmPassword: false,
-									});
-								}}
-								className="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors font-semibold"
-							>
-								إلغاء
-							</button>
-							<button
-								onClick={handleChangePasswordSubmit}
-								className="flex-1 bg-red-700 text-white py-2 px-4 rounded-lg hover:bg-red-800 transition-colors font-semibold"
-							>
-								تغيير كلمة المرور
-							</button>
+						<div className="p-6 space-y-4">
+							{["currentPassword", "newPassword", "confirmPassword"].map((field, idx) => (
+								<div key={idx}>
+									<label className={`block text-sm font-medium ${theme.textSecondary} mb-1.5`}>
+										{field === "currentPassword" ? "كلمة المرور الحالية" : field === "newPassword" ? "كلمة المرور الجديدة" : "تأكيد كلمة المرور"}
+									</label>
+									<div className="relative">
+										<input 
+											type={showPasswords[field] ? "text" : "password"} 
+											name={field} 
+											value={passwordData[field]} 
+											onChange={handlePasswordChange} 
+											className={`w-full p-3 pl-10 rounded-xl border transition-all outline-none ${theme.input}`}
+										/>
+										<button type="button" onClick={() => setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }))} className="absolute left-3 top-3.5 text-gray-400 hover:text-[#1ba3b6]">
+											{showPasswords[field] ? "👁️" : "👁️‍🗨️"}
+										</button>
+									</div>
+								</div>
+							))}
+							<div className="flex gap-3 pt-2">
+								<button onClick={() => setShowPasswordModal(false)} className={`flex-1 py-3 rounded-xl font-bold ${theme.buttonSecondary}`}>إلغاء</button>
+								<button onClick={handleChangePasswordSubmit} className={`flex-1 py-3 rounded-xl font-bold ${theme.buttonPrimary}`}>حفظ</button>
+							</div>
 						</div>
 					</div>
 				</div>

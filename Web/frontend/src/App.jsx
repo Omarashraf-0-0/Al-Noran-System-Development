@@ -31,7 +31,7 @@ import ShipmentsManagement from "./pages/ShipmentsManagement";
 import ShipmentHistory from "./pages/ShipmentHistory";
 import MyCustomers from "./pages/MyCustomers";
 import ShipmentChatPage from "./pages/ShipmentChatPage";
-import ClientProfilePage from "./pages/ClientProfilePage";
+import ClientProfilePage from "./pages/ClientUserProfilePage";
 import EmployeeProfilePage from "./pages/EmployeeProfilePage";
 import AdminProfilePage from "./pages/AdminProfilePage";
 import PaymentsManagementPage from "./pages/PaymentsManagementPage";
@@ -45,6 +45,9 @@ import ExportShipmentsPage from "./pages/ExportShipmentsPage";
 import ExportShipmentDetailsPage from "./pages/ExportShipmentDetailsPage";
 import EmployeeUCRRequestsPage from "./pages/EmployeeUCRRequestsPage";
 import EmployeeExportShipmentsPage from "./pages/EmployeeExportShipmentsPage";
+import ExportShipmentHistory from "./pages/ExportShipmentHistory";
+import EmployeeShipmentDetailsPage from "./pages/EmployeeShipmentDetailsPage";
+import EmployeeExportShipmentDetailsPage from "./pages/EmployeeExportShipmentDetailsPage";
 
 
 // Admin Route Protection Component
@@ -168,307 +171,332 @@ const ProfileRoute = () => {
 
 const App = () => {
 	return (
-		<div>
-			<Routes>
-				<Route path="/" element={<LandingPage />} />
-				<Route path="/login" element={<LoginPage />} />
-				<Route path="/register" element={<RegisterPage />} />
-				<Route path="/forgetpassword" element={<ForgetPasswordPage />} />
-				<Route path="/verify-otp" element={<OTPPage />} />
-				<Route path="/resetpassword" element={<ResetPasswordPage />} />
-				<Route
-					path="/home"
-					element={
-						<ClientRoute>
-							<HomePage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/profile"
-					element={
-						<AuthRoute>
-							<ProfileRoute />
-						</AuthRoute>
-					}
-				/>
-				<Route
-					path="/acidrequest"
-					element={
-						<ClientRoute>
-							<ACIDRequestPage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/acidrequests"
-					element={
-						<ClientRoute>
-							<AcidRequestsPage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/acidrequest/:requestId"
-					element={
-						<ClientRoute>
-							<AcidRequestDetailsPage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/acidrequest/:requestId/edit"
-					element={
-						<ClientRoute>
-							<EditAcidRequestPage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/upload-documents"
-					element={
-						<ClientRoute>
-							<DocumentUploadPage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/employeedashboard"
-					element={
-						<EmployeeRoute>
-							<EmployeeDashboard />
-						</EmployeeRoute>
-					}
-				/>
-				<Route
-					path="/shipmentstatus/:shipmentId"
-					element={
-						<ClientRoute>
-							<ShipmentStatus />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/employee-shipment/:shipmentId"
-					element={
-						<EmployeeRoute>
-							<EmployeeShipmentManagement />
-						</EmployeeRoute>
-					}
-				/>
-				<Route
-					path="/client-shipments"
-					element={
-						<ClientRoute>
-							<ClientShipments />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/admindashboard"
-					element={
-						<AdminRoute>
-							<AdminDashboard />
-						</AdminRoute>
-					}
-				/>
-				<Route
-					path="/EmployeeNotifications"
-					element={
-						<EmployeeRoute>
-							<EmployeeNotifications />
-						</EmployeeRoute>
-					}
-				/>
-				<Route
-					path="/employeemanagement"
-					element={
-						<AdminRoute>
-							<EmployeeManagement />
-						</AdminRoute>
-					}
-				/>
-				<Route
-					path="/customermanagement"
-					element={
-						<AdminRoute>
-							<CustomerManagement />
-						</AdminRoute>
-					}
-				/>
-				<Route
-					path="/certificatesmanagement"
-					element={
-						<AdminRoute>
-							<CertificatesManagement />
-						</AdminRoute>
-					}
-				/>
-				<Route
-					path="/shipmentsmanagement"
-					element={
-						<AdminRoute>
-							<ShipmentsManagement />
-						</AdminRoute>
-					}
-				/>
-				<Route
-					path="/chat"
-					element={
-						<AuthRoute>
-							<Chat />
-						</AuthRoute>
-					}
-				/>
-				<Route
-					path="/support-dashboard"
-					element={
-						<EmployeeRoute>
-							<SupportDashboard />
-						</EmployeeRoute>
-					}
-				/>
-				<Route
-					path="/my-customers"
-					element={
-						<EmployeeRoute>
-							<MyCustomers />
-						</EmployeeRoute>
-					}
-				/>
-				<Route
-					path="/shipment-chat/:shipmentId"
-					element={
-						<ClientRoute>
-							<ShipmentChatPage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/employee/acid-requests"
-					element={
-						<EmployeeRoute>
-							<EmployeeAcidRequestsPage />
-						</EmployeeRoute>
-					}
-				/>
-				<Route
-					path="/employee-shipments"
-					element={
-						<EmployeeRoute>
-							<EmployeeShipments />
-						</EmployeeRoute>
-					}
-				/>
-				<Route
-					path="/shipment-history/:shipmentId"
-					element={
-						<EmployeeRoute>
-							<ShipmentHistory />
-						</EmployeeRoute>
-					}
-				/>
-				<Route
-					path="/admin-shipment/:shipmentId"
-					element={
-						<AdminRoute>
-							<AdminShipmentManagement />
-						</AdminRoute>
-					}
-				/>
-				{/* Client Profile (for admin/employee to view) */}
-				<Route
-					path="/client/:clientId"
-					element={
-						<EmployeeRoute>
-							<ClientProfilePage />
-						</EmployeeRoute>
-					}
-				/>
+		<ThemeProvider>
+			<div>
+				<Routes>
+					<Route path="/" element={<LandingPage />} />
+					<Route path="/login" element={<LoginPage />} />
+					<Route path="/register" element={<RegisterPage />} />
+					<Route path="/forgetpassword" element={<ForgetPasswordPage />} />
+					<Route path="/verify-otp" element={<OTPPage />} />
+					<Route path="/resetpassword" element={<ResetPasswordPage />} />
+					<Route
+						path="/home"
+						element={
+							<ClientRoute>
+								<HomePage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/profile"
+						element={
+							<AuthRoute>
+								<ProfileRoute />
+							</AuthRoute>
+						}
+					/>
+					<Route
+						path="/notification/:id"
+						element={
+							<AuthRoute>
+								<NotificationPage />
+							</AuthRoute>
+						}
+					/>
+					<Route
+						path="/notifications"
+						element={
+							<AuthRoute>
+								<AllNotificationsPage />
+							</AuthRoute>
+						}
+					/>
+					<Route
+						path="/acidrequest"
+						element={
+							<ClientRoute>
+								<ACIDRequestPage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/acidrequests"
+						element={
+							<ClientRoute>
+								<AcidRequestsPage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/acidrequest/:requestId"
+						element={
+							<ClientRoute>
+								<AcidRequestDetailsPage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/acidrequest/:requestId/edit"
+						element={
+							<ClientRoute>
+								<EditAcidRequestPage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/upload-documents"
+						element={
+							<ClientRoute>
+								<DocumentUploadPage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/employeedashboard"
+						element={
+							<EmployeeRoute>
+								<EmployeeDashboard />
+							</EmployeeRoute>
+						}
+					/>
+					<Route
+						path="/shipmentstatus/:shipmentId"
+						element={
+							<ClientRoute>
+								<ShipmentStatus />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/employee-shipment/:shipmentId"
+						element={
+							<EmployeeRoute>
+								<EmployeeShipmentDetailsPage />
+							</EmployeeRoute>
+						}
+					/>
+					<Route
+						path="/client-shipments"
+						element={
+							<ClientRoute>
+								<ClientShipments />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/admindashboard"
+						element={
+							<AdminRoute>
+								<AdminDashboard />
+							</AdminRoute>
+						}
+					/>
+					<Route
+						path="/EmployeeNotifications"
+						element={
+							<EmployeeRoute>
+								<EmployeeNotifications />
+							</EmployeeRoute>
+						}
+					/>
+					<Route
+						path="/employeemanagement"
+						element={
+							<AdminRoute>
+								<EmployeeManagement />
+							</AdminRoute>
+						}
+					/>
+					<Route
+						path="/customermanagement"
+						element={
+							<AdminRoute>
+								<CustomerManagement />
+							</AdminRoute>
+						}
+					/>
+					<Route
+						path="/certificatesmanagement"
+						element={
+							<AdminRoute>
+								<CertificatesManagement />
+							</AdminRoute>
+						}
+					/>
+					<Route
+						path="/shipmentsmanagement"
+						element={
+							<AdminRoute>
+								<ShipmentsManagement />
+							</AdminRoute>
+						}
+					/>
+					<Route
+						path="/chat"
+						element={
+							<AuthRoute>
+								<Chat />
+							</AuthRoute>
+						}
+					/>
+					<Route
+						path="/support-dashboard"
+						element={
+							<EmployeeRoute>
+								<SupportDashboard />
+							</EmployeeRoute>
+						}
+					/>
+					<Route
+						path="/my-customers"
+						element={
+							<EmployeeRoute>
+								<MyCustomers />
+							</EmployeeRoute>
+						}
+					/>
+					<Route
+						path="/shipment-chat/:shipmentId"
+						element={
+							<ClientRoute>
+								<ShipmentChatPage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/employee/acid-requests"
+						element={
+							<EmployeeRoute>
+								<EmployeeAcidRequestsPage />
+							</EmployeeRoute>
+						}
+					/>
+					<Route
+						path="/employee-shipments"
+						element={
+							<EmployeeRoute>
+								<EmployeeShipments />
+							</EmployeeRoute>
+						}
+					/>
+					<Route
+						path="/shipment-history/:shipmentId"
+						element={
+							<EmployeeRoute>
+								<ShipmentHistory />
+							</EmployeeRoute>
+						}
+					/>
+					<Route
+						path="/admin-shipment/:shipmentId"
+						element={
+							<AdminRoute>
+								<AdminShipmentManagement />
+							</AdminRoute>
+						}
+					/>
+					{/* Client Profile (for admin/employee to view) */}
+					<Route
+						path="/client/:clientId"
+						element={
+							<EmployeeRoute>
+								<ClientProfilePage />
+							</EmployeeRoute>
+						}
+					/>
 
-				{/* ===== Export System Routes (UCR) ===== */}
-				{/* Client Export Routes */}
-				<Route
-					path="/ucr-request"
-					element={
-						<ClientRoute>
-							<UCRRequestPage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/ucr-requests"
-					element={
-						<ClientRoute>
-							<UCRRequestsPage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/ucr-request/:requestId"
-					element={
-						<ClientRoute>
-							<UCRRequestDetailsPage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/ucr-request/:requestId/edit"
-					element={
-						<ClientRoute>
-							<UCRRequestPage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/export-shipments"
-					element={
-						<ClientRoute>
-							<ExportShipmentsPage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/export-shipment/:shipmentId"
-					element={
-						<ClientRoute>
-							<ExportShipmentDetailsPage />
-						</ClientRoute>
-					}
-				/>
-				{/* Employee Export Routes */}
-				<Route
-					path="/employee/ucr-requests"
-					element={
-						<EmployeeRoute>
-							<EmployeeUCRRequestsPage />
-						</EmployeeRoute>
-					}
-				/>
-				<Route
-					path="/employee/ucr-request/:requestId"
-					element={
-						<EmployeeRoute>
-							<UCRRequestDetailsPage />
-						</EmployeeRoute>
-					}
-				/>
-				<Route
-					path="/employee/export-shipments"
-					element={
-						<EmployeeRoute>
-							<EmployeeExportShipmentsPage />
-						</EmployeeRoute>
-					}
-				/>
-				<Route
-					path="/employee/export-shipment/:shipmentId"
-					element={
-						<EmployeeRoute>
-							<ExportShipmentDetailsPage />
-						</EmployeeRoute>
-					}
-				/>
+					{/* ===== Export System Routes (UCR) ===== */}
+					{/* Client Export Routes */}
+					<Route
+						path="/ucr-request"
+						element={
+							<ClientRoute>
+								<UCRRequestPage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/ucr-requests"
+						element={
+							<ClientRoute>
+								<UCRRequestsPage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/ucr-request/:requestId"
+						element={
+							<ClientRoute>
+								<UCRRequestDetailsPage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/ucr-request/:requestId/edit"
+						element={
+							<ClientRoute>
+								<UCRRequestPage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/export-shipments"
+						element={
+							<ClientRoute>
+								<ExportShipmentsPage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/export-shipment/:shipmentId"
+						element={
+							<ClientRoute>
+								<ExportShipmentDetailsPage />
+							</ClientRoute>
+						}
+					/>
+					{/* Employee Export Routes */}
+					<Route
+						path="/employee/ucr-requests"
+						element={
+							<EmployeeRoute>
+								<EmployeeUCRRequestsPage />
+							</EmployeeRoute>
+						}
+					/>
+					<Route
+						path="/employee/ucr-request/:requestId"
+						element={
+							<EmployeeRoute>
+								<UCRRequestDetailsPage />
+							</EmployeeRoute>
+						}
+					/>
+					<Route
+						path="/employee/export-shipments"
+						element={
+							<EmployeeRoute>
+								<EmployeeExportShipmentsPage />
+							</EmployeeRoute>
+						}
+					/>
+					<Route
+						path="/employee/export-shipment/:shipmentId"
+						element={
+							<EmployeeRoute>
+								<EmployeeExportShipmentDetailsPage />
+							</EmployeeRoute>
+						}
+					/>
+					<Route
+						path="/export-shipment-history/:shipmentId"
+						element={
+							<EmployeeRoute>
+								<ExportShipmentHistory />
+							</EmployeeRoute>
+						}
+					/>
 
 				{/* NEW */}
 				<Route
@@ -491,6 +519,7 @@ const App = () => {
 				<Route path="*" element={<NotFound404 />} />
 			</Routes>
 		</div>
+		</ThemeProvider>
 	);
 };
 

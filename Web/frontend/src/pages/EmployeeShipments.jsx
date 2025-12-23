@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
 import Header from "../components/Header";
-import Footer from "../components/Footer";
-import WelcomeBanner from "./WelcomeBanner";
-import quickReorderIcon from "../assets/images/quick_reorder.png";
-import filterListIcon from "../assets/images/filter_list.png";
-import filterAltIcon from "../assets/images/filter_alt.png";
-import searchIcon from "../assets/images/Search.svg";
+import SearchFilterSort from "../components/SearchFilterSort";
+import ShipmentsTable from "../components/ShipmentsTable";
+import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorMessage from "../components/ErrorMessage";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { useTheme } from "../context/ThemeContext";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function EmployeeShipments() {
+	const { isDarkMode } = useTheme();
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [isSortOpen, setIsSortOpen] = useState(false);
@@ -18,6 +19,10 @@ export default function EmployeeShipments() {
 	const [error, setError] = useState(null);
 	const [selectedStatus, setSelectedStatus] = useState("الكل");
 	const [sortOption, setSortOption] = useState("newest");
+	
+	// Pagination
+	const [currentPage, setCurrentPage] = useState(1);
+	const itemsPerPage = 12;
 
 	const user = JSON.parse(localStorage.getItem("user"));
 	const userID = user?.id;
@@ -59,16 +64,15 @@ export default function EmployeeShipments() {
 					}
 				);
 
-				console.log("Fetched shipments:", response.data);
-
 				const formattedShipments = (response.data || []).map((shipment) => ({
 					id: shipment._id,
-					userId: shipment.user_id, // For client profile link
-					clientName: shipment.employerName || "Unknown Client",
-					shipmentNo: shipment.number46 || shipment.shipmentNumber || "N/A",
+					userId: shipment.user_id?._id || shipment.user_id,
+					clientName: shipment.employerName || shipment.user_id?.fullname || "Unknown Client",
+					shipmentNo: shipment.shipmentCode || shipment.shipmentNumber || shipment.acid || shipment.number46 || "N/A",
 					acid: shipment.acid || "N/A",
 					status: shipment.status || "pending",
-					createdAt: shipment.createdAt, // Keep raw date for sorting
+					shipmentType: shipment.shipment_type || "بحري",
+					createdAt: shipment.createdAt,
 					date: new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
 						day: "numeric",
 						month: "long",
@@ -114,7 +118,7 @@ export default function EmployeeShipments() {
 		setIsSortOpen(false);
 	};
 
-	// Normalize status for comparison (all Arabic)
+	// Normalize status logic...
 	const normalizeStatus = (status) => {
 		const statusNormalization = {
 			"Pending": "في انتظار الشحن",
@@ -137,15 +141,13 @@ export default function EmployeeShipments() {
 		return statusNormalization[status] || status;
 	};
 
-	// Filter and sort shipments
+	// Filter and sort
 	let filteredShipments = shipments.filter((shipment) => {
-		// Filter by search term (shipment number, client name, ACID)
 		const matchesSearch =
 			shipment.shipmentNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
 			shipment.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
 			shipment.acid.toLowerCase().includes(searchTerm.toLowerCase());
 
-		// Filter by status - normalize both the filter and shipment status for comparison
 		const matchesStatus =
 			selectedStatus === "الكل" ||
 			normalizeStatus(shipment.status) === normalizeStatus(selectedStatus);
@@ -153,19 +155,12 @@ export default function EmployeeShipments() {
 		return matchesSearch && matchesStatus;
 	});
 
-	// Sort shipments
 	filteredShipments = [...filteredShipments].sort((a, b) => {
 		switch (sortOption) {
-			case "newest": {
-				const dateA = new Date(a.createdAt).getTime();
-				const dateB = new Date(b.createdAt).getTime();
-				return dateB - dateA;
-			}
-			case "oldest": {
-				const dateA = new Date(a.createdAt).getTime();
-				const dateB = new Date(b.createdAt).getTime();
-				return dateA - dateB;
-			}
+			case "newest":
+				return new Date(b.createdAt) - new Date(a.createdAt);
+			case "oldest":
+				return new Date(a.createdAt) - new Date(b.createdAt);
 			case "clientAZ":
 				return a.clientName.localeCompare(b.clientName, "ar");
 			case "clientZA":
@@ -175,220 +170,131 @@ export default function EmployeeShipments() {
 		}
 	});
 
+	// Pagination Logic
+	const totalPages = Math.ceil(filteredShipments.length / itemsPerPage);
+	const indexOfLastItem = currentPage * itemsPerPage;
+	const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+	const currentItems = filteredShipments.slice(indexOfFirstItem, indexOfLastItem);
+
+	const nextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+	const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+
 	return (
-		<div className="flex flex-col min-h-screen bg-gray-50 font-sans relative">
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#050a0d]" : "bg-gray-50"}`}>
+			
+			{/* Animated Background - Turquoise Theme */}
+			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+				{isDarkMode ? (
+					<>
+						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[100px] animate-pulse"></div>
+						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#0d5c66]/20 rounded-full filter blur-[120px]"></div>
+					</>
+				) : (
+					<div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-cyan-50/50 to-transparent"></div>
+				)}
+			</div>
+
 			<Header />
-			<WelcomeBanner />
-
-			<section className="flex-grow w-full bg-white py-12 px-8 shadow-inner relative">
-				<div className="max-w-6xl mx-auto">
-					<h1 className="text-3xl font-bold text-right text-red-800 mb-8">
-						الشحنات
-					</h1>
-
-					{/* 🔍 Search + Filter + Sort */}
-					<div className="flex items-center justify-center mb-8 gap-4 relative">
-						{/* Left side — Filter + Sort */}
-						<div className="flex items-center gap-3">
-							{/* Filter Button */}
-							<button
-								onClick={toggleFilter}
-								className={`flex items-center gap-2 font-medium transition-colors ${
-									isFilterOpen
-										? "bg-red-800 text-white px-3 py-1 rounded-md"
-										: "text-red-800"
-								}`}
-							>
-								<img
-									src={filterAltIcon}
-									alt="Filter"
-									className="w-5 h-5 object-contain"
-								/>
-								تصفية
-							</button>
-
-							{/* Sort Button */}
-							<button
-								onClick={toggleSort}
-								className={`flex items-center gap-2 font-medium transition-colors ${
-									isSortOpen
-										? "bg-red-800 text-white px-3 py-1 rounded-md"
-										: "text-red-800"
-								}`}
-							>
-								<img
-									src={filterListIcon}
-									alt="Sort"
-									className="w-5 h-5 object-contain"
-								/>
-								ترتيب
-							</button>
-						</div>
-
-						{/* Search Bar */}
-						<div className="relative w-1/2">
-							<input
-								type="text"
-								placeholder="ابحث برقم الشحنة، اسم العميل، أو ACID"
-								value={searchTerm}
-								onChange={(e) => setSearchTerm(e.target.value)}
-								className="w-full bg-white shadow-md rounded-full py-2 px-4 pr-10 text-right focus:outline-none focus:ring-2 focus:ring-red-500 placeholder-gray-400 text-black"
-							/>
-							<img
-								src={searchIcon}
-								alt="Search"
-								className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-							/>
-						</div>
-
-						{/* Filter Dropdown */}
-						{isFilterOpen && (
-							<div className="absolute top-14 left-40 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">
-									تصفية حسب الحالة:
-								</h4>
-								<select
-									value={selectedStatus}
-									onChange={(e) => setSelectedStatus(e.target.value)}
-									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
-								>
-									{shipmentStatuses.map((status) => (
-										<option key={status.value} value={status.value}>
-											{status.label}
-										</option>
-									))}
-								</select>
-								<button
-									onClick={handleFilterApply}
-									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
-								>
-									تطبيق
-								</button>
-							</div>
-						)}
-
-						{/* Sort Dropdown */}
-						{isSortOpen && (
-							<div className="absolute top-14 left-20 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">ترتيب حسب:</h4>
-								<select
-									value={sortOption}
-									onChange={(e) => setSortOption(e.target.value)}
-									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
-								>
-									<option value="newest">الأحدث أولاً</option>
-									<option value="oldest">الأقدم أولاً</option>
-									<option value="clientAZ">العميل (أ-ي)</option>
-									<option value="clientZA">العميل (ي-أ)</option>
-								</select>
-								<button
-									onClick={handleSortApply}
-									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
-								>
-									تطبيق
-								</button>
-							</div>
-						)}
+			
+			<section className="flex-grow w-full pt-24 pb-12 px-4 md:px-8 relative z-10">
+				<div className="max-w-7xl mx-auto">
+					{/* Header Section */}
+					<div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-[#1ba3b6]"}`}>
+							<span className="text-4xl">📦</span>
+							جميع الشحنات
+							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-cyan-100 text-[#1ba3b6]"}`}>
+								{filteredShipments.length} شحنة
+							</span>
+						</h1>
 					</div>
 
-					{/* 📦 Shipments Table */}
+					{/* 🔍 Search + Filter + Sort */}
+					<SearchFilterSort
+						searchTerm={searchTerm}
+						onSearchChange={setSearchTerm}
+						searchPlaceholder="ابحث برقم الشحنة، اسم العميل، أو ACID"
+						isFilterOpen={isFilterOpen}
+						onToggleFilter={toggleFilter}
+						filterValue={selectedStatus}
+						onFilterChange={setSelectedStatus}
+						filterOptions={shipmentStatuses}
+						filterLabel="تصفية حسب الحالة:"
+						onFilterApply={handleFilterApply}
+						isSortOpen={isSortOpen}
+						onToggleSort={toggleSort}
+						sortValue={sortOption}
+						onSortChange={setSortOption}
+						onSortApply={handleSortApply}
+						userType={user?.type}
+						isDarkMode={isDarkMode}
+					/>
+
+					{/* 📦 Shipments Grid */}
 					{loading ? (
-						<div className="flex justify-center items-center py-12 gap-4">
-							<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
-							<span className="text-gray-600 text-lg">
-								جاري تحميل الشحنات...
-							</span>
-						</div>
+						<LoadingSpinner />
 					) : error ? (
-						<div className="bg-red-50 border border-red-300 rounded-lg p-4 text-right">
-							<p className="text-red-800 font-medium mb-3">
-								❌ حدث خطأ: {error}
-							</p>
-							<button
-								onClick={() => window.location.reload()}
-								className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-							>
-								إعادة محاولة
-							</button>
-						</div>
+						<ErrorMessage
+							message={error}
+							onRetry={() => window.location.reload()}
+							retryText="إعادة محاولة"
+						/>
 					) : filteredShipments.length === 0 ? (
-						<div className="text-center py-12">
-							<p className="text-gray-500 text-lg">لا توجد شحنات</p>
+						<div className={`text-center py-20 rounded-3xl border border-dashed ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+							<div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${isDarkMode ? "bg-white/5" : "bg-gray-50"}`}>
+								<span className="text-4xl">📦</span>
+							</div>
+							<h3 className={`text-xl font-bold mb-2 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>لا توجد شحنات</h3>
+							<p className="text-gray-500">لم يتم العثور على شحنات تطابق بحثك</p>
 						</div>
 					) : (
-						<div className="overflow-x-auto">
-							<table className="w-full text-right border-separate border-spacing-y-3">
-								<tbody>
-									{filteredShipments.map((shipment) => (
-										<tr
-											key={shipment.id}
-											className="bg-gray-100 hover:bg-gray-200 rounded-xl transition text-right"
-										>
-											<td className="py-3 px-4 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="text-gray-700 text-base font-semibold">
-														{shipment.userId ? (
-												<a 
-													href={`/client/${shipment.userId}`}
-													className="hover:text-[#1BA3B6] hover:underline"
-												>
-													{shipment.clientName}
-												</a>
-											) : shipment.clientName}
-													</span>
-													<span className="text-gray-500 text-xs">
-														{shipment.date}
-													</span>
-												</div>
-											</td>
+						<>
+							<ShipmentsTable
+								shipments={currentItems}
+								maxItems={itemsPerPage}
+								linkPrefix="/employee-shipment"
+								userType={user?.type}
+								isDarkMode={isDarkMode}
+							/>
 
-											<td className="py-3 px-4 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="font-semibold text-gray-800">
-														{shipment.shipmentNo}
-													</span>
-												</div>
-											</td>
+							{/* Pagination Controls */}
+							{totalPages > 1 && (
+								<div className="flex justify-center items-center gap-4 mt-12" dir="ltr">
+									<button
+										onClick={prevPage}
+										disabled={currentPage === 1}
+										className={`p-3 rounded-full transition-all duration-300 ${
+											currentPage === 1 
+												? (isDarkMode ? "text-gray-700 bg-white/5 cursor-not-allowed" : "text-gray-300 bg-gray-100 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm")
+										}`}
+									>
+										<ChevronLeft size={24} />
+									</button>
+									
+									<div className={`px-6 py-2 rounded-xl font-bold ${isDarkMode ? "bg-white/5 text-white border border-white/10" : "bg-white text-gray-800 shadow-sm"}`}>
+										<span className={isDarkMode ? "text-[#1ba3b6]" : "text-[#1ba3b6]"}>{currentPage}</span>
+										<span className="mx-2 opacity-50">/</span>
+										<span className="opacity-70">{totalPages}</span>
+									</div>
 
-											<td className="py-3 px-4 align-top">
-												<div className="flex flex-col text-sm">
-													<span className="text-gray-700 text-base">
-														{shipment.acid}
-													</span>
-												</div>
-											</td>
-
-											<td className="py-3 px-4 align-top">
-												<span
-													className="bg-blue-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit"
-													style={{ color: "#690000" }}
-												>
-													<img
-														src={quickReorderIcon}
-														alt="status icon"
-														className="w-4 h-4"
-													/>
-													{shipment.status}
-												</span>
-											</td>
-
-											<td className="py-3 px-4 align-top">
-												<a href={`/employee-shipment/${shipment.id}`}>
-													<span className="text-blue-600 text-sm font-medium underline cursor-pointer">
-														إدارة الشحنة
-													</span>
-												</a>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
+									<button
+										onClick={nextPage}
+										disabled={currentPage === totalPages}
+										className={`p-3 rounded-full transition-all duration-300 ${
+											currentPage === totalPages 
+												? (isDarkMode ? "text-gray-700 bg-white/5 cursor-not-allowed" : "text-gray-300 bg-gray-100 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm")
+										}`}
+									>
+										<ChevronRight size={24} />
+									</button>
+								</div>
+							)}
+						</>
 					)}
 				</div>
 			</section>
-
-			<Footer />
 		</div>
 	);
 }

@@ -116,12 +116,56 @@ const FileRow = ({
 		if (onDownload) {
 			onDownload();
 		} else {
-			toast.loading("جاري تحميل الملف...");
-			const freshUrl = await getFreshUrl();
-			toast.dismiss();
-			if (freshUrl) {
-				window.open(freshUrl, "_blank");
+			if (!id) {
+				toast.error("لا يمكن تحميل هذا الملف");
+				return;
 			}
+			const toastId = toast.loading("جاري بدء التحميل...");
+			try {
+				const token = localStorage.getItem("token");
+				const response = await fetch(`${import.meta.env.VITE_API_URL}/api/uploads/${id}/download`, {
+					headers: { Authorization: `Bearer ${token}` }
+				});
+
+				if (!response.ok) throw new Error("Download failed");
+
+				// Extract filename from Content-Disposition header if available
+				let downloadName = name || "document";
+				const disposition = response.headers.get('Content-Disposition');
+				if (disposition) {
+					// Try filename* (UTF-8) first
+					const filenameStarRegex = /filename\*=UTF-8''([^;\n]*)/;
+					const starMatches = filenameStarRegex.exec(disposition);
+					if (starMatches && starMatches[1]) {
+						downloadName = decodeURIComponent(starMatches[1]);
+					} else {
+						// Fallback to standard filename
+						const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+						const matches = filenameRegex.exec(disposition);
+						if (matches != null && matches[1]) { 
+							downloadName = decodeURIComponent(matches[1].replace(/['"]/g, ''));
+						}
+					}
+				}
+
+				const blob = await response.blob();
+				const blobUrl = window.URL.createObjectURL(blob);
+				
+				// Use a temporary anchor to trigger download
+				const link = document.createElement('a');
+				link.href = blobUrl;
+				link.setAttribute('download', downloadName);
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+				window.URL.revokeObjectURL(blobUrl);
+				
+				toast.success("تم التحميل بنجاح");
+			} catch (error) {
+				console.error("Download error:", error);
+				toast.error("فشل التحميل");
+			}
+			toast.dismiss(toastId);
 		}
 	};
 

@@ -3,76 +3,54 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import Header from "../components/Header";
-import Footer from "../components/Footer";
-import WelcomeBanner from "./WelcomeBanner";
-import quickReorderIcon from "../assets/images/quick_reorder.png";
-import filterListIcon from "../assets/images/filter_list.png";
-import filterAltIcon from "../assets/images/filter_alt.png";
-import searchIcon from "../assets/images/Search.svg";
+import SearchFilterSort from "../components/SearchFilterSort";
+import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorMessage from "../components/ErrorMessage";
+import { useTheme } from "../context/ThemeContext";
+
+import { ChevronLeft, ChevronRight, Lock, Unlock, CheckCircle, XCircle, AlertTriangle, FileText, Anchor, Truck, Eye } from "lucide-react";
 
 // Status configurations
 const STATUS_CONFIG = {
-	pending: {
-		label: "قيد المراجعة",
-		color: "bg-yellow-200",
-		textColor: "#856404",
-	},
-	under_review: {
-		label: "قيد التدقيق",
-		color: "bg-blue-200",
-		textColor: "#0c5460",
-	},
-	approved: {
-		label: "معتمد",
-		color: "bg-green-200",
-		textColor: "#155724",
-	},
-	rejected: {
-		label: "مرفوض",
-		color: "bg-red-200",
-		textColor: "#721c24",
-	},
-	needs_revision: {
-		label: "يحتاج تعديل",
-		color: "bg-orange-200",
-		textColor: "#856404",
-	},
-	ucr_issued: {
-		label: "تم إصدار UCR",
-		color: "bg-indigo-200",
-		textColor: "#3730a3",
-	},
-	completed: {
-		label: "مكتمل",
-		color: "bg-green-300",
-		textColor: "#155724",
-	},
-};
-
-// Certification type labels
-const CERT_TYPE_LABELS = {
-	noran: "شهادة النوران",
-	client: "شهادة العميل",
+	pending: { label: "قيد المراجعة", color: "text-amber-600", bg: "bg-amber-100", border: "border-amber-200", icon: "⏳" },
+	under_review: { label: "قيد التدقيق", color: "text-blue-600", bg: "bg-blue-100", border: "border-blue-200", icon: "👀" },
+	approved: { label: "معتمد", color: "text-green-600", bg: "bg-green-100", border: "border-green-200", icon: "✅" },
+	rejected: { label: "مرفوض", color: "text-red-600", bg: "bg-red-100", border: "border-red-200", icon: "❌" },
+	needs_revision: { label: "يحتاج تعديل", color: "text-orange-600", bg: "bg-orange-100", border: "border-orange-200", icon: "⚠️" },
+	ucr_issued: { label: "تم إصدار UCR", color: "text-indigo-600", bg: "bg-indigo-100", border: "border-indigo-200", icon: "📋" },
+	completed: { label: "مكتمل", color: "text-emerald-600", bg: "bg-emerald-100", border: "border-emerald-200", icon: "✨" },
 };
 
 const EmployeeUCRRequestsPage = () => {
 	const navigate = useNavigate();
+	const { isDarkMode } = useTheme();
+	
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [requests, setRequests] = useState([]);
 	const [filteredRequests, setFilteredRequests] = useState([]);
+	
+	// Filtering & Sorting
+	const [searchTerm, setSearchTerm] = useState("");
 	const [statusFilter, setStatusFilter] = useState("all");
-	const [certTypeFilter, setCertTypeFilter] = useState("all");
-	const [searchQuery, setSearchQuery] = useState("");
-	const [sortBy, setSortBy] = useState("newest");
+	const [sortOption, setSortOption] = useState("newest");
+	const [isFilterOpen, setIsFilterOpen] = useState(false);
+	const [isSortOpen, setIsSortOpen] = useState(false);
+
+	// Pagination
+	const [currentPage, setCurrentPage] = useState(1);
+	const itemsPerPage = 8;
+
+	// Modals & Actions
 	const [selectedRequest, setSelectedRequest] = useState(null);
 	const [actionModal, setActionModal] = useState({ open: false, type: null });
 	const [actionNotes, setActionNotes] = useState("");
 	const [processingAction, setProcessingAction] = useState(false);
-	const [isFilterOpen, setIsFilterOpen] = useState(false);
-	const [isSortOpen, setIsSortOpen] = useState(false);
 	const [ucrNumber, setUcrNumber] = useState("");
 	const [issueUcrModal, setIssueUcrModal] = useState({ open: false, request: null });
+
+	const user = JSON.parse(localStorage.getItem("user"));
+	const token = localStorage.getItem("token");
 
 	// Status options for filter
 	const statusOptions = [
@@ -86,79 +64,131 @@ const EmployeeUCRRequestsPage = () => {
 		{ value: "completed", label: "مكتمل" },
 	];
 
-	// Fetch all UCR requests for employee
 	const fetchRequests = useCallback(async () => {
 		setLoading(true);
 		setError(null);
 		try {
-			const token = localStorage.getItem("token");
-			if (!token) {
-				toast.error("يجب تسجيل الدخول أولاً");
-				navigate("/login");
-				return;
-			}
-
+			if (!token) return;
 			const response = await axios.get(
 				`${import.meta.env.VITE_API_URL}/api/ucr/employee/all`,
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
+				{ headers: { Authorization: `Bearer ${token}` } }
 			);
-
 			if (response.data.success) {
 				setRequests(response.data.data || []);
 			}
 		} catch (error) {
 			console.error("Error fetching UCR requests:", error);
-			const errorMessage = error.response?.data?.message || "فشل في جلب الطلبات";
-			setError(errorMessage);
-			if (error.response?.status === 401) {
-				toast.error("انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى");
-				navigate("/login");
-			} else if (error.response?.status === 403) {
-				toast.error("غير مصرح لك بالوصول لهذه الصفحة");
-				navigate("/");
-			} else {
-				toast.error(errorMessage);
-			}
+			setError(error.response?.data?.message || "فشل في جلب الطلبات");
 		} finally {
 			setLoading(false);
 		}
-	}, [navigate]);
+	}, [token]);
 
 	useEffect(() => {
 		fetchRequests();
 	}, [fetchRequests]);
 
-	// Toggle filter dropdown
-	const toggleFilter = () => {
-		setIsFilterOpen(!isFilterOpen);
-		setIsSortOpen(false);
+	// --- Actions ---
+
+	const handleLock = async (requestId, e) => {
+		e?.stopPropagation();
+		try {
+			const response = await axios.post(
+				`${import.meta.env.VITE_API_URL}/api/ucr/employee/${requestId}/lock`,
+				{},
+				{ headers: { Authorization: `Bearer ${token}` } }
+			);
+
+			if (response.data.success) {
+				toast.success("تم قفل الطلب بنجاح");
+				fetchRequests();
+			}
+		} catch (error) {
+			console.error("Error locking request:", error);
+			toast.error(error.response?.data?.message || "فشل قفل الطلب");
+		}
 	};
 
-	// Toggle sort dropdown
-	const toggleSort = () => {
-		setIsSortOpen(!isSortOpen);
-		setIsFilterOpen(false);
+	const handleActionSubmit = async () => {
+		if (!selectedRequest || !actionModal.type) return;
+		
+		const type = actionModal.type;
+		if ((type === 'reject' || type === 'revision') && !actionNotes.trim()) {
+			toast.error("يجب إدخال الملاحظات");
+			return;
+		}
+
+		setProcessingAction(true);
+		try {
+			let status = "";
+			if (type === 'approve') status = "approved";
+			else if (type === 'reject') status = "rejected";
+			else if (type === 'revision') status = "needs_revision";
+
+			const payload = {
+				status: status,
+				[type === 'reject' ? 'rejectionReason' : 'employeeNotes']: actionNotes,
+			};
+
+			const response = await axios.patch(
+				`${import.meta.env.VITE_API_URL}/api/ucr/employee/${selectedRequest._id}/status`,
+				payload,
+				{ headers: { Authorization: `Bearer ${token}` } }
+			);
+
+			if (response.data.success) {
+				toast.success("تم تحديث حالة الطلب");
+				closeActionModal();
+				fetchRequests();
+			}
+		} catch (error) {
+			console.error("Error updating status:", error);
+			toast.error(error.response?.data?.message || "فشل تحديث الحالة");
+		} finally {
+			setProcessingAction(false);
+		}
 	};
 
-	// Filter and sort requests
+	const handleIssueUCR = async () => {
+		if (!issueUcrModal.request || !ucrNumber.trim()) {
+			toast.error("يجب إدخال رقم UCR");
+			return;
+		}
+
+		setProcessingAction(true);
+		try {
+			const response = await axios.post(
+				`${import.meta.env.VITE_API_URL}/api/ucr/employee/${issueUcrModal.request._id}/issue-ucr`,
+				{ ucrNumber: ucrNumber.trim() },
+				{ headers: { Authorization: `Bearer ${token}` } }
+			);
+
+			if (response.data.success) {
+				toast.success(response.data.message || "تم إصدار UCR بنجاح");
+				closeIssueUcrModal();
+				fetchRequests();
+				if (response.data.shipment) {
+					navigate("/employee/export-shipments");
+				}
+			}
+		} catch (error) {
+			console.error("Error issuing UCR:", error);
+			toast.error(error.response?.data?.message || "فشل إصدار UCR");
+		} finally {
+			setProcessingAction(false);
+		}
+	};
+
+	// --- Logic: Filter & Sort ---
 	useEffect(() => {
 		let result = [...requests];
 
-		// Apply status filter
 		if (statusFilter !== "all") {
 			result = result.filter((req) => req.status === statusFilter);
 		}
 
-		// Apply certification type filter
-		if (certTypeFilter !== "all") {
-			result = result.filter((req) => req.certificationType === certTypeFilter);
-		}
-
-		// Apply search filter
-		if (searchQuery) {
-			const query = searchQuery.toLowerCase();
+		if (searchTerm) {
+			const query = searchTerm.toLowerCase();
 			result = result.filter(
 				(req) =>
 					req.ucrNumber?.toLowerCase().includes(query) ||
@@ -169,725 +199,408 @@ const EmployeeUCRRequestsPage = () => {
 			);
 		}
 
-		// Apply sorting
 		result.sort((a, b) => {
-			if (sortBy === "newest") {
-				return new Date(b.createdAt) - new Date(a.createdAt);
-			} else if (sortBy === "oldest") {
-				return new Date(a.createdAt) - new Date(b.createdAt);
-			} else if (sortBy === "value_high") {
-				return (b.valueInEGP || 0) - (a.valueInEGP || 0);
-			} else if (sortBy === "value_low") {
-				return (a.valueInEGP || 0) - (b.valueInEGP || 0);
-			}
+			if (sortOption === "newest") return new Date(b.createdAt) - new Date(a.createdAt);
+			if (sortOption === "oldest") return new Date(a.createdAt) - new Date(b.createdAt);
 			return 0;
 		});
 
 		setFilteredRequests(result);
-	}, [requests, statusFilter, certTypeFilter, searchQuery, sortBy]);
+	}, [requests, statusFilter, searchTerm, sortOption]);
 
-	// Format date
-	const formatDate = (dateStr) => {
-		if (!dateStr) return "—";
-		return new Date(dateStr).toLocaleDateString("ar-EG", {
-			year: "numeric",
-			month: "long",
-			day: "numeric",
-		});
-	};
 
-	// Format currency
-	const formatCurrency = (value) => {
-		if (!value) return "—";
-		return new Intl.NumberFormat("ar-EG", {
-			style: "currency",
-			currency: "EGP",
-			maximumFractionDigits: 0,
-		}).format(value);
-	};
+	// Pagination Logic
+	const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+	const indexOfLastItem = currentPage * itemsPerPage;
+	const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+	const currentItems = filteredRequests.slice(indexOfFirstItem, indexOfLastItem);
 
-	// Get status style
-	const getStatusStyle = (status) => {
-		const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
-		return {
-			className: config.color,
-			color: config.textColor,
-		};
-	};
+	const nextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+	const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
 
-	// Get status count
-	const getStatusCount = (status) => {
-		if (status === "all") return requests.length;
-		return requests.filter((req) => req.status === status).length;
-	};
-
-	// Handle Lock Request
-	const handleLock = async (requestId) => {
-		try {
-			const token = localStorage.getItem("token");
-			const response = await axios.post(
-				`${import.meta.env.VITE_API_URL}/api/ucr/employee/${requestId}/lock`,
-				{},
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
-			);
-
-			if (response.data.success) {
-				toast.success("تم قفل الطلب بنجاح");
-				fetchRequests();
-			}
-		} catch (error) {
-			console.error("Error locking request:", error);
-			toast.error(error.response?.data?.message || "فشل في قفل الطلب");
-		}
-	};
-
-	// Handle Approve Request
-	const handleApprove = async () => {
-		if (!selectedRequest) return;
-
-		setProcessingAction(true);
-		try {
-			const token = localStorage.getItem("token");
-			const response = await axios.patch(
-				`${import.meta.env.VITE_API_URL}/api/ucr/employee/${selectedRequest._id}/status`,
-				{
-					status: "approved",
-					employeeNotes: actionNotes,
-				},
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
-			);
-
-			if (response.data.success) {
-				toast.success("تم اعتماد الطلب بنجاح");
-				setActionModal({ open: false, type: null });
-				setActionNotes("");
-				setSelectedRequest(null);
-				fetchRequests();
-			}
-		} catch (error) {
-			console.error("Error approving request:", error);
-			toast.error(error.response?.data?.message || "فشل في اعتماد الطلب");
-		} finally {
-			setProcessingAction(false);
-		}
-	};
-
-	// Handle Reject Request
-	const handleReject = async () => {
-		if (!selectedRequest || !actionNotes.trim()) {
-			toast.error("يجب إدخال سبب الرفض");
-			return;
-		}
-
-		setProcessingAction(true);
-		try {
-			const token = localStorage.getItem("token");
-			const response = await axios.patch(
-				`${import.meta.env.VITE_API_URL}/api/ucr/employee/${selectedRequest._id}/status`,
-				{
-					status: "rejected",
-					rejectionReason: actionNotes,
-				},
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
-			);
-
-			if (response.data.success) {
-				toast.success("تم رفض الطلب");
-				setActionModal({ open: false, type: null });
-				setActionNotes("");
-				setSelectedRequest(null);
-				fetchRequests();
-			}
-		} catch (error) {
-			console.error("Error rejecting request:", error);
-			toast.error(error.response?.data?.message || "فشل في رفض الطلب");
-		} finally {
-			setProcessingAction(false);
-		}
-	};
-
-	// Handle Request Revision
-	const handleRevision = async () => {
-		if (!selectedRequest || !actionNotes.trim()) {
-			toast.error("يجب إدخال ملاحظات التعديل");
-			return;
-		}
-
-		setProcessingAction(true);
-		try {
-			const token = localStorage.getItem("token");
-			const response = await axios.patch(
-				`${import.meta.env.VITE_API_URL}/api/ucr/employee/${selectedRequest._id}/status`,
-				{
-					status: "needs_revision",
-					employeeNotes: actionNotes,
-				},
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
-			);
-
-			if (response.data.success) {
-				toast.success("تم طلب التعديل");
-				setActionModal({ open: false, type: null });
-				setActionNotes("");
-				setSelectedRequest(null);
-				fetchRequests();
-			}
-		} catch (error) {
-			console.error("Error requesting revision:", error);
-			toast.error(error.response?.data?.message || "فشل في طلب التعديل");
-		} finally {
-			setProcessingAction(false);
-		}
-	};
-
-	// Handle Issue UCR and Create Shipment
-	const handleIssueUCR = async () => {
-		if (!issueUcrModal.request || !ucrNumber.trim()) {
-			toast.error("يجب إدخال رقم UCR");
-			return;
-		}
-
-		setProcessingAction(true);
-		try {
-			const token = localStorage.getItem("token");
-			const response = await axios.post(
-				`${import.meta.env.VITE_API_URL}/api/ucr/employee/${issueUcrModal.request._id}/issue-ucr`,
-				{
-					ucrNumber: ucrNumber.trim(),
-				},
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
-			);
-
-			if (response.data.success) {
-				toast.success(response.data.message || "تم إصدار UCR وإنشاء الشحنة بنجاح");
-				setIssueUcrModal({ open: false, request: null });
-				setUcrNumber("");
-				fetchRequests();
-
-				// Navigate to export shipments if shipment was created
-				if (response.data.shipment) {
-					navigate("/employee/export-shipments");
-				}
-			}
-		} catch (error) {
-			console.error("Error issuing UCR:", error);
-			toast.error(error.response?.data?.message || "فشل في إصدار UCR");
-		} finally {
-			setProcessingAction(false);
-		}
-	};
-
-	// Open Issue UCR modal
-	const openIssueUcrModal = (request) => {
-		setIssueUcrModal({ open: true, request });
-		setUcrNumber("");
-	};
-
-	// Close Issue UCR modal
-	const closeIssueUcrModal = () => {
-		setIssueUcrModal({ open: false, request: null });
-		setUcrNumber("");
-	};
-
-	// Open action modal
-	const openActionModal = (request, type) => {
+	// Modals Open/Close
+	const openActionModal = (request, type, e) => {
+		e?.stopPropagation();
 		setSelectedRequest(request);
 		setActionModal({ open: true, type });
 		setActionNotes("");
 	};
-
-	// Close action modal
 	const closeActionModal = () => {
 		setActionModal({ open: false, type: null });
 		setActionNotes("");
 		setSelectedRequest(null);
 	};
+	const openIssueUcrModal = (request, e) => {
+		e?.stopPropagation();
+		setIssueUcrModal({ open: true, request });
+		setUcrNumber("");
+	};
+	const closeIssueUcrModal = () => {
+		setIssueUcrModal({ open: false, request: null });
+		setUcrNumber("");
+	};
+
+	// Constants for UI
+	const themeCardBg = isDarkMode ? "bg-white/5 border-white/5" : "bg-white border-gray-100";
+	const themeText = isDarkMode ? "text-white" : "text-gray-900";
+	const themeSubText = isDarkMode ? "text-gray-400" : "text-gray-500";
 
 	return (
-		<div className="flex flex-col min-h-screen bg-gray-50 font-sans relative">
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#050a0d]" : "bg-gray-50"}`}>
+			
+			{/* Animated Background */}
+			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+				{isDarkMode ? (
+					<>
+						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[100px] animate-pulse"></div>
+						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#0d5c66]/20 rounded-full filter blur-[120px]"></div>
+					</>
+				) : (
+					<div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-cyan-50/50 to-transparent"></div>
+				)}
+			</div>
+			
 			<Header />
-			<WelcomeBanner />
 
-			<section className="flex-grow w-full bg-white py-12 px-8 shadow-inner relative">
-				<div className="max-w-6xl mx-auto">
-					{/* Header */}
-					<div className="flex items-center justify-between mb-8">
-						<h1 className="text-3xl font-bold text-right text-red-800">
+			<section className="flex-grow w-full pt-24 pb-12 px-4 md:px-8 relative z-10">
+				<div className="max-w-7xl mx-auto">
+					{/* Header Section */}
+					<div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-[#1ba3b6]"}`}>
+							<span className="text-4xl">📋</span>
 							إدارة طلبات UCR
+							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-cyan-100 text-[#1ba3b6]"}`}>
+								{filteredRequests.length} طلب
+							</span>
 						</h1>
-						<p className="text-gray-500 text-sm">
-							{getStatusCount("pending")} طلب في انتظار المراجعة
-						</p>
 					</div>
 
-					{/* 🔍 Search + Filter + Sort */}
-					<div className="flex items-center justify-center mb-8 gap-4 relative">
-						{/* Left side — Filter + Sort */}
-						<div className="flex items-center gap-3">
-							{/* Filter Button */}
-							<button
-								onClick={toggleFilter}
-								className={`flex items-center gap-2 font-medium transition-colors ${
-									isFilterOpen
-										? "bg-red-800 text-white px-3 py-1 rounded-md"
-										: "text-red-800"
-								}`}
-							>
-								<img
-									src={filterAltIcon}
-									alt="Filter"
-									className="w-5 h-5 object-contain"
-								/>
-								تصفية
-							</button>
+					{/* Search, Filter, Sort */}
+					<SearchFilterSort
+						searchTerm={searchTerm}
+						onSearchChange={setSearchTerm}
+						searchPlaceholder="ابحث برقم UCR، العميل، الوجهة..."
+						isFilterOpen={isFilterOpen}
+						onToggleFilter={() => { setIsFilterOpen(!isFilterOpen); setIsSortOpen(false); }}
+						filterValue={statusFilter}
+						onFilterChange={setStatusFilter}
+						filterOptions={statusOptions}
+						filterLabel="تصفية حسب الحالة:"
+						onFilterApply={() => setIsFilterOpen(false)}
+						isSortOpen={isSortOpen}
+						onToggleSort={() => { setIsSortOpen(!isSortOpen); setIsFilterOpen(false); }}
+						sortValue={sortOption}
+						onSortChange={setSortOption}
+						onSortApply={() => setIsSortOpen(false)}
+						userType={user?.type}
+						isDarkMode={isDarkMode}
+					/>
 
-							{/* Sort Button */}
-							<button
-								onClick={toggleSort}
-								className={`flex items-center gap-2 font-medium transition-colors ${
-									isSortOpen
-										? "bg-red-800 text-white px-3 py-1 rounded-md"
-										: "text-red-800"
-								}`}
-							>
-								<img
-									src={filterListIcon}
-									alt="Sort"
-									className="w-5 h-5 object-contain"
-								/>
-								ترتيب
-							</button>
-						</div>
-
-						{/* Search Bar */}
-						<div className="relative w-1/2">
-							<input
-								type="text"
-								placeholder="ابحث برقم الطلب، اسم العميل، أو الوجهة..."
-								value={searchQuery}
-								onChange={(e) => setSearchQuery(e.target.value)}
-								className="w-full bg-white shadow-md rounded-full py-2 px-4 pr-10 text-right focus:outline-none focus:ring-2 focus:ring-red-500 placeholder-gray-400 text-black"
-							/>
-							<img
-								src={searchIcon}
-								alt="Search"
-								className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-							/>
-						</div>
-
-						{/* 🧩 Filter Dropdown */}
-						{isFilterOpen && (
-							<div className="absolute top-14 left-40 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-72 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">تصفية:</h4>
-								
-								{/* Status Filter */}
-								<label className="block text-sm text-gray-600 mb-1">الحالة:</label>
-								<select
-									value={statusFilter}
-									onChange={(e) => setStatusFilter(e.target.value)}
-									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
-								>
-									{statusOptions.map((status) => (
-										<option key={status.value} value={status.value}>
-											{status.label}
-										</option>
-									))}
-								</select>
-
-								{/* Certification Type Filter */}
-								<label className="block text-sm text-gray-600 mb-1">نوع الشهادة:</label>
-								<select
-									value={certTypeFilter}
-									onChange={(e) => setCertTypeFilter(e.target.value)}
-									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
-								>
-									<option value="all">الكل</option>
-									<option value="noran">شهادة النوران</option>
-									<option value="client">شهادة العميل</option>
-								</select>
-
-								<button
-									onClick={() => setIsFilterOpen(false)}
-									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
-								>
-									تطبيق
-								</button>
-							</div>
-						)}
-
-						{/* 🧩 Sort Dropdown */}
-						{isSortOpen && (
-							<div className="absolute top-14 left-20 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-64 text-right z-20 text-gray-700">
-								<h4 className="font-semibold text-red-800 mb-3">ترتيب حسب:</h4>
-								<select
-									value={sortBy}
-									onChange={(e) => setSortBy(e.target.value)}
-									className="w-full border border-gray-300 rounded-md p-2 mb-3 focus:ring-1 focus:ring-red-600 bg-white text-gray-700"
-								>
-									<option value="newest">الأحدث أولاً</option>
-									<option value="oldest">الأقدم أولاً</option>
-									<option value="value_high">القيمة الأعلى</option>
-									<option value="value_low">القيمة الأقل</option>
-								</select>
-								<button
-									onClick={() => setIsSortOpen(false)}
-									className="w-full bg-red-800 text-white py-1 rounded-md hover:bg-red-700 transition"
-								>
-									تطبيق
-								</button>
-							</div>
-						)}
-					</div>
-
-					{/* 📋 Requests Table */}
+					{/* Grid of Cards */}
 					{loading ? (
-						<div className="flex justify-center items-center py-12 gap-4">
-							<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
-							<span className="text-gray-600 text-lg">جاري تحميل الطلبات...</span>
-						</div>
+						<LoadingSpinner />
 					) : error ? (
-						<div className="bg-red-50 border border-red-300 rounded-lg p-4 text-right">
-							<p className="text-red-800 font-medium mb-3">❌ حدث خطأ: {error}</p>
-							<button
-								onClick={() => window.location.reload()}
-								className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-							>
-								إعادة محاولة
-							</button>
-						</div>
+						<ErrorMessage message={error} onRetry={fetchRequests} retryText="إعادة محاولة" />
 					) : filteredRequests.length === 0 ? (
-						<div className="text-center py-12">
-							<span className="text-5xl mb-4 block">📭</span>
-							<p className="text-gray-500 text-lg">
-								{requests.length === 0
-									? "لا توجد طلبات UCR"
-									: "لا توجد طلبات تطابق معايير البحث"}
-							</p>
+						<div className={`text-center py-20 rounded-3xl border border-dashed ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+							<div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${isDarkMode ? "bg-white/5" : "bg-gray-50"}`}>
+								<span className="text-4xl">📭</span>
+							</div>
+							<h3 className={`text-xl font-bold mb-2 ${themeText}`}>لا توجد طلبات UCR</h3>
+							<p className={themeSubText}>لم يتم العثور على طلبات تطابق بحثك</p>
 						</div>
 					) : (
-						<div className="overflow-x-auto">
-							<table className="w-full text-right border-separate border-spacing-y-3">
-								<thead>
-									<tr className="text-gray-600 text-sm">
-										<th className="py-2 px-4 font-semibold text-right">العميل</th>
-										<th className="py-2 px-4 font-semibold text-right">رقم UCR / نوع الشحن</th>
-										<th className="py-2 px-4 font-semibold text-right">الوجهة</th>
-										<th className="py-2 px-4 font-semibold text-right">القيمة</th>
-										<th className="py-2 px-4 font-semibold text-right">الحالة</th>
-										<th className="py-2 px-4 font-semibold text-right">الإجراءات</th>
-									</tr>
-								</thead>
-								<tbody>
-									{filteredRequests.map((request) => {
-										const statusStyle = getStatusStyle(request.status);
-										return (
-											<tr
-												key={request._id}
-												className={`rounded-xl transition text-right ${
-													request.isLocked
-														? "bg-blue-50 hover:bg-blue-100"
-														: "bg-gray-100 hover:bg-gray-200"
-												}`}
-											>
-												<td className="py-3 px-4 align-top">
-													<div className="flex flex-col text-sm">
-														<span className="text-gray-700 text-base font-semibold">
-															{request.userId?.fullname || request.userId?.name || "—"}
-														</span>
-														<span className="text-gray-500 text-xs">
-															{formatDate(request.createdAt)}
-														</span>
+						<>
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+								{currentItems.map((request) => {
+									const statusConfig = STATUS_CONFIG[request.status] || STATUS_CONFIG.pending;
+									const isLocked = request.isLocked;
+									const isLockedByOthers = isLocked && request.reviewingBy?._id !== user.id;
+
+									return (
+										<div
+											key={request._id}
+											className={`group relative rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between
+												${themeCardBg} ${isDarkMode ? "hover:border-[#1ba3b6]/30" : "hover:border-[#1ba3b6]/30"}
+											`}
+											onClick={() => {
+                        navigate(`/employee/ucr-request/${request._id}`);
+                      }}
+										>
+											{/* Top: Status & Date */}
+											<div className="flex justify-between items-start mb-4">
+												<span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border}`}>
+													<span>{statusConfig.icon}</span>
+													{statusConfig.label}
+												</span>
+												<span className={`text-xs ${themeSubText}`}>
+													{new Date(request.createdAt).toLocaleDateString("ar-EG")}
+												</span>
+											</div>
+
+											{/* Middle: Info */}
+											<div className="mb-4">
+												<h3 className={`text-lg font-bold mb-1 break-all ${request.ucrNumber ? "text-[#1ba3b6]" : themeText}`}>
+													{request.ucrNumber || `#${request._id.slice(-6)}`}
+												</h3>
+												<div className={`flex items-center gap-1 text-sm mb-2 ${themeSubText}`}>
+													🌍 <span>{request.destinationCountry || "غير محدد"}</span>
+												</div>
+												<div className="flex items-center gap-2 mb-2">
+													<div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDarkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-700"}`}>
+														{request.userId?.username?.charAt(0).toUpperCase()}
 													</div>
-												</td>
-												<td className="py-3 px-4 align-top">
-													<div className="flex flex-col text-sm">
-														<span className="font-semibold text-gray-800 flex items-center gap-1">
-															{request.isLocked && "🔒"}
-															{request.ucrNumber || `#${request._id?.slice(-6)}`}
-														</span>
-														<span className="text-gray-500 text-xs">
-															{request.shippingMethod === "air" ? "✈️ جوي" : "🚢 بحري"}
-														</span>
-													</div>
-												</td>
-												<td className="py-3 px-4 align-top">
-													<div className="flex flex-col text-sm">
-														<span className="text-gray-700 text-base">
-															{request.destinationCountry || "—"}
-														</span>
-														{request.destinationPort && (
-															<span className="text-gray-500 text-xs">
-																{request.destinationPort}
-															</span>
-														)}
-													</div>
-												</td>
-												<td className="py-3 px-4 align-top">
-													<span className="text-gray-600 text-sm">
-														{formatCurrency(request.valueInEGP)}
+													<span className={`text-sm ${themeText}`}>
+														{request.userId?.fullname || request.userId?.username}
 													</span>
-												</td>
-												<td className="py-3 px-4 align-top">
-													<span
-														className={`${statusStyle.className} text-xs font-semibold px-3 py-1 rounded-full flex items-center justify-center gap-2 w-fit`}
-														style={{ color: statusStyle.color }}
-													>
-														<img
-															src={quickReorderIcon}
-															alt="status icon"
-															className="w-4 h-4"
-														/>
-														{STATUS_CONFIG[request.status]?.label || request.status}
-													</span>
-												</td>
-												<td className="py-3 px-4 align-top">
-													<div className="flex flex-wrap items-center gap-2">
+												</div>
+												
+												{/* Locked Status */}
+												{isLocked && (
+													<div className="mt-2 text-xs flex items-center gap-1 text-red-500 font-medium bg-red-500/10 px-2 py-1 rounded-lg w-fit">
+														<Lock size={12} />
+														<span>مقفول للمراجعة</span>
+													</div>
+												)}
+											</div>
+
+											{/* Bottom: Actions */}
+											<div className={`pt-4 border-t flex flex-wrap gap-2 justify-end ${isDarkMode ? "border-white/5" : "border-gray-100"}`}>
+												
+												{/* View Details */}
+												<button
+													onClick={(e) => {
+														e.stopPropagation();
+														navigate(`/employee/ucr-request/${request._id}`);
+													}}
+													className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 bg-blue-50 text-blue-600 hover:bg-blue-100"
+												>
+													<Eye size={14} /> تفاصيل
+												</button>
+
+												{/* Lock/Unlock */}
+												{request.status === "pending" && (
+													!isLocked ? (
 														<button
-															onClick={() => navigate(`/employee/ucr-request/${request._id}`)}
-															className="text-blue-600 text-sm font-medium underline cursor-pointer hover:text-blue-800"
+															onClick={(e) => handleLock(request._id, e)}
+															className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 bg-purple-100 text-purple-700 hover:bg-purple-200"
 														>
-															عرض
+															<Lock size={14} /> قفل
 														</button>
-														{request.status === "pending" && !request.isLocked && (
-															<>
-																<span className="text-gray-300">|</span>
-																<button
-																	onClick={() => handleLock(request._id)}
-																	className="text-purple-600 text-sm font-medium underline cursor-pointer hover:text-purple-800"
-																>
-																	🔒 قفل
-																</button>
-															</>
-														)}
-														{(request.status === "under_review" ||
-															(request.status === "pending" && request.isLocked)) && (
-															<>
-																<span className="text-gray-300">|</span>
-																<button
-																	onClick={() => openActionModal(request, "approve")}
-																	className="text-green-600 text-sm font-medium cursor-pointer hover:text-green-800"
-																>
-																	✅ قبول
-																</button>
-																<button
-																	onClick={() => openActionModal(request, "revision")}
-																	className="text-yellow-600 text-sm font-medium cursor-pointer hover:text-yellow-800"
-																>
-																	⚠️ تعديل
-																</button>
-																<button
-																	onClick={() => openActionModal(request, "reject")}
-																	className="text-red-600 text-sm font-medium cursor-pointer hover:text-red-800"
-																>
-																	❌ رفض
-																</button>
-															</>
-														)}
+													) : null
+												)}
 
-														{/* Issue UCR button for approved requests */}
-														{request.status === "approved" && (
-															<>
-																<span className="text-gray-300">|</span>
-																<button
-																	onClick={() => openIssueUcrModal(request)}
-																	className="text-indigo-600 text-sm font-medium cursor-pointer hover:text-indigo-800"
-																>
-																	📋 إصدار UCR
-																</button>
-															</>
-														)}
+												{/* Actions: Approve / Revise / Reject */}
+												{((request.status === "under_review" || (request.status === "pending" && isLocked)) && !isLockedByOthers) && (
+													<>
+														<button
+															onClick={(e) => openActionModal(request, "approve", e)}
+															className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 bg-green-100 text-green-700 hover:bg-green-200"
+														>
+															<CheckCircle size={14} />
+														</button>
+														<button
+															onClick={(e) => openActionModal(request, "revision", e)}
+															className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 bg-orange-100 text-orange-700 hover:bg-orange-200"
+														>
+															<AlertTriangle size={14} />
+														</button>
+														<button
+															onClick={(e) => openActionModal(request, "reject", e)}
+															className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 bg-red-100 text-red-700 hover:bg-red-200"
+														>
+															<XCircle size={14} />
+														</button>
+													</>
+												)}
 
-														{/* Track shipment for ucr_issued requests */}
-														{request.status === "ucr_issued" && request.hasExportShipment && (
-															<>
-																<span className="text-gray-300">|</span>
-																<button
-																	onClick={() => navigate("/employee/export-shipments")}
-																	className="text-green-600 text-sm font-medium cursor-pointer hover:text-green-800"
-																>
-																	📦 متابعة الشحنة
-																</button>
-															</>
-														)}
-													</div>
-												</td>
-											</tr>
-										);
-									})}
-								</tbody>
-							</table>
-						</div>
+												{/* Issue UCR */}
+												{request.status === "approved" && (
+													<button
+														onClick={(e) => openIssueUcrModal(request, e)}
+														className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+													>
+														<Anchor size={14} /> إصدار UCR
+													</button>
+												)}
+
+												{/* Track Shipment */}
+												{request.status === "ucr_issued" && request.hasExportShipment && (
+													<button
+														onClick={(e) => { e.stopPropagation(); navigate("/employee/export-shipments"); }}
+														className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 bg-green-50 text-green-600 hover:bg-green-100"
+													>
+														<Truck size={14} /> متابعة
+													</button>
+												)}
+											</div>
+										</div>
+									);
+								})}
+							</div>
+
+
+
+							{/* Pagination */}
+							{totalPages > 1 && (
+								<div className="flex justify-center items-center gap-4 mt-12" dir="ltr">
+									<button
+										onClick={prevPage}
+										disabled={currentPage === 1}
+										className={`p-3 rounded-full transition-all duration-300 ${
+											currentPage === 1 
+												? (isDarkMode ? "text-gray-700 bg-white/5 cursor-not-allowed" : "text-gray-300 bg-gray-100 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm")
+										}`}
+									>
+										<ChevronLeft size={24} />
+									</button>
+									
+									<div className={`px-6 py-2 rounded-xl font-bold ${isDarkMode ? "bg-white/5 text-white border border-white/10" : "bg-white text-gray-800 shadow-sm"}`}>
+										<span className="text-[#1ba3b6]">{currentPage}</span>
+										<span className="mx-2 opacity-50">/</span>
+										<span className="opacity-70">{totalPages}</span>
+									</div>
+
+									<button
+										onClick={nextPage}
+										disabled={currentPage === totalPages}
+										className={`p-3 rounded-full transition-all duration-300 ${
+											currentPage === totalPages 
+												? (isDarkMode ? "text-gray-700 bg-white/5 cursor-not-allowed" : "text-gray-300 bg-gray-100 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm")
+										}`}
+									>
+										<ChevronRight size={24} />
+									</button>
+								</div>
+							)}
+						</>
 					)}
 				</div>
 			</section>
 
+			{/* -- Modals -- */}
+			
+			{/* Action Modal (Approve/Reject/Revise) */}
+			{actionModal.open && (
+				<div 
+					className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+					onClick={closeActionModal}
+				>
+					<div 
+						className={`relative rounded-2xl max-w-md w-full p-6 shadow-2xl transform transition-all scale-100 ${isDarkMode ? "bg-[#1e1e1e] border border-white/10" : "bg-white"}`}
+						onClick={e => e.stopPropagation()}
+					>
+						<h3 className={`text-xl font-bold mb-4 text-right ${themeText}`}>
+							{actionModal.type === 'approve' ? '✅ اعتماد الطلب' : actionModal.type === 'reject' ? '❌ رفض الطلب' : '⚠️ طلب تعديل'}
+						</h3>
+
+						<div className="mb-6 text-right">
+							<label className={`block text-sm font-bold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+								ملاحظات {actionModal.type === 'reject' ? 'الرفض' : actionModal.type === 'revision' ? 'التعديل' : 'الاعتماد'}
+								{actionModal.type !== 'approve' && <span className="text-red-500">*</span>}
+							</label>
+							<textarea
+								value={actionNotes}
+								onChange={(e) => setActionNotes(e.target.value)}
+								rows={3}
+								className={`w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#1ba3b6] outline-none transition-all resize-none ${
+									isDarkMode 
+										? "bg-black/30 border-white/10 text-white placeholder-gray-500" 
+										: "bg-white border-gray-300 text-gray-900"
+								}`}
+								placeholder="أكتب ملاحظاتك هنا..."
+							/>
+						</div>
+
+						<div className="flex justify-end gap-3">
+							<button
+								onClick={closeActionModal}
+								disabled={processingAction}
+								className={`px-5 py-2.5 rounded-xl font-bold transition-all ${
+									isDarkMode 
+										? "bg-white/10 text-white hover:bg-white/20" 
+										: "bg-gray-100 text-gray-700 hover:bg-gray-200"
+								}`}
+							>
+								إلغاء
+							</button>
+							<button
+								onClick={handleActionSubmit}
+								disabled={processingAction || ((actionModal.type === 'reject' || actionModal.type === 'revision') && !actionNotes.trim())}
+								className={`px-5 py-2.5 rounded-xl font-bold text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed
+									${actionModal.type === 'approve' ? 'bg-green-600 hover:bg-green-700' : 
+									  actionModal.type === 'reject' ? 'bg-red-600 hover:bg-red-700' : 'bg-orange-500 hover:bg-orange-600'}
+								`}
+							>
+								{processingAction ? "جاري التحديث..." : "تأكيد"}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+			
 			{/* Issue UCR Modal */}
-			{issueUcrModal.open && issueUcrModal.request && (
-				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-					<div className="bg-white rounded-lg max-w-md w-full p-6">
-						<h3 className="text-lg font-bold mb-4">📋 إصدار رقم UCR</h3>
-
-						<p className="text-sm text-gray-600 mb-4">
-							العميل:{" "}
-							<span className="font-medium">
-								{issueUcrModal.request.userId?.fullname || "غير محدد"}
-							</span>
+			{issueUcrModal.open && (
+				<div 
+					className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+					onClick={closeIssueUcrModal}
+				>
+					<div 
+						className={`relative rounded-2xl max-w-md w-full p-6 shadow-2xl transform transition-all scale-100 ${isDarkMode ? "bg-[#1e1e1e] border border-white/10" : "bg-white"}`}
+						onClick={e => e.stopPropagation()}
+					>
+						<h3 className={`text-xl font-bold mb-4 text-right flex items-center gap-2 ${themeText}`}>
+							<Anchor size={24} /> إصدار رقم UCR
+						</h3>
+						
+						<p className={`text-sm mb-4 text-right ${themeSubText}`}>
+							سيتم إنشاء شحنة تصدير جديدة تلقائياً عند إصدار رقم UCR.
 						</p>
 
-						<p className="text-sm text-gray-600 mb-4">
-							الوصف:{" "}
-							<span className="font-medium">
-								{issueUcrModal.request.generalDescription?.slice(0, 50)}
-								{issueUcrModal.request.generalDescription?.length > 50 ? "..." : ""}
-							</span>
-						</p>
-
-						<div className="mb-4">
-							<label className="block text-sm font-medium text-gray-700 mb-1">
-								رقم UCR من النافذة الواحدة *
+						<div className="mb-6 text-right">
+							<label className={`block text-sm font-bold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+								رقم UCR من النافذة <span className="text-red-500">*</span>
 							</label>
 							<input
 								type="text"
 								value={ucrNumber}
 								onChange={(e) => setUcrNumber(e.target.value)}
-								className="w-full p-2 border border-gray-300 rounded-lg bg-white text-black focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-								placeholder="أدخل رقم UCR..."
+								className={`w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#1ba3b6] outline-none transition-all text-left ${
+									isDarkMode 
+										? "bg-black/30 border-white/10 text-white placeholder-gray-500" 
+										: "bg-white border-gray-300 text-gray-900"
+								}`}
+								placeholder="أدخل الرقم هنا..."
 								dir="ltr"
 							/>
 						</div>
 
-						<p className="text-xs text-gray-500 mb-4">
-							⚠️ سيتم إنشاء شحنة تصدير جديدة تلقائياً عند إصدار رقم UCR
-						</p>
-
-						<div className="flex justify-end gap-2">
+						<div className="flex justify-end gap-3">
 							<button
 								onClick={closeIssueUcrModal}
 								disabled={processingAction}
-								className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+								className={`px-5 py-2.5 rounded-xl font-bold transition-all ${
+									isDarkMode 
+										? "bg-white/10 text-white hover:bg-white/20" 
+										: "bg-gray-100 text-gray-700 hover:bg-gray-200"
+								}`}
 							>
 								إلغاء
 							</button>
 							<button
 								onClick={handleIssueUCR}
 								disabled={processingAction || !ucrNumber.trim()}
-								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+								className="px-5 py-2.5 bg-[#1ba3b6] text-white rounded-xl font-bold hover:bg-[#158a9b] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#1ba3b6]/20"
 							>
-								{processingAction && (
-									<svg
-										className="animate-spin h-4 w-4"
-										viewBox="0 0 24 24"
-									>
-										<circle
-											className="opacity-25"
-											cx="12"
-											cy="12"
-											r="10"
-											stroke="currentColor"
-											strokeWidth="4"
-										></circle>
-										<path
-											className="opacity-75"
-											fill="currentColor"
-											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-										></path>
-									</svg>
-								)}
-								إصدار UCR وإنشاء الشحنة
+								{processingAction ? "جاري الإصدار..." : "إصدار وإنشاء الشحنة"}
 							</button>
 						</div>
 					</div>
 				</div>
 			)}
 
-			{/* Action Modal */}
-			{actionModal.open && selectedRequest && (
-				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-					<div className="bg-white rounded-lg max-w-md w-full p-6">
-						<h3 className="text-lg font-bold mb-4">
-							{actionModal.type === "approve" && "✅ اعتماد الطلب"}
-							{actionModal.type === "reject" && "❌ رفض الطلب"}
-							{actionModal.type === "revision" && "⚠️ طلب تعديل"}
-						</h3>
-
-						<p className="text-sm text-gray-600 mb-4">
-							الطلب:{" "}
-							<span className="font-medium">
-								{selectedRequest.ucrNumber || selectedRequest._id?.slice(-8)}
-							</span>
-						</p>
-
-						<div className="mb-4">
-							<label className="block text-sm font-medium text-gray-700 mb-1">
-								{actionModal.type === "approve" && "ملاحظات (اختياري)"}
-								{actionModal.type === "reject" && "سبب الرفض *"}
-								{actionModal.type === "revision" && "ملاحظات التعديل المطلوب *"}
-							</label>
-							<textarea
-								value={actionNotes}
-								onChange={(e) => setActionNotes(e.target.value)}
-								rows={4}
-								className="w-full p-2 border border-gray-300 rounded-lg bg-white text-black focus:ring-2 focus:ring-red-500 focus:border-red-500"
-								placeholder={
-									actionModal.type === "approve"
-										? "أضف أي ملاحظات..."
-										: "اكتب السبب أو الملاحظات هنا..."
-								}
-							/>
-						</div>
-
-						<div className="flex justify-end gap-2">
-							<button
-								onClick={closeActionModal}
-								disabled={processingAction}
-								className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-							>
-								إلغاء
-							</button>
-							<button
-								onClick={() => {
-									if (actionModal.type === "approve") handleApprove();
-									else if (actionModal.type === "reject") handleReject();
-									else if (actionModal.type === "revision") handleRevision();
-								}}
-								disabled={processingAction}
-								className={`px-4 py-2 text-white rounded-lg disabled:opacity-50 ${
-									actionModal.type === "approve"
-										? "bg-green-600 hover:bg-green-700"
-										: actionModal.type === "reject"
-										? "bg-red-600 hover:bg-red-700"
-										: "bg-yellow-600 hover:bg-yellow-700"
-								}`}
-							>
-								{processingAction ? (
-									<span className="flex items-center gap-2">
-										<div className="spinner border-2 border-white border-t-transparent rounded-full w-4 h-4 animate-spin"></div>
-										جاري المعالجة...
-									</span>
-								) : (
-									<>
-										{actionModal.type === "approve" && "تأكيد الاعتماد"}
-										{actionModal.type === "reject" && "تأكيد الرفض"}
-										{actionModal.type === "revision" && "إرسال طلب التعديل"}
-									</>
-								)}
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
-
-			<Footer />
 		</div>
 	);
 };
