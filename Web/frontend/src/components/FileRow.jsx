@@ -113,10 +113,18 @@ const FileRow = ({
 				let downloadName = name || "document";
 				const disposition = response.headers.get('Content-Disposition');
 				if (disposition) {
-					const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-					const matches = filenameRegex.exec(disposition);
-					if (matches != null && matches[1]) { 
-						downloadName = decodeURIComponent(matches[1].replace(/['"]/g, ''));
+					// Try filename* (UTF-8) first
+					const filenameStarRegex = /filename\*=UTF-8''([^;\n]*)/;
+					const starMatches = filenameStarRegex.exec(disposition);
+					if (starMatches && starMatches[1]) {
+						downloadName = decodeURIComponent(starMatches[1]);
+					} else {
+						// Fallback to standard filename
+						const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+						const matches = filenameRegex.exec(disposition);
+						if (matches != null && matches[1]) { 
+							downloadName = decodeURIComponent(matches[1].replace(/['"]/g, ''));
+						}
 					}
 				}
 

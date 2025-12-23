@@ -24,6 +24,8 @@ const {
 	getRevenueComparison,
 	searchShipments,
 	getDistinctDocumentNames,
+    rejectUploadedDocument,
+    addCompletedDocument // ✅
 } = require("../controllers/shipmentController");
 
 const router = express.Router();
@@ -56,6 +58,12 @@ router.post(
 	protect,
 	requestRequiredDocuments
 );
+// ✅ Add completed document directly (Employee)
+router.post(
+	"/id/:shipmentId/completed-document",
+	protect,
+	addCompletedDocument
+);
 router.get("/id/:shipmentId/required-documents", protect, getRequiredDocuments);
 router.patch(
 	"/id/:shipmentId/required-documents/:documentId",
@@ -65,7 +73,13 @@ router.patch(
 router.delete(
 	"/id/:shipmentId/required-documents/:documentId",
 	protect,
+	protect,
 	resetUploadedDocument
+);
+router.put(
+	"/id/:shipmentId/required-documents/:documentId/reject",
+	protect,
+	require("../controllers/shipmentController").rejectUploadedDocument
 );
 router.get("/id/:shipmentId", protect, getShipmentById);
 

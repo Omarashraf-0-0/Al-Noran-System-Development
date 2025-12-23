@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { LayoutGrid, List } from "lucide-react";
 import Header from "../components/Header";
-import Footer from "../components/Footer";
 import WelcomeBanner from "./WelcomeBanner";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorMessage from "../components/ErrorMessage";
@@ -20,6 +20,11 @@ export default function ShipmentsList() {
 	const [error, setError] = useState(null);
 	const [selectedStatus, setSelectedStatus] = useState("الكل");
 	const [sortOption, setSortOption] = useState("newest");
+	const [notificationCount, setNotificationCount] = useState(0);
+	const [notifications, setNotifications] = useState([]);
+	const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
+	const notificationRef = useRef(null);
+	const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
 
 	// TODO: RBAC - Get user permissions from context/store
 	// Example: const { user, hasPermission } = useAuth();
@@ -71,7 +76,7 @@ export default function ShipmentsList() {
 				const formattedShipments = (response.data || []).map((shipment) => ({
 					id: shipment._id,
 					clientName: shipment.employerName || "Unknown Client",
-					shipmentNo: shipment.number46 || shipment.shipmentNumber || "N/A",
+					shipmentNo: shipment.shipmentCode || shipment.shipmentNumber || shipment.acid || shipment.number46 || "N/A",
 					acid: shipment.acid || "N/A",
 					status: shipment.status || "pending",
 					createdAt: shipment.createdAt, // Keep raw date for sorting
@@ -181,19 +186,52 @@ export default function ShipmentsList() {
 		}
 	});
 
-	return (
-		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#0a0505] text-white" : "bg-gray-50 text-gray-900"}`}>
-			<Header />
-			<WelcomeBanner />
+	// Determine Theme based on User - Default Employee Turquoise
+	const theme = {
+		pageBg: isDarkMode 
+			? "bg-[#050f14]" 
+			: "bg-[#F0FEFF]",
+		sectionBg: isDarkMode 
+			? "bg-[#0a1a1f] border-[#163a42]" 
+			: "bg-white border-cyan-50",
+		heading: isDarkMode ? "text-[#1ba3b6]" : "text-[#1ba3b6]",
+		button: "bg-gradient-to-r from-[#1ba3b6] to-[#158A9A] hover:bg-[#158A9A] text-white shadow-lg hover:shadow-[#1ba3b6]/30",
+	};
 
-			<section className={`flex-grow w-full py-12 px-8 shadow-inner relative transition-colors duration-300 ${isDarkMode ? "bg-[#1a1010] border-t border-[#3d1a1a]" : "bg-white"}`}>
-				<div className="max-w-6xl mx-auto">
-					<h1 className={`text-3xl font-bold text-right mb-8 ${isDarkMode ? "text-red-500" : "text-red-800"}`}>
-						شحناتي
-					</h1>
+	return (
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#050a0d]" : "bg-gray-50"}`}>
+			
+			{/* Animated Background - Turquoise Theme */}
+			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+				{isDarkMode ? (
+					<>
+						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[100px] animate-pulse"></div>
+						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#0d5c66]/20 rounded-full filter blur-[120px]"></div>
+					</>
+				) : (
+					<div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-cyan-50/50 to-transparent"></div>
+				)}
+			</div>
+
+			<Header />
+			
+			<section className="flex-grow w-full pt-24 pb-12 px-4 md:px-8 relative z-10">
+				<div className="max-w-7xl mx-auto">
+					{/* Welcome Banner - Same width as content */}
+					<WelcomeBanner />
+
+					{/* Header Section */}
+					<div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-[#1ba3b6]"}`}>
+							<span className="text-4xl">📦</span>
+							شحناتي
+							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-cyan-100 text-[#1ba3b6]"}`}>
+								{filteredShipments.length} شحنة
+							</span>
+						</h1>
+					</div>
 
 					{/* 🔍 Search + Filter + Sort */}
-					{/* TODO: RBAC - Only show controls if user has permission */}
 					<SearchFilterSort
 						searchTerm={searchTerm}
 						onSearchChange={setSearchTerm}
@@ -210,10 +248,29 @@ export default function ShipmentsList() {
 						sortValue={sortOption}
 						onSortChange={setSortOption}
 						onSortApply={handleSortApply}
-					/>
+						userType={user?.type}
 
-					{/* 📦 Shipments Table */}
-					{/* TODO: RBAC - Only show shipments if user has permission */}
+						isDarkMode={isDarkMode}
+					>
+						<div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+							<button
+								onClick={() => setViewMode("grid")}
+								className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								title="عرض شبكة"
+							>
+								<LayoutGrid size={20} />
+							</button>
+							<button
+								onClick={() => setViewMode("list")}
+								className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								title="عرض قائمة"
+							>
+								<List size={20} />
+							</button>
+						</div>
+					</SearchFilterSort>
+
+					{/* 📦 Shipments Grid */}
 					{loading ? (
 						<LoadingSpinner />
 					) : error ? (
@@ -222,20 +279,35 @@ export default function ShipmentsList() {
 							onRetry={() => window.location.reload()}
 							retryText="إعادة محاولة"
 						/>
+					) : filteredShipments.length === 0 ? (
+						<div className={`text-center py-20 rounded-3xl border border-dashed ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+							<div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${isDarkMode ? "bg-white/5" : "bg-gray-50"}`}>
+								<span className="text-4xl">📦</span>
+							</div>
+							<h3 className={`text-xl font-bold mb-2 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>لا توجد شحنات</h3>
+							<p className="text-gray-500">لم يتم العثور على شحنات تطابق بحثك</p>
+						</div>
 					) : (
 						<>
 							<ShipmentsTable
 								shipments={filteredShipments}
-								maxItems={5}
+								maxItems={12}
 								linkPrefix="/employee-shipment"
+								userType={user?.type}
+								isDarkMode={isDarkMode}
+								viewMode={viewMode}
 							/>
 
 							{/* View All Button */}
-							{filteredShipments.length > 5 && (
+							{filteredShipments.length > 12 && (
 								<div className="flex justify-center mt-8">
 									<a
 										href="/employee-shipments"
-										className="bg-red-800 text-white px-8 py-3 rounded-lg hover:bg-red-700 transition font-semibold"
+										className={`px-8 py-3 rounded-xl font-bold transition-all transform hover:-translate-y-1 ${
+											isDarkMode 
+												? "bg-gradient-to-r from-[#1ba3b6] to-[#158A9A] text-white shadow-lg hover:shadow-[#1ba3b6]/30" 
+												: "bg-[#1ba3b6] text-white hover:bg-[#158A9A]"
+										}`}
 									>
 										عرض جميع الشحنات ({filteredShipments.length})
 									</a>
@@ -245,8 +317,6 @@ export default function ShipmentsList() {
 					)}
 				</div>
 			</section>
-
-			<Footer />
 		</div>
 	);
 }

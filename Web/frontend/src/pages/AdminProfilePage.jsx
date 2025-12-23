@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
-import Header from "../components/Header";
 import Cropper from "react-easy-crop";
 import { useTheme } from "../context/ThemeContext";
 
@@ -47,33 +46,6 @@ const AdminProfilePage = () => {
 	const [isVisible, setIsVisible] = useState(false);
 	const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
-	const handleDeletePhoto = () => {
-		if (!profilePhoto) return;
-		setShowDeleteConfirmModal(true);
-	};
-
-	const confirmDeletePhoto = async () => {
-		setDeletingPhoto(true);
-		setShowDeleteConfirmModal(false);
-		try {
-			const token = localStorage.getItem("token");
-			await axios.put(
-				`${import.meta.env.VITE_API_URL}/api/users/profile`,
-				{ profilePhoto: "", fullname: user.fullname, username: user.username, phone: user.phone, email: user.email },
-				{ headers: { Authorization: `Bearer ${token}` } }
-			);
-			setProfilePhoto(null);
-			setUser((prev) => ({ ...prev, profilePhoto: null }));
-			toast.success("تم حذف الصورة بنجاح");
-		} catch {
-			toast.error("فشل حذف الصورة");
-		} finally {
-			setDeletingPhoto(false);
-		}
-	};
-// ... (rest of code)
-
-// Inside return JSX, add the modal:
 
 	// Use Global Theme Context
 	const { isDarkMode, toggleTheme } = useTheme();
@@ -105,8 +77,35 @@ const AdminProfilePage = () => {
 		modalOverlay: isDarkMode ? "bg-black/60" : "bg-black/40",
 	};
 
+
+	const handleDeletePhoto = () => {
+		if (!profilePhoto) return;
+		setShowDeleteConfirmModal(true);
+	};
+
+	const confirmDeletePhoto = async () => {
+		setDeletingPhoto(true);
+		setShowDeleteConfirmModal(false);
+		try {
+			const token = localStorage.getItem("token");
+			await axios.put(
+				`${import.meta.env.VITE_API_URL}/api/users/profile`,
+				{ profilePhoto: "", fullname: user.fullname, username: user.username, phone: user.phone, email: user.email },
+				{ headers: { Authorization: `Bearer ${token}` } }
+			);
+			setProfilePhoto(null);
+			setUser((prev) => ({ ...prev, profilePhoto: null }));
+			toast.success("تم حذف الصورة بنجاح");
+		} catch {
+			toast.error("فشل حذف الصورة");
+		} finally {
+			setDeletingPhoto(false);
+		}
+	};
+
 	useEffect(() => {
 		fetchUserProfile();
+		setIsVisible(true);
 		setIsVisible(true);
 	}, []);
 
@@ -132,6 +131,7 @@ const AdminProfilePage = () => {
 			const response = await axios.get(
 				`${import.meta.env.VITE_API_URL}/api/users/profile`,
 				{ headers: { Authorization: `Bearer ${token}` } }
+
 			);
 
 			setUser(response.data.user);
@@ -144,6 +144,7 @@ const AdminProfilePage = () => {
 			setFormData(userData);
 			setOriginalFormData(userData);
 			setHasUnsavedChanges(false);
+
 
 			if (response.data.user.profilePhoto) {
 				const photo = response.data.user.profilePhoto;
@@ -231,6 +232,8 @@ const AdminProfilePage = () => {
 				setShowPasswordModal(false);
 				setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
 				setShowPasswords({ currentPassword: false, newPassword: false, confirmPassword: false });
+				setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+				setShowPasswords({ currentPassword: false, newPassword: false, confirmPassword: false });
 			}
 		} catch (error) {
 			toast.error(error.response?.data?.message || "فشل تغيير كلمة المرور");
@@ -260,7 +263,6 @@ const AdminProfilePage = () => {
 	};
 
 	const onCropComplete = (croppedArea, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels);
-
 	const createImage = (url) =>
 		new Promise((resolve, reject) => {
 			const image = new Image();
@@ -276,6 +278,8 @@ const AdminProfilePage = () => {
 		const size = 500;
 		canvas.width = size;
 		canvas.height = size;
+		ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, size, size);
+		return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.95));
 		ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, size, size);
 		return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.95));
 	};
@@ -306,12 +310,11 @@ const AdminProfilePage = () => {
 				// 3. Update user profile with the identifier
 				await axios.put(
 					`${import.meta.env.VITE_API_URL}/api/users/profile`,
-					{ profilePhoto: photoIdentifier, fullname: user.fullname, username: user.username, phone: user.phone, email: user.email },
+					{ profilePhoto: photoIdentifier },
 					{ headers: { Authorization: `Bearer ${token}` } }
 				);
 
 				// 4. Update local state for immediate feedback
-				// If we have a direct URL (presigned or local), use it. Otherwise rely on fetchUserProfile logic.
 				const displayUrl = response.data.upload?.url || response.data.file?.url || (photoIdentifier.startsWith("http") ? photoIdentifier : null);
 				
 				if (displayUrl) {
@@ -333,19 +336,18 @@ const AdminProfilePage = () => {
 		}
 	};
 
-
-
 	const getAdminType = () => {
 		const userType = user?.type;
 		const employeeType = user?.employeeDetails?.employeeType;
 		if (userType === "admin" || employeeType === "System Admin") {
-			return { label: "مدير النظام", icon: "👑", color: "bg-[#D4AF37]" }; // Gold for Admin
+			return { label: "مدير النظام", icon: "👑", color: "bg-[#DAA520]" };
 		}
-		return { label: "مسؤول", icon: "🛡️", color: "bg-[#B5952F]" }; // Dark Gold for others
+		return { label: "مسؤول", icon: "🛡️", color: "bg-[#B8860B]" };
 	};
 
 	if (loading) {
 		return (
+
 			<div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-16 w-16 border-4 border-[#D4AF37] border-t-transparent mx-auto mb-4"></div>
@@ -397,8 +399,10 @@ const AdminProfilePage = () => {
 				
 				{/* Row 1: Profile Header Card */}
 				<div className={`${theme.headerGradient} rounded-2xl p-6 relative overflow-hidden shadow-2xl border border-white/10`}>
-					<div className="absolute top-0 left-0 w-40 h-40 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-					<div className="absolute bottom-0 right-0 w-32 h-32 bg-[#F3E5AB]/10 rounded-full translate-x-1/4 translate-y-1/4"></div>
+					<div className="absolute top-0 left-0 w-40 h-40 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2">
+					</div>
+					<div className="absolute bottom-0 right-0 w-32 h-32 bg-[#F3E5AB]/10 rounded-full translate-x-1/4 translate-y-1/4">
+					</div>
 					
 					<div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
 						{/* Profile Photo */}
@@ -408,11 +412,18 @@ const AdminProfilePage = () => {
 									{loadingPhoto || uploadingPhoto ? (
 										<div className="animate-spin rounded-full h-8 w-8 border-2 border-[#D4AF37] border-t-transparent"></div>
 									) : profilePhoto ? (
-										<img src={profilePhoto} alt="Profile" className="w-full h-full object-cover rounded-full" />
+										<img 
+											src={profilePhoto} 
+											alt="Profile" 
+											className="w-full h-full object-cover"
+											onError={(e) => { e.target.onerror = null; e.target.src = "https://ui-avatars.com/api/?name=Admin&background=0D0D0D&color=fff"; }}
+										/>
 									) : (
-										<span className="text-4xl">{getAdminType().icon}</span>
+										<span className="text-4xl">👑</span>
 									)}
 								</div>
+								
+								{/* Edit Overlay */}
 							</div>
 							<label htmlFor="photo-upload" className="absolute bottom-1 right-1 bg-[#D4AF37] hover:bg-[#B5952F] w-9 h-9 rounded-full flex items-center justify-center cursor-pointer shadow-lg border-2 border-white transition-transform hover:scale-110">
 								<svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -423,39 +434,37 @@ const AdminProfilePage = () => {
 							<input id="photo-upload" type="file" accept="image/jpeg,image/jpg,image/png" onChange={handlePhotoUpload} className="hidden" />
 						</div>
 
-						{/* User Info */}
-						<div className="text-center md:text-right flex-1">
-							<h1 className="text-3xl font-bold text-white mb-2">{user?.fullname || "المسؤول"}</h1>
-							<div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-2">
-								<p className="text-white/70 text-sm">@{user?.username}</p>
-								<span className="text-white/20">|</span>
-								<p className="text-white/70 text-sm" dir="ltr">{user?.email}</p>
-							</div>
-							<div className="flex flex-wrap justify-center md:justify-start gap-2">
-								<span className={`${getAdminType().color} text-white text-xs px-3 py-1 rounded-full font-bold shadow bg-opacity-80`}>
-									{getAdminType().icon} {getAdminType().label}
+						{/* Text Info */}
+						<div className="flex-1 text-center md:text-right">
+							<h1 className="text-3xl font-bold text-[#1a1600] mb-2 drop-shadow-sm">{user?.fullname || "المسؤول"}</h1>
+							<div className="flex flex-wrap gap-3 justify-center md:justify-start">
+								<span className={`px-4 py-1.5 rounded-full text-sm font-bold border border-[#1a1600]/10 flex items-center gap-2 shadow-sm ${getAdminType().color} text-white`}>
+									<span>{getAdminType().icon}</span>
+									{getAdminType().label}
+								</span>
+								<span className="px-4 py-1.5 rounded-full bg-white/20 backdrop-blur text-[#1a1600] text-sm font-bold border border-[#1a1600]/10 flex items-center gap-2">
+									<span>📧</span> {user?.email}
 								</span>
 							</div>
 						</div>
 
-						{/* Theme Toggle */}
+						{/* Edit Button */}
 						<button 
-							onClick={toggleTheme} 
-							className="p-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all hover:scale-105 flex items-center gap-2"
+							onClick={() => setIsEditing(!isEditing)}
+							className={`px-6 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center gap-2 ${
+								isEditing 
+									? "bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20" 
+									: "bg-[#1a1600] text-[#D4AF37] hover:bg-[#2d2600]"
+							}`}
 						>
-							{isDarkMode ? (
-								<svg className="w-5 h-5 text-yellow-300" fill="currentColor" viewBox="0 0 24 24">
-									<path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
-								</svg>
+							{isEditing ? (
+								<><span>✕</span> إلغاء التعديل</>
 							) : (
-								<svg className="w-5 h-5 text-white bg-white/20 rounded-full" fill="currentColor" viewBox="0 0 24 24">
-									<path fillRule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" clipRule="evenodd" />
-								</svg>
+								<><span>✏️</span> تعديل الملف</>
 							)}
 						</button>
 					</div>
 				</div>
-
 				{/* Row 2: Stats / Navigation Grid */}
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 					<Link to="/admindashboard" className={`${theme.card} rounded-xl p-5 border ${theme.cardHover} transition-all group flex items-center justify-between`}>
@@ -550,8 +559,23 @@ const AdminProfilePage = () => {
 						</div>
 					</div>
 
-					{/* Quick Actions */}
-					<div className="space-y-6">
+					
+					{/* Security Status Card */}
+					<div className={`${theme.card} rounded-2xl border p-6`}>
+						<div className="flex items-center gap-4">
+							<div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-500 text-xl border border-green-500/20">
+								🛡️
+							</div>
+							<div>
+								<h4 className={`font-bold ${theme.textPrimary}`}>حالة الحساب آمنة</h4>
+								<p className={`text-sm ${theme.textMuted}`}>تم تفعيل المصادقة الثنائية</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{/* Quick Actions */}
+				<div className="space-y-6">
 						{/* Action Buttons */}
 						<div className={`${theme.card} rounded-2xl border p-6`}>
 							<h3 className={`text-lg font-bold ${theme.textPrimary} mb-6 flex items-center gap-2`}>
@@ -626,20 +650,6 @@ const AdminProfilePage = () => {
 										)}
 									</button>
 								)}
-							</div>
-						</div>
-						
-						{/* Security Status Card */}
-						<div className={`${theme.card} rounded-2xl border p-6`}>
-							<div className="flex items-center gap-4">
-								<div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-500 text-xl border border-green-500/20">
-									🛡️
-								</div>
-								<div>
-									<h4 className={`font-bold ${theme.textPrimary}`}>حالة الحساب آمنة</h4>
-									<p className={`text-sm ${theme.textMuted}`}>تم تفعيل المصادقة الثنائية</p>
-								</div>
-							</div>
 						</div>
 					</div>
 				</div>
@@ -677,6 +687,8 @@ const AdminProfilePage = () => {
 				</div>
 			)}
 			
+
+			
 			{/* Crop Modal */}
 			{showCropModal && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -705,6 +717,13 @@ const AdminProfilePage = () => {
 							<button onClick={handleCropConfirm} className="px-6 py-2 bg-[#D4AF37] hover:bg-[#B5952F] text-white rounded-lg font-bold transition-colors">
 								قص وحفظ
 							</button>
+						</div>
+						<div className="relative h-80 w-full bg-black">
+							<Cropper image={selectedImage} crop={crop} zoom={zoom} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} />
+						</div>
+						<div className="p-4 flex gap-3 justify-end bg-[#1a1a1a]">
+							<button onClick={() => setShowCropModal(false)} className="px-5 py-2 text-gray-300 hover:text-white font-medium">إلغاء</button>
+							<button onClick={handleCropConfirm} className="px-6 py-2 bg-[#DAA520] text-white rounded-xl font-bold hover:bg-[#B8860B]">حفظ</button>
 						</div>
 					</div>
 				</div>
@@ -743,6 +762,7 @@ const AdminProfilePage = () => {
 								</div>
 							</div>
 							
+							
 							<div>
 								<label className={`block text-sm font-medium ${theme.textSecondary} mb-1`}>كلمة المرور الجديدة</label>
 								<div className="relative">
@@ -762,6 +782,7 @@ const AdminProfilePage = () => {
 									</button>
 								</div>
 							</div>
+							
 							
 							<div>
 								<label className={`block text-sm font-medium ${theme.textSecondary} mb-1`}>تأكيد كلمة المرور</label>
@@ -797,6 +818,7 @@ const AdminProfilePage = () => {
 									حفظ
 								</button>
 							</div>
+
 						</div>
 					</div>
 				</div>

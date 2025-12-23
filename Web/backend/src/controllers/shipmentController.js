@@ -1,8 +1,10 @@
 const Shipment = require("../models/shipment");
 const Invoice = require("../models/invoice");
+const Upload = require("../models/upload");
 const mailSender = require("../services/mailer");
 const jwt = require("jsonwebtoken");
 const notificationService = require("../services/notificationService");
+const s3Helpers = require("../utils/s3Helpers");
 
 // ✅ إنشاء شحنة جديدة
 const createShipment = async (req, res) => {
@@ -71,7 +73,11 @@ const createShipment = async (req, res) => {
 			num_of_containers:
 				shipmentData.num_of_containers || shipmentData.numContainers || 1,
 			type_of_containers:
-				shipmentData.type_of_containers || shipmentData.containerTypes || [],
+				Array.isArray(shipmentData.type_of_containers)
+					? shipmentData.type_of_containers.map(i => (typeof i === 'object' && i.type) ? i.type : i)
+					: (Array.isArray(shipmentData.containerTypes)
+						? shipmentData.containerTypes.map(i => (typeof i === 'object' && i.type) ? i.type : i)
+						: []),
 			status: shipmentData.status || "Pending",
 			policy: shipmentData.policy || "",
 			arrivalDate: shipmentData.arrivalDate,
@@ -367,8 +373,84 @@ const getShipmentById = async (req, res) => {
 			}
 		}
 
-		res.json(shipment);
-	} catch (error) {
+		// Convert to object to allow attaching new properties
+		let shipmentObj = shipment.toObject();
+
+        const processDocumentUrl = async (keyOrUrl) => {
+            if (!keyOrUrl) return null;
+            try {
+                // Extract S3 key if input is a URL (e.g., from old unsanitized data)
+                const key = (keyOrUrl.includes('amazonaws.com') || keyOrUrl.startsWith('http')) 
+                    ? keyOrUrl.split('.com/')[1] 
+                    : keyOrUrl;
+                
+                if (key) {
+                    return await s3Helpers.getPresignedUrl(key);
+                }
+            } catch (err) {
+                console.error(`Failed to presign URL for key: ${keyOrUrl}`, err.message);
+            }
+            return keyOrUrl; // Fallback to original
+        };
+
+        // 1. Fetch & Presign General Uploads (Attachments)
+        try {
+            const generalUploads = await Upload.find({
+                category: "shipment",
+                relatedId: shipment._id
+            }).lean();
+
+            // Presign URLs
+            shipmentObj.uploads = await Promise.all(generalUploads.map(async (doc) => {
+                const signedUrl = await s3Helpers.getPresignedUrl(doc.s3Key);
+                return { 
+                    ...doc, 
+                    s3Url: signedUrl, // Prefer s3Url prop for frontend
+                    url: signedUrl // Fallback
+                };
+            }));
+            
+            console.log(`📂 Found ${shipmentObj.uploads.length} general uploads`);
+        } catch (err) {
+            console.error("❌ Error fetching general uploads:", err.message);
+            shipmentObj.uploads = [];
+        }
+
+        // 2. Presign Required Documents
+        if (shipmentObj.requiredDocuments && shipmentObj.requiredDocuments.length > 0) {
+            shipmentObj.requiredDocuments = await Promise.all(shipmentObj.requiredDocuments.map(async (doc) => {
+                if (doc.fileId) {
+                    const signedUrl = await processDocumentUrl(doc.fileId);
+                    return { ...doc, fileId: signedUrl };
+                }
+                return doc;
+            }));
+        }
+
+		// 3. Extract & Presign Proforma Invoice from ACID Request Uploads
+		if (shipmentObj.acid_request_id && shipmentObj.acid_request_id.uploads) {
+			const proforma = shipmentObj.acid_request_id.uploads.find(
+				(doc) => doc.documentType === "proforma_invoice"
+			);
+
+			if (proforma) {
+				try {
+					const signedUrl = await s3Helpers.getPresignedUrl(proforma.s3Key);
+					shipmentObj.proformaInvoice = {
+						...proforma,
+						url: signedUrl,
+						originalUrl: proforma.url 
+					};
+					console.log("✅ Proforma Invoice Presigned URL Generated");
+				} catch (err) {
+					console.error("❌ Failed to presign Proforma Invoice URL:", err);
+					shipmentObj.proformaInvoice = proforma; 
+				}
+			} 
+		}
+
+		res.json(shipmentObj);
+    } catch (error) {
 		console.error("Error in getShipmentById:", error);
 		res.status(500).json({ message: error.message });
 	}
@@ -1464,6 +1546,126 @@ const getDistinctDocumentNames = async (req, res) => {
 	}
 };
 
+// ✅ Reject uploaded document (Reset to pending but keep request)
+const rejectUploadedDocument = async (req, res) => {
+	try {
+		const { shipmentId, documentId } = req.params;
+
+		console.log("❌ Rejecting document upload:", {
+			shipmentId,
+			documentId,
+		});
+
+		const shipment = await Shipment.findById(shipmentId);
+
+		if (!shipment) {
+			return res.status(404).json({ message: "Shipment not found" });
+		}
+
+		const document = shipment.requiredDocuments.id(documentId);
+
+		if (!document) {
+			return res.status(404).json({ message: "Document not found" });
+		}
+
+		const documentName = document.name;
+
+		// Keep request, but reset upload status
+		document.uploaded = false;
+		document.fileId = null;
+		document.uploadedAt = null;
+
+		await shipment.save();
+
+		console.log("✅ Document upload rejected:", documentName);
+
+		// Emit socket event
+		if (req.io) {
+			req.io.to(shipment.acid).emit("documentRejected", {
+				shipmentId: shipment._id,
+				acid: shipment.acid,
+				documentId: documentId,
+				documentName: documentName,
+			});
+		}
+        
+        // Notify Client
+        if (shipment.user_id) {
+             try {
+				await notificationService.createNotification({
+					userId: shipment.user_id,
+					type: "document_rejected",
+					title: "مستند مرفوض",
+					message: `تم رفض المستند "${documentName}" للشحنة ${shipment.acid}. يرجى رفعه مرة أخرى.`,
+					data: {
+						shipmentId: shipment._id,
+						acid: shipment.acid,
+						documentId: documentId,
+					},
+					sendPush: true,
+					priority: "high",
+				});
+            } catch (err) {
+                console.error("Failed to notify client about rejection:", err);
+            }
+        }
+
+		res.json({
+			success: true,
+			message: "تم رفض المستند وإعادة تعيين حالته.",
+            data: {
+                _id: document._id,
+                name: document.name,
+                uploaded: false,
+                requestedAt: document.requestedAt
+            }
+		});
+	} catch (error) {
+		console.error("Error rejecting document:", error);
+		res.status(500).json({ success: false, message: error.message });
+	}
+};
+
+// ✅ Add completed document directly (Employee Action)
+const addCompletedDocument = async (req, res) => {
+    try {
+        const { shipmentId } = req.params;
+        const { name, fileId } = req.body;
+
+        if (!name || !fileId) {
+            return res.status(400).json({ message: "Missing document name or fileId" });
+        }
+
+        const shipment = await Shipment.findById(shipmentId);
+        if (!shipment) {
+            return res.status(404).json({ message: "Shipment not found" });
+        }
+
+        // Add to requiredDocuments as already completed
+        shipment.requiredDocuments.push({
+            name,
+            uploaded: true,
+            fileId, // This is the S3 Key or URL
+            requestedAt: new Date(),
+            uploadedAt: new Date()
+        });
+
+        await shipment.save();
+        
+        console.log(`✅ Document added directly by employee: ${name}`);
+
+        res.json({
+            success: true,
+            message: "تم إضافة المستند بنجاح",
+            data: shipment
+        });
+
+    } catch (error) {
+        console.error("Error adding completed document:", error);
+        res.status(500).json({ message: "حدث خطأ أثناء إضافة المستند" });
+    }
+};
+
 module.exports = {
 	createShipment,
 	getAllShipments,
@@ -1480,6 +1682,8 @@ module.exports = {
 	getRequiredDocuments,
 	markDocumentAsUploaded,
 	resetUploadedDocument,
+    rejectUploadedDocument,
+    addCompletedDocument,
 	getEmployeeShipmentStats,
 	getClientShipmentStats,
 	addShipments,

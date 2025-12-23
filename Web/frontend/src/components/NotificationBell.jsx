@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-hot-toast";
+import { useTheme } from "../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { io } from "socket.io-client";
+import axios from "axios";
 
-const NotificationBell = ({ isDarkMode }) => {
+const NotificationBell = () => {
 	const [notifications, setNotifications] = useState([]);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 	const socketRef = useRef(null);
+	const { isDarkMode } = useTheme();
 
 	// Get token from localStorage
 	const token = localStorage.getItem("token");
@@ -20,15 +22,15 @@ const NotificationBell = ({ isDarkMode }) => {
 	// Load cached notifications on mount
 	useEffect(() => {
 		if (!user._id) return;
-
+		
 		try {
 			const CACHE_KEY = `notifications_${user._id}`;
 			const CACHE_TIMESTAMP_KEY = `notifications_timestamp_${user._id}`;
 			const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
+			
 			const cached = localStorage.getItem(CACHE_KEY);
 			const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-
+			
 			if (cached && timestamp) {
 				const age = Date.now() - parseInt(timestamp);
 				if (age < CACHE_DURATION) {
@@ -46,11 +48,11 @@ const NotificationBell = ({ isDarkMode }) => {
 	// Save notifications to cache
 	const saveToCache = useCallback((notifs, count) => {
 		if (!user._id) return;
-
+		
 		try {
 			const CACHE_KEY = `notifications_${user._id}`;
 			const CACHE_TIMESTAMP_KEY = `notifications_timestamp_${user._id}`;
-
+			
 			localStorage.setItem(CACHE_KEY, JSON.stringify({
 				notifications: notifs,
 				unreadCount: count
@@ -61,8 +63,46 @@ const NotificationBell = ({ isDarkMode }) => {
 			console.error("Error saving notifications to cache:", error);
 		}
 	}, [user._id]);
-
 	// Theme configuration
+	const getAccentColors = () => {
+		const role = user?.type || 'client';
+		const emType = user?.employeeDetails?.employeeType;
+		
+		if (role === 'admin' || (role === 'employee' && emType === 'System Admin')) {
+			return {
+				main: "text-[#D4AF37]",
+				bg: "bg-[#D4AF37]",
+				bgLight: "bg-[#D4AF37]/10",
+				hover: "hover:text-[#B5952F]",
+				button: "bg-[#D4AF37] hover:bg-[#B5952F]",
+				spinner: "border-[#D4AF37]",
+				badge: "bg-[#D4AF37] text-white"
+			};
+		}
+		if (role === 'employee') {
+			return {
+				main: "text-[#1ba3b6]",
+				bg: "bg-[#1ba3b6]",
+				bgLight: "bg-[#1ba3b6]/10",
+				hover: "hover:text-[#158A9A]",
+				button: "bg-[#1ba3b6] hover:bg-[#158A9A]",
+				spinner: "border-[#1ba3b6]",
+				badge: "bg-[#1ba3b6] text-white"
+			};
+		}
+		return {
+			main: "text-red-600",
+			bg: "bg-red-600",
+			bgLight: "bg-red-100",
+			hover: "hover:text-red-800",
+			button: "bg-red-600 hover:bg-red-700",
+			spinner: "border-red-600",
+			badge: "bg-red-600 text-white"
+		};
+	};
+	
+	const accent = getAccentColors();
+
 	const theme = {
 		dropdownBg: isDarkMode ? "bg-[#1a1010] border-[#3d1a1a]" : "bg-white border-gray-200",
 		headerBg: isDarkMode ? "bg-[#2b0000] border-[#3d1a1a]" : "bg-gray-50 border-gray-200",
@@ -74,10 +114,12 @@ const NotificationBell = ({ isDarkMode }) => {
 	};
 
 	// Fetch notifications from API
+	// Fetch notifications from API
 	const fetchNotifications = useCallback(async () => {
+		if (!token) return;
 		try {
 			setLoading(true);
-
+			
 			const response = await axios.get(`${apiUrl}/api/notifications`, {
 				headers: {
 					Authorization: `Bearer ${token}`,
@@ -90,28 +132,21 @@ const NotificationBell = ({ isDarkMode }) => {
 
 			if (response.data.success) {
 				const notifs = response.data.notifications || [];
-				const count = response.data.unreadCount || 0;
-
+				
 				setNotifications(notifs);
-				setUnreadCount(count);
-
-				// Save to cache
-				saveToCache(notifs, count);
+				setUnreadCount(notifs.filter((n) => !n.read).length);
 			}
 		} catch (error) {
 			console.error("Error fetching notifications:", error);
-			if (error.response?.status !== 401) {
-				// Silent fail for better UX or use toast if critical
-			}
 		} finally {
 			setLoading(false);
 		}
-	}, [apiUrl, token, saveToCache]);
+	}, [token, apiUrl]);
 
+	// Initial fetch and Socket.IO connection
 	useEffect(() => {
-		if (!token || !user._id) return;
+		if (!token) return;
 
-		// Fetch notifications (cache already loaded in separate useEffect)
 		fetchNotifications();
 
 		// Connect to Socket.IO
@@ -167,8 +202,7 @@ const NotificationBell = ({ isDarkMode }) => {
 				socketRef.current.disconnect();
 			}
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [token, user._id, apiUrl, fetchNotifications]);
+	}, [token, apiUrl, user._id, user.role, fetchNotifications]);
 
 	// Handle notification click - delete notification and navigate to notification page
 	const handleNotificationClick = async (notifId) => {
@@ -251,13 +285,13 @@ const NotificationBell = ({ isDarkMode }) => {
 						fetchNotifications(); // Refresh when opening
 					}
 				}}
-				className={`relative p-2 transition ${isDarkMode ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-red-800"}`}
+				className={`relative p-2 transition ${isDarkMode ? "text-gray-300 hover:text-white" : `text-gray-600 ${accent.hover}`}`}
 			>
 				<svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
 					<path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
 				</svg>
 				{unreadCount > 0 && (
-					<span className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-bounce">
+					<span className={`absolute top-0 right-0 ${accent.badge} text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-bounce`}>
 						{unreadCount}
 					</span>
 				)}
@@ -271,7 +305,7 @@ const NotificationBell = ({ isDarkMode }) => {
 						<div className="flex items-center gap-2">
 							<h3 className={`font-bold ${theme.textMain}`}>الإشعارات</h3>
 							{unreadCount > 0 && (
-								<span className="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full font-bold">
+								<span className={`${accent.bgLight} ${accent.main} text-xs px-2 py-0.5 rounded-full font-bold`}>
 									{unreadCount} غير مقروء
 								</span>
 							)}
@@ -288,7 +322,7 @@ const NotificationBell = ({ isDarkMode }) => {
 					<div className="overflow-y-auto flex-1 custom-scrollbar">
 						{loading ? (
 							<div className="p-8 text-center">
-								<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+								<div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${accent.spinner} mx-auto`}></div>
 								<p className={`mt-2 ${theme.textSub}`}>جاري التحميل...</p>
 							</div>
 						) : notifications.length === 0 ? (
@@ -301,8 +335,9 @@ const NotificationBell = ({ isDarkMode }) => {
 									<div
 										key={notif._id}
 										onClick={() => handleNotificationClick(notif._id)}
-										className={`p-4 cursor-pointer transition flex items-start gap-3 ${notif.read ? `bg-transparent ${theme.hoverBg}` : `${theme.unreadBg}`
-											}`}
+										className={`p-4 cursor-pointer transition flex items-start gap-3 ${
+											notif.read ? `bg-transparent ${theme.hoverBg}` : `${theme.unreadBg}`
+										}`}
 									>
 										<span className="text-2xl mt-1 shrink-0">
 											{getNotificationIcon(notif.type)}
@@ -319,7 +354,7 @@ const NotificationBell = ({ isDarkMode }) => {
 											</p>
 										</div>
 										{!notif.read && (
-											<span className="w-2 h-2 bg-red-600 rounded-full mt-2 shrink-0"></span>
+											<span className={`w-2 h-2 ${accent.bg} rounded-full mt-2 shrink-0`}></span>
 										)}
 									</div>
 								))}
@@ -334,7 +369,7 @@ const NotificationBell = ({ isDarkMode }) => {
 								setShowDropdown(false);
 								navigate("/notifications");
 							}}
-							className="w-full py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-colors shadow-md"
+							className={`w-full py-2 rounded-lg ${accent.button} text-white text-sm font-bold transition-colors shadow-md`}
 						>
 							عرض كل الإشعارات
 						</button>

@@ -46,6 +46,32 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 		return "/home"; // Default for clients
 	};
 
+	// Determine theme colors based on user type
+	const getThemeColors = () => {
+		if (user?.type === "admin") {
+			return {
+				button: "bg-[#D4AF37] text-white hover:bg-[#B5952F] shadow-lg hover:shadow-[#D4AF37]/30",
+				textHover: "text-gray-700 hover:text-[#D4AF37]",
+				logoFilter: "sepia(100%) hue-rotate(10deg) saturate(300%)" // Gold
+			};
+		}
+		if (user?.type === "employee") {
+			return {
+				button: "bg-[#1ba3b6] text-white hover:bg-[#158A9A] shadow-lg hover:shadow-[#1ba3b6]/30",
+				textHover: "text-gray-700 hover:text-[#1ba3b6]",
+				logoFilter: "sepia(100%) hue-rotate(130deg) saturate(300%)" // Turquoise/Cyan
+			};
+		}
+		// Default Client Theme (Red)
+		return {
+			button: "bg-[#690000] text-white hover:bg-[#8B0000] shadow-lg hover:shadow-[#690000]/30",
+			textHover: "text-gray-700 hover:text-[#690000]",
+			logoFilter: ""
+		};
+	};
+
+	const themeColors = getThemeColors();
+
 	return (
 		<header
 			className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
@@ -59,13 +85,14 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 				{/* Right Section - Logo and Nav */}
 				<div className="flex items-center gap-12">
 					<Link to="/" className="flex items-center gap-2">
-						{/* Use colored logo when scrolled, white logo when transparent (if available, else colored) */}
+						{/* Use colored logo when scrolled, white logo when transparent */}
 						<img
 							src="/images/coloredLogo.png"
 							alt="النوران"
 							className={`h-10 w-auto transition-transform hover:scale-105 ${
 								scrolled ? "" : "brightness-0 invert drop-shadow-md"
 							}`}
+							style={scrolled && (user?.type === "employee" || user?.type === "admin") ? { filter: themeColors.logoFilter } : {}}
 						/>
 					</Link>
 
@@ -82,7 +109,7 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 									onClick={item.action}
 									className={`text-base font-medium transition-colors ${
 										scrolled
-											? "text-gray-700 hover:text-[#690000]"
+											? themeColors.textHover
 											: "text-white/90 hover:text-white"
 									}`}
 								>
@@ -94,7 +121,7 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 									to={item.path}
 									className={`text-base font-medium transition-colors ${
 										scrolled
-											? "text-gray-700 hover:text-[#690000]"
+											? themeColors.textHover
 											: "text-white/90 hover:text-white"
 									}`}
 								>
@@ -138,8 +165,8 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 							to={user ? getDashboardPath() : "/login"}
 							className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all duration-300 transform hover:-translate-y-0.5 hover:scale-105 ${
 								scrolled
-									? "bg-[#690000] text-white hover:bg-[#8B0000] shadow-lg hover:shadow-[#690000]/30"
-									: "bg-white text-[#690000] hover:bg-gray-50 shadow-xl hover:shadow-2xl"
+									? themeColors.button
+									: "bg-white text-gray-900 hover:bg-gray-50 shadow-xl hover:shadow-2xl"
 							}`}
 						>
 							{user ? (

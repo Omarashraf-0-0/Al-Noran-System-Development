@@ -53,7 +53,7 @@ const shipmentSchema = new mongoose.Schema(
 		type_of_containers: [
 			{
 				type: String,
-				enum: ["20ft", "40ft", "45ft"],
+				enum: ["20ft", "40ft", "45ft", "40hc", "lcl"],
 			},
 		],
 

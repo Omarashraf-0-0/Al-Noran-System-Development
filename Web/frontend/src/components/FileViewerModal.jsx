@@ -12,8 +12,19 @@ const FileViewerModal = ({ isOpen, onClose, fileUrl, fileName, fileType, fileId 
 		const toastId = toast.loading("جاري بدء التحميل...");
 		try {
 			if (!fileId) {
-				console.error("Missing fileId for secure download");
-				toast.error("لا يمكن تحميل الملف بشكل آمن (مفقود المعرف)");
+                if (fileUrl) {
+                    // Fallback to direct download if no ID for proxy
+                    const link = document.createElement('a');
+                    link.href = fileUrl;
+                    link.download = fileName || "download";
+                    link.target = "_blank";
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    toast.success("تم بدء التحميل");
+                } else {
+                    toast.error("رابط الملف غير متوفر");
+                }
 				toast.dismiss(toastId);
 				return;
 			}
@@ -30,10 +41,18 @@ const FileViewerModal = ({ isOpen, onClose, fileUrl, fileName, fileType, fileId 
 			let downloadName = fileName || "document";
 			const disposition = response.headers.get('Content-Disposition');
 			if (disposition) {
-				const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-				const matches = filenameRegex.exec(disposition);
-				if (matches != null && matches[1]) { 
-					downloadName = decodeURIComponent(matches[1].replace(/['"]/g, ''));
+				// Try filename* (UTF-8) first
+				const filenameStarRegex = /filename\*=UTF-8''([^;\n]*)/;
+				const starMatches = filenameStarRegex.exec(disposition);
+				if (starMatches && starMatches[1]) {
+					downloadName = decodeURIComponent(starMatches[1]);
+				} else {
+					// Fallback to standard filename
+					const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+					const matches = filenameRegex.exec(disposition);
+					if (matches != null && matches[1]) { 
+						downloadName = decodeURIComponent(matches[1].replace(/['"]/g, ''));
+					}
 				}
 			}
 
@@ -49,7 +68,12 @@ const FileViewerModal = ({ isOpen, onClose, fileUrl, fileName, fileType, fileId 
 			toast.success("تم التحميل بنجاح");
 		} catch (e) {
 			console.error("Download failed", e);
-			toast.error("فشل التحميل");
+             // Fallback to direct URL on failure if available
+            if (fileUrl) {
+                window.open(fileUrl, '_blank');
+            } else {
+			    toast.error("فشل التحميل");
+            }
 		}
 		toast.dismiss(toastId);
 	};
@@ -62,8 +86,10 @@ const FileViewerModal = ({ isOpen, onClose, fileUrl, fileName, fileType, fileId 
 
 	if (!isOpen) return null;
 
-	const isImage = fileType?.startsWith("image/") || fileUrl?.match(/\.(jpeg|jpg|png|gif|webp)$/i);
-	const isPdf = fileType === "application/pdf" || fileUrl?.match(/\.pdf$/i);
+    // Clean URL to remove query params for extension check
+    const cleanUrl = fileUrl?.split('?')[0]?.toLowerCase() || "";
+	const isImage = fileType?.startsWith("image/") || cleanUrl.match(/\.(jpeg|jpg|png|gif|webp)$/i);
+	const isPdf = fileType === "application/pdf" || cleanUrl.endsWith('.pdf');
 
 	const handleLoad = () => setLoading(false);
 	const handleError = () => {
@@ -72,7 +98,7 @@ const FileViewerModal = ({ isOpen, onClose, fileUrl, fileName, fileType, fileId 
 	};
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+		<div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
 			{/* Backdrop */}
 			<div 
 				className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
