@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/services/notification_service.dart';
-import '../../core/widgets/unified_top_bar.dart';
 import '../../theme/colors.dart';
 
 /// صفحة الإشعارات الرئيسية
@@ -18,6 +18,12 @@ class _NotificationsPageState extends State<NotificationsPage>
   final NotificationService _notificationService = NotificationService();
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
+
+  // Premium Colors
+  static const Color primaryDark = Color(0xFF690000);
+  static const Color primaryLight = Color(0xFF8B0000);
+  static const Color accentColor = Color(0xFF1BA3B6);
+  static const Color goldAccent = Color(0xFFD4AF37);
 
   StreamSubscription? _notificationsSubscription;
   StreamSubscription? _loadingSubscription;
@@ -84,7 +90,7 @@ class _NotificationsPageState extends State<NotificationsPage>
   }
 
   void _onTabChanged() {
-    if (_tabController.indexIsChanging) {
+    if (!_tabController.indexIsChanging) {
       setState(() {
         _selectedFilter = _filters[_tabController.index]['key'];
       });
@@ -212,11 +218,14 @@ class _NotificationsPageState extends State<NotificationsPage>
   void _showNotificationOptions() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder:
           (context) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
             padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -229,64 +238,125 @@ class _NotificationsPageState extends State<NotificationsPage>
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
+                const SizedBox(height: 24),
+                Text(
+                  'خيارات الإشعارات',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: primaryDark,
+                  ),
+                ),
                 const SizedBox(height: 20),
-                _buildOptionTile(
-                  icon: Icons.done_all,
+                _buildPremiumOptionTile(
+                  icon: Icons.done_all_rounded,
                   title: 'تحديد الكل كمقروء',
-                  color: AlNoranColors.info,
+                  subtitle: 'علّم جميع الإشعارات كمقروءة',
+                  color: accentColor,
                   onTap: () {
+                    HapticFeedback.lightImpact();
                     Navigator.pop(context);
                     _markAllAsRead();
                   },
                 ),
-                _buildOptionTile(
-                  icon: Icons.delete_sweep,
+                const SizedBox(height: 12),
+                _buildPremiumOptionTile(
+                  icon: Icons.delete_sweep_rounded,
                   title: 'حذف المقروءة',
-                  color: AlNoranColors.error,
+                  subtitle: 'احذف الإشعارات المقروءة فقط',
+                  color: Colors.red,
                   onTap: () {
+                    HapticFeedback.lightImpact();
                     Navigator.pop(context);
                     _clearReadNotifications();
                   },
                 ),
-                _buildOptionTile(
-                  icon: Icons.settings,
+                const SizedBox(height: 12),
+                _buildPremiumOptionTile(
+                  icon: Icons.settings_rounded,
                   title: 'إعدادات الإشعارات',
-                  color: AlNoranColors.primary,
+                  subtitle: 'تخصيص تفضيلات الإشعارات',
+                  color: goldAccent,
                   onTap: () {
+                    HapticFeedback.lightImpact();
                     Navigator.pop(context);
                     context.push('/notification-settings');
                   },
                 ),
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
               ],
             ),
           ),
     );
   }
 
-  Widget _buildOptionTile({
+  Widget _buildPremiumOptionTile({
     required IconData icon,
     required String title,
+    required String subtitle,
     required Color color,
     required VoidCallback onTap,
   }) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(10),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withOpacity(0.15)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: Colors.grey[400],
+              ),
+            ],
+          ),
         ),
-        child: Icon(icon, color: color),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontFamily: 'Cairo',
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
   }
 
@@ -295,77 +365,307 @@ class _NotificationsPageState extends State<NotificationsPage>
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AlNoranColors.greyBg,
+        backgroundColor: const Color(0xFFF8F9FA),
         body: Column(
           children: [
-            // Top Bar
-            UnifiedTopBar(
-              title: 'الإشعارات',
-              subtitle: '${_notificationService.unreadCount} غير مقروء',
-              showBackButton: true,
-              showNotification: false,
-              onBackPressed: () {
-                if (GoRouter.of(context).canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/home');
-                }
-              },
-            ),
+            // Premium Top Bar
+            _buildPremiumHeader(),
 
-            // Filter Tabs
-            Container(
-              color: Colors.white,
-              child: TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                labelColor: AlNoranColors.primary,
-                unselectedLabelColor: Colors.grey,
-                indicatorColor: AlNoranColors.primary,
-                indicatorWeight: 3,
-                labelStyle: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 13,
-                ),
-                tabs:
-                    _filters.map((f) {
-                      return Tab(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(f['icon'], size: 18),
-                            const SizedBox(width: 6),
-                            Text(f['label']),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-              ),
-            ),
+            // Premium Filter Tabs
+            _buildPremiumTabs(),
 
             // Notifications List
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _refreshNotifications,
-                color: AlNoranColors.primary,
+                color: primaryDark,
+                backgroundColor: Colors.white,
+                displacement: 40,
                 child: _buildNotificationsList(),
               ),
             ),
           ],
         ),
         floatingActionButton:
-            _notifications.isNotEmpty
-                ? FloatingActionButton(
-                  onPressed: _showNotificationOptions,
-                  backgroundColor: AlNoranColors.primary,
-                  child: const Icon(Icons.more_vert, color: Colors.white),
-                )
-                : null,
+            _notifications.isNotEmpty ? _buildPremiumFAB() : null,
+      ),
+    );
+  }
+
+  Widget _buildPremiumHeader() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [primaryDark, primaryLight],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: Row(
+            children: [
+              // Back Button
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+                  color: Colors.white,
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    if (GoRouter.of(context).canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/home');
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              // Title & Subtitle
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'الإشعارات',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                _notificationService.unreadCount > 0
+                                    ? accentColor.withOpacity(0.3)
+                                    : Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_notificationService.unreadCount > 0) ...[
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: accentColor,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: accentColor.withOpacity(0.5),
+                                        blurRadius: 4,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              Text(
+                                _notificationService.unreadCount > 0
+                                    ? '${_notificationService.unreadCount} غير مقروء'
+                                    : 'لا توجد إشعارات جديدة',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withOpacity(0.95),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Settings Button
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.settings_rounded, size: 20),
+                  color: Colors.white,
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    context.push('/notification-settings');
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumTabs() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TabBar(
+        controller: _tabController,
+        isScrollable: true,
+        labelColor: primaryDark,
+        unselectedLabelColor: Colors.grey[500],
+        indicatorColor: primaryDark,
+        indicatorWeight: 3,
+        indicatorSize: TabBarIndicatorSize.label,
+        dividerColor: Colors.transparent,
+        splashFactory: NoSplash.splashFactory,
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
+        indicatorPadding: const EdgeInsets.symmetric(horizontal: 0),
+        labelStyle: const TextStyle(
+          fontFamily: 'Cairo',
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontFamily: 'Cairo',
+          fontSize: 13,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        onTap: (index) {
+          setState(() {
+            _selectedFilter = _filters[index]['key'];
+          });
+        },
+        tabs:
+            _filters.asMap().entries.map((entry) {
+              final index = entry.key;
+              final f = entry.value;
+              final isSelected = _tabController.index == index;
+              return Tab(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected ? primaryDark : Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        f['icon'],
+                        size: 16,
+                        color: isSelected ? Colors.white : Colors.grey[400],
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        f['label'],
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.grey[600],
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontFamily: 'Cairo',
+                          fontSize: 13,
+                        ),
+                      ),
+                      if (f['key'] == 'unread' &&
+                          _notificationService.unreadCount > 0) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.white : primaryDark,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${_notificationService.unreadCount}',
+                            style: TextStyle(
+                              color: isSelected ? primaryDark : Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildPremiumFAB() {
+    return FloatingActionButton(
+      onPressed: () {
+        HapticFeedback.lightImpact();
+        _showNotificationOptions();
+      },
+      backgroundColor: primaryDark,
+      elevation: 8,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [primaryDark, primaryLight],
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: primaryDark.withOpacity(0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.more_vert_rounded,
+          color: Colors.white,
+          size: 26,
+        ),
       ),
     );
   }
@@ -374,15 +674,37 @@ class _NotificationsPageState extends State<NotificationsPage>
     final filteredNotifications = _filteredNotifications;
 
     if (_isLoading && filteredNotifications.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: AlNoranColors.primary),
-            SizedBox(height: 16),
-            Text(
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    primaryDark.withOpacity(0.1),
+                    accentColor.withOpacity(0.1),
+                  ],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  color: primaryDark,
+                  strokeWidth: 3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
               'جاري تحميل الإشعارات...',
-              style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 16,
+                color: Colors.grey,
+              ),
             ),
           ],
         ),
@@ -399,74 +721,186 @@ class _NotificationsPageState extends State<NotificationsPage>
       itemCount: filteredNotifications.length + (_isLoading ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == filteredNotifications.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
+          return Padding(
+            padding: const EdgeInsets.all(16),
             child: Center(
-              child: CircularProgressIndicator(color: AlNoranColors.primary),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: primaryDark.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const CircularProgressIndicator(
+                  color: primaryDark,
+                  strokeWidth: 2,
+                ),
+              ),
             ),
           );
         }
 
         final notification = filteredNotifications[index];
-        return _NotificationCard(
-          notification: notification,
-          onTap: () => _onNotificationTap(notification),
-          onDismiss: () => _deleteNotification(notification),
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: Duration(milliseconds: 300 + (index * 50).clamp(0, 300)),
+          curve: Curves.easeOut,
+          builder: (context, value, child) {
+            return Transform.translate(
+              offset: Offset(0, 20 * (1 - value)),
+              child: Opacity(opacity: value, child: child),
+            );
+          },
+          child: _NotificationCard(
+            notification: notification,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              _onNotificationTap(notification);
+            },
+            onDismiss: () => _deleteNotification(notification),
+          ),
         );
       },
     );
   }
 
   Widget _buildEmptyState() {
+    IconData emptyIcon;
+    String emptyTitle;
+    String emptySubtitle;
+    Color iconColor;
+
+    if (_selectedFilter == 'unread') {
+      emptyIcon = Icons.mark_email_read_rounded;
+      emptyTitle = 'لا توجد إشعارات غير مقروءة';
+      emptySubtitle = 'رائع! لقد قرأت جميع الإشعارات';
+      iconColor = const Color(0xFF10B981);
+    } else if (_selectedFilter == 'shipments') {
+      emptyIcon = Icons.local_shipping_rounded;
+      emptyTitle = 'لا توجد إشعارات شحنات';
+      emptySubtitle = 'ستظهر هنا إشعارات الشحنات الجديدة';
+      iconColor = const Color(0xFF3B82F6);
+    } else if (_selectedFilter == 'acid') {
+      emptyIcon = Icons.science_rounded;
+      emptyTitle = 'لا توجد إشعارات ACID';
+      emptySubtitle = 'ستظهر هنا إشعارات طلبات ACID';
+      iconColor = const Color(0xFF8B5CF6);
+    } else if (_selectedFilter == 'ucr') {
+      emptyIcon = Icons.description_rounded;
+      emptyTitle = 'لا توجد إشعارات UCR';
+      emptySubtitle = 'ستظهر هنا إشعارات طلبات التصدير';
+      iconColor = const Color(0xFF10B981);
+    } else if (_selectedFilter == 'documents') {
+      emptyIcon = Icons.folder_rounded;
+      emptyTitle = 'لا توجد إشعارات مستندات';
+      emptySubtitle = 'ستظهر هنا إشعارات المستندات';
+      iconColor = const Color(0xFFF59E0B);
+    } else if (_selectedFilter == 'finance') {
+      emptyIcon = Icons.account_balance_wallet_rounded;
+      emptyTitle = 'لا توجد إشعارات مالية';
+      emptySubtitle = 'ستظهر هنا إشعارات الفواتير والمدفوعات';
+      iconColor = const Color(0xFF690000);
+    } else if (_selectedFilter == 'chat') {
+      emptyIcon = Icons.chat_bubble_rounded;
+      emptyTitle = 'لا توجد رسائل';
+      emptySubtitle = 'ستظهر هنا إشعارات المحادثات';
+      iconColor = const Color(0xFF06B6D4);
+    } else {
+      emptyIcon = Icons.notifications_off_rounded;
+      emptyTitle = 'لا توجد إشعارات';
+      emptySubtitle = 'ستظهر الإشعارات هنا عند وصولها';
+      iconColor = Colors.grey;
+    }
+
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  blurRadius: 20,
-                  spreadRadius: 5,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Animated icon container
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.8, end: 1.0),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.elasticOut,
+                builder: (context, value, child) {
+                  return Transform.scale(scale: value, child: child);
+                },
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        iconColor.withOpacity(0.15),
+                        iconColor.withOpacity(0.05),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: iconColor.withOpacity(0.2),
+                        blurRadius: 30,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: Icon(emptyIcon, size: 56, color: iconColor),
                 ),
-              ],
-            ),
-            child: Icon(
-              _selectedFilter == 'unread'
-                  ? Icons.mark_email_read
-                  : Icons.notifications_off,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                emptyTitle,
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                emptySubtitle,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              // Refresh button
+              OutlinedButton.icon(
+                onPressed: _refreshNotifications,
+                icon: const Icon(Icons.refresh_rounded, size: 20),
+                label: const Text(
+                  'تحديث',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: iconColor,
+                  side: BorderSide(color: iconColor.withOpacity(0.5)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
-          Text(
-            _selectedFilter == 'unread'
-                ? 'لا توجد إشعارات غير مقروءة'
-                : 'لا توجد إشعارات',
-            style: const TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _selectedFilter == 'unread'
-                ? 'لقد قرأت جميع الإشعارات'
-                : 'ستظهر الإشعارات هنا عند وصولها',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -480,30 +914,30 @@ class _NotificationsPageState extends State<NotificationsPage>
     // Navigate based on notification type
     if (!mounted) return;
 
+    final data = notification.data;
+
     switch (notification.type) {
       case 'shipment_created':
       case 'shipment_status_changed':
       case 'shipment_documents_requested':
       case 'shipment_customs_cleared':
       case 'shipment_delivered':
-        final shipmentId = notification.data?['shipmentId'];
-        if (shipmentId != null) {
-          context.push('/shipment/$shipmentId');
+        final shipmentId = data?['shipmentId'] ?? data?['acid'];
+        if (shipmentId != null && shipmentId.toString().isNotEmpty) {
+          context.push('/shipment-details/$shipmentId');
         } else {
           context.push('/shipments');
         }
         break;
 
       case 'acid_submitted':
+      case 'acid_created':
       case 'acid_reviewing':
       case 'acid_issued':
       case 'acid_rejected':
-        final acidRequestId = notification.data?['acidRequestId'];
-        if (acidRequestId != null) {
-          context.push('/acid-request/$acidRequestId');
-        } else {
-          context.push('/acid-requests');
-        }
+      case 'acid_documents_requested':
+        // Navigate to shipments page (imports) - ACID tab
+        context.push('/shipments');
         break;
 
       case 'ucr_created':
@@ -512,11 +946,24 @@ class _NotificationsPageState extends State<NotificationsPage>
       case 'ucr_rejected':
       case 'ucr_issued':
       case 'ucr_certificate_issued':
-        final ucrRequestId = notification.data?['ucrRequestId'];
-        if (ucrRequestId != null) {
-          context.push('/ucr-request/$ucrRequestId');
+      case 'ucr_documents_requested':
+        final ucrId = data?['ucrRequestId'] ?? data?['ucrId'];
+        if (ucrId != null && ucrId.toString().isNotEmpty) {
+          context.push('/ucr-details/$ucrId');
         } else {
-          context.push('/ucr-requests');
+          context.push('/exports');
+        }
+        break;
+
+      case 'export_shipment_status_changed':
+      case 'export_shipment_completed':
+      case 'export_shipment_cancelled':
+        final exportShipmentId = data?['shipmentId'];
+        if (exportShipmentId != null &&
+            exportShipmentId.toString().isNotEmpty) {
+          context.push('/export-shipment-details/$exportShipmentId');
+        } else {
+          context.push('/exports');
         }
         break;
 
@@ -525,30 +972,37 @@ class _NotificationsPageState extends State<NotificationsPage>
       case 'document_rejected':
       case 'documents_verified':
       case 'documents_pending':
+      case 'document_requested':
+      case 'document_expiring':
         context.push('/documents');
         break;
 
+      case 'invoice_created':
       case 'invoice_generated':
       case 'invoice_paid':
       case 'invoice_overdue':
       case 'payment_reminder':
       case 'payment_received':
-        final invoiceId = notification.data?['invoiceId'];
-        if (invoiceId != null) {
-          context.push('/invoice/$invoiceId');
-        } else {
-          context.push('/invoices');
-        }
+      case 'payment_failed':
+        context.push('/payments');
         break;
 
       case 'chat_message':
       case 'chat_new_conversation':
-        final conversationId = notification.data?['conversationId'];
-        if (conversationId != null) {
+        final conversationId = data?['conversationId'] ?? data?['shipmentId'];
+        if (conversationId != null && conversationId.toString().isNotEmpty) {
           context.push('/chat/$conversationId');
         } else {
-          context.push('/chat');
+          // Show notification details if no conversation ID
+          _showNotificationDetails(notification);
         }
+        break;
+
+      case 'registration':
+      case 'account_activated':
+      case 'password_changed':
+      case 'security_alert':
+        context.push('/profile');
         break;
 
       default:
@@ -558,85 +1012,288 @@ class _NotificationsPageState extends State<NotificationsPage>
   }
 
   void _showNotificationDetails(AppNotification notification) {
-    showDialog(
+    // Get category color
+    Color categoryColor;
+    IconData categoryIcon;
+
+    switch (notification.type) {
+      case 'shipment_created':
+      case 'shipment_status_changed':
+      case 'shipment_documents_requested':
+      case 'shipment_customs_cleared':
+      case 'shipment_delivered':
+        categoryColor = const Color(0xFF3B82F6);
+        categoryIcon = Icons.local_shipping_rounded;
+        break;
+      case 'acid_submitted':
+      case 'acid_created':
+      case 'acid_reviewing':
+      case 'acid_issued':
+      case 'acid_rejected':
+        categoryColor = const Color(0xFF8B5CF6);
+        categoryIcon = Icons.science_rounded;
+        break;
+      case 'ucr_created':
+      case 'ucr_reviewing':
+      case 'ucr_approved':
+      case 'ucr_rejected':
+      case 'ucr_issued':
+      case 'ucr_certificate_issued':
+        categoryColor = const Color(0xFF10B981);
+        categoryIcon = Icons.description_rounded;
+        break;
+      case 'export_shipment_status_changed':
+      case 'export_shipment_completed':
+      case 'export_shipment_cancelled':
+        categoryColor = const Color(0xFF059669);
+        categoryIcon = Icons.flight_takeoff_rounded;
+        break;
+      case 'document_uploaded':
+      case 'document_approved':
+      case 'document_rejected':
+      case 'documents_verified':
+      case 'documents_pending':
+        categoryColor = const Color(0xFFF59E0B);
+        categoryIcon = Icons.folder_rounded;
+        break;
+      case 'invoice_created':
+      case 'invoice_generated':
+      case 'invoice_paid':
+      case 'invoice_overdue':
+      case 'payment_reminder':
+      case 'payment_received':
+      case 'payment_failed':
+        categoryColor = const Color(0xFF690000);
+        categoryIcon = Icons.receipt_long_rounded;
+        break;
+      default:
+        categoryColor = const Color(0xFF6B7280);
+        categoryIcon = Icons.notifications_rounded;
+    }
+
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+          (context) => Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
             ),
-            title: Row(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  notification.typeIcon,
-                  style: const TextStyle(fontSize: 24),
+                // Handle
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 12, bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    notification.title,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+
+                // Header with gradient
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        categoryColor.withOpacity(0.1),
+                        categoryColor.withOpacity(0.05),
+                      ],
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: categoryColor.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: categoryColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          categoryIcon,
+                          color: categoryColor,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              notification.title,
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Color(0xFF1F2937),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: categoryColor.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                notification.categoryName,
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: categoryColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Message
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: Text(
+                      notification.message,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 14,
+                        height: 1.6,
+                        color: Color(0xFF4B5563),
+                      ),
                     ),
                   ),
                 ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  notification.message,
-                  style: const TextStyle(fontFamily: 'Cairo'),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 4),
-                    Text(
-                      notification.timeAgo,
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 12,
-                        color: Colors.grey[500],
+
+                const SizedBox(height: 16),
+
+                // Time and status
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 16,
+                        color: Colors.grey[400],
                       ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AlNoranColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        notification.categoryName,
-                        style: const TextStyle(
+                      const SizedBox(width: 6),
+                      Text(
+                        notification.timeAgo,
+                        style: TextStyle(
                           fontFamily: 'Cairo',
-                          fontSize: 10,
-                          color: AlNoranColors.primary,
+                          fontSize: 13,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              notification.isRead
+                                  ? Colors.grey[100]
+                                  : const Color(0xFF10B981).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              notification.isRead
+                                  ? Icons.done_all_rounded
+                                  : Icons.markunread_rounded,
+                              size: 14,
+                              color:
+                                  notification.isRead
+                                      ? Colors.grey[500]
+                                      : const Color(0xFF10B981),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              notification.isRead ? 'مقروء' : 'جديد',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    notification.isRead
+                                        ? Colors.grey[500]
+                                        : const Color(0xFF10B981),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Action button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: categoryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'حسناً',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
+
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'إغلاق',
-                  style: TextStyle(fontFamily: 'Cairo'),
-                ),
-              ),
-            ],
           ),
     );
   }
@@ -646,32 +1303,89 @@ class _NotificationsPageState extends State<NotificationsPage>
       notification.id,
     );
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'تم حذف الإشعار',
-            style: TextStyle(fontFamily: 'Cairo'),
-          ),
-          backgroundColor: AlNoranColors.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          action: SnackBarAction(
-            label: 'تراجع',
-            textColor: Colors.white,
-            onPressed: () {
-              // Refresh to get notification back (if server supports it)
-              _refreshNotifications();
-            },
-          ),
-        ),
+      // Show success popup
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder:
+            (context) => Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.check_circle_rounded,
+                        color: Colors.green.shade400,
+                        size: 36,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'تم الحذف بنجاح',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'تم حذف الإشعار',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryDark,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'حسناً',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
       );
+      // Auto close after 2 seconds
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      });
     }
   }
 }
 
-/// كارد الإشعار الفردي
+/// كارد الإشعار الفردي - تصميم محسن
 class _NotificationCard extends StatelessWidget {
   final AppNotification notification;
   final VoidCallback onTap;
@@ -686,11 +1400,116 @@ class _NotificationCard extends StatelessWidget {
   Color get _priorityColor {
     switch (notification.priority) {
       case 'high':
-        return AlNoranColors.error;
+      case 'urgent':
+        return const Color(0xFFDC2626); // Red
       case 'low':
         return Colors.grey;
       default:
-        return AlNoranColors.primary;
+        return const Color(0xFF1BA3B6); // Accent blue
+    }
+  }
+
+  Color get _categoryColor {
+    switch (notification.type) {
+      case 'shipment_created':
+      case 'shipment_status_changed':
+      case 'shipment_documents_requested':
+      case 'shipment_customs_cleared':
+      case 'shipment_delivered':
+      case 'shipment_arrived':
+      case 'shipment_completed':
+        return const Color(0xFF3B82F6); // Blue
+      case 'acid_submitted':
+      case 'acid_created':
+      case 'acid_reviewing':
+      case 'acid_issued':
+      case 'acid_rejected':
+        return const Color(0xFF8B5CF6); // Purple
+      case 'ucr_created':
+      case 'ucr_reviewing':
+      case 'ucr_approved':
+      case 'ucr_rejected':
+      case 'ucr_issued':
+      case 'ucr_certificate_issued':
+        return const Color(0xFF10B981); // Green
+      case 'export_shipment_status_changed':
+      case 'export_shipment_completed':
+      case 'export_shipment_cancelled':
+        return const Color(0xFF059669); // Emerald
+      case 'document_uploaded':
+      case 'document_approved':
+      case 'document_rejected':
+      case 'documents_verified':
+      case 'documents_pending':
+        return const Color(0xFFF59E0B); // Amber
+      case 'invoice_created':
+      case 'invoice_generated':
+      case 'invoice_paid':
+      case 'invoice_overdue':
+      case 'payment_reminder':
+      case 'payment_received':
+      case 'payment_failed':
+        return const Color(0xFF690000); // Primary
+      case 'chat_message':
+      case 'chat_new_conversation':
+        return const Color(0xFF06B6D4); // Cyan
+      default:
+        return const Color(0xFF6B7280); // Gray
+    }
+  }
+
+  IconData get _typeIconData {
+    switch (notification.type) {
+      case 'shipment_created':
+      case 'shipment_status_changed':
+      case 'shipment_documents_requested':
+      case 'shipment_customs_cleared':
+      case 'shipment_delivered':
+      case 'shipment_arrived':
+      case 'shipment_completed':
+        return Icons.local_shipping_rounded;
+      case 'acid_submitted':
+      case 'acid_created':
+      case 'acid_reviewing':
+      case 'acid_issued':
+      case 'acid_rejected':
+        return Icons.science_rounded;
+      case 'ucr_created':
+      case 'ucr_reviewing':
+      case 'ucr_approved':
+      case 'ucr_rejected':
+      case 'ucr_issued':
+      case 'ucr_certificate_issued':
+        return Icons.description_rounded;
+      case 'export_shipment_status_changed':
+      case 'export_shipment_completed':
+      case 'export_shipment_cancelled':
+        return Icons.flight_takeoff_rounded;
+      case 'document_uploaded':
+      case 'document_approved':
+      case 'document_rejected':
+      case 'documents_verified':
+      case 'documents_pending':
+        return Icons.folder_rounded;
+      case 'invoice_created':
+      case 'invoice_generated':
+      case 'invoice_paid':
+      case 'invoice_overdue':
+      case 'payment_reminder':
+      case 'payment_received':
+      case 'payment_failed':
+        return Icons.receipt_long_rounded;
+      case 'chat_message':
+      case 'chat_new_conversation':
+        return Icons.chat_bubble_rounded;
+      case 'registration':
+      case 'account_activated':
+        return Icons.person_add_rounded;
+      case 'password_changed':
+      case 'security_alert':
+        return Icons.security_rounded;
+      default:
+        return Icons.notifications_rounded;
     }
   }
 
@@ -701,146 +1520,144 @@ class _NotificationCard extends StatelessWidget {
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
+        padding: const EdgeInsets.only(left: 24),
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: AlNoranColors.error,
+          gradient: LinearGradient(
+            colors: [Colors.red.shade400, Colors.red.shade600],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Icon(Icons.delete, color: Colors.white),
-      ),
-      onDismissed: (_) => onDismiss(),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: notification.isRead ? Colors.white : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border:
-                notification.isRead
-                    ? null
-                    : Border.all(
-                      color: _priorityColor.withOpacity(0.3),
-                      width: 1,
-                    ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
+        child: const Row(
+          children: [
+            Icon(Icons.delete_rounded, color: Colors.white, size: 28),
+            SizedBox(width: 8),
+            Text(
+              'حذف',
+              style: TextStyle(
+                color: Colors.white,
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              // Unread indicator
-              if (!notification.isRead)
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: _priorityColor,
-                      shape: BoxShape.circle,
+            ),
+          ],
+        ),
+      ),
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+              context: context,
+              barrierColor: Colors.black54,
+              builder:
+                  (context) => Dialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                  ),
-                ),
-
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Icon
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: _priorityColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        notification.typeIcon,
-                        style: const TextStyle(fontSize: 24),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // Content
-                    Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Icon
+                          Container(
+                            width: 70,
+                            height: 70,
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.delete_forever_rounded,
+                              color: Colors.red.shade400,
+                              size: 40,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // Title
+                          const Text(
+                            'حذف الإشعار',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          // Content
+                          Text(
+                            'هل أنت متأكد من حذف هذا الإشعار؟\nلا يمكن التراجع عن هذا الإجراء.',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          // Buttons
                           Row(
                             children: [
                               Expanded(
-                                child: Text(
-                                  notification.title,
-                                  style: TextStyle(
-                                    fontFamily: 'Cairo',
-                                    fontWeight:
-                                        notification.isRead
-                                            ? FontWeight.w500
-                                            : FontWeight.bold,
-                                    fontSize: 14,
-                                    color:
-                                        notification.isRead
-                                            ? Colors.grey[700]
-                                            : Colors.black,
+                                child: OutlinedButton(
+                                  onPressed:
+                                      () => Navigator.pop(context, false),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    side: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            notification.message,
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 13,
-                              color: Colors.grey[600],
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.access_time,
-                                size: 12,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                notification.timeAgo,
-                                style: TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontSize: 11,
-                                  color: Colors.grey[400],
+                                  child: const Text(
+                                    'إلغاء',
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AlNoranColors.greyBg,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  notification.categoryName,
-                                  style: TextStyle(
-                                    fontFamily: 'Cairo',
-                                    fontSize: 10,
-                                    color: Colors.grey[600],
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.delete_rounded,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'حذف',
+                                        style: TextStyle(
+                                          fontFamily: 'Cairo',
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -849,17 +1666,261 @@ class _NotificationCard extends StatelessWidget {
                         ],
                       ),
                     ),
-
-                    // Arrow
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 14,
-                      color: Colors.grey[400],
+                  ),
+            ) ??
+            false;
+      },
+      onDismissed: (_) => onDismiss(),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border:
+                notification.isRead
+                    ? Border.all(color: Colors.grey.shade200, width: 1)
+                    : Border.all(
+                      color: _categoryColor.withOpacity(0.4),
+                      width: 2,
                     ),
-                  ],
-                ),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    notification.isRead
+                        ? Colors.black.withOpacity(0.03)
+                        : _categoryColor.withOpacity(0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              children: [
+                // Left color stripe
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 5,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          _categoryColor,
+                          _categoryColor.withOpacity(0.7),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Content
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 21, 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Icon with gradient background
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _categoryColor.withOpacity(0.15),
+                              _categoryColor.withOpacity(0.08),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: _categoryColor.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Icon(
+                              _typeIconData,
+                              color: _categoryColor,
+                              size: 26,
+                            ),
+                            // Unread badge
+                            if (!notification.isRead)
+                              Positioned(
+                                top: 2,
+                                left: 2,
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: _priorityColor,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _priorityColor.withOpacity(0.4),
+                                        blurRadius: 4,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+
+                      // Text content
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Title row
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    notification.title,
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontWeight:
+                                          notification.isRead
+                                              ? FontWeight.w500
+                                              : FontWeight.bold,
+                                      fontSize: 15,
+                                      color:
+                                          notification.isRead
+                                              ? Colors.grey[700]
+                                              : const Color(0xFF1F2937),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                // Priority indicator
+                                if (notification.priority == 'high' ||
+                                    notification.priority == 'urgent')
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _priorityColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: _priorityColor.withOpacity(0.3),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      notification.priority == 'urgent'
+                                          ? 'عاجل'
+                                          : 'مهم',
+                                      style: TextStyle(
+                                        fontFamily: 'Cairo',
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: _priorityColor,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+
+                            // Message
+                            Text(
+                              notification.message,
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                                height: 1.4,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Footer row
+                            Row(
+                              children: [
+                                // Time
+                                Icon(
+                                  Icons.access_time_rounded,
+                                  size: 13,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  notification.timeAgo,
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 11,
+                                    color: Colors.grey[400],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+
+                                // Category badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _categoryColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    notification.categoryName,
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: _categoryColor,
+                                    ),
+                                  ),
+                                ),
+
+                                const Spacer(),
+
+                                // Arrow indicator
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    size: 12,
+                                    color: Colors.grey[400],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

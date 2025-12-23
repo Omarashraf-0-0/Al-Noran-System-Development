@@ -141,12 +141,14 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         backgroundColor: AlNoranColors.greyBg,
         body: Column(
           children: [
-            // Top Bar
+            // Top Bar - Simple header without welcome greeting
             UnifiedTopBar(
               title: 'إعدادات الإشعارات',
-              subtitle: 'تحكم في الإشعارات',
+              subtitle: 'تخصيص تفضيلات الإشعارات',
               showBackButton: true,
               showNotification: false,
+              showWelcome: false,
+              showProfilePhoto: false,
               onBackPressed: () {
                 if (GoRouter.of(context).canPop()) {
                   context.pop();

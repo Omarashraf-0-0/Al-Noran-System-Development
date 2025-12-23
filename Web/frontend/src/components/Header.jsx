@@ -33,6 +33,7 @@ import NotificationBell from "./NotificationBell";
 
 const Header = () => {
 	const { isDarkMode, toggleTheme } = useTheme();
+	const { isDarkMode, toggleTheme } = useTheme();
 	const [user, setUser] = useState(null);
 	const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -45,7 +46,6 @@ const Header = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const profileMenuRef = useRef(null);
-	const notificationRef = useRef(null);
 	const dropdownRef = useRef(null);
 
 	// Load user from localStorage
@@ -416,6 +416,8 @@ const Header = () => {
 			<div className="w-full px-4 md:px-6">
 				<div className="flex items-center justify-between h-16 w-full relative">
 					
+				<div className="flex items-center justify-between h-16 w-full relative">
+					
 					{/* ====================== */}
 					{/* 1. Right Section (User Info + Notifications + Mobile Toggle) */}
 					{/* ====================== */}
@@ -424,7 +426,9 @@ const Header = () => {
 						<button
 							onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
 							className="md:hidden p-1 rounded-md text-white hover:bg-white/10 focus:outline-none transition-colors"
+							className="md:hidden p-1 rounded-md text-white hover:bg-white/10 focus:outline-none transition-colors"
 						>
+							<img src={dehaze} alt="Menu" className="h-7 w-7 object-contain filter invert brightness-0" />
 							<img src={dehaze} alt="Menu" className="h-7 w-7 object-contain filter invert brightness-0" />
 						</button>
 
@@ -544,6 +548,8 @@ const Header = () => {
 													)
 														? "bg-white/20 text-white font-bold shadow-sm"
 														: "text-white/90 hover:bg-white/10 hover:text-white"
+														? "bg-white/20 text-white font-bold shadow-sm"
+														: "text-white/90 hover:bg-white/10 hover:text-white"
 												}`}
 											>
 												<item.icon className={`w-4 h-4 transition-colors ${item.dropdownItems?.some(sub => isActivePath(sub.path)) ? "text-white" : "text-gray-400 group-hover:text-[#690000]"}`} />
@@ -559,6 +565,7 @@ const Header = () => {
 															key={subIndex}
 															to={subItem.path}
 															onClick={() => setOpenDropdown(null)}
+															className={`group flex items-center px-4 py-3 text-sm transition-all duration-200 ${
 															className={`group flex items-center px-4 py-3 text-sm transition-all duration-200 ${
 																isActivePath(subItem.path)
 																	? `${accent.bg} ${accent.text} font-bold border-r-4 ${accent.border}`
@@ -579,6 +586,8 @@ const Header = () => {
 											to={item.path}
 											className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
 												isActivePath(item.path)
+													? "bg-white/20 text-white font-bold shadow-sm"
+													: "text-white/90 hover:bg-white/10 hover:text-white"
 													? "bg-white/20 text-white font-bold shadow-sm"
 													: "text-white/90 hover:bg-white/10 hover:text-white"
 											}`}

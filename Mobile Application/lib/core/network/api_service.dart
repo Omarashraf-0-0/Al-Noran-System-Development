@@ -1,35 +1,15 @@
 import 'dart:convert';
-import 'dart:io'; // للتحقق من المنصة
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart'; // للتحقق من kIsWeb
 import 'package:http_parser/http_parser.dart';
 import '../storage/secure_storage.dart';
 
 class ApiService {
-  // Base URL - يتغير حسب المنصة تلقائياً
+  // Base URL - سيرفر Render الجديد
   static String get baseUrl {
-    // لو Web (Chrome/Edge/Firefox)
-    if (kIsWeb) {
-      return 'http://localhost:3500';
-    }
-
-    // لو Android (Emulator أو Physical Device)
-    if (Platform.isAndroid) {
-      // للـ Emulator - استخدم IP الخاص
-      // return 'http://10.0.2.2:3500';
-
-      // لو موبايل حقيقي، استخدم IP اللابتوب:
-      return 'http://192.168.1.16:3500';
-    }
-
-    // لو iOS Simulator أو جهاز حقيقي
-    if (Platform.isIOS) {
-      return 'http://localhost:3500'; // iOS simulator يستخدم localhost عادي
-    }
-
-    // Default
-    return 'http://localhost:3500';
+    // الـ Production URL على Render
+    return 'https://al-noran-system-development.onrender.com';
   }
 
   // Login API
@@ -38,16 +18,26 @@ class ApiService {
     required String password,
   }) async {
     try {
+      final headers = {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+        'x-client-type': 'mobile',
+        'x-flutter-app': 'true',
+        'User-Agent': 'Flutter/AlNoran Mobile App',
+      };
+
       print('🔐 [API] Login request to: $baseUrl/api/auth/login');
+      print('🔐 [API] Headers being sent: $headers');
 
       final response = await http
           .post(
             Uri.parse('$baseUrl/api/auth/login'),
-            headers: {
-              'Content-Type': 'application/json',
-              'ngrok-skip-browser-warning': 'true', // مهم لـ ngrok
-            },
-            body: jsonEncode({'email': email, 'password': password}),
+            headers: headers,
+            body: jsonEncode({
+              'email': email,
+              'password': password,
+              'platform': 'mobile',
+            }),
           )
           .timeout(
             const Duration(seconds: 15),
@@ -102,6 +92,81 @@ class ApiService {
     }
   }
 
+  // Google Sign In API
+  static Future<Map<String, dynamic>> googleSignIn({
+    required String email,
+    required String displayName,
+    required String googleId,
+    String? idToken,
+    String? accessToken,
+  }) async {
+    try {
+      print('🔐 [API] Google Sign In request to: $baseUrl/api/auth/google');
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/auth/google'),
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true',
+              'X-Client-Type': 'mobile',
+              'X-Flutter-App': 'true',
+            },
+            body: jsonEncode({
+              'email': email,
+              'displayName': displayName,
+              'googleId': googleId,
+              'idToken': idToken,
+              'accessToken': accessToken,
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception('انتهت مهلة الاتصال - يرجى المحاولة مرة أخرى');
+            },
+          );
+
+      print('🔐 [API] Google Sign In response status: ${response.statusCode}');
+      print('🔐 [API] Google Sign In response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('🔐 [API] Google Sign In successful!');
+
+        // إذا كان مستخدم موجود، احفظ الـ token
+        if (data['token'] != null) {
+          await saveToken(data['token']);
+          if (data['user'] != null) {
+            await saveUserData(data['user']);
+          }
+        }
+
+        return {
+          'success': true,
+          'isNewUser': data['isNewUser'] ?? false,
+          'message': data['message'] ?? 'تم تسجيل الدخول بنجاح',
+          'data': data,
+        };
+      } else {
+        print('🔐 [API] Google Sign In failed: ${data['message']}');
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل تسجيل الدخول بجوجل',
+          'error': data['error'],
+        };
+      }
+    } catch (e) {
+      print('🔐 [API] Google Sign In exception: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في الاتصال بالسيرفر',
+        'error': e.toString(),
+      };
+    }
+  }
+
   // Register API
   static Future<Map<String, dynamic>> register({
     required String name,
@@ -137,6 +202,8 @@ class ApiService {
         headers: {
           'Content-Type': 'application/json',
           'ngrok-skip-browser-warning': 'true',
+          'X-Client-Type': 'mobile',
+          'X-Flutter-App': 'true',
         },
         body: jsonEncode(body),
       );
@@ -1342,6 +1409,228 @@ class ApiService {
     }
   }
 
+  /// Add Document to Shipment
+  /// Adds a new customer-uploaded document to the shipment's documents list
+  static Future<Map<String, dynamic>> addDocumentToShipment({
+    required String shipmentId,
+    required String documentName,
+    required String fileId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📝 [addDocumentToShipment] Adding document: $documentName');
+      print('📝 [addDocumentToShipment] To shipment: $shipmentId');
+      print('📝 [addDocumentToShipment] File ID: $fileId');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/shipments/id/$shipmentId/documents'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'name': documentName,
+          'fileId': fileId,
+          'uploaded': true,
+          'uploadedAt': DateTime.now().toIso8601String(),
+        }),
+      );
+
+      print('📝 [addDocumentToShipment] Status: ${response.statusCode}');
+      print('📝 [addDocumentToShipment] Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم إضافة المستند بنجاح',
+          'data': data['data'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل إضافة المستند',
+        };
+      }
+    } catch (e) {
+      print('❌ [addDocumentToShipment] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في إضافة المستند',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Add Document to Export Shipment
+  /// Adds a new customer-uploaded document to the export shipment's documents list
+  static Future<Map<String, dynamic>> addDocumentToExportShipment({
+    required String shipmentId,
+    required String documentName,
+    required String fileId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📝 [addDocumentToExportShipment] Adding document: $documentName');
+      print('📝 [addDocumentToExportShipment] To export shipment: $shipmentId');
+      print('📝 [addDocumentToExportShipment] File ID: $fileId');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/export-shipments/$shipmentId/documents'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'name': documentName,
+          'fileId': fileId,
+          'uploaded': true,
+          'uploadedAt': DateTime.now().toIso8601String(),
+        }),
+      );
+
+      print('📝 [addDocumentToExportShipment] Status: ${response.statusCode}');
+      print('📝 [addDocumentToExportShipment] Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم إضافة المستند بنجاح',
+          'data': data['data'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل إضافة المستند',
+        };
+      }
+    } catch (e) {
+      print('❌ [addDocumentToExportShipment] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في إضافة المستند',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get Required Documents for Export Shipment
+  /// Retrieves the list of documents requested by employee for specific export shipment
+  static Future<Map<String, dynamic>> getExportRequiredDocuments({
+    required String shipmentId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print(
+        '📋 [getExportRequiredDocuments] Fetching for shipment: $shipmentId',
+      );
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/export-shipments/$shipmentId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📋 [getExportRequiredDocuments] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final shipment = data['data'] ?? data['shipment'] ?? {};
+        final requiredDocs = shipment['requiredDocuments'] ?? [];
+
+        return {
+          'success': true,
+          'requiredDocuments': List<Map<String, dynamic>>.from(
+            requiredDocs.map((doc) => Map<String, dynamic>.from(doc)),
+          ),
+        };
+      } else if (response.statusCode == 404) {
+        return {'success': false, 'message': 'شحنة التصدير غير موجودة'};
+      } else {
+        return {'success': false, 'message': 'فشل تحميل المستندات المطلوبة'};
+      }
+    } catch (e) {
+      print('❌ [getExportRequiredDocuments] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحميل المستندات المطلوبة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Upload Required Document for Export Shipment
+  /// Client uploads a document that was requested by employee
+  static Future<Map<String, dynamic>> uploadExportRequiredDocument({
+    required String shipmentId,
+    required String documentName,
+    required String uploadId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📤 [uploadExportRequiredDocument] Uploading for: $documentName');
+      print('📤 [uploadExportRequiredDocument] Shipment: $shipmentId');
+      print('📤 [uploadExportRequiredDocument] Upload ID: $uploadId');
+
+      final response = await http.post(
+        Uri.parse(
+          '$baseUrl/api/export-shipments/$shipmentId/upload-required/${Uri.encodeComponent(documentName)}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'uploadId': uploadId}),
+      );
+
+      print('📤 [uploadExportRequiredDocument] Status: ${response.statusCode}');
+      print('📤 [uploadExportRequiredDocument] Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': 'تم رفع المستند بنجاح',
+          'shipment': data['shipment'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل رفع المستند',
+        };
+      }
+    } catch (e) {
+      print('❌ [uploadExportRequiredDocument] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في رفع المستند',
+        'error': e.toString(),
+      };
+    }
+  }
+
   /// Create Shipment
   /// Creates a new shipment
   static Future<Map<String, dynamic>> createShipment({
@@ -2411,6 +2700,142 @@ class ApiService {
     }
   }
 
+  /// Get My Export Shipments
+  /// Gets all export shipments for the current user
+  static Future<Map<String, dynamic>> getMyExportShipments() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📦 [getMyExportShipments] Fetching export shipments...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/export-shipments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📦 [getMyExportShipments] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('📦 [getMyExportShipments] Response keys: ${data.keys}');
+
+        // Backend returns 'shipments' not 'data'
+        final shipments = data['shipments'] ?? data['data'] ?? [];
+        print('📦 [getMyExportShipments] Got ${shipments.length} shipments');
+
+        return {'success': true, 'data': shipments};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب شحنات التصدير',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMyExportShipments] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب شحنات التصدير',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get Export Shipment by ID
+  /// Gets a single export shipment by its ID
+  static Future<Map<String, dynamic>> getExportShipmentById({
+    required String id,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('🚢 [getExportShipmentById] Fetching export shipment: $id');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/export-shipments/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('🚢 [getExportShipmentById] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': data['shipment'] ?? data['data'] ?? data,
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب تفاصيل الشحنة',
+        };
+      }
+    } catch (e) {
+      print('❌ [getExportShipmentById] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب تفاصيل الشحنة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get UCR Request by ID
+  /// Gets a single UCR request by its ID
+  static Future<Map<String, dynamic>> getUcrRequestById({
+    required String id,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📋 [getUcrRequestById] Fetching UCR request: $id');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/ucr/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📋 [getUcrRequestById] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'data': data['data'] ?? data};
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل جلب تفاصيل الطلب',
+        };
+      }
+    } catch (e) {
+      print('❌ [getUcrRequestById] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب تفاصيل الطلب',
+        'error': e.toString(),
+      };
+    }
+  }
+
   // =====================================================
   // 🔔 NOTIFICATIONS API
   // =====================================================
@@ -2844,6 +3269,365 @@ class ApiService {
       return {
         'success': false,
         'message': 'خطأ في حفظ FCM Token',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // ============================================================================
+  // ======================== PAYMENTS & INVOICES APIs ==========================
+  // ============================================================================
+
+  /// Get My Invoices
+  /// Fetches all invoices for the currently logged-in user
+  static Future<Map<String, dynamic>> getMyInvoices() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💰 [getMyInvoices] Fetching invoices...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/invoices/myInvoices'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💰 [getMyInvoices] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print(
+          '💰 [getMyInvoices] Got ${data['invoices']?.length ?? 0} invoices',
+        );
+        return {
+          'success': true,
+          'invoices': data['invoices'] ?? [],
+          'message': data['message'] ?? 'تم جلب الفواتير بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في جلب الفواتير',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMyInvoices] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب الفواتير',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get My Payments
+  /// Fetches all payments/receipts for the currently logged-in user
+  static Future<Map<String, dynamic>> getMyPayments() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💳 [getMyPayments] Fetching payments...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/payments/my-payments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💳 [getMyPayments] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Backend returns array directly, not wrapped in object
+        final payments = data is List ? data : [];
+        print('💳 [getMyPayments] Got ${payments.length} payments');
+        return {
+          'success': true,
+          'payments': payments,
+          'message': 'تم جلب المدفوعات بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في جلب المدفوعات',
+        };
+      }
+    } catch (e) {
+      print('❌ [getMyPayments] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب المدفوعات',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Create Payment (Upload Receipt)
+  /// Creates a new payment with receipt image(s)
+  static Future<Map<String, dynamic>> createPayment({
+    required List<String> imageUrls,
+    String paymentMethod = 'BANK_TRANSFER',
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print(
+        '💳 [createPayment] Creating payment with ${imageUrls.length} receipts...',
+      );
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/payments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'transactions':
+              imageUrls
+                  .map((url) => {'imageUrls': url, 'status': 'PENDING'})
+                  .toList(),
+          'paymentMethod': paymentMethod,
+        }),
+      );
+
+      print('💳 [createPayment] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'payment': data['payment'],
+          'message': data['message'] ?? 'تم رفع الإيصال بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في رفع الإيصال',
+        };
+      }
+    } catch (e) {
+      print('❌ [createPayment] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في رفع الإيصال',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Update Payment Receipt
+  /// Updates the receipt image for a pending or rejected payment
+  static Future<Map<String, dynamic>> updatePaymentReceipt({
+    required String paymentId,
+    required String imageUrl,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💳 [updatePaymentReceipt] Updating payment: $paymentId');
+
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/payments/$paymentId/receipt'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'imageUrls': imageUrl}),
+      );
+
+      print('💳 [updatePaymentReceipt] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'payment': data['payment'],
+          'message': data['message'] ?? 'تم تحديث الإيصال بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في تحديث الإيصال',
+        };
+      }
+    } catch (e) {
+      print('❌ [updatePaymentReceipt] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في تحديث الإيصال',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Pay Invoice from Wallet
+  /// Pays an invoice using the user's wallet balance
+  static Future<Map<String, dynamic>> payInvoice(String invoiceId) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('💰 [payInvoice] Paying invoice: $invoiceId');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/invoices/$invoiceId/pay'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('💰 [payInvoice] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': data['message'] ?? 'تم الدفع بنجاح',
+          'invoice': data['invoice'],
+          'newBalance': data['newBalance'],
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {'success': false, 'message': data['message'] ?? 'فشل في الدفع'};
+      }
+    } catch (e) {
+      print('❌ [payInvoice] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في عملية الدفع',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get User Wallet Balance
+  /// Gets the current wallet balance from user profile
+  static Future<Map<String, dynamic>> getWalletBalance() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('👛 [getWalletBalance] Fetching wallet balance...');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/auth/me'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('👛 [getWalletBalance] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final wallet = data['user']?['wallet'] ?? 0;
+        print('👛 [getWalletBalance] Wallet: $wallet EGP');
+        return {'success': true, 'wallet': wallet, 'user': data['user']};
+      } else {
+        return {'success': false, 'message': 'فشل في جلب رصيد المحفظة'};
+      }
+    } catch (e) {
+      print('❌ [getWalletBalance] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في جلب رصيد المحفظة',
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Upload Receipt Image to Cloudinary
+  /// Uploads a receipt image and returns the URL
+  static Future<Map<String, dynamic>> uploadReceiptImage(File imageFile) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'message': 'يجب تسجيل الدخول أولاً'};
+      }
+
+      print('📤 [uploadReceiptImage] Uploading receipt image...');
+
+      // Create multipart request
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/uploads'),
+      );
+
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add category field (required by backend)
+      request.fields['category'] = 'payment';
+      // documentType is optional for payment category, backend will accept null
+
+      // Add file
+      final fileExtension = imageFile.path.split('.').last.toLowerCase();
+      String mimeType = 'image/jpeg';
+      if (fileExtension == 'png') mimeType = 'image/png';
+      if (fileExtension == 'gif') mimeType = 'image/gif';
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          imageFile.path,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('📤 [uploadReceiptImage] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        // Backend returns: { success: true, upload: { url: "...", publicUrl: "..." } }
+        final uploadData = data['upload'] ?? {};
+        final url = uploadData['url'] ?? uploadData['publicUrl'] ?? '';
+        print('📤 [uploadReceiptImage] URL: $url');
+        return {
+          'success': true,
+          'url': url,
+          'uploadId': uploadData['id'],
+          'message': data['message'] ?? 'تم رفع الصورة بنجاح',
+        };
+      } else {
+        final data = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': data['message'] ?? 'فشل في رفع الصورة',
+        };
+      }
+    } catch (e) {
+      print('❌ [uploadReceiptImage] Error: $e');
+      return {
+        'success': false,
+        'message': 'خطأ في رفع الصورة',
         'error': e.toString(),
       };
     }

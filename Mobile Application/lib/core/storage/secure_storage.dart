@@ -7,6 +7,7 @@ class SecureStorage {
   // Keys
   static const String _tokenKey = 'auth_token';
   static const String _userDataKey = 'user_data';
+  static const String _notificationsEnabledKey = 'notifications_enabled';
 
   /// Save JWT Token
   static Future<void> saveToken(String token) async {
@@ -66,5 +67,17 @@ class SecureStorage {
   static Future<bool> isLoggedIn() async {
     final token = await getToken();
     return token != null && token.isNotEmpty;
+  }
+
+  /// Save Notifications Setting
+  static Future<void> setNotificationsEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_notificationsEnabledKey, enabled);
+  }
+
+  /// Get Notifications Setting (default: true)
+  static Future<bool> getNotificationsEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_notificationsEnabledKey) ?? true;
   }
 }

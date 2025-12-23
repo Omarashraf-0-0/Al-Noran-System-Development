@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:url_launcher/url_launcher.dart';
@@ -20,11 +21,19 @@ class UcrRequestPage extends StatefulWidget {
   State<UcrRequestPage> createState() => _UcrRequestPageState();
 }
 
-class _UcrRequestPageState extends State<UcrRequestPage> {
-  // Colors
+class _UcrRequestPageState extends State<UcrRequestPage>
+    with SingleTickerProviderStateMixin {
+  // Premium Colors
   static const Color primaryDark = Color(0xFF690000);
-  static const Color primaryLight = Color(0xFFA40000);
+  static const Color primaryLight = Color(0xFF8B0000);
   static const Color accent = Color(0xFF1BA3B6);
+  static const Color bgColor = Color(0xFFF8F9FA);
+  static const Color cardColor = Colors.white;
+
+  // Animation controller
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   // Current step: 0 = اختيار نوع الشهادة, 1 = ملء البيانات
   int _currentStep = 0;
@@ -34,6 +43,12 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
 
   // Shipping method: 'air' = جوي, 'sea' = بحري
   String _shippingMethod = 'sea';
+
+  // Sea shipment type: 'fcl' = حاويات, 'lcl' = بضايع عامة, 'parcels' = طرود
+  String _seaShipmentType = 'fcl';
+
+  // Weight unit for general weight
+  String _generalWeightUnit = 'kilograms';
 
   // State
   bool _isSubmitting = false;
@@ -206,6 +221,21 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   @override
   void initState() {
     super.initState();
+    // Initialize animation controller
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
+    _animationController.forward();
     // Check document verification status
     _checkDocumentStatus();
   }
@@ -228,6 +258,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
 
   @override
   void dispose() {
+    _animationController.dispose();
     _destinationCountryController.dispose();
     _destinationPortController.dispose();
     _generalDescriptionController.dispose();
@@ -538,6 +569,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   String _getRegistrationDocumentDisplayName(String docType) {
     final names = {
       'personal_id': 'البطاقة الشخصية',
+      'passport': 'جواز السفر',
       'power_of_attorney': 'التوكيل',
       'contract': 'العقد',
       'tax_card': 'البطاقة الضريبية',
@@ -546,6 +578,8 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
       'import_export_card': 'بطاقة الاستيراد والتصدير',
       'production_supplies': 'مستلزمات الإنتاج',
       'industrial_register': 'السجل الصناعي',
+      'personal_id_of_representative': 'بطاقة المفوض',
+      'trade_certificates': 'شهادات المزاولة',
     };
     return names[docType] ?? docType;
   }
@@ -553,14 +587,42 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   // Map document key to valid backend enum value
   String _mapDocumentKeyToEnum(String key) {
     final mappings = {
-      'bank_waiver': 'other', // التنازل البنكي
-      'original_invoice': 'invoice', // الفاتورة الأصلية
-      'packing_list': 'other', // كشف العبوة
-      'shipping_permit': 'other', // إذن الشحن
-      'awb': 'bill_of_lading', // بوليصة الشحن الجوي
-      'bl': 'bill_of_lading', // بوليصة الشحن البحري
+      'bank_waiver': 'bank_waiver',
+      'export_invoice': 'export_invoice',
+      'export_packing_list': 'export_packing_list',
+      'shipping_permit': 'shipping_permit',
+      'awb': 'awb',
+      'bl': 'bl',
     };
     return mappings[key] ?? 'other';
+  }
+
+  // Get document description
+  String _getDocumentDescription(String key) {
+    final descriptions = {
+      'bank_waiver': 'إعفاء بنكي من الجهة المصرفية',
+      'export_invoice': 'فاتورة التصدير التجارية',
+      'export_packing_list': 'قائمة التعبئة',
+      'shipping_permit': 'تصريح الشحن من الجمارك',
+      'awb': 'بوليصة الشحن الجوي',
+      'bl': 'بوليصة الشحن البحري',
+    };
+    return descriptions[key] ?? '';
+  }
+
+  // Calculate export fee preview (for Noran certification)
+  double _calculateFeePreview() {
+    if (_certificationType != 'noran') return 0;
+    final value = double.tryParse(_valueInEGPController.text.trim()) ?? 0;
+    // 10% of value, minimum 3500 EGP
+    return value > 0 ? (value * 0.1 > 3500 ? value * 0.1 : 3500) : 0;
+  }
+
+  // Check if packages count is required
+  bool get _needsPackagesCount {
+    return _shippingMethod == 'air' ||
+        (_shippingMethod == 'sea' &&
+            (_seaShipmentType == 'parcels' || _seaShipmentType == 'lcl'));
   }
 
   // Get required documents based on certification type and shipping method
@@ -569,20 +631,20 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
       // على بطاقة الشركة - نفس المستندات للجوي والبحري
       return [
         {'key': 'bank_waiver', 'name': 'التنازل البنكي'},
-        {'key': 'original_invoice', 'name': 'الفاتورة الأصلية'},
-        {'key': 'packing_list', 'name': 'كشف العبوة'},
+        {'key': 'export_invoice', 'name': 'الفاتورة الأصلية'},
+        {'key': 'export_packing_list', 'name': 'كشف العبوة'},
       ];
     } else {
       // على بطاقتي الخاصة
       if (_shippingMethod == 'air') {
         return [
-          {'key': 'original_invoice', 'name': 'الفاتورة الأصلية'},
+          {'key': 'export_invoice', 'name': 'الفاتورة الأصلية'},
           {'key': 'shipping_permit', 'name': 'إذن الشحن'},
           {'key': 'awb', 'name': 'بوليصة الشحن الجوي (AWB)'},
         ];
       } else {
         return [
-          {'key': 'original_invoice', 'name': 'الفاتورة الأصلية'},
+          {'key': 'export_invoice', 'name': 'الفاتورة الأصلية'},
           {'key': 'shipping_permit', 'name': 'إذن الشحن'},
           {'key': 'bl', 'name': 'بوليصة الشحن البحري (B/L)'},
         ];
@@ -596,34 +658,51 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
       canPop: _currentStep == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
+        HapticFeedback.lightImpact();
         // If on step 1, go back to step 0
         setState(() {
           _currentStep = 0;
         });
+        _animationController.reset();
+        _animationController.forward();
       },
       child: Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
-          backgroundColor: const Color(0xFFF5F5F5),
+          backgroundColor: bgColor,
           body: Column(
             children: [
               UnifiedTopBar(
                 showBackButton: true,
                 showMenu: false,
+                title: 'طلب رقم UCR',
+                subtitle:
+                    _currentStep == 0 ? 'اختر نوع الشهادة' : 'ملء البيانات',
+                titleIcon: Icons.local_shipping_rounded,
+                showWelcome: false,
                 onBackPressed:
                     _currentStep == 0
                         ? null
                         : () {
+                          HapticFeedback.lightImpact();
                           setState(() {
                             _currentStep = 0;
                           });
+                          _animationController.reset();
+                          _animationController.forward();
                         },
               ),
               Expanded(
-                child:
-                    _currentStep == 0
-                        ? _buildCertificationTypeSelection()
-                        : _buildDataEntryForm(),
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child:
+                        _currentStep == 0
+                            ? _buildCertificationTypeSelection()
+                            : _buildDataEntryForm(),
+                  ),
+                ),
               ),
             ],
           ),
@@ -638,112 +717,513 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
 
   Widget _buildCertificationTypeSelection() {
     return SingleChildScrollView(
-      child: Column(
-        children: [
-          const SizedBox(height: 24),
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
 
-          // Header
-          _buildHeader(
-            icon: Icons.assignment_outlined,
-            title: 'طلب رقم UCR',
-            subtitle: 'اختر نوع الشهادة للتصدير',
+            // Premium Header Card
+            _buildPremiumHeaderCard(
+              icon: Icons.verified_rounded,
+              title: 'اختر نوع الشهادة',
+              subtitle: 'حدد طريقة إصدار شهادة UCR',
+            ),
+
+            const SizedBox(height: 28),
+
+            // Section Title with Icon
+            _buildSectionHeader(
+              'نوع الشهادة',
+              Icons.assignment_turned_in_rounded,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Option 1: على بطاقة الشركة (النوران)
+            _buildPremiumCertificationOption(
+              type: 'noran',
+              title: 'على بطاقة الشركة',
+              subtitle: 'النوران تتولى جميع المستندات والإجراءات',
+              note: 'رسوم 10%',
+              icon: Icons.business_center_rounded,
+              color: const Color(0xFF2E7D32),
+              isSelected: _certificationType == 'noran',
+              features: ['إجراءات سريعة', 'دعم كامل', 'ضمان الجودة'],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Option 2: على بطاقتي الخاصة
+            _buildPremiumCertificationOption(
+              type: 'client',
+              title: 'على بطاقتي الخاصة',
+              subtitle: 'أنت المسؤول عن توفير المستندات المطلوبة',
+              note: 'بدون رسوم إضافية',
+              icon: Icons.person_rounded,
+              color: const Color(0xFFEF6C00),
+              isSelected: _certificationType == 'client',
+              features: ['توفير مالي', 'مرونة أكثر', 'تحكم كامل'],
+            ),
+
+            const SizedBox(height: 36),
+
+            // Premium Continue Button
+            _buildPremiumContinueButton(),
+
+            const SizedBox(height: 24),
+
+            // Info tip
+            _buildInfoTip(
+              'يمكنك تغيير نوع الشهادة لاحقاً قبل إرسال الطلب',
+              Icons.lightbulb_outline_rounded,
+            ),
+
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumHeaderCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [primaryDark, primaryLight],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
-
-          const SizedBox(height: 32),
-
-          // Title
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(icon, color: Colors.white, size: 36),
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.check_circle_outline, color: primaryDark, size: 24),
-                SizedBox(width: 8),
                 Text(
-                  'نوع الشهادة',
-                  style: TextStyle(
-                    fontSize: 20,
+                  title,
+                  style: const TextStyle(
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
+                    color: Colors.white,
                     fontFamily: 'Cairo',
-                    color: primaryDark,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontFamily: 'Cairo',
                   ),
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
 
-          const SizedBox(height: 20),
-
-          // Option 1: على بطاقة الشركة (النوران)
-          _buildCertificationOption(
-            type: 'noran',
-            title: 'على بطاقة الشركة',
-            subtitle: 'النوران تتولى المستندات',
-            note: 'رسوم 10%',
-            icon: Icons.business,
-            color: Colors.green,
-            isSelected: _certificationType == 'noran',
+  Widget _buildSectionHeader(
+    String title,
+    IconData icon, {
+    bool isRequired = false,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: primaryDark.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
           ),
-
-          const SizedBox(height: 16),
-
-          // Option 2: على بطاقتي الخاصة
-          _buildCertificationOption(
-            type: 'client',
-            title: 'على بطاقتي الخاصة',
-            subtitle: 'أنت توفر المستندات',
-            note: 'بدون رسوم 10%',
-            icon: Icons.person,
-            color: Colors.orange,
-            isSelected: _certificationType == 'client',
+          child: Icon(icon, color: primaryDark, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: primaryDark,
+            fontFamily: 'Cairo',
           ),
-
-          const SizedBox(height: 40),
-
-          // Continue Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed:
-                    _certificationType != null
-                        ? () {
-                          setState(() {
-                            _currentStep = 1;
-                          });
-                        }
-                        : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryDark,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey[300],
-                  disabledForegroundColor: Colors.grey[600],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: _certificationType != null ? 4 : 0,
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'متابعة',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Cairo',
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_back, size: 20),
-                  ],
-                ),
+        ),
+        if (isRequired) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'مطلوب',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.red.shade700,
+                fontFamily: 'Cairo',
               ),
             ),
           ),
+        ],
+      ],
+    );
+  }
 
-          const SizedBox(height: 32),
+  Widget _buildPremiumCertificationOption({
+    required String type,
+    required String title,
+    required String subtitle,
+    required String note,
+    required IconData icon,
+    required Color color,
+    required bool isSelected,
+    required List<String> features,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() {
+          _certificationType = type;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.08) : cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade200,
+            width: isSelected ? 2.5 : 1,
+          ),
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.25),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                  : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                // Icon Container
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    gradient:
+                        isSelected
+                            ? LinearGradient(
+                              colors: [color, color.withValues(alpha: 0.8)],
+                            )
+                            : null,
+                    color: isSelected ? null : color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow:
+                        isSelected
+                            ? [
+                              BoxShadow(
+                                color: color.withValues(alpha: 0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                            : null,
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isSelected ? Colors.white : color,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Text Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cairo',
+                          color: isSelected ? color : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'Cairo',
+                          color: Colors.grey.shade600,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Selection Indicator
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected ? color : Colors.transparent,
+                    border: Border.all(
+                      color: isSelected ? color : Colors.grey.shade400,
+                      width: 2,
+                    ),
+                    boxShadow:
+                        isSelected
+                            ? [
+                              BoxShadow(
+                                color: color.withValues(alpha: 0.4),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                            : null,
+                  ),
+                  child:
+                      isSelected
+                          ? const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 18,
+                          )
+                          : null,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Note Badge and Features
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        color.withValues(alpha: 0.15),
+                        color.withValues(alpha: 0.08),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: color.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        type == 'noran'
+                            ? Icons.percent_rounded
+                            : Icons.savings_rounded,
+                        size: 14,
+                        color: color,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        note,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Cairo',
+                          color: color,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // Features Row (only show when selected)
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 300),
+              crossFadeState:
+                  isSelected
+                      ? CrossFadeState.showFirst
+                      : CrossFadeState.showSecond,
+              firstChild: Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children:
+                      features.map((feature) {
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.check_circle_rounded,
+                              color: color,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              feature,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontFamily: 'Cairo',
+                                color: color,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                ),
+              ),
+              secondChild: const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumContinueButton() {
+    final isEnabled = _certificationType != null;
+    return Container(
+      width: double.infinity,
+      height: 60,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors:
+              isEnabled
+                  ? [primaryDark, primaryLight]
+                  : [Colors.grey.shade400, Colors.grey.shade500],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow:
+            isEnabled
+                ? [
+                  BoxShadow(
+                    color: primaryDark.withValues(alpha: 0.4),
+                    blurRadius: 15,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+                : null,
+      ),
+      child: ElevatedButton(
+        onPressed:
+            isEnabled
+                ? () {
+                  HapticFeedback.mediumImpact();
+                  setState(() {
+                    _currentStep = 1;
+                  });
+                  _animationController.reset();
+                  _animationController.forward();
+                }
+                : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          shadowColor: Colors.transparent,
+          disabledBackgroundColor: Colors.transparent,
+          disabledForegroundColor: Colors.white60,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'متابعة للخطوة التالية',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Cairo',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.arrow_forward_rounded, size: 18),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoTip(String message, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.blue.shade600, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 12,
+                fontFamily: 'Cairo',
+                color: Colors.blue.shade800,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -881,75 +1361,892 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
 
   Widget _buildDataEntryForm() {
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+
+            // Premium Header with certification type badge
+            _buildFormHeader(),
+
+            const SizedBox(height: 24),
+
+            // Shipping Method Toggle (Premium Style)
+            _buildPremiumShippingToggle(),
+
+            const SizedBox(height: 28),
+
+            // Destination Section
+            _buildSectionHeader(
+              'الوجهة',
+              Icons.location_on_rounded,
+              isRequired: true,
+            ),
+            const SizedBox(height: 12),
+            _buildPremiumDestinationSection(),
+
+            const SizedBox(height: 28),
+
+            // Goods Info Section
+            _buildSectionHeader(
+              'بيانات البضاعة',
+              Icons.inventory_2_rounded,
+              isRequired: true,
+            ),
+            const SizedBox(height: 12),
+            _buildPremiumGoodsSection(),
+
+            const SizedBox(height: 28),
+
+            // Invoice Section
+            _buildSectionHeader(
+              'بيانات الفاتورة',
+              Icons.receipt_rounded,
+              isRequired: true,
+            ),
+            const SizedBox(height: 12),
+            _buildPremiumInvoiceSection(),
+
+            const SizedBox(height: 28),
+
+            // Items Section
+            _buildSectionHeader(
+              'تفاصيل البنود',
+              Icons.list_alt_rounded,
+              isRequired: true,
+            ),
+            const SizedBox(height: 12),
+            _buildItemsSection(),
+
+            const SizedBox(height: 28),
+
+            // Documents Section
+            _buildSectionHeader(
+              'المستندات المطلوبة',
+              Icons.attach_file_rounded,
+              isRequired: true,
+            ),
+            const SizedBox(height: 12),
+            _buildDocumentsSection(),
+
+            const SizedBox(height: 28),
+
+            // Notes Section (Optional)
+            _buildSectionHeader('ملاحظات إضافية', Icons.note_alt_rounded),
+            const SizedBox(height: 12),
+            _buildNotesSection(),
+
+            const SizedBox(height: 36),
+
+            // Premium Submit Button
+            _buildPremiumSubmitButton(),
+
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormHeader() {
+    final isNoran = _certificationType == 'noran';
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [primaryDark, primaryLight],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Column(
         children: [
-          const SizedBox(height: 24),
-
-          // Header
-          _buildHeader(
-            icon: Icons.edit_document,
-            title: 'طلب رقم UCR',
-            subtitle:
-                _certificationType == 'noran'
-                    ? 'على بطاقة الشركة (النوران)'
-                    : 'على بطاقتي الخاصة',
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.edit_document,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ملء بيانات الطلب',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'أكمل جميع الحقول المطلوبة بدقة',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-
-          const SizedBox(height: 24),
-
-          // Shipping Method Toggle
-          _buildShippingMethodToggle(),
-
-          const SizedBox(height: 24),
-
-          // Destination Section
-          _buildSectionTitle('الوجهة', Icons.location_on),
-          _buildDestinationSection(),
-
-          const SizedBox(height: 24),
-
-          // Goods Info Section
-          _buildSectionTitle('بيانات البضاعة الأساسية', Icons.inventory_2),
-          _buildGoodsInfoSection(),
-
-          const SizedBox(height: 24),
-
-          // Invoice Section
-          _buildSectionTitle('بيانات الفاتورة', Icons.receipt),
-          _buildInvoiceSection(),
-
-          // Sea Shipment Section (only for sea)
-          if (_shippingMethod == 'sea') ...[
-            const SizedBox(height: 24),
-            _buildSectionTitle('بيانات الشحن البحري', Icons.directions_boat),
-            _buildSeaShipmentSection(),
-          ],
-
-          const SizedBox(height: 24),
-
-          // Items Section (Optional)
-          _buildSectionTitle('تفاصيل البنود (اختياري)', Icons.list_alt),
-          _buildItemsSection(),
-
-          const SizedBox(height: 24),
-
-          // Documents Section
-          _buildSectionTitle('المستندات المطلوبة', Icons.attach_file),
-          _buildDocumentsSection(),
-
-          const SizedBox(height: 24),
-
-          // Notes Section (Optional)
-          _buildSectionTitle('ملاحظات إضافية (اختياري)', Icons.note),
-          _buildNotesSection(),
-
-          const SizedBox(height: 32),
-
-          // Submit Button
-          _buildSubmitButton(),
-
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
+          // Certification type badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isNoran
+                      ? Icons.business_center_rounded
+                      : Icons.person_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  isNoran ? 'على بطاقة الشركة (النوران)' : 'على بطاقتي الخاصة',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        isNoran
+                            ? Colors.green.shade400
+                            : Colors.orange.shade400,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isNoran ? '10%' : 'مجاني',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumShippingToggle() {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildPremiumShippingButton(
+              'شحن جوي',
+              'air',
+              Icons.flight_rounded,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _buildPremiumShippingButton(
+              'شحن بحري',
+              'sea',
+              Icons.directions_boat_rounded,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumShippingButton(
+    String label,
+    String value,
+    IconData icon,
+  ) {
+    final isSelected = _shippingMethod == value;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() {
+          _shippingMethod = value;
+          _containerWeights.clear();
+          _containersCountController.clear();
+          _seaShipmentType = 'fcl';
+          _packagesCountController.clear();
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        height: 60,
+        decoration: BoxDecoration(
+          gradient:
+              isSelected
+                  ? LinearGradient(
+                    colors: [primaryDark, primaryLight],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                  : null,
+          color: isSelected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: primaryDark.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                  : null,
+        ),
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? Colors.white : Colors.grey.shade600,
+                size: 24,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumDestinationSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildPremiumDropdownField(
+            label: 'بلد الوجهة',
+            icon: Icons.public_rounded,
+            value:
+                _destinationCountryController.text.isEmpty
+                    ? null
+                    : _destinationCountryController.text,
+            items: _countries,
+            isRequired: true,
+            onChanged: (value) {
+              setState(() {
+                _destinationCountryController.text = value ?? '';
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildPremiumTextField(
+            controller: _destinationPortController,
+            label: 'الميناء / المطار',
+            placeholder: 'أدخل اسم الميناء أو المطار',
+            icon: Icons.anchor_rounded,
+            isRequired: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumGoodsSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildPremiumTextField(
+            controller: _generalDescriptionController,
+            label: 'الوصف العام للبضاعة',
+            placeholder: 'وصف تفصيلي للبضاعة المراد تصديرها',
+            icon: Icons.description_rounded,
+            isRequired: true,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: _buildPremiumTextField(
+                  controller: _totalWeightController,
+                  label: 'الوزن الإجمالي',
+                  placeholder: '500',
+                  icon: Icons.scale_rounded,
+                  isRequired: true,
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPremiumDropdownField(
+                  label: 'الوحدة',
+                  icon: Icons.straighten_rounded,
+                  value: _generalWeightUnit == 'kilograms' ? 'كيلوجرام' : 'طن',
+                  items: const ['كيلوجرام', 'طن'],
+                  onChanged: (value) {
+                    setState(() {
+                      _generalWeightUnit = value == 'طن' ? 'tons' : 'kilograms';
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          // Sea Shipment Type Selection (only for sea)
+          if (_shippingMethod == 'sea') ...[
+            const SizedBox(height: 20),
+            _buildSeaShipmentTypeSelector(),
+          ],
+          // Packages Count - only show when needed
+          if (_needsPackagesCount) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildPremiumTextField(
+                    controller: _packagesCountController,
+                    label: 'عدد الطرود',
+                    placeholder: '10',
+                    icon: Icons.inventory_rounded,
+                    isRequired: true,
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                if (_shippingMethod == 'sea') ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildPremiumTextField(
+                      controller: _quantityController,
+                      label: 'الكمية',
+                      placeholder: '100',
+                      icon: Icons.production_quantity_limits_rounded,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+          // Containers Section (only for sea + FCL)
+          if (_shippingMethod == 'sea' && _seaShipmentType == 'fcl') ...[
+            const SizedBox(height: 20),
+            _buildContainersSection(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumInvoiceSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Info tip
+          _buildInfoTip(
+            'بيانات الفاتورة التجارية الأصلية المُصدرة للمستورد',
+            Icons.lightbulb_outline_rounded,
+          ),
+          const SizedBox(height: 20),
+          _buildPremiumTextField(
+            controller: _valueInEGPController,
+            label: 'القيمة بالجنيه المصري',
+            placeholder: '50,000',
+            icon: Icons.attach_money_rounded,
+            isRequired: true,
+            keyboardType: TextInputType.number,
+            onChanged: (value) => setState(() {}),
+          ),
+          // Fee Preview for Noran Certified
+          if (_certificationType == 'noran' &&
+              _valueInEGPController.text.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildFeePreviewCard(),
+          ],
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildPremiumTextField(
+                  controller: _invoiceNumberController,
+                  label: 'رقم الفاتورة',
+                  placeholder: 'INV-2025-001',
+                  icon: Icons.numbers_rounded,
+                  isRequired: true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildPremiumDateField(
+                  label: 'تاريخ الفاتورة',
+                  icon: Icons.calendar_today_rounded,
+                  value: _invoiceDate,
+                  isRequired: true,
+                  onTap: _pickInvoiceDate,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeePreviewCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.green.shade50, Colors.green.shade100],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.green.shade300),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.green.shade500,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.calculate_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'رسوم التصدير المتوقعة',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontFamily: 'Cairo',
+                    color: Colors.green.shade700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_calculateFeePreview().toStringAsFixed(0)} جنيه مصري',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo',
+                    color: Colors.green.shade800,
+                  ),
+                ),
+                Text(
+                  '(10% من القيمة، الحد الأدنى 3,500 جنيه)',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontFamily: 'Cairo',
+                    color: Colors.green.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumTextField({
+    required TextEditingController controller,
+    required String label,
+    required String placeholder,
+    required IconData icon,
+    TextInputType? keyboardType,
+    bool isRequired = false,
+    int maxLines = 1,
+    Function(String)? onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+                fontFamily: 'Cairo',
+              ),
+            ),
+            if (isRequired)
+              Text(
+                ' *',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade600,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: TextField(
+            controller: controller,
+            textAlign: TextAlign.right,
+            textDirection: TextDirection.rtl,
+            keyboardType: keyboardType,
+            maxLines: maxLines,
+            style: const TextStyle(
+              fontSize: 15,
+              fontFamily: 'Cairo',
+              fontWeight: FontWeight.w500,
+            ),
+            onChanged: onChanged,
+            decoration: InputDecoration(
+              hintText: placeholder,
+              hintStyle: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 14,
+                fontFamily: 'Cairo',
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+              suffixIcon: Icon(icon, color: Colors.grey.shade400, size: 22),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumDropdownField({
+    required String label,
+    required IconData icon,
+    required String? value,
+    required List<String> items,
+    required Function(String?) onChanged,
+    bool isRequired = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+                fontFamily: 'Cairo',
+              ),
+            ),
+            if (isRequired)
+              Text(
+                ' *',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade600,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 16),
+            ),
+            style: const TextStyle(
+              fontSize: 14,
+              fontFamily: 'Cairo',
+              color: Colors.black,
+            ),
+            hint: Text(
+              'اختر...',
+              style: TextStyle(
+                color: Colors.grey.shade400,
+                fontFamily: 'Cairo',
+              ),
+            ),
+            isExpanded: true,
+            items:
+                items.map((item) {
+                  return DropdownMenuItem<String>(
+                    value: item,
+                    child: Text(item),
+                  );
+                }).toList(),
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumDateField({
+    required String label,
+    required IconData icon,
+    required DateTime? value,
+    required VoidCallback onTap,
+    bool isRequired = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+                fontFamily: 'Cairo',
+              ),
+            ),
+            if (isRequired)
+              Text(
+                ' *',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade600,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    value != null
+                        ? DateFormat('yyyy/MM/dd').format(value)
+                        : 'اختر التاريخ',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'Cairo',
+                      color:
+                          value != null ? Colors.black : Colors.grey.shade400,
+                    ),
+                  ),
+                ),
+                Icon(icon, color: Colors.grey.shade400, size: 20),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumSubmitButton() {
+    return Container(
+      width: double.infinity,
+      height: 64,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors:
+              _isSubmitting
+                  ? [Colors.grey.shade400, Colors.grey.shade500]
+                  : [primaryDark, primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow:
+            _isSubmitting
+                ? []
+                : [
+                  BoxShadow(
+                    color: primaryDark.withValues(alpha: 0.45),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+      ),
+      child: ElevatedButton(
+        onPressed: _isSubmitting ? null : _submitRequest,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        child:
+            _isSubmitting
+                ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    const Text(
+                      'جاري إرسال الطلب...',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                )
+                : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.send_rounded, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    const Text(
+                      'إرسال طلب UCR',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
       ),
     );
   }
@@ -1077,6 +2374,8 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
           // Reset container data when switching
           _containerWeights.clear();
           _containersCountController.clear();
+          _seaShipmentType = 'fcl';
+          _packagesCountController.clear();
         });
       },
       child: AnimatedContainer(
@@ -1172,93 +2471,21 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
           _buildTextField(
             controller: _generalDescriptionController,
             label: 'الوصف العام للبضاعة *',
-            placeholder: 'اكتب وصفاً تفصيلياً للبضاعة',
+            placeholder: 'وصف تفصيلي للبضاعة المراد تصديرها',
             icon: Icons.description,
             maxLines: 3,
           ),
           const SizedBox(height: 16),
+          // Total Weight with unit
           Row(
             children: [
               Expanded(
+                flex: 2,
                 child: _buildTextField(
                   controller: _totalWeightController,
-                  label: 'الوزن الإجمالي (كجم) *',
-                  placeholder: '100',
+                  label: 'الوزن الإجمالي *',
+                  placeholder: '500',
                   icon: Icons.scale,
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildTextField(
-                  controller: _packagesCountController,
-                  label: 'عدد الطرود *',
-                  placeholder: '10',
-                  icon: Icons.inventory,
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInvoiceSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        children: [
-          const SizedBox(height: 12),
-          _buildTextField(
-            controller: _valueInEGPController,
-            label: 'القيمة بالجنيه المصري *',
-            placeholder: '50000',
-            icon: Icons.attach_money,
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  controller: _invoiceNumberController,
-                  label: 'رقم الفاتورة الأصلية *',
-                  placeholder: 'INV-2024-001',
-                  icon: Icons.numbers,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildDateField(
-                  label: 'تاريخ الفاتورة *',
-                  icon: Icons.calendar_today,
-                  value: _invoiceDate,
-                  onTap: _pickInvoiceDate,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSeaShipmentSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        children: [
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  controller: _quantityController,
-                  label: 'الكمية',
-                  placeholder: '100',
-                  icon: Icons.production_quantity_limits,
                   keyboardType: TextInputType.number,
                 ),
               ),
@@ -1267,11 +2494,11 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
                 child: _buildDropdownField(
                   label: 'وحدة الوزن',
                   icon: Icons.straighten,
-                  value: _weightUnit,
+                  value: _generalWeightUnit == 'kilograms' ? 'كيلوجرام' : 'طن',
                   items: const ['كيلوجرام', 'طن'],
                   onChanged: (value) {
                     setState(() {
-                      _weightUnit = value ?? 'كيلوجرام';
+                      _generalWeightUnit = value == 'طن' ? 'tons' : 'kilograms';
                     });
                   },
                 ),
@@ -1279,36 +2506,266 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildTextField(
-            controller: _containersCountController,
-            label: 'عدد الحاويات *',
-            placeholder: '2',
-            icon: Icons.view_in_ar,
-            keyboardType: TextInputType.number,
-            onChanged: (value) {
-              _updateContainerWeights();
-            },
+
+          // Sea Shipment Type Selection (only for sea)
+          if (_shippingMethod == 'sea') ...[
+            _buildSeaShipmentTypeSelector(),
+            const SizedBox(height: 16),
+          ],
+
+          // Packages Count - only show when needed
+          if (_needsPackagesCount) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTextField(
+                    controller: _packagesCountController,
+                    label: 'عدد الطرود *',
+                    placeholder: '10',
+                    icon: Icons.inventory,
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                if (_shippingMethod == 'sea') ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: _quantityController,
+                      label: 'الكمية',
+                      placeholder: '100',
+                      icon: Icons.production_quantity_limits,
+                      keyboardType: TextInputType.number,
+                      isRequired: false,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+
+          // Containers Section (only for sea + FCL)
+          if (_shippingMethod == 'sea' && _seaShipmentType == 'fcl') ...[
+            const SizedBox(height: 16),
+            _buildContainersSection(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSeaShipmentTypeSelector() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.directions_boat,
+                color: Colors.blue.shade700,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'نوع الشحنة البحرية *',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Cairo',
+                  color: Colors.blue.shade800,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          // Container weights
+          Row(
+            children: [
+              // FCL Option
+              Expanded(
+                child: _buildSeaTypeOption(
+                  type: 'fcl',
+                  title: 'حاويات',
+                  subtitle: 'FCL',
+                  description: 'حاوية كاملة أو أكثر',
+                  icon: Icons.directions_boat,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // LCL Option
+              Expanded(
+                child: _buildSeaTypeOption(
+                  type: 'lcl',
+                  title: 'بضايع عامة',
+                  subtitle: 'LCL',
+                  description: 'أقل من حاوية كاملة',
+                  icon: Icons.inventory_2,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Parcels Option
+              Expanded(
+                child: _buildSeaTypeOption(
+                  type: 'parcels',
+                  title: 'طرود',
+                  subtitle: '',
+                  description: 'بضاعة منفصلة',
+                  icon: Icons.local_shipping,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSeaTypeOption({
+    required String type,
+    required String title,
+    required String subtitle,
+    required String description,
+    required IconData icon,
+  }) {
+    final isSelected = _seaShipmentType == type;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _seaShipmentType = type;
+          // Reset containers when switching type
+          if (type != 'fcl') {
+            _containerWeights.clear();
+            _containersCountController.clear();
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue.shade100 : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.blue.shade500 : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.blue.shade700 : Colors.grey.shade500,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Cairo',
+                color: isSelected ? Colors.blue.shade800 : Colors.grey.shade700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (subtitle.isNotEmpty)
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Cairo',
+                  color: Colors.blue.shade600,
+                ),
+              ),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 8,
+                fontFamily: 'Cairo',
+                color: Colors.grey.shade500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (isSelected)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade500,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 12),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContainersSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  controller: _containersCountController,
+                  label: 'عدد الحاويات *',
+                  placeholder: '2',
+                  icon: Icons.view_in_ar,
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    _updateContainerWeights();
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildTextField(
+                  controller: _quantityController,
+                  label: 'الكمية الإجمالية',
+                  placeholder: '100',
+                  icon: Icons.production_quantity_limits,
+                  keyboardType: TextInputType.number,
+                  isRequired: false,
+                ),
+              ),
+            ],
+          ),
+          // Container Details
           if (_containerWeights.isNotEmpty) ...[
+            const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade200),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'أوزان الحاويات',
+                  Text(
+                    'تفاصيل الحاويات',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Cairo',
-                      color: primaryDark,
+                      color: Colors.blue.shade800,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -1328,106 +2785,320 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
     );
   }
 
-  Widget _buildContainerWeightRow(int index) {
-    return Row(
-      children: [
-        Text(
-          'حاوية ${index + 1}',
-          style: const TextStyle(
-            fontSize: 12,
-            fontFamily: 'Cairo',
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          flex: 2,
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: 'رقم الحاوية',
-              hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
+  Widget _buildInvoiceSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          // Info text
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.blue.shade200),
             ),
-            style: const TextStyle(fontSize: 12, fontFamily: 'Cairo'),
-            onChanged: (value) {
-              _containerWeights[index]['containerNumber'] = value;
-            },
+            child: Row(
+              children: [
+                Icon(
+                  Icons.lightbulb_outline,
+                  color: Colors.blue.shade600,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'بيانات الفاتورة التجارية الأصلية المُصدرة للمستورد',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'Cairo',
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: TextField(
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _valueInEGPController,
+            label: 'القيمة بالجنيه المصري *',
+            placeholder: '50,000',
+            icon: Icons.attach_money,
             keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              hintText: 'الوزن',
-              hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-            ),
-            style: const TextStyle(fontSize: 12, fontFamily: 'Cairo'),
             onChanged: (value) {
-              _containerWeights[index]['weight'] =
-                  double.tryParse(value) ?? 0.0;
+              setState(() {}); // Rebuild to update fee preview
             },
           ),
-        ),
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 80,
-          child: DropdownButtonFormField<String>(
-            value: _containerWeights[index]['unit'] ?? 'كيلوجرام',
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 8,
+          // Fee Preview for Noran Certified
+          if (_certificationType == 'noran' &&
+              _valueInEGPController.text.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.green.shade300),
               ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+              child: Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade500,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'رسوم التصدير المتوقعة: ${_calculateFeePreview().toStringAsFixed(0)} جنيه مصري',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color: Colors.green.shade800,
+                          ),
+                        ),
+                        Text(
+                          '(10% من القيمة، الحد الأدنى 3,500 جنيه)',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontFamily: 'Cairo',
+                            color: Colors.green.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            style: const TextStyle(
-              fontSize: 11,
-              fontFamily: 'Cairo',
-              color: Colors.black,
-            ),
-            items: const [
-              DropdownMenuItem(value: 'كيلوجرام', child: Text('كجم')),
-              DropdownMenuItem(value: 'طن', child: Text('طن')),
+          ],
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  controller: _invoiceNumberController,
+                  label: 'رقم الفاتورة الأصلية *',
+                  placeholder: 'INV-2025-001',
+                  icon: Icons.numbers,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildDateField(
+                  label: 'تاريخ الفاتورة *',
+                  icon: Icons.calendar_today,
+                  value: _invoiceDate,
+                  onTap: _pickInvoiceDate,
+                ),
+              ),
             ],
-            onChanged: (value) {
-              setState(() {
-                _containerWeights[index]['unit'] = value;
-              });
-            },
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContainerWeightRow(int index) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'الحاوية ${index + 1}',
+            style: TextStyle(
+              fontSize: 13,
+              fontFamily: 'Cairo',
+              fontWeight: FontWeight.bold,
+              color: Colors.blue.shade800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Row 1: Container Number and Size
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextFormField(
+                  key: ValueKey('container_number_$index'),
+                  initialValue:
+                      _containerWeights[index]['containerNumber']?.toString() ??
+                      '',
+                  decoration: InputDecoration(
+                    labelText: 'رقم الحاوية',
+                    labelStyle: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                    ),
+                    hintText: 'CONT-001',
+                    hintStyle: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  style: const TextStyle(fontSize: 12, fontFamily: 'Cairo'),
+                  onChanged: (value) {
+                    _containerWeights[index]['containerNumber'] = value;
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _containerWeights[index]['size'] ?? '20ft',
+                  decoration: InputDecoration(
+                    labelText: 'مقاس الحاوية',
+                    labelStyle: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'Cairo',
+                    color: Colors.black,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: '20ft', child: Text('20 قدم')),
+                    DropdownMenuItem(value: '40ft', child: Text('40 قدم')),
+                    DropdownMenuItem(value: '40ft-hc', child: Text('40 HC')),
+                    DropdownMenuItem(value: '45ft', child: Text('45 قدم')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _containerWeights[index]['size'] = value;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Row 2: Weight and Unit
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  key: ValueKey('container_weight_$index'),
+                  initialValue:
+                      _containerWeights[index]['weight']?.toString() ?? '',
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'الوزن',
+                    labelStyle: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                    ),
+                    hintText: '0',
+                    hintStyle: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  style: const TextStyle(fontSize: 12, fontFamily: 'Cairo'),
+                  onChanged: (value) {
+                    _containerWeights[index]['weight'] =
+                        double.tryParse(value) ?? 0.0;
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 100,
+                child: DropdownButtonFormField<String>(
+                  value: _containerWeights[index]['unit'] ?? 'kilograms',
+                  decoration: InputDecoration(
+                    labelText: 'الوحدة',
+                    labelStyle: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'Cairo',
+                    color: Colors.black,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'kilograms', child: Text('كجم')),
+                    DropdownMenuItem(value: 'tons', child: Text('طن')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _containerWeights[index]['unit'] = value;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1438,8 +3109,9 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
         for (var i = _containerWeights.length; i < count; i++) {
           _containerWeights.add({
             'containerNumber': '',
+            'size': '20ft',
             'weight': 0.0,
-            'unit': 'كيلوجرام',
+            'unit': 'kilograms',
           });
         }
       } else if (count < _containerWeights.length) {
@@ -1449,61 +3121,114 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   }
 
   Widget _buildItemsSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         children: [
-          const SizedBox(height: 12),
-          // Add item button
-          GestureDetector(
-            onTap: _addItem,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: accent.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: accent.withOpacity(0.3)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_circle_outline, color: accent),
-                  const SizedBox(width: 8),
-                  Text(
-                    'إضافة بند جديد',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Cairo',
-                      color: accent,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // Info text - First item is required
+          _buildInfoTip(
+            'البند الأول مطلوب - يمكنك إضافة بنود إضافية اختيارياً',
+            Icons.info_outline_rounded,
           ),
-          // Items list
-          if (_items.isNotEmpty) ...[
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
+          // First item (required) - always show
+          if (_items.isEmpty)
+            _buildFirstItemCard()
+          else
             ..._items.asMap().entries.map((entry) {
               final index = entry.key;
               final item = entry.value;
               return _buildItemCard(index, item);
             }).toList(),
+          // Add more items button
+          if (_items.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                _addItem();
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      accent.withValues(alpha: 0.1),
+                      accent.withValues(alpha: 0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: accent.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.add_rounded, color: accent, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'إضافة بند إضافي (اختياري)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo',
+                        color: accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ],
       ),
     );
   }
 
+  Widget _buildFirstItemCard() {
+    // Initialize first item if empty
+    if (_items.isEmpty) {
+      _items.add({
+        'description': '',
+        'hsCode': '',
+        'quantity': null,
+        'weight': null,
+        'value': null,
+        'unit': '',
+      });
+    }
+    return _buildItemCard(0, _items[0]);
+  }
+
   Widget _buildItemCard(int index, Map<String, dynamic> item) {
+    final isFirstItem = index == 0;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isFirstItem ? Colors.red.shade50 : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(
+          color: isFirstItem ? Colors.red.shade200 : Colors.grey[300]!,
+          width: isFirstItem ? 2 : 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1511,30 +3236,59 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'البند ${index + 1}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Cairo',
-                  color: primaryDark,
+              Row(
+                children: [
+                  Text(
+                    'البند ${index + 1}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Cairo',
+                      color: primaryDark,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          isFirstItem
+                              ? Colors.red.shade600
+                              : Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      isFirstItem ? 'مطلوب' : 'اختياري',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontFamily: 'Cairo',
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (!isFirstItem)
+                IconButton(
+                  onPressed: () => _removeItem(index),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  iconSize: 20,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-              ),
-              IconButton(
-                onPressed: () => _removeItem(index),
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                iconSize: 20,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
             ],
           ),
           const Divider(),
           _buildItemTextField(
             index,
             'description',
-            'وصف الصنف *',
+            isFirstItem ? 'وصف الصنف *' : 'وصف الصنف',
             Icons.description,
+            isRequired: isFirstItem,
           ),
           const SizedBox(height: 8),
           Row(
@@ -1543,7 +3297,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
                 child: _buildItemTextField(
                   index,
                   'hsCode',
-                  'كود البند الجمركي',
+                  'البند الجمركي (HS Code)',
                   Icons.qr_code,
                 ),
               ),
@@ -1552,9 +3306,10 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
                 child: _buildItemTextField(
                   index,
                   'quantity',
-                  'الكمية',
+                  isFirstItem ? 'الكمية *' : 'الكمية',
                   Icons.numbers,
                   isNumber: true,
+                  isRequired: isFirstItem,
                 ),
               ),
             ],
@@ -1576,9 +3331,10 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
                 child: _buildItemTextField(
                   index,
                   'value',
-                  'القيمة',
+                  isFirstItem ? 'القيمة *' : 'القيمة',
                   Icons.attach_money,
                   isNumber: true,
+                  isRequired: isFirstItem,
                 ),
               ),
               const SizedBox(width: 8),
@@ -1586,8 +3342,9 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
                 child: _buildItemTextField(
                   index,
                   'unit',
-                  'الوحدة',
+                  isFirstItem ? 'الوحدة *' : 'الوحدة',
                   Icons.straighten,
+                  isRequired: isFirstItem,
                 ),
               ),
             ],
@@ -1603,8 +3360,14 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
     String label,
     IconData icon, {
     bool isNumber = false,
+    bool isRequired = false,
   }) {
-    return TextField(
+    // Get initial value
+    final initialValue = _items[index][key]?.toString() ?? '';
+
+    return TextFormField(
+      key: ValueKey('item_${index}_$key'),
+      initialValue: initialValue,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
       decoration: InputDecoration(
         labelText: label,
@@ -1619,13 +3382,15 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Colors.grey[300]!),
         ),
+        filled: true,
+        fillColor: Colors.white,
       ),
       style: const TextStyle(fontSize: 12, fontFamily: 'Cairo'),
       onChanged: (value) {
         if (isNumber) {
-          _items[index][key] = double.tryParse(value);
+          _items[index][key] = value.isEmpty ? null : double.tryParse(value);
         } else {
-          _items[index][key] = value;
+          _items[index][key] = value.isEmpty ? '' : value;
         }
       },
     );
@@ -1645,32 +3410,217 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   }
 
   void _removeItem(int index) {
+    // Don't allow removing first item
+    if (index == 0 && _items.length == 1) return;
     setState(() {
       _items.removeAt(index);
     });
   }
 
   Widget _buildDocumentsSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         children: [
-          const SizedBox(height: 12),
-          ..._requiredDocuments.map((doc) {
+          // Info text
+          _buildInfoTip(
+            'المستند الأول مطلوب - المستندات الإضافية اختيارية',
+            Icons.attach_file_rounded,
+          ),
+          const SizedBox(height: 16),
+          // Certification Type Badge
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  (_certificationType == 'noran' ? Colors.green : Colors.orange)
+                      .withValues(alpha: 0.1),
+                  (_certificationType == 'noran' ? Colors.green : Colors.orange)
+                      .withValues(alpha: 0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: (_certificationType == 'noran'
+                        ? Colors.green
+                        : Colors.orange)
+                    .withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color:
+                        _certificationType == 'noran'
+                            ? Colors.green.shade500
+                            : Colors.orange.shade500,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    _certificationType == 'noran'
+                        ? Icons.business_center_rounded
+                        : Icons.person_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  _certificationType == 'noran'
+                      ? 'شهادة النوران'
+                      : 'شهادتك الخاصة',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo',
+                    color:
+                        _certificationType == 'noran'
+                            ? Colors.green.shade800
+                            : Colors.orange.shade800,
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 10),
+                  width: 1,
+                  height: 20,
+                  color: Colors.grey.shade300,
+                ),
+                Icon(
+                  _shippingMethod == 'air'
+                      ? Icons.flight_rounded
+                      : Icons.directions_boat_rounded,
+                  color: Colors.grey.shade600,
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _shippingMethod == 'air' ? 'شحن جوي' : 'شحن بحري',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontFamily: 'Cairo',
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Documents list
+          ..._requiredDocuments.asMap().entries.map((entry) {
+            final index = entry.key;
+            final doc = entry.value;
             final key = doc['key']!;
             final name = doc['name']!;
             final isUploaded = _uploadedDocuments.containsKey(key);
+            final isRequired = index == 0; // First document is required
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: _buildDocumentUploadCard(key, name, isUploaded),
+              child: _buildDocumentUploadCard(
+                key,
+                name,
+                isUploaded,
+                isRequired: isRequired,
+              ),
             );
           }).toList(),
+          // Upload Progress Summary
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'المستندات المرفوعة: ${_uploadedDocuments.length} من ${_requiredDocuments.length}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'Cairo',
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    Row(
+                      children:
+                          _requiredDocuments.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final doc = entry.value;
+                            final isUploaded = _uploadedDocuments.containsKey(
+                              doc['key'],
+                            );
+                            return Container(
+                              width: 12,
+                              height: 12,
+                              margin: const EdgeInsets.only(left: 4),
+                              decoration: BoxDecoration(
+                                color:
+                                    isUploaded
+                                        ? Colors.green.shade500
+                                        : (index == 0
+                                            ? Colors.red.shade400
+                                            : Colors.grey.shade300),
+                                shape: BoxShape.circle,
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  ],
+                ),
+                if (_uploadedDocuments.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.green.shade600,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'تم رفع المستند المطلوب',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'Cairo',
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDocumentUploadCard(String key, String name, bool isUploaded) {
+  Widget _buildDocumentUploadCard(
+    String key,
+    String name,
+    bool isUploaded, {
+    bool isRequired = false,
+  }) {
+    final description = _getDocumentDescription(key);
     return GestureDetector(
       onTap: () {
         if (isUploaded) {
@@ -1682,25 +3632,46 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isUploaded ? Colors.green.shade50 : Colors.white,
+          color:
+              isUploaded
+                  ? Colors.green.shade50
+                  : (isRequired ? Colors.red.shade50 : Colors.white),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isUploaded ? Colors.green : Colors.grey[300]!,
-            width: isUploaded ? 2 : 1,
+            color:
+                isUploaded
+                    ? Colors.green
+                    : (isRequired ? Colors.red.shade200 : Colors.grey[300]!),
+            width: isUploaded || isRequired ? 2 : 1,
           ),
         ),
         child: Row(
           children: [
+            // Status indicator with number
             Container(
-              padding: const EdgeInsets.all(10),
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: isUploaded ? Colors.green : accent,
+                color:
+                    isUploaded
+                        ? Colors.green
+                        : (isRequired
+                            ? Colors.red.shade600
+                            : Colors.grey.shade400),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                isUploaded ? Icons.check : Icons.upload_file,
-                color: Colors.white,
-                size: 20,
+              child: Center(
+                child:
+                    isUploaded
+                        ? const Icon(Icons.check, color: Colors.white, size: 20)
+                        : Text(
+                          '${_requiredDocuments.indexWhere((d) => d['key'] == key) + 1}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
               ),
             ),
             const SizedBox(width: 12),
@@ -1708,16 +3679,55 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    name,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Cairo',
-                      color:
-                          isUploaded ? Colors.green.shade700 : Colors.black87,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color:
+                                isUploaded
+                                    ? Colors.green.shade700
+                                    : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              isRequired
+                                  ? Colors.red.shade600
+                                  : Colors.grey.shade400,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          isRequired ? 'مطلوب' : 'اختياري',
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontFamily: 'Cairo',
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  if (description.isNotEmpty && !isUploaded)
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontFamily: 'Cairo',
+                        color: Colors.grey[500],
+                      ),
+                    ),
                   if (isUploaded && _uploadedDocuments[key] != null)
                     Text(
                       _uploadedDocuments[key]!['fileName'] ?? 'تم الرفع',
@@ -1742,7 +3752,18 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
                 ],
               )
             else
-              Icon(Icons.upload_file, color: Colors.grey[400], size: 20),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.upload_file,
+                  color: Colors.grey[500],
+                  size: 20,
+                ),
+              ),
           ],
         ),
       ),
@@ -2169,18 +4190,27 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   }
 
   Widget _buildNotesSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         children: [
-          const SizedBox(height: 12),
-          _buildTextField(
+          _buildPremiumTextField(
             controller: _notesController,
-            label: 'ملاحظات',
-            placeholder: 'أضف أي ملاحظات إضافية...',
-            icon: Icons.edit_note,
+            label: 'ملاحظات إضافية',
+            placeholder: 'أضف أي ملاحظات أو تعليمات خاصة بالطلب...',
+            icon: Icons.edit_note_rounded,
             maxLines: 3,
-            isRequired: false,
           ),
         ],
       ),
@@ -2430,7 +4460,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
                 foregroundColor: primaryDark, // Button text color
               ),
             ),
-            dialogTheme: DialogTheme(
+            dialogTheme: DialogThemeData(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -2599,88 +4629,317 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
   Future<void> _submitRequest() async {
     // Check document verification first
     if (!_canSubmitRequests) {
+      HapticFeedback.mediumImpact();
       _showDocumentRequiredDialog();
       return;
     }
 
-    // Validate required fields
-    if (_destinationCountryController.text.trim().isEmpty) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'يرجى اختيار بلد الوجهة',
-      );
-      return;
-    }
-    if (_destinationPortController.text.trim().isEmpty) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'يرجى إدخال الميناء/المطار',
-      );
-      return;
-    }
+    // ==========================================
+    // COMPREHENSIVE VALIDATION (matching web)
+    // ==========================================
+
+    // 1. Basic required fields
     if (_generalDescriptionController.text.trim().isEmpty) {
+      HapticFeedback.mediumImpact();
       AlNoranPopups.showError(
         context: context,
-        message: 'يرجى إدخال وصف البضاعة',
+        message: 'الرجاء إدخال وصف البضاعة',
       );
       return;
     }
+
     if (_totalWeightController.text.trim().isEmpty) {
+      HapticFeedback.mediumImpact();
       AlNoranPopups.showError(
         context: context,
-        message: 'يرجى إدخال الوزن الإجمالي',
+        message: 'الرجاء إدخال الوزن الكلي',
       );
       return;
     }
-    if (_packagesCountController.text.trim().isEmpty) {
+
+    // packagesCount is required only for air shipments, sea parcels, or sea LCL
+    if (_needsPackagesCount && _packagesCountController.text.trim().isEmpty) {
+      HapticFeedback.mediumImpact();
       AlNoranPopups.showError(
         context: context,
-        message: 'يرجى إدخال عدد الطرود',
+        message: 'الرجاء إدخال عدد الطرود',
       );
       return;
     }
+
     if (_valueInEGPController.text.trim().isEmpty) {
+      HapticFeedback.mediumImpact();
       AlNoranPopups.showError(
         context: context,
-        message: 'يرجى إدخال القيمة بالجنيه',
+        message: 'الرجاء إدخال قيمة الشحنة بالجنيه المصري',
       );
       return;
     }
+
     if (_invoiceNumberController.text.trim().isEmpty) {
       AlNoranPopups.showError(
         context: context,
-        message: 'يرجى إدخال رقم الفاتورة',
+        message: 'الرجاء إدخال رقم الفاتورة',
       );
       return;
     }
+
     if (_invoiceDate == null) {
       AlNoranPopups.showError(
         context: context,
-        message: 'يرجى اختيار تاريخ الفاتورة',
+        message: 'الرجاء اختيار تاريخ الفاتورة',
       );
       return;
     }
 
-    // Validate sea shipment containers
-    if (_shippingMethod == 'sea') {
-      if (_containersCountController.text.trim().isEmpty) {
+    if (_destinationCountryController.text.trim().isEmpty) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'الرجاء اختيار بلد الوجهة',
+      );
+      return;
+    }
+
+    if (_destinationPortController.text.trim().isEmpty) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'الرجاء إدخال الميناء أو المطار',
+      );
+      return;
+    }
+
+    // 2. Numeric validations - no negative numbers
+    final totalWeight =
+        double.tryParse(_totalWeightController.text.trim()) ?? 0;
+    final packagesCount =
+        int.tryParse(_packagesCountController.text.trim()) ?? 0;
+    final valueInEGP =
+        double.tryParse(
+          _valueInEGPController.text.trim().replaceAll(',', ''),
+        ) ??
+        0;
+
+    if (totalWeight <= 0) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'الوزن الكلي يجب أن يكون رقم موجب أكبر من صفر',
+      );
+      return;
+    }
+
+    if (totalWeight > 1000000) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'الوزن الكلي يبدو كبيرًا جدًا. الرجاء التحقق من القيمة',
+      );
+      return;
+    }
+
+    // Validate packagesCount only when required
+    if (_needsPackagesCount) {
+      if (packagesCount <= 0) {
         AlNoranPopups.showError(
           context: context,
-          message: 'يرجى إدخال عدد الحاويات',
+          message: 'عدد الطرود يجب أن يكون رقم صحيح موجب',
+        );
+        return;
+      }
+
+      if (packagesCount > 10000) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'عدد الطرود يبدو كبيرًا جدًا. الرجاء التحقق من القيمة',
         );
         return;
       }
     }
 
-    // Validate required documents
-    for (var doc in _requiredDocuments) {
-      if (!_uploadedDocuments.containsKey(doc['key'])) {
+    if (valueInEGP <= 0) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'قيمة الشحنة يجب أن تكون رقم موجب أكبر من صفر',
+      );
+      return;
+    }
+
+    if (valueInEGP > 100000000000) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'قيمة الشحنة تبدو كبيرة جدًا. الرجاء التحقق من القيمة',
+      );
+      return;
+    }
+
+    // 3. Invoice date validation - not future date
+    final today = DateTime.now();
+    if (_invoiceDate!.isAfter(
+      DateTime(today.year, today.month, today.day, 23, 59, 59),
+    )) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'تاريخ الفاتورة لا يمكن أن يكون في المستقبل',
+      );
+      return;
+    }
+
+    // 4. Sea shipment specific validations
+    if (_shippingMethod == 'sea' && _seaShipmentType == 'fcl') {
+      final containersCount =
+          int.tryParse(_containersCountController.text.trim()) ?? 0;
+      if (containersCount <= 0) {
         AlNoranPopups.showError(
           context: context,
-          message: 'يرجى رفع ${doc['name']}',
+          message: 'الرجاء إدخال عدد الحاويات للشحن البحري',
         );
         return;
       }
+      if (containersCount > 500) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'عدد الحاويات يبدو كبيرًا جدًا. الرجاء التحقق',
+        );
+        return;
+      }
+
+      // Validate container weights
+      final validContainers =
+          _containerWeights
+              .where((c) => c['containerNumber']?.toString().isNotEmpty == true)
+              .toList();
+      for (final container in validContainers) {
+        final cWeight = (container['weight'] as num?)?.toDouble() ?? 0;
+        if (cWeight < 0) {
+          AlNoranPopups.showError(
+            context: context,
+            message:
+                'وزن الحاوية ${container['containerNumber']} لا يمكن أن يكون سالبًا',
+          );
+          return;
+        }
+        if (cWeight > 50000) {
+          AlNoranPopups.showError(
+            context: context,
+            message:
+                'وزن الحاوية ${container['containerNumber']} يبدو كبيرًا جدًا',
+          );
+          return;
+        }
+      }
+    }
+
+    // 5. Items validation - First item is required
+    if (_items.isEmpty ||
+        _items[0]['description']?.toString().trim().isEmpty == true) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'الرجاء إدخال وصف البند الأول على الأقل',
+      );
+      return;
+    }
+
+    // Validate first item has required fields
+    final firstItem = _items[0];
+    if (firstItem['quantity'] == null ||
+        firstItem['value'] == null ||
+        firstItem['unit']?.toString().isEmpty == true) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'الرجاء ملء الكمية والقيمة والوحدة للبند الأول',
+      );
+      return;
+    }
+
+    // Validate all items with descriptions
+    double totalItemsWeight = 0;
+    double totalItemsValue = 0;
+    final validItemsForCheck =
+        _items
+            .where(
+              (item) =>
+                  item['description']?.toString().trim().isNotEmpty == true,
+            )
+            .toList();
+
+    for (int i = 0; i < validItemsForCheck.length; i++) {
+      final item = validItemsForCheck[i];
+      final itemNum = i + 1;
+
+      // Check for negative values
+      final itemQty = (item['quantity'] as num?)?.toDouble() ?? 0;
+      final itemWeight = (item['weight'] as num?)?.toDouble() ?? 0;
+      final itemValue = (item['value'] as num?)?.toDouble() ?? 0;
+
+      if (itemQty < 0) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'كمية البند $itemNum لا يمكن أن تكون سالبة',
+        );
+        return;
+      }
+
+      if (itemWeight < 0) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'وزن البند $itemNum لا يمكن أن يكون سالبًا',
+        );
+        return;
+      }
+
+      if (itemValue < 0) {
+        AlNoranPopups.showError(
+          context: context,
+          message: 'قيمة البند $itemNum لا يمكن أن تكون سالبة',
+        );
+        return;
+      }
+
+      // Sum weights and values for cross-validation
+      if (itemWeight > 0) totalItemsWeight += itemWeight;
+      if (itemValue > 0) totalItemsValue += itemValue;
+
+      // HS Code validation (if provided)
+      final hsCode = item['hsCode']?.toString().trim() ?? '';
+      if (hsCode.isNotEmpty) {
+        final hsCodeClean = hsCode.replaceAll('.', '');
+        final hsCodePattern = RegExp(r'^[0-9]{4,10}$');
+        if (!hsCodePattern.hasMatch(hsCodeClean)) {
+          AlNoranPopups.showError(
+            context: context,
+            message:
+                'البند الجمركي للبند $itemNum يجب أن يكون من 4 إلى 10 أرقام',
+          );
+          return;
+        }
+      }
+    }
+
+    // 6. Cross-validation: Items weight vs total weight
+    if (totalItemsWeight > 0 && totalItemsWeight > totalWeight * 1.1) {
+      AlNoranPopups.showError(
+        context: context,
+        message:
+            'مجموع أوزان البنود (${totalItemsWeight.toStringAsFixed(0)} كجم) أكبر من الوزن الكلي (${totalWeight.toStringAsFixed(0)} كجم)',
+      );
+      return;
+    }
+
+    // 7. Cross-validation: Items value vs total value (allow 20% margin)
+    if (totalItemsValue > 0 && totalItemsValue > valueInEGP * 1.2) {
+      AlNoranPopups.showError(
+        context: context,
+        message:
+            'مجموع قيم البنود أكبر بكثير من القيمة الإجمالية. الرجاء التحقق',
+      );
+      return;
+    }
+
+    // 8. Document validation - At least first document required
+    if (_uploadedDocuments.isEmpty) {
+      AlNoranPopups.showError(
+        context: context,
+        message: 'الرجاء رفع المستند الأول على الأقل',
+      );
+      return;
     }
 
     setState(() => _isSubmitting = true);
@@ -2715,15 +4974,15 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
               .toList();
 
       // Prepare request data
-      final requestData = {
+      final requestData = <String, dynamic>{
         'certificationType': _certificationType,
         'shippingMethod': _shippingMethod,
         'destinationCountry': _destinationCountryController.text.trim(),
         'destinationPort': _destinationPortController.text.trim(),
         'generalDescription': _generalDescriptionController.text.trim(),
-        'totalWeight': double.parse(_totalWeightController.text.trim()),
-        'packagesCount': int.parse(_packagesCountController.text.trim()),
-        'valueInEGP': double.parse(_valueInEGPController.text.trim()),
+        'totalWeight': totalWeight,
+        'weightUnit': _generalWeightUnit,
+        'valueInEGP': valueInEGP,
         'originalInvoiceNumber': _invoiceNumberController.text.trim(),
         'invoiceDate': _invoiceDate!.toIso8601String(),
         'uploads': uploadIds,
@@ -2731,36 +4990,52 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
         'clientNotes': _notesController.text.trim(),
       };
 
+      // Add packages count if needed
+      if (_needsPackagesCount) {
+        requestData['packagesCount'] = packagesCount;
+      }
+
       // Add sea shipment fields
       if (_shippingMethod == 'sea') {
-        requestData['quantity'] = double.tryParse(
-          _quantityController.text.trim(),
-        );
-        requestData['weightUnit'] = _weightUnit == 'طن' ? 'tons' : 'kilograms';
-        requestData['containersCount'] = int.parse(
-          _containersCountController.text.trim(),
-        );
-        requestData['containerWeights'] =
-            _containerWeights
-                .where(
-                  (c) => c['containerNumber']?.toString().isNotEmpty == true,
-                )
-                .map(
-                  (c) => {
-                    'containerNumber': c['containerNumber'],
-                    'weight': c['weight'],
-                    'unit': c['unit'] == 'طن' ? 'tons' : 'kilograms',
-                  },
-                )
-                .toList();
+        requestData['seaShipmentType'] = _seaShipmentType;
+
+        if (_quantityController.text.trim().isNotEmpty) {
+          requestData['quantity'] = double.tryParse(
+            _quantityController.text.trim(),
+          );
+        }
+
+        if (_seaShipmentType == 'fcl') {
+          requestData['containersCount'] = int.tryParse(
+            _containersCountController.text.trim(),
+          );
+
+          // Include container weights with size
+          requestData['containerWeights'] =
+              _containerWeights
+                  .where(
+                    (c) => c['containerNumber']?.toString().isNotEmpty == true,
+                  )
+                  .map(
+                    (c) => {
+                      'containerNumber': c['containerNumber'],
+                      'size': c['size'] ?? '20ft',
+                      'weight': c['weight'],
+                      'unit': c['unit'] ?? 'kilograms',
+                    },
+                  )
+                  .toList();
+        }
       }
 
       print('📤 [UCR] Submitting request: $requestData');
 
+      HapticFeedback.lightImpact();
       final result = await ApiService.createUcrRequest(requestData);
 
       if (mounted) {
         if (result['success'] == true) {
+          HapticFeedback.heavyImpact();
           // Refresh notifications to update badge count
           NotificationService().refresh();
 
@@ -2773,6 +5048,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
           // Go back to home
           context.go('/home');
         } else {
+          HapticFeedback.mediumImpact();
           AlNoranPopups.showError(
             context: context,
             message: result['message'] ?? 'فشل إرسال الطلب',
@@ -2781,6 +5057,7 @@ class _UcrRequestPageState extends State<UcrRequestPage> {
       }
     } catch (e) {
       print('❌ [UCR] Submit error: $e');
+      HapticFeedback.mediumImpact();
       if (mounted) {
         AlNoranPopups.showError(
           context: context,

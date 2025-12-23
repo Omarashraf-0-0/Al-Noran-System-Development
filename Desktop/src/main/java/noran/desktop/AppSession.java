@@ -1,32 +1,52 @@
 package noran.desktop;
 
+import javafx.scene.image.Image;
 import noran.desktop.Controllers.User;
 
-/**
- * Simple application session holder (singleton) to keep app-scoped objects like the current user.
- */
-public final class AppSession {
-
-    private static final AppSession INSTANCE = new AppSession();
-
+public class AppSession {
+    private static AppSession instance;
     private User currentUser;
+    private String authToken; // 🔴 Store the token
+    private Image cachedProfileImage; // Cached profile image to avoid reloading
 
     private AppSession() {
     }
 
     public static AppSession getInstance() {
-        return INSTANCE;
+        if (instance == null)
+            instance = new AppSession();
+        return instance;
     }
 
     public User getCurrentUser() {
         return currentUser;
     }
 
-    public void setCurrentUser(User user) {
-        this.currentUser = user;
+    public void setCurrentUser(User currentUser) {
+        this.currentUser = currentUser;
     }
 
-    public void clear() {
-        this.currentUser = null;
+    // 🔴 Getters & Setters for Token
+    public String getAuthToken() {
+        return authToken;
+    }
+
+    public void setAuthToken(String authToken) {
+        this.authToken = authToken;
+    }
+
+    // Cached profile image
+    public Image getCachedProfileImage() {
+        return cachedProfileImage;
+    }
+
+    public void setCachedProfileImage(Image image) {
+        this.cachedProfileImage = image;
+    }
+
+    public void logout() {
+        currentUser = null;
+        authToken = null;
+        cachedProfileImage = null;
     }
 }

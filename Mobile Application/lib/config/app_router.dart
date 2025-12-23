@@ -6,10 +6,15 @@ import '../features/auth/register_page.dart';
 import '../features/auth/ForgotPasswordPage.dart';
 import '../features/auth/OtpVerificationPage.dart';
 import '../features/auth/reset_password_page.dart';
+import '../features/auth/personalRegistration.dart';
+import '../features/auth/commercialRegistration.dart';
+import '../features/auth/factoryRegistration.dart';
 import '../features/home/homePage.dart';
 import '../features/home/myShipments.dart';
 import '../features/home/myExports.dart';
 import '../features/Shipments/ShipmentsDetailsPage.dart';
+import '../features/Shipments/UCRDetailsPage.dart';
+import '../features/Shipments/ExportShipmentDetailsPage.dart';
 import '../features/Shipments/ChatPage.dart';
 import '../features/Shipments/ACIDReqPage.dart';
 import '../features/Shipments/UCRReqPage.dart';
@@ -19,6 +24,7 @@ import '../features/profile/settings_menu_page.dart';
 import '../features/profile/documents_settings_page.dart';
 import '../features/notifications/notifications_page.dart';
 import '../features/notifications/notification_settings_page.dart';
+import '../features/payments/PaymentsPage.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -44,6 +50,36 @@ class AppRouter {
         path: '/register',
         name: 'register',
         builder: (context, state) => const RegisterPage(),
+      ),
+
+      // Personal Registration
+      GoRoute(
+        path: '/personal-registration',
+        name: 'personal-registration',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return PersonalRegistrationPage(userData: extra ?? {});
+        },
+      ),
+
+      // Commercial Registration
+      GoRoute(
+        path: '/commercial-registration',
+        name: 'commercial-registration',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return CommercialRegistrationPage(userData: extra ?? {});
+        },
+      ),
+
+      // Factory Registration
+      GoRoute(
+        path: '/factory-registration',
+        name: 'factory-registration',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return FactoryRegistrationPage(userData: extra ?? {});
+        },
       ),
 
       // Forgot Password
@@ -112,6 +148,19 @@ class AppRouter {
         },
       ),
 
+      // Payments & Invoices
+      GoRoute(
+        path: '/payments',
+        name: 'payments',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return PaymentsPage(
+            userName: extra?['userName'] ?? 'مستخدم',
+            userEmail: extra?['userEmail'] ?? 'user@alnoran.com',
+          );
+        },
+      ),
+
       // Shipment Details
       GoRoute(
         path: '/shipment-details/:shipmentId',
@@ -119,6 +168,26 @@ class AppRouter {
         builder: (context, state) {
           final shipmentId = state.pathParameters['shipmentId'] ?? '';
           return ShipmentDetailsPage(shipmentId: shipmentId);
+        },
+      ),
+
+      // UCR Details (Export Request Details)
+      GoRoute(
+        path: '/ucr-details/:ucrId',
+        name: 'ucr-details',
+        builder: (context, state) {
+          final ucrId = state.pathParameters['ucrId'] ?? '';
+          return UcrDetailsPage(ucrRequestId: ucrId);
+        },
+      ),
+
+      // Export Shipment Details (after UCR is issued)
+      GoRoute(
+        path: '/export-shipment-details/:shipmentId',
+        name: 'export-shipment-details',
+        builder: (context, state) {
+          final shipmentId = state.pathParameters['shipmentId'] ?? '';
+          return ExportShipmentDetailsPage(shipmentId: shipmentId);
         },
       ),
 

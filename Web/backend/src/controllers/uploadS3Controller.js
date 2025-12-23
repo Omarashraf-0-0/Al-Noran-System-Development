@@ -6,8 +6,81 @@ const {
 	getPresignedUrl,
 	deleteFromS3,
 	validateFile,
+	getFileStream,
 } = require("../utils/s3Helpers");
 const notificationService = require("../services/notificationService");
+
+// ✅ Proxy download through backend to hide S3 URL
+const proxyDownload = async (req, res) => {
+	try {
+		const upload = await Upload.findById(req.params.id);
+
+		if (!upload) {
+			return res.status(404).json({ message: "Upload not found" });
+		}
+
+		if (!upload.s3Key) {
+			return res.status(400).json({ message: "File does not exist in storage" });
+		}
+		
+		try {
+			const s3Stream = await getFileStream(upload.s3Key);
+			
+			// Determine filename and extension
+			let filename = upload.originalname || upload.filename || "document";
+			
+			// Simple extension map function
+			const getExtension = (mime) => {
+				const map = {
+					'application/pdf': '.pdf',
+					'image/jpeg': '.jpg',
+					'image/jpg': '.jpg',
+					'image/png': '.png',
+					'image/gif': '.gif',
+					'image/webp': '.webp',
+					'application/msword': '.doc',
+					'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+					'application/vnd.ms-excel': '.xls',
+					'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx'
+				};
+				return map[mime] || '';
+			};
+			
+			// Ensure filename has extension
+			const ext = getExtension(upload.mimetype);
+			if (ext && !filename.toLowerCase().endsWith(ext)) {
+				// Check if it has any extension, if not replace/append
+				if (!filename.includes('.')) {
+					filename += ext;
+				} else {
+					// Has wrong extension or custom name? Let's just append if it doesn't match
+					// Actually, safer to just append if completely missing, otherwise trust original
+				}
+			}
+			
+			// If filename still has no extension and we know it, append it
+			if (!filename.includes('.') && ext) {
+				filename += ext;
+			}
+			
+			// Encode filename for UTF-8 support
+			const encodedFilename = encodeURIComponent(filename).replace(/'/g, '%27').replace(/\(/g, '%28').replace(/\)/g, '%29');
+			
+			// Set headers for download with full UTF-8 support
+			res.setHeader('Content-disposition', `attachment; filename="document${ext}"; filename*=UTF-8''${encodedFilename}`);
+			res.setHeader('Content-type', upload.mimetype || 'application/octet-stream');
+			
+			// Pipe stream to response
+			s3Stream.pipe(res);
+		} catch (s3Error) {
+			console.error("Proxy download failed:", s3Error);
+			res.status(500).json({ message: "Failed to download file from storage" });
+		}
+	} catch (error) {
+		console.error("Proxy download error:", error);
+		res.status(500).json({ message: error.message });
+	}
+};
 
 /**
  * @route   POST /api/uploads
@@ -95,6 +168,7 @@ const uploadFile = async (req, res) => {
 			"archive",
 			"ucr_request",
 			"payment",
+			"export_shipment",
 		];
 		if (!validCategories.includes(category)) {
 			console.log("❌ Invalid category:", category);
@@ -106,7 +180,7 @@ const uploadFile = async (req, res) => {
 		}
 
 		// Validate relatedId for specific categories
-		if (["acid", "shipment", "invoice"].includes(category) && !relatedId) {
+		if (["acid", "shipment", "invoice", "export_shipment"].includes(category) && !relatedId) {
 			console.log("❌ relatedId required for category:", category);
 			return res.status(400).json({
 				message: `relatedId is required for category: ${category}`,
@@ -123,7 +197,8 @@ const uploadFile = async (req, res) => {
 			clientType = reqClientType || user.clientDetails?.clientType;
 
 			// For registration category, validate required documents
-			if (category === "registration" && !clientType) {
+			// Skip check for profilePhoto as it doesn't depend on client type
+			if (category === "registration" && !clientType && documentType !== "profilePhoto") {
 				console.log("❌ clientType required for registration");
 				return res.status(400).json({
 					message:
@@ -752,4 +827,5 @@ module.exports = {
 	deleteUpload,
 	checkRequiredDocuments,
 	getPresignedUrlForKey,
+	proxyDownload,
 };

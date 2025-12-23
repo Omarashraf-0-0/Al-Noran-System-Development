@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
-import '../../util/file_picker_helper.dart'; // FilePickerHelper for PDF support
+import '../../core/widgets/widgets.dart';
+import '../../theme/theme.dart';
+import '../../util/file_picker_helper.dart';
+import 'auth_dark_mode_mixin.dart';
 
 class FactoryRegistrationPage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -15,234 +18,442 @@ class FactoryRegistrationPage extends StatefulWidget {
       _FactoryRegistrationPageState();
 }
 
-class _FactoryRegistrationPageState extends State<FactoryRegistrationPage> {
-  File? _contractFile; // العقد
-  File? _taxCardFile; // البطاقة الضريبية
-  File? _commercialRegisterFile; // السجل التجاري
-  File? _valueAddedCertificateFile; // شهادة القيمة المضافة
-  File? _productionRequirementsFile; // مستلزمات الإنتاج
-  File? _industrialRegisterFile; // السجل الصناعي
+class _FactoryRegistrationPageState extends State<FactoryRegistrationPage>
+    with SingleTickerProviderStateMixin, AuthDarkModeMixin {
+  File? _contractFile;
+  File? _taxCardFile;
+  File? _commercialRegisterFile;
+  File? _valueAddedCertificateFile;
+  File? _productionRequirementsFile;
+  File? _industrialRegisterFile;
 
   bool _isLoading = false;
 
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF690000),
-          elevation: 0,
-          title: const Text(
-            'التسجيل - حساب مصنع',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+    return Scaffold(
+      body: Stack(
+        children: [
+          // ============= PREMIUM GRADIENT BACKGROUND =============
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(gradient: backgroundGradientFull),
+          ),
+
+          // ============= DECORATIVE CIRCLES =============
+          Positioned(
+            top: -80,
+            right: -60,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: decorativeCircleColor,
+              ),
             ),
           ),
-          centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_forward, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
+          Positioned(
+            bottom: -100,
+            left: -80,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: decorativeCircleColorSmall,
+              ),
+            ),
+          ),
+
+          // ============= GOLDEN ACCENT LINE =============
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 3,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Color(0xFFD4AF37),
+                    Color(0xFFF5E7A3),
+                    Color(0xFFD4AF37),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // ============= MAIN CONTENT =============
+          SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
+
+                        // Back Button
+                        _buildBackButton(),
+
+                        const SizedBox(height: 24),
+
+                        // Icon
+                        _buildIcon(),
+
+                        const SizedBox(height: 20),
+
+                        // Title & Subtitle
+                        _buildHeader(),
+
+                        const SizedBox(height: 28),
+
+                        // Form Card
+                        _buildFormCard(),
+
+                        const SizedBox(height: 16),
+
+                        // Info Box
+                        _buildInfoBox(),
+
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============= PREMIUM BACK BUTTON =============
+  Widget _buildBackButton() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.pop(),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: backButtonBgColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                width: 1.5,
+              ),
+            ),
+            child: const Icon(
+              Icons.arrow_forward_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
           ),
         ),
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Icon
-                Center(
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF690000).withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.factory,
-                      size: 50,
-                      color: Color(0xFF690000),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
+      ),
+    );
+  }
 
-                // Title
-                const Text(
-                  'إكمال بيانات حساب المصنع',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Cairo',
-                    color: Color(0xFF690000),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'يرجى إرفاق المستندات المطلوبة',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontFamily: 'Cairo',
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Required Documents
-                _buildSectionTitle('المستندات المطلوبة'),
-                const SizedBox(height: 16),
-
-                _buildDocumentUpload(
-                  title: 'العقد *',
-                  subtitle: 'صورة أو ملف PDF للعقد',
-                  file: _contractFile,
-                  onTap: () => _pickFile('contract'),
-                  onRemove: () => setState(() => _contractFile = null),
-                ),
-                const SizedBox(height: 16),
-
-                _buildDocumentUpload(
-                  title: 'البطاقة الضريبية *',
-                  subtitle: 'صورة أو ملف PDF للبطاقة الضريبية',
-                  file: _taxCardFile,
-                  onTap: () => _pickFile('taxCard'),
-                  onRemove: () => setState(() => _taxCardFile = null),
-                ),
-                const SizedBox(height: 16),
-
-                _buildDocumentUpload(
-                  title: 'السجل التجاري *',
-                  subtitle: 'صورة أو ملف PDF للسجل التجاري',
-                  file: _commercialRegisterFile,
-                  onTap: () => _pickFile('commercialRegister'),
-                  onRemove:
-                      () => setState(() => _commercialRegisterFile = null),
-                ),
-                const SizedBox(height: 16),
-
-                _buildDocumentUpload(
-                  title: 'شهادة القيمة المضافة *',
-                  subtitle: 'صورة أو ملف PDF لشهادة القيمة المضافة',
-                  file: _valueAddedCertificateFile,
-                  onTap: () => _pickFile('valueAddedCertificate'),
-                  onRemove:
-                      () => setState(() => _valueAddedCertificateFile = null),
-                ),
-                const SizedBox(height: 16),
-
-                _buildDocumentUpload(
-                  title: 'مستلزمات الإنتاج *',
-                  subtitle: 'صورة أو ملف PDF لمستلزمات الإنتاج',
-                  file: _productionRequirementsFile,
-                  onTap: () => _pickFile('productionRequirements'),
-                  onRemove:
-                      () => setState(() => _productionRequirementsFile = null),
-                ),
-                const SizedBox(height: 16),
-
-                _buildDocumentUpload(
-                  title: 'السجل الصناعي *',
-                  subtitle: 'صورة أو ملف PDF للسجل الصناعي',
-                  file: _industrialRegisterFile,
-                  onTap: () => _pickFile('industrialRegister'),
-                  onRemove:
-                      () => setState(() => _industrialRegisterFile = null),
-                ),
-                const SizedBox(height: 32),
-
-                // Submit Button
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _handleSubmit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF690000),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child:
-                      _isLoading
-                          ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                          : const Text(
-                            'إتمام التسجيل',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo',
-                              color: Colors.white,
-                            ),
-                          ),
-                ),
-                const SizedBox(height: 16),
-
-                // Info Box
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1ba3b6).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFF1ba3b6).withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: const Color(0xFF1ba3b6),
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'سيتم مراجعة المستندات المرفوعة وتفعيل حسابك خلال 24-48 ساعة',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontFamily: 'Cairo',
-                            color: const Color(0xFF1ba3b6),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+  // ============= PREMIUM ICON WITH GOLD RING =============
+  Widget _buildIcon() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.elasticOut,
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: value,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFF5E7A3),
+                  Color(0xFFD4AF37),
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                  blurRadius: 20,
+                  spreadRadius: 2,
                 ),
               ],
             ),
+            child: Container(
+              margin: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: logoContainerColor,
+              ),
+              child: const Icon(
+                Icons.factory_rounded,
+                size: 48,
+                color: Color(0xFFD4AF37),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ============= PREMIUM HEADER WITH GOLD TEXT =============
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        ShaderMask(
+          shaderCallback:
+              (bounds) => const LinearGradient(
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFF5E7A3),
+                  Color(0xFFD4AF37),
+                ],
+              ).createShader(bounds),
+          child: const Text(
+            'حساب مصنع',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Cairo',
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'ارفق المستندات المطلوبة لإتمام التسجيل',
+          style: TextStyle(
+            fontSize: 14,
+            fontFamily: 'Cairo',
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  // ============= PREMIUM FORM CARD =============
+  Widget _buildFormCard() {
+    final sectionTitleColor = const Color(0xFF690000);
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: cardDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'المستندات المطلوبة',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: sectionTitleColor,
+                  fontSize: 17,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          _buildDocumentUpload(
+            title: 'العقد',
+            subtitle: 'صورة أو ملف PDF للعقد',
+            file: _contractFile,
+            onTap: () => _pickFile('contract'),
+            onRemove: () => setState(() => _contractFile = null),
+          ),
+
+          const SizedBox(height: 16),
+
+          _buildDocumentUpload(
+            title: 'البطاقة الضريبية',
+            subtitle: 'صورة أو ملف PDF للبطاقة الضريبية',
+            file: _taxCardFile,
+            onTap: () => _pickFile('taxCard'),
+            onRemove: () => setState(() => _taxCardFile = null),
+          ),
+
+          const SizedBox(height: 16),
+
+          _buildDocumentUpload(
+            title: 'السجل التجاري',
+            subtitle: 'صورة أو ملف PDF للسجل التجاري',
+            file: _commercialRegisterFile,
+            onTap: () => _pickFile('commercialRegister'),
+            onRemove: () => setState(() => _commercialRegisterFile = null),
+          ),
+
+          const SizedBox(height: 16),
+
+          _buildDocumentUpload(
+            title: 'شهادة القيمة المضافة',
+            subtitle: 'صورة أو ملف PDF لشهادة القيمة المضافة',
+            file: _valueAddedCertificateFile,
+            onTap: () => _pickFile('valueAddedCertificate'),
+            onRemove: () => setState(() => _valueAddedCertificateFile = null),
+          ),
+
+          const SizedBox(height: 16),
+
+          _buildDocumentUpload(
+            title: 'مستلزمات الإنتاج',
+            subtitle: 'صورة أو ملف PDF لمستلزمات الإنتاج',
+            file: _productionRequirementsFile,
+            onTap: () => _pickFile('productionRequirements'),
+            onRemove: () => setState(() => _productionRequirementsFile = null),
+          ),
+
+          const SizedBox(height: 16),
+
+          _buildDocumentUpload(
+            title: 'السجل الصناعي',
+            subtitle: 'صورة أو ملف PDF للسجل الصناعي',
+            file: _industrialRegisterFile,
+            onTap: () => _pickFile('industrialRegister'),
+            onRemove: () => setState(() => _industrialRegisterFile = null),
+          ),
+
+          const SizedBox(height: 28),
+
+          // Premium Submit Button
+          _buildPremiumSubmitButton(),
+        ],
+      ),
+    );
+  }
+
+  // ============= PREMIUM SUBMIT BUTTON =============
+  Widget _buildPremiumSubmitButton() {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: buttonGradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: buttonShadowColor,
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isLoading ? null : _handleSubmit,
+          borderRadius: BorderRadius.circular(16),
+          child: Center(
+            child:
+                _isLoading
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                    : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'إتمام التسجيل',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color: buttonTextColor,
+                          ),
+                        ),
+                      ],
+                    ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        fontFamily: 'Cairo',
-        color: Color(0xFF690000),
-      ),
-    );
-  }
-
+  // ============= PREMIUM DOCUMENT UPLOAD =============
   Widget _buildDocumentUpload({
     required String title,
     required String subtitle,
@@ -250,99 +461,185 @@ class _FactoryRegistrationPageState extends State<FactoryRegistrationPage> {
     required VoidCallback onTap,
     required VoidCallback onRemove,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color:
-              file != null ? const Color(0xFF1ba3b6) : const Color(0xFFE0E0E0),
-          width: 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color:
-                        file != null
-                            ? const Color(0xFF1ba3b6).withOpacity(0.1)
-                            : const Color(0xFF690000).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    file != null ? Icons.check_circle : Icons.upload_file,
-                    color:
-                        file != null
-                            ? const Color(0xFF1ba3b6)
-                            : const Color(0xFF690000),
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
-                          color: Color(0xFF424242),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        file != null ? file.path.split('/').last : subtitle,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontFamily: 'Cairo',
-                          color:
-                              file != null
-                                  ? const Color(0xFF1ba3b6)
-                                  : const Color(0xFFBDBDBD),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                if (file != null)
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.red, size: 20),
-                    onPressed: onRemove,
-                  )
-                else
-                  const Icon(
-                    Icons.arrow_back_ios,
-                    color: Color(0xFFBDBDBD),
-                    size: 16,
-                  ),
-              ],
+    final bool hasFile = file != null;
+    final uploadBgColor =
+        isDark ? AppColors.darkSurface : const Color(0xFFF8F9FA);
+    final uploadBorderColor =
+        hasFile
+            ? const Color(0xFFD4AF37)
+            : (isDark ? AppColors.darkBorder : Colors.grey[200]!);
+    final iconBgColor =
+        hasFile
+            ? const Color(0xFFD4AF37).withValues(alpha: 0.15)
+            : (isDark
+                ? AppColors.darkCard
+                : const Color(0xFF690000).withValues(alpha: 0.1));
+    final uploadIconColor =
+        hasFile ? const Color(0xFFD4AF37) : const Color(0xFF690000);
+    final titleTextColor =
+        isDark ? AppColors.darkTextPrimary : const Color(0xFF333333);
+    final fileTextColor =
+        hasFile
+            ? const Color(0xFFD4AF37)
+            : (isDark ? AppColors.darkTextMuted : Colors.grey[500]);
+    final arrowColor = isDark ? AppColors.darkTextMuted : Colors.grey[400];
+    final requiredColor = const Color(0xFF690000);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: uploadBgColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: uploadBorderColor,
+              width: hasFile ? 2 : 1.5,
             ),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    hasFile
+                        ? const Color(0xFFD4AF37).withValues(alpha: 0.1)
+                        : (isDark
+                            ? Colors.black.withValues(alpha: 0.2)
+                            : const Color(0xFF690000).withValues(alpha: 0.05)),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  hasFile
+                      ? Icons.check_circle_rounded
+                      : Icons.upload_file_rounded,
+                  color: uploadIconColor,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: titleTextColor,
+                            fontSize: 14,
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                        Text(
+                          ' *',
+                          style: TextStyle(
+                            color: requiredColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hasFile ? file.path.split('/').last : subtitle,
+                      style: TextStyle(
+                        color: fileTextColor,
+                        fontSize: 12,
+                        fontFamily: 'Cairo',
+                        fontWeight:
+                            hasFile ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (hasFile)
+                IconButton(
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: const Color(0xFF690000),
+                    size: 20,
+                  ),
+                  onPressed: onRemove,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                )
+              else
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: arrowColor,
+                  size: 14,
+                ),
+            ],
           ),
         ),
       ),
     );
   }
 
+  // ============= PREMIUM INFO BOX =============
+  Widget _buildInfoBox() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.info_outline_rounded,
+              color: Color(0xFFD4AF37),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Text(
+              'سيتم مراجعة المستندات المرفوعة وتفعيل حسابك خلال 24-48 ساعة',
+              style: TextStyle(
+                fontSize: 13,
+                fontFamily: 'Cairo',
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============= PICK FILE =============
   Future<void> _pickFile(String fileType) async {
     try {
-      // استخدام FilePickerHelper الجديد اللي بيدعم PDF
       final File? pickedFile = await FilePickerHelper.pickFile(context);
-
       if (pickedFile != null) {
+        HapticFeedback.lightImpact();
         setState(() {
           switch (fileType) {
             case 'contract':
@@ -367,71 +664,86 @@ class _FactoryRegistrationPageState extends State<FactoryRegistrationPage> {
         });
       }
     } catch (e) {
-      AlNoranPopups.showError(
+      EnhancedPopups.showError(
         context: context,
+        title: 'خطأ',
         message: 'حدث خطأ أثناء اختيار الملف',
       );
     }
   }
 
+  // ============= HANDLE SUBMIT =============
   Future<void> _handleSubmit() async {
-    // Validation - check all required documents
+    FocusScope.of(context).unfocus();
+
+    // Validation
     if (_contractFile == null) {
-      AlNoranPopups.showError(
+      HapticFeedback.mediumImpact();
+      EnhancedPopups.showError(
         context: context,
+        title: 'تنبيه',
         message: 'من فضلك قم بإرفاق العقد',
       );
       return;
     }
 
     if (_taxCardFile == null) {
-      AlNoranPopups.showError(
+      HapticFeedback.mediumImpact();
+      EnhancedPopups.showError(
         context: context,
+        title: 'تنبيه',
         message: 'من فضلك قم بإرفاق البطاقة الضريبية',
       );
       return;
     }
 
     if (_commercialRegisterFile == null) {
-      AlNoranPopups.showError(
+      HapticFeedback.mediumImpact();
+      EnhancedPopups.showError(
         context: context,
+        title: 'تنبيه',
         message: 'من فضلك قم بإرفاق السجل التجاري',
       );
       return;
     }
 
     if (_valueAddedCertificateFile == null) {
-      AlNoranPopups.showError(
+      HapticFeedback.mediumImpact();
+      EnhancedPopups.showError(
         context: context,
+        title: 'تنبيه',
         message: 'من فضلك قم بإرفاق شهادة القيمة المضافة',
       );
       return;
     }
 
     if (_productionRequirementsFile == null) {
-      AlNoranPopups.showError(
+      HapticFeedback.mediumImpact();
+      EnhancedPopups.showError(
         context: context,
+        title: 'تنبيه',
         message: 'من فضلك قم بإرفاق مستلزمات الإنتاج',
       );
       return;
     }
 
     if (_industrialRegisterFile == null) {
-      AlNoranPopups.showError(
+      HapticFeedback.mediumImpact();
+      EnhancedPopups.showError(
         context: context,
+        title: 'تنبيه',
         message: 'من فضلك قم بإرفاق السجل الصناعي',
       );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
+    HapticFeedback.lightImpact();
 
     try {
-      // First, create the user account
+      // Create user account
       final registerResult = await ApiService.register(
-        name: widget.userData['name'],
+        name: widget.userData['fullname'] ?? widget.userData['name'],
         username: widget.userData['username'],
         email: widget.userData['email'],
         phone: widget.userData['phone'],
@@ -440,45 +752,31 @@ class _FactoryRegistrationPageState extends State<FactoryRegistrationPage> {
       );
 
       if (!registerResult['success']) {
-        setState(() {
-          _isLoading = false;
-        });
-        AlNoranPopups.showError(
+        setState(() => _isLoading = false);
+        HapticFeedback.mediumImpact();
+        EnhancedPopups.showError(
           context: context,
+          title: 'خطأ',
           message: registerResult['message'] ?? 'فشل إنشاء الحساب',
         );
         return;
       }
 
-      // JWT Token is automatically saved by ApiService.register
-      // Add a small delay to ensure token is saved to SharedPreferences
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Verify token is saved before uploading
       final savedToken = await ApiService.getToken();
       if (savedToken == null || savedToken.isEmpty) {
-        setState(() {
-          _isLoading = false;
-        });
-        AlNoranPopups.showError(
+        setState(() => _isLoading = false);
+        EnhancedPopups.showWarning(
           context: context,
-          title: 'خطأ في التوثيق',
-          message:
-              'تم إنشاء الحساب لكن حدث خطأ في الجلسة. يرجى تسجيل الدخول ورفع المستندات من الإعدادات',
+          title: 'تنبيه',
+          message: 'تم إنشاء الحساب لكن حدث خطأ في الجلسة. يرجى تسجيل الدخول',
         );
-        if (mounted) {
-          context.go('/login');
-        }
+        if (mounted) context.go('/login');
         return;
       }
 
-      print(
-        '🔑 Token verified before upload: ${savedToken.substring(0, 20)}...',
-      );
-
-      // Now upload all required documents to S3
-
-      // Prepare documents list with their metadata
+      // Upload documents
       final List<Map<String, dynamic>> documentsToUpload = [
         {
           'file': _contractFile!,
@@ -497,12 +795,12 @@ class _FactoryRegistrationPageState extends State<FactoryRegistrationPage> {
         },
         {
           'file': _valueAddedCertificateFile!,
-          'type': 'certificate_vat', // Fixed: match backend enum
+          'type': 'certificate_vat',
           'description': 'شهادة القيمة المضافة - حساب مصنع',
         },
         {
           'file': _productionRequirementsFile!,
-          'type': 'production_supplies', // Fixed: match backend enum
+          'type': 'production_requirements',
           'description': 'مستلزمات الإنتاج - حساب مصنع',
         },
         {
@@ -512,13 +810,10 @@ class _FactoryRegistrationPageState extends State<FactoryRegistrationPage> {
         },
       ];
 
-      // Upload documents to S3
       bool allUploadsSuccessful = true;
       String? failedDocType;
-      String? failedDocError;
 
       for (var doc in documentsToUpload) {
-        print('📤 Uploading: ${doc['type']}...');
         final uploadResult = await ApiService.uploadToS3(
           file: doc['file'],
           category: 'registration',
@@ -532,50 +827,40 @@ class _FactoryRegistrationPageState extends State<FactoryRegistrationPage> {
         if (!uploadResult['success']) {
           allUploadsSuccessful = false;
           failedDocType = doc['type'];
-          failedDocError = uploadResult['message'] ?? 'خطأ غير معروف';
-          print('❌ Upload failed for ${doc['type']}: $failedDocError');
           break;
         }
-        print('✅ Uploaded: ${doc['type']}');
       }
 
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
 
       if (allUploadsSuccessful) {
-        print('✅✅✅ All documents uploaded successfully!');
-        await AlNoranPopups.showSuccess(
+        HapticFeedback.heavyImpact();
+        EnhancedPopups.showSuccess(
           context: context,
           title: 'تم التسجيل بنجاح',
-          message:
-              'تم إنشاء حساب المصنع وتحميل جميع المستندات إلى السحابة بنجاح. سيتم مراجعة حسابك وتفعيله خلال 24-48 ساعة',
+          message: 'سيتم مراجعة حسابك وتفعيله خلال 24-48 ساعة',
         );
 
-        if (mounted) {
-          context.go('/login');
-        }
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (mounted) context.go('/login');
       } else {
-        AlNoranPopups.showError(
+        HapticFeedback.mediumImpact();
+        EnhancedPopups.showWarning(
           context: context,
-          title: 'خطأ في رفع المستندات',
-          message:
-              'تم إنشاء الحساب ولكن فشل رفع مستند: $failedDocType. السبب: $failedDocError',
+          title: 'تنبيه',
+          message: 'تم إنشاء الحساب لكن فشل رفع مستند: $failedDocType',
         );
-        if (mounted) {
-          context.go('/login');
-        }
+        if (mounted) context.go('/login');
       }
     } catch (e) {
-      print('❌ Registration exception: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
+      HapticFeedback.mediumImpact();
+
       if (mounted) {
-        AlNoranPopups.showError(
+        EnhancedPopups.showError(
           context: context,
-          title: 'خطأ في الاتصال',
-          message: 'حدث خطأ أثناء الاتصال بالسيرفر. يرجى المحاولة مرة أخرى',
+          title: 'خطأ',
+          message: 'حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى',
         );
       }
     }

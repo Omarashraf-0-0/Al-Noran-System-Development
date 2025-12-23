@@ -2,17 +2,55 @@ const User = require("../models/user");
 const { validationResult } = require("express-validator");
 const asyncHandler = require("express-async-handler");
 const notificationService = require("../services/notificationService");
+const { verifyCaptcha } = require("../services/captchaService");
 
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
 const login = asyncHandler(async (req, res) => {
-	const { email, password } = req.body;
+	const { email, password, captchaToken, platform } = req.body;
+	
+	// Log all headers for debugging
+	console.log(`🔍 [Auth] Login attempt for: ${email}`);
+	console.log(`🔍 [Auth] Platform from body: ${platform}`);
+	
+	// Check if request is from mobile app (check body first, then headers)
+	const clientType = req.headers['x-client-type'] || req.headers['X-Client-Type'] || '';
+	const flutterApp = req.headers['x-flutter-app'] || req.headers['X-Flutter-App'] || '';
+	const userAgent = req.headers['user-agent'] || '';
+	
+	const isMobileApp = platform === 'mobile' ||
+	                    clientType.toLowerCase() === 'mobile' || 
+	                    userAgent.toLowerCase().includes('flutter') ||
+	                    flutterApp.toLowerCase() === 'true' ||
+	                    userAgent.toLowerCase().includes('dart');
+	
+	console.log(`🔍 [Auth] Is mobile app: ${isMobileApp}`);
 
 	// Validation
 	if (!email || !password) {
 		res.status(400);
 		throw new Error("من فضلك أدخل البريد الإلكتروني وكلمة المرور");
+	}
+
+	// Verify reCAPTCHA token (only for web, skip for mobile)
+	if (!isMobileApp) {
+		if (captchaToken) {
+			const captchaResult = await verifyCaptcha(captchaToken);
+			if (!captchaResult.success) {
+				console.warn(`⚠️ [Auth] reCAPTCHA verification failed`);
+				res.status(400);
+				throw new Error("فشل التحقق الأمني. يرجى المحاولة مرة أخرى");
+			}
+			console.log(`✅ [Auth] reCAPTCHA verified successfully`);
+		} else {
+			// CAPTCHA token is required for web only
+			console.warn(`⚠️ [Auth] CAPTCHA required but not provided (web login)`);
+			res.status(400);
+			throw new Error("يرجى إكمال التحقق الأمني");
+		}
+	} else {
+		console.log(`📱 [Auth] Mobile app login - skipping CAPTCHA`);
 	}
 
 	// Check for user
@@ -96,6 +134,7 @@ const signup = asyncHandler(async (req, res) => {
 		rank,
 		clientDetails,
 		employeeDetails,
+		googleId,
 	} = req.body;
 
 	const userExists = await User.findOne({
@@ -110,6 +149,28 @@ const signup = asyncHandler(async (req, res) => {
 		);
 	}
 
+	// Validate personal account requirements based on nationality
+	if (type === "client" && clientDetails?.clientType === "personal") {
+		const nationality = clientDetails.nationality;
+		
+		if (!nationality) {
+			res.status(400);
+			throw new Error("الجنسية مطلوبة للحسابات الشخصية");
+		}
+
+		if (nationality === "egyptian") {
+			if (!clientDetails.ssn || clientDetails.ssn.trim() === "" || clientDetails.ssn.length !== 14) {
+				res.status(400);
+				throw new Error("الرقم القومي مطلوب للحسابات الشخصية");
+			}
+		} else if (nationality === "nonEgyptian") {
+			if (!clientDetails.passportNumber || clientDetails.passportNumber.trim() === "") {
+				res.status(400);
+				throw new Error("رقم الباسبور مطلوب");
+			}
+		}
+	}
+
 	const userData = {
 		fullname,
 		username,
@@ -118,6 +179,11 @@ const signup = asyncHandler(async (req, res) => {
 		password,
 		type,
 	};
+
+	// Add googleId if provided (for Google signup)
+	if (googleId) {
+		userData.googleId = googleId;
+	}
 
 	// Add taxNumber and rank if provided
 	if (taxNumber) userData.taxNumber = taxNumber;
@@ -129,14 +195,18 @@ const signup = asyncHandler(async (req, res) => {
 		if (clientDetails) {
 			userData.clientDetails = {
 				clientType: clientDetails.clientType || null,
+				nationality: clientDetails.nationality || "",
 				ssn: clientDetails.ssn || "",
+				passportNumber: clientDetails.passportNumber || "",
 			};
 		}
 		// Otherwise use flat format (backward compatibility)
 		else if (clientType) {
 			userData.clientDetails = {
 				clientType,
+				nationality: "",
 				ssn: ssn || "",
+				passportNumber: "",
 			};
 		}
 	}
@@ -273,9 +343,70 @@ const getMe = asyncHandler(async (req, res) => {
 	});
 });
 
+// @desc    Google Sign In
+// @route   POST /api/auth/google
+// @access  Public
+const googleSignIn = asyncHandler(async (req, res) => {
+	const { email, displayName, googleId, idToken, accessToken } = req.body;
+
+	if (!email || !googleId) {
+		res.status(400);
+		throw new Error("بيانات جوجل غير مكتملة");
+	}
+
+	// Check if user exists with this email
+	let user = await User.findOne({ email });
+
+	if (user) {
+		// User exists - update Google ID if not set
+		if (!user.googleId) {
+			user.googleId = googleId;
+			await user.save();
+		}
+
+		// Check if user is active
+		if (!user.active) {
+			res.status(403);
+			throw new Error("تم إيقاف حسابك. تواصل مع الإدارة");
+		}
+
+		// Create token
+		const token = user.getSignedJwtToken();
+
+		return res.status(200).json({
+			success: true,
+			message: "تم تسجيل الدخول بنجاح",
+			isNewUser: false,
+			token,
+			user: {
+				id: user._id,
+				fullname: user.fullname,
+				username: user.username,
+				email: user.email,
+				type: user.type,
+				phone: user.phone,
+				clientDetails: user.clientDetails,
+			},
+		});
+	}
+
+	// User doesn't exist - return info for registration
+	res.status(200).json({
+		success: true,
+		isNewUser: true,
+		message: "حساب جديد - يرجى إكمال التسجيل",
+		googleData: {
+			email,
+			displayName,
+			googleId,
+		},
+	});
+});
+
 module.exports = {
 	login,
 	signup,
 	checkAvailability,
 	getMe,
+	googleSignIn,
 };

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
-import 'dart:math' as math;
 import '../../core/network/api_service.dart';
+import '../../core/services/cached_api_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,580 +13,422 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _logoController;
-  late AnimationController _waveController;
-  late AnimationController _shipController;
-  late AnimationController _textController;
-  late AnimationController _fadeOutController;
-
-  late Animation<double> _logoScale;
-  late Animation<double> _logoOpacity;
-  late Animation<double> _textFade;
-  late Animation<Offset> _textSlide;
-  late Animation<double> _fadeOut;
-
-  double _progress = 0.0;
-  bool _showProgress = false;
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
 
-    // Logo Animation - ظهور أنيق
-    _logoController = AnimationController(
-      duration: const Duration(milliseconds: 1800),
-      vsync: this,
-    );
-
-    _logoScale = Tween<double>(begin: 0.3, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeOutBack),
-    );
-
-    _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _logoController,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
       ),
     );
 
-    // Text Animation
-    _textController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
-    _textFade = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeIn));
-
-    _textSlide = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
-
-    // Wave Animation - أمواج البحر
-    _waveController = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    )..repeat();
-
-    // Ship Animation - سفينة متحركة
-    _shipController = AnimationController(
-      duration: const Duration(seconds: 4),
-      vsync: this,
-    )..repeat();
-
-    // Fade Out Animation للانتقال
-    _fadeOutController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+      ),
     );
 
-    _fadeOut = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _fadeOutController, curve: Curves.easeInOut),
+    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.8, curve: Curves.elasticOut),
+      ),
     );
 
-    // بدء التسلسل
-    _startAnimationSequence();
-  }
-
-  void _startAnimationSequence() async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    _logoController.forward();
-
-    await Future.delayed(const Duration(milliseconds: 800));
-    _textController.forward();
-
-    await Future.delayed(const Duration(milliseconds: 1000));
-    setState(() => _showProgress = true);
-    _simulateLoading();
-  }
-
-  void _simulateLoading() {
-    Timer.periodic(const Duration(milliseconds: 50), (timer) {
-      setState(() {
-        _progress += 0.02;
-        if (_progress >= 1.0) {
-          timer.cancel();
-          _navigateToHome();
-        }
-      });
-    });
-  }
-
-  void _navigateToHome() async {
-    if (!mounted) return;
-
-    // Check if user is already logged in
-    final token = await ApiService.getToken();
-    final userData = await ApiService.getUserData();
-
-    // الانتقال مع GoRouter
-    if (mounted) {
-      if (token != null && token.isNotEmpty && userData['id'] != null) {
-        // User is logged in, go directly to HomePage
-        context.go(
-          '/home',
-          extra: {
-            'userName':
-                userData['fullname'] ?? userData['username'] ?? 'مستخدم',
-            'userEmail': userData['email'] ?? '',
-          },
-        );
-      } else {
-        // User not logged in, go to LoginPage
-        context.go('/login');
-      }
-    }
+    _controller.forward();
+    _checkAuthAndNavigate();
   }
 
   @override
   void dispose() {
-    _logoController.dispose();
-    _waveController.dispose();
-    _shipController.dispose();
-    _textController.dispose();
-    _fadeOutController.dispose();
+    _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    try {
+      final token = await ApiService.getToken();
+
+      if (token?.isNotEmpty == true) {
+        final userData = await ApiService.getUserData();
+
+        if (mounted && userData != null) {
+          // Prefetch data in background for better performance
+          CachedApiService().prefetchData();
+
+          context.go(
+            '/home',
+            extra: {
+              'userName':
+                  userData['fullname'] ?? userData['username'] ?? 'مستخدم',
+              'userEmail': userData['email'] ?? '',
+            },
+          );
+        } else {
+          if (mounted) context.go('/login');
+        }
+      } else {
+        if (mounted) context.go('/login');
+      }
+    } catch (e) {
+      if (mounted) context.go('/login');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeOut,
-      child: Scaffold(
-        body: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF690000), Color(0xFF8b0000), Color(0xFF690000)],
-              stops: [0.0, 0.5, 1.0],
+    return Scaffold(
+      body: Stack(
+        children: [
+          // ============= PREMIUM GRADIENT BACKGROUND =============
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF690000),
+                  Color(0xFF8B0000),
+                  Color(0xFF4A0000),
+                ],
+                stops: [0.0, 0.5, 1.0],
+              ),
             ),
           ),
-          child: Stack(
-            children: [
-              // Animated Waves (البحر) - في الخلفية بعيد
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Opacity(
-                  opacity: 0.12,
-                  child: SizedBox(
-                    height: 150,
-                    child: Stack(
-                      children: List.generate(3, (index) => _buildWave(index)),
-                    ),
-                  ),
+
+          // ============= DECORATIVE CIRCLES =============
+          Positioned(
+            top: -100,
+            right: -80,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 100,
+            left: -60,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -120,
+            left: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 200,
+            right: -50,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.06),
+              ),
+            ),
+          ),
+
+          // ============= GOLDEN ACCENT LINE TOP =============
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 4,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Color(0xFFD4AF37),
+                    Color(0xFFF5E7A3),
+                    Color(0xFFD4AF37),
+                    Colors.transparent,
+                  ],
                 ),
               ),
+            ),
+          ),
 
-              // Moving Ship (سفينة) - خلفية
-              _buildMovingShip(),
-
-              // Main Content
-              Center(
+          // ============= MAIN CONTENT =============
+          SafeArea(
+            child: Center(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo - كبير وواضح
-                    AnimatedBuilder(
-                      animation: _logoController,
-                      builder: (context, child) {
-                        return Transform.scale(
-                          scale: _logoScale.value,
-                          child: Opacity(
-                            opacity: _logoOpacity.value,
-                            child: _buildLogo(),
+                    // Premium Logo with Gold Ring
+                    ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFFD4AF37),
+                              Color(0xFFF5E7A3),
+                              Color(0xFFD4AF37),
+                            ],
                           ),
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 50),
-
-                    // App Name
-                    SlideTransition(
-                      position: _textSlide,
-                      child: FadeTransition(
-                        opacity: _textFade,
-                        child: Column(
-                          children: [
-                            const Text(
-                              'نوران سمارت',
-                              style: TextStyle(
-                                fontSize: 44,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 2,
-                                shadows: [
-                                  Shadow(
-                                    color: Color(0xFF1ba3b6),
-                                    blurRadius: 30,
-                                    offset: Offset(0, 5),
-                                  ),
-                                ],
-                              ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFFD4AF37,
+                              ).withValues(alpha: 0.5),
+                              blurRadius: 30,
+                              spreadRadius: 5,
                             ),
-                            const SizedBox(height: 15),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _buildServiceIcon(
-                                  Icons.flight_takeoff,
-                                  'شحن جوي',
-                                ),
-                                const SizedBox(width: 20),
-                                _buildServiceIcon(
-                                  Icons.directions_boat,
-                                  'شحن بحري',
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 15),
-                            const Text(
-                              'التخليص الجمركي والشحن الدولي',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: Color(0xFF1ba3b6),
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 1.2,
-                              ),
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
                             ),
                           ],
                         ),
+                        child: Container(
+                          margin: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                          ),
+                          padding: const EdgeInsets.all(20),
+                          child: Image.asset(
+                            'assets/img/logo.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(
+                                Icons.local_shipping_rounded,
+                                size: 80,
+                                color: Color(0xFF690000),
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     ),
 
-                    const SizedBox(height: 80),
+                    const SizedBox(height: 40),
 
-                    // Progress Indicator
-                    if (_showProgress) _buildShippingProgress(),
-                  ],
-                ),
-              ),
-
-              // Version
-              Positioned(
-                bottom: 30,
-                left: 0,
-                right: 0,
-                child: FadeTransition(
-                  opacity: _textFade,
-                  child: const Text(
-                    'الإصدار 1.0.0',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white38,
-                      fontSize: 12,
-                      letterSpacing: 1,
+                    // App Name with Gold Shader
+                    ShaderMask(
+                      shaderCallback:
+                          (bounds) => const LinearGradient(
+                            colors: [
+                              Color(0xFFD4AF37),
+                              Color(0xFFF5E7A3),
+                              Color(0xFFD4AF37),
+                            ],
+                          ).createShader(bounds),
+                      child: const Text(
+                        'النوران',
+                        style: TextStyle(
+                          fontSize: 52,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'Cairo',
+                          letterSpacing: 2,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildLogo() {
-    return Container(
-      width: 280,
-      height: 280,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1ba3b6).withOpacity(0.5),
-            blurRadius: 50,
-            spreadRadius: 20,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
-          ),
-        ],
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(35),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [
-              Colors.white.withOpacity(0.25),
-              Colors.white.withOpacity(0.05),
-            ],
-          ),
-          border: Border.all(
-            color: const Color(0xFF1ba3b6).withOpacity(0.6),
-            width: 3,
-          ),
-        ),
-        child: Container(
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-          ),
-          child: ClipOval(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Image.asset(
-                'assets/img/logo.png',
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
-                    Icons.flight_takeoff_rounded,
-                    size: 120,
-                    color: Color(0xFF690000),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+                    const SizedBox(height: 8),
 
-  Widget _buildServiceIcon(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFF1ba3b6).withOpacity(0.2),
-            border: Border.all(
-              color: const Color(0xFF1ba3b6).withOpacity(0.4),
-              width: 1.5,
-            ),
-          ),
-          child: Icon(icon, color: const Color(0xFF1ba3b6), size: 24),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
+                    // Subtitle
+                    Text(
+                      'للخدمات اللوجستية',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontFamily: 'Cairo',
+                        letterSpacing: 1,
+                      ),
+                    ),
 
-  Widget _buildShippingProgress() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 50),
-      child: Column(
-        children: [
-          // Progress Container Icon - من الشمال لليمين
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(4, (index) {
-                final isActive = _progress * 4 > index;
-                final isCompleted = _progress * 4 > index + 1;
+                    const SizedBox(height: 20),
 
-                return Row(
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 400),
-                      width: isActive ? 40 : 30,
-                      height: isActive ? 40 : 30,
+                    // Premium Gold Divider
+                    Container(
+                      width: 140,
+                      height: 3,
                       decoration: BoxDecoration(
-                        color:
-                            isCompleted
-                                ? const Color(0xFF1ba3b6)
-                                : isActive
-                                ? const Color(0xFF1ba3b6).withOpacity(0.7)
-                                : Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(2),
+                        gradient: const LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            Color(0xFFD4AF37),
+                            Color(0xFFF5E7A3),
+                            Color(0xFFD4AF37),
+                            Colors.transparent,
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(
+                              0xFFD4AF37,
+                            ).withValues(alpha: 0.4),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // Premium Loading Indicator
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
                         border: Border.all(
-                          color:
-                              isActive
-                                  ? const Color(0xFF1ba3b6)
-                                  : Colors.white.withOpacity(0.3),
+                          color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
                           width: 2,
                         ),
-                        boxShadow:
-                            isActive
-                                ? [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF1ba3b6,
-                                    ).withOpacity(0.5),
-                                    blurRadius: 15,
-                                    spreadRadius: 2,
-                                  ),
-                                ]
-                                : [],
                       ),
-                      child: Icon(
-                        Icons.inventory_2,
-                        color: isActive ? Colors.white : Colors.white54,
-                        size: isActive ? 22 : 16,
-                      ),
-                    ),
-                    if (index < 3)
-                      Container(
-                        width: 30,
-                        height: 2,
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                            colors: [
-                              isCompleted
-                                  ? const Color(0xFF1ba3b6)
-                                  : Colors.white.withOpacity(0.3),
-                              _progress * 4 > index + 0.5
-                                  ? const Color(0xFF1ba3b6)
-                                  : Colors.white.withOpacity(0.3),
-                            ],
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFFD4AF37),
                           ),
-                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Loading Text
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: const Text(
+                        'جاري التحميل...',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white,
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // Version with Premium Style
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFFD4AF37),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'الإصدار 1.0.0',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.white.withValues(alpha: 0.7),
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
-                );
-              }),
+                ),
+              ),
             ),
           ),
 
-          const SizedBox(height: 25),
-
-          // Loading Text
-          AnimatedOpacity(
-            opacity: (_progress * 10 % 2).floor() == 0 ? 1.0 : 0.6,
-            duration: const Duration(milliseconds: 600),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.sync, color: Color(0xFF1ba3b6), size: 18),
-                SizedBox(width: 10),
-                Text(
-                  'جاري تحميل البيانات',
-                  style: TextStyle(
-                    color: Color(0xFF1ba3b6),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.8,
-                  ),
+          // ============= GOLDEN ACCENT LINE BOTTOM =============
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 3,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Color(0xFFD4AF37),
+                    Color(0xFFF5E7A3),
+                    Color(0xFFD4AF37),
+                    Colors.transparent,
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildWave(int index) {
-    final delays = [0.0, 0.3, 0.6];
-    final heights = [0.15, 0.2, 0.25];
-
-    return Positioned(
-      bottom: -20,
-      left: 0,
-      right: 0,
-      child: AnimatedBuilder(
-        animation: _waveController,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(
-              ((_waveController.value + delays[index]) % 1.0) * 400 - 200,
-              0,
-            ),
-            child: Opacity(
-              opacity: 0.1 - (index * 0.02),
-              child: CustomPaint(
-                size: Size(MediaQuery.of(context).size.width, 150),
-                painter: WavePainter(
-                  animationValue: _waveController.value,
-                  waveHeight: heights[index],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildMovingShip() {
-    return AnimatedBuilder(
-      animation: _shipController,
-      builder: (context, child) {
-        final progress = _shipController.value;
-
-        return Positioned(
-          left: MediaQuery.of(context).size.width * progress - 50,
-          bottom: 80,
-          child: Opacity(
-            opacity: 0.1,
-            child: Transform.scale(
-              scaleX: progress > 0.5 ? -1 : 1,
-              child: const Icon(
-                Icons.directions_boat,
-                size: 60,
-                color: Color(0xFF1ba3b6),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-// Wave Painter للأمواج
-class WavePainter extends CustomPainter {
-  final double animationValue;
-  final double waveHeight;
-
-  WavePainter({required this.animationValue, required this.waveHeight});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..color = const Color(0xFF1ba3b6)
-          ..style = PaintingStyle.fill;
-
-    final path = Path();
-    path.moveTo(0, size.height);
-
-    for (double i = 0; i < size.width; i++) {
-      path.lineTo(
-        i,
-        size.height -
-            (math.sin(
-                  (i / size.width * 2 * math.pi) +
-                      (animationValue * 2 * math.pi),
-                ) *
-                size.height *
-                waveHeight),
-      );
-    }
-
-    path.lineTo(size.width, size.height);
-    path.close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(WavePainter oldDelegate) => true;
 }

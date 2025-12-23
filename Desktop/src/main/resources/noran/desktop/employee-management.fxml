@@ -1,17 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.TableColumn?>
-<?import javafx.scene.control.TableView?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.StackPane?>
-<?import javafx.scene.layout.VBox?>
+<?import java.lang.String?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
 
-<BorderPane nodeOrientation="RIGHT_TO_LEFT" prefHeight="780" prefWidth="1250" style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.EmployeeManagementController">
+<BorderPane nodeOrientation="RIGHT_TO_LEFT" 
+            style="-fx-font-family: 'Segoe UI', 'Noto Sans Arabic', system-ui; -fx-background-color: linear-gradient(to bottom right, #f8f9fa, #eef1f5);" 
+            stylesheets="@shipments.css"
+            xmlns="http://javafx.com/javafx/23.0.1" 
+            xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="noran.desktop.Controllers.EmployeeManagementController">
+
+    <stylesheets>
+        <String fx:value="@combo-style.css" />
+        <String fx:value="@invoices-table.css" />
+    </stylesheets>
 
     <left>
         <fx:include fx:id="sidebar" source="Sidebar.fxml" />
@@ -20,50 +25,120 @@
     <top>
         <fx:include fx:id="topBar" source="TopBar.fxml" />
     </top>
+
     <!-- CENTER CONTENT -->
     <center>
-        <VBox alignment="TOP_CENTER" spacing="24" style="-fx-padding: 32 24;">
-         <AnchorPane prefHeight="200.0" prefWidth="200.0">
-            <children>
-               <Button fx:id="updateClientBtn1" onAction="#editShipment" prefHeight="55.0" prefWidth="66.0" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" />
-               <ImageView fitHeight="47.0" fitWidth="61.0" pickOnBounds="true" preserveRatio="true">
-                  <image>
-                     <Image url="@images/cached.png" />
-                  </image>
-               </ImageView>
-            </children>
-         </AnchorPane>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" style="-fx-background: transparent; -fx-background-color: transparent;">
+            <VBox spacing="24" style="-fx-padding: 32 40;">
+                
+                <!-- Page Header -->
+                <HBox alignment="CENTER" spacing="0">
+                    <VBox alignment="CENTER_LEFT" spacing="8" HBox.hgrow="ALWAYS">
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <StackPane prefWidth="50" prefHeight="50">
+                                <Circle radius="25" style="-fx-fill: linear-gradient(to bottom right, #a40000, #7a0000);"/>
+                                <Label text="👨‍💼" style="-fx-font-size: 24px;"/>
+                            </StackPane>
+                            <VBox spacing="4">
+                                <Label text="إدارة الموظفين" style="-fx-font-size: 26px; -fx-font-weight: 700; -fx-text-fill: #1a1a2e;"/>
+                                <Label text="عرض وإدارة بيانات الموظفين" style="-fx-font-size: 14px; -fx-text-fill: #6b7280;"/>
+                            </VBox>
+                        </HBox>
+                    </VBox>
+                    
+                    <!-- Refresh Button -->
+                    <Button onAction="#refresh" styleClass="refresh-button">
+                        <graphic>
+                            <HBox alignment="CENTER" spacing="8">
+                                <Label text="🔄" style="-fx-font-size: 18px;"/>
+                                <Label text="تحديث" style="-fx-font-size: 15px; -fx-text-fill: white; -fx-font-weight: 700;"/>
+                            </HBox>
+                        </graphic>
+                    </Button>
+                </HBox>
 
+                <!-- Filter Section Card -->
+                <VBox spacing="0" style="-fx-background-color: white; -fx-background-radius: 16; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 4);">
+                    <!-- Filter Header -->
+                    <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-background-color: linear-gradient(to left, #1ba3b6, #158a9a); -fx-background-radius: 16 16 0 0; -fx-padding: 14 24;">
+                        <Label text="تصفية الموظفين" style="-fx-font-size: 15px; -fx-font-weight: 600; -fx-text-fill: white;"/>
+                        <Label text="🔍" style="-fx-font-size: 16px;"/>
+                    </HBox>
+                    
+                    <!-- Filter Controls -->
+                    <HBox alignment="CENTER_LEFT" spacing="30" style="-fx-padding: 20 24;">
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="👔" style="-fx-font-size: 16px;"/>
+                            <Label text="نوع الموظف:" style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #374151;" />
+                            <ComboBox fx:id="employeeTypeFilter" prefWidth="160" promptText="الكل" />
+                        </HBox>
+                        
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="📊" style="-fx-font-size: 16px;"/>
+                            <Label text="حالة الموظف:" style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #374151;" />
+                            <ComboBox fx:id="employeeStatusFilter" prefWidth="140" promptText="الكل" />
+                        </HBox>
+                    </HBox>
+                </VBox>
 
-            <ImageView fitHeight="220" preserveRatio="true">
-                <image>
-                    <Image url="@images/invoice-illustration.png" />
-                </image>
-            </ImageView>
-            <!-- Table container -->
-            <StackPane style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 18; -fx-border-color: #eee; -fx-border-radius: 12;">
-                <TableView fx:id="clientTable" prefHeight="380" prefWidth="880" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css">
+                <!-- Table Section -->
+                <VBox spacing="0" styleClass="table-container" VBox.vgrow="ALWAYS">
+                    <!-- Table Header -->
+                    <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-background-color: linear-gradient(to left, #a40000, #7a0000); -fx-background-radius: 16 16 0 0; -fx-padding: 16 24;">
+                        <Label text="قائمة الموظفين" style="-fx-font-size: 16px; -fx-font-weight: 600; -fx-text-fill: white;"/>
+                        <Label text="📋" style="-fx-font-size: 18px;"/>
+                    </HBox>
+                    
+                    <!-- Table -->
+                    <StackPane style="-fx-background-color: white; -fx-background-radius: 0 0 16 16; -fx-padding: 0;" VBox.vgrow="ALWAYS">
+                        <TableView fx:id="clientTable" prefHeight="380" style="-fx-background-color: transparent;" stylesheets="@invoices-table.css">
+                            <columns>
+                                <TableColumn fx:id="colName" text="اسم الموظف" />
+                                <TableColumn fx:id="colEmail" text="البريد الالكتروني" />
+                                <TableColumn fx:id="colPhone" text="رقم الهاتف" />
+                                <TableColumn fx:id="colType" text="نوع الموظف" />
+                                <TableColumn fx:id="colRank" text="حالة الموظف" />
+                            </columns>
+                        </TableView>
+                    </StackPane>
+                </VBox>
 
-                    <columns>
-                        <TableColumn fx:id="colName" prefWidth="220" text="اسم الموظف" />
-                        <TableColumn fx:id="colEmail" prefWidth="220" text="البريد الالكتروني" />
-                        <TableColumn fx:id="colPhone" prefWidth="220" text="رقم الهاتف" />
-                        <TableColumn fx:id="colType" prefWidth="220" text="نوع الموظف" />
-                        <TableColumn fx:id="colRank" prefWidth="220" text="حالة الموظف" />
-                    </columns>
-                </TableView>
-            </StackPane>
-            <!-- Buttons -->
-            <HBox alignment="CENTER" spacing="12" style="-fx-padding: 12 0 0 0;">
-                <Button fx:id="addُEmployeebtn" onAction="#addُEmployee" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8; -fx-font-weight: bold" text="إضافة موظف جديد +" />
-
-                <Button fx:id="deleteClientBtn" onAction="#deleteEmployee" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 10 18; -fx-background-radius: 8; -fx-font-weight: bold" text="مسح الموظف" />
-
-                <Button fx:id="updateClientBtn" onAction="#editEmployee" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" text="تعديل الموظف" />
-
-<!--                <Region HBox.hgrow="ALWAYS" />-->
-                <Button fx:id="freezeClientBtn" onAction="#freezeEmployee" style="-fx-background-color: #690000; -fx-text-fill: white; -fx-padding: 12 24; -fx-background-radius: 8; -fx-font-weight: bold;" text="تجميد الموظف" />
-            </HBox>
-        </VBox>
+                <!-- Action Buttons -->
+                <HBox alignment="CENTER" spacing="16" style="-fx-padding: 8 0;">
+                    <Button fx:id="addُEmployeebtn" onAction="#addُEmployee" styleClass="success-button">
+                        <graphic>
+                            <HBox alignment="CENTER" spacing="8">
+                                <Label text="➕" style="-fx-font-size: 16px;"/>
+                                <Label text="إضافة موظف جديد" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
+                            </HBox>
+                        </graphic>
+                    </Button>
+                    <Button fx:id="updateClientBtn" onAction="#editEmployee" styleClass="secondary-button">
+                        <graphic>
+                            <HBox alignment="CENTER" spacing="8">
+                                <Label text="✏️" style="-fx-font-size: 16px;"/>
+                                <Label text="تعديل الموظف" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
+                            </HBox>
+                        </graphic>
+                    </Button>
+                    <Button fx:id="freezeClientBtn" onAction="#freezeEmployee" style="-fx-background-color: linear-gradient(to bottom, #6b7280, #4b5563); -fx-background-radius: 12; -fx-padding: 14 28; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0, 0, 4);">
+                        <graphic>
+                            <HBox alignment="CENTER" spacing="8">
+                                <Label text="❄️" style="-fx-font-size: 16px;"/>
+                                <Label text="تجميد الموظف" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
+                            </HBox>
+                        </graphic>
+                    </Button>
+                    <Button fx:id="deleteClientBtn" onAction="#deleteEmployee" styleClass="danger-button">
+                        <graphic>
+                            <HBox alignment="CENTER" spacing="8">
+                                <Label text="🗑️" style="-fx-font-size: 16px;"/>
+                                <Label text="مسح الموظف" style="-fx-font-size: 14px; -fx-text-fill: white; -fx-font-weight: 600;"/>
+                            </HBox>
+                        </graphic>
+                    </Button>
+                </HBox>
+            </VBox>
+        </ScrollPane>
     </center>
 </BorderPane>

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
@@ -15,6 +16,13 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  // Premium Colors
+  static const Color primaryDark = Color(0xFF690000);
+  static const Color primaryLight = Color(0xFF8B0000);
+  static const Color accentColor = Color(0xFF1ba3b6);
+  static const Color goldAccent = Color(0xFFD4AF37);
+  static const Color bgColor = Color(0xFFF8F9FA);
+
   Map<String, dynamic>? _userData;
   List<Map<String, dynamic>> _uploadedDocuments = [];
   bool _isLoading = true;
@@ -359,472 +367,479 @@ class _ProfilePageState extends State<ProfilePage> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF690000),
-          elevation: 0,
-          title: const Text(
-            'الملف الشخصي',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: Colors.white,
-            ),
-          ),
-          centerTitle: true,
-          automaticallyImplyLeading: false,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.arrow_forward, color: Colors.white),
-              onPressed: () {
-                if (GoRouter.of(context).canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/home');
-                }
-              },
-            ),
-          ],
-        ),
+        backgroundColor: bgColor,
         body:
             _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                  child: CircularProgressIndicator(color: primaryDark),
+                )
                 : RefreshIndicator(
                   onRefresh: _loadUserData,
-                  color: const Color(0xFF690000),
-                  child: SingleChildScrollView(
+                  color: primaryDark,
+                  child: CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    child: Column(
-                      children: [
-                        // Header Section
-                        _buildHeaderSection(),
+                    slivers: [
+                      // Premium App Bar
+                      SliverAppBar(
+                        expandedHeight: 280,
+                        pinned: true,
+                        backgroundColor: primaryDark,
+                        automaticallyImplyLeading: false,
+                        actions: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.arrow_forward_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              if (GoRouter.of(context).canPop()) {
+                                context.pop();
+                              } else {
+                                context.go('/home');
+                              }
+                            },
+                          ),
+                        ],
+                        flexibleSpace: FlexibleSpaceBar(
+                          background: _buildPremiumHeader(),
+                        ),
+                      ),
 
-                        const SizedBox(height: 16),
+                      // Content
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            children: [
+                              // Personal Info Card
+                              _buildPremiumInfoCard(),
+                              const SizedBox(height: 16),
 
-                        // Personal Info Card
-                        _buildPersonalInfoCard(),
-
-                        const SizedBox(height: 16),
-
-                        // Company/Business Info Card (if applicable)
-                        if (_userData?['clientDetails'] != null)
-                          _buildCompanyInfoCard(),
-
-                        const SizedBox(height: 16),
-
-                        // Documents Section
-                        _buildDocumentsSection(),
-
-                        const SizedBox(height: 24),
-                      ],
-                    ),
+                              // Documents Section
+                              _buildPremiumDocumentsSection(),
+                              const SizedBox(height: 100),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
       ),
     );
   }
 
-  Widget _buildHeaderSection() {
+  Widget _buildPremiumHeader() {
     return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Color(0xFF690000),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [primaryDark, primaryLight, primaryDark.withOpacity(0.9)],
         ),
       ),
-      child: Column(
+      child: Stack(
         children: [
-          const SizedBox(height: 24),
-          // Profile Picture with change option
-          Stack(
-            children: [
-              GestureDetector(
-                onTap: _showPhotoOptions,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFF1ba3b6),
-                      width: 3,
-                    ),
-                  ),
-                  child:
-                      _isUploadingPhoto
-                          ? const Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF690000),
-                              strokeWidth: 3,
+          // Decorative circles
+          Positioned(
+            top: -50,
+            right: -50,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -30,
+            left: -30,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 50,
+            left: 20,
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.03),
+              ),
+            ),
+          ),
+
+          // Content - Centered with SingleChildScrollView to prevent overflow
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 30),
+                  // Profile Picture - Centered
+                  Center(
+                    child: GestureDetector(
+                      onTap: _showPhotoOptions,
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: [accentColor, goldAccent],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.3),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
                             ),
-                          )
-                          : _profilePhotoUrl != null
-                          ? ClipOval(
-                            child: Image.network(
-                              _profilePhotoUrl!,
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (
-                                context,
-                                child,
-                                loadingProgress,
-                              ) {
-                                if (loadingProgress == null) return child;
-                                return const Center(
-                                  child: CircularProgressIndicator(
-                                    color: Color(0xFF690000),
-                                    strokeWidth: 2,
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Icon(
-                                  Icons.person,
-                                  size: 60,
-                                  color: Color(0xFF690000),
-                                );
-                              },
+                            padding: const EdgeInsets.all(4),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                              ),
+                              child:
+                                  _isUploadingPhoto
+                                      ? const Center(
+                                        child: CircularProgressIndicator(
+                                          color: primaryDark,
+                                          strokeWidth: 3,
+                                        ),
+                                      )
+                                      : ClipOval(
+                                        child:
+                                            _profilePhotoUrl != null
+                                                ? Image.network(
+                                                  _profilePhotoUrl!,
+                                                  width: 112,
+                                                  height: 112,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder:
+                                                      (_, __, ___) => Icon(
+                                                        Icons.person_rounded,
+                                                        size: 55,
+                                                        color: primaryDark,
+                                                      ),
+                                                )
+                                                : Icon(
+                                                  Icons.person_rounded,
+                                                  size: 55,
+                                                  color: primaryDark,
+                                                ),
+                                      ),
                             ),
-                          )
-                          : const Icon(
-                            Icons.person,
-                            size: 60,
-                            color: Color(0xFF690000),
                           ),
-                ),
-              ),
-              // Camera icon overlay
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: GestureDetector(
-                  onTap: _showPhotoOptions,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1ba3b6),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 18,
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    accentColor,
+                                    accentColor.withOpacity(0.8),
+                                  ],
+                                ),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 3,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: accentColor.withOpacity(0.4),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 20),
+                  // User Name - Centered
+                  Center(
+                    child: Text(
+                      _userData?['fullname'] ?? 'المستخدم',
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Email - Centered with icon
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(25),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.email_rounded,
+                            size: 18,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            _userData?['email'] ?? '',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withOpacity(0.95),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Account type badge - Centered
+                  if (_userData?['clientDetails']?['clientType'] != null) ...[
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [goldAccent, goldAccent.withOpacity(0.8)],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: goldAccent.withOpacity(0.4),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.verified_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _getClientTypeName(
+                                _userData?['clientDetails']?['clientType'],
+                              ),
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // User Name
-          Text(
-            _userData?['fullname'] ?? 'المستخدم',
-            style: const TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
             ),
           ),
-          const SizedBox(height: 8),
-          // Account Type Badge
-          if (_userData?['clientDetails']?['clientType'] != null ||
-              _userData?['type'] != null) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1ba3b6),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                _getClientTypeName(
-                  _userData?['clientDetails']?['clientType'] ??
-                      _userData?['type'],
-                ),
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ] else ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade400,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'حساب عام',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  Widget _buildPersonalInfoCard() {
+  Widget _buildPremiumInfoCard() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: primaryDark.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
-              Icon(Icons.person_outline, color: Color(0xFF690000), size: 24),
-              SizedBox(width: 8),
-              Text(
-                'المعلومات الشخصية',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF690000),
-                ),
+          // Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primaryDark.withOpacity(0.05), Colors.transparent],
               ),
-            ],
-          ),
-          const Divider(height: 24, thickness: 1),
-          _buildInfoRow(
-            Icons.badge,
-            'اسم المستخدم',
-            _userData?['username'] ?? '-',
-          ),
-          const SizedBox(height: 12),
-          _buildInfoRow(
-            Icons.email,
-            'البريد الإلكتروني',
-            _userData?['email'] ?? '-',
-          ),
-          const SizedBox(height: 12),
-          _buildInfoRow(Icons.phone, 'رقم الهاتف', _userData?['phone'] ?? '-'),
-          if (_userData?['nationalId'] != null) ...[
-            const SizedBox(height: 12),
-            _buildInfoRow(
-              Icons.credit_card,
-              'الرقم القومي',
-              _userData?['nationalId'] ?? '-',
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompanyInfoCard() {
-    final clientDetails = _userData?['clientDetails'];
-    if (clientDetails == null) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.business, color: Color(0xFF1ba3b6), size: 24),
-              SizedBox(width: 8),
-              Text(
-                'معلومات الشركة',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF690000),
-                ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
               ),
-            ],
-          ),
-          const Divider(height: 24, thickness: 1),
-          if (clientDetails['companyName'] != null) ...[
-            _buildInfoRow(
-              Icons.apartment,
-              'اسم الشركة',
-              clientDetails['companyName'],
             ),
-            const SizedBox(height: 12),
-          ],
-          if (clientDetails['commercialRegisterNumber'] != null) ...[
-            _buildInfoRow(
-              Icons.numbers,
-              'رقم السجل التجاري',
-              clientDetails['commercialRegisterNumber'],
-            ),
-            const SizedBox(height: 12),
-          ],
-          if (clientDetails['taxCardNumber'] != null) ...[
-            _buildInfoRow(
-              Icons.receipt,
-              'رقم البطاقة الضريبية',
-              clientDetails['taxCardNumber'],
-            ),
-            const SizedBox(height: 12),
-          ],
-          if (clientDetails['address'] != null) ...[
-            _buildInfoRow(
-              Icons.location_on,
-              'العنوان',
-              clientDetails['address'],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDocumentsSection() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.folder_open, color: Color(0xFF1ba3b6), size: 24),
-              SizedBox(width: 8),
-              Text(
-                'المستندات المرفوعة',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF690000),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryDark, primaryLight],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.person_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const Divider(height: 24, thickness: 1),
-          if (_uploadedDocuments.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24.0),
-                child: Text(
-                  'لا توجد مستندات مرفوعة',
+                const SizedBox(width: 12),
+                const Text(
+                  'المعلومات الشخصية',
                   style: TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: 16,
-                    color: Colors.grey,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: primaryDark,
                   ),
                 ),
-              ),
-            )
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _uploadedDocuments.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final doc = _uploadedDocuments[index];
-                return _buildDocumentCard(doc);
-              },
+              ],
             ),
+          ),
+
+          // Info Items
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildPremiumInfoRow(
+                  icon: Icons.badge_rounded,
+                  label: 'اسم المستخدم',
+                  value: _userData?['username'] ?? '-',
+                  color: accentColor,
+                ),
+                const SizedBox(height: 16),
+                _buildPremiumInfoRow(
+                  icon: Icons.phone_rounded,
+                  label: 'رقم الهاتف',
+                  value: _userData?['phone'] ?? '-',
+                  color: goldAccent,
+                ),
+                if (_userData?['nationalId'] != null) ...[
+                  const SizedBox(height: 16),
+                  _buildPremiumInfoRow(
+                    icon: Icons.credit_card_rounded,
+                    label: 'الرقم القومي',
+                    value: _userData?['nationalId'] ?? '-',
+                    color: primaryDark,
+                  ),
+                ],
+                if (_userData?['clientDetails']?['clientType'] != null) ...[
+                  const SizedBox(height: 16),
+                  _buildPremiumInfoRow(
+                    icon: Icons.category_rounded,
+                    label: 'نوع الحساب',
+                    value: _getClientTypeName(
+                      _userData?['clientDetails']?['clientType'],
+                    ),
+                    color: Colors.purple,
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDocumentCard(Map<String, dynamic> doc) {
-    final isPDF = doc['mimetype']?.toString().contains('pdf') ?? false;
-
+  Widget _buildPremiumInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.1), width: 1),
       ),
       child: Row(
         children: [
           Container(
-            width: 50,
-            height: 50,
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isPDF ? Colors.red.shade50 : Colors.blue.shade50,
+              color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              isPDF ? Icons.picture_as_pdf : Icons.image,
-              color: isPDF ? Colors.red : Colors.blue,
-              size: 28,
-            ),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _getDocumentTypeName(doc['documentType']),
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF690000),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  doc['filename'] ?? 'مستند',
+                  label,
                   style: TextStyle(
                     fontFamily: 'Cairo',
-                    fontSize: 13,
-                    color: Colors.grey.shade600,
+                    fontSize: 11,
+                    color: Colors.grey[500],
+                    fontWeight: FontWeight.w500,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D2D2D),
+                  ),
                 ),
               ],
             ),
@@ -834,39 +849,193 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20, color: const Color(0xFF1ba3b6)),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 15,
-                  color: Color(0xFF2D2D2D),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+  Widget _buildPremiumDocumentsSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 5),
           ),
-        ),
-      ],
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [accentColor.withOpacity(0.05), Colors.transparent],
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [accentColor, accentColor.withOpacity(0.8)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.folder_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'المستندات المرفوعة',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: primaryDark,
+                  ),
+                ),
+                const Spacer(),
+                if (_uploadedDocuments.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${_uploadedDocuments.length}',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: accentColor,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Documents List
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                _uploadedDocuments.isEmpty
+                    ? _buildEmptyDocuments()
+                    : Column(
+                      children:
+                          _uploadedDocuments
+                              .map((doc) => _buildPremiumDocumentCard(doc))
+                              .toList(),
+                    ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyDocuments() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.folder_off_rounded,
+              size: 40,
+              color: Colors.grey[400],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'لا توجد مستندات مرفوعة',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumDocumentCard(Map<String, dynamic> doc) {
+    final isPDF = doc['mimetype']?.toString().contains('pdf') ?? false;
+    final color = isPDF ? Colors.red : Colors.blue;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.1), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              isPDF ? Icons.picture_as_pdf_rounded : Icons.image_rounded,
+              color: color,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _getDocumentTypeName(doc['documentType']),
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: primaryDark,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  doc['filename'] ?? 'مستند',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11,
+                    color: Colors.grey[500],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+        ],
+      ),
     );
   }
 }

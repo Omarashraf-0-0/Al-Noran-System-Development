@@ -4,6 +4,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { useTheme } from "../context/ThemeContext";
 import BackgroundContainer from "../components/BackgroundContainer";
 import FormContainer from "../components/FormContainer";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -71,6 +72,7 @@ const UCRRequestPage = () => {
 	const [fetchingData, setFetchingData] = useState(false);
 	const [uploading, setUploading] = useState(false);
 	const [user, setUser] = useState(null);
+	const { isDarkMode } = useTheme();
 
 	// Form state
 	const [formData, setFormData] = useState({
@@ -660,7 +662,7 @@ const UCRRequestPage = () => {
 	};
 
 	return (
-		<div className="min-h-screen flex flex-col bg-gray-50" dir="rtl">
+		<div className={`min-h-screen flex flex-col transition-colors duration-300 ${isDarkMode ? "bg-[#0a0505]" : "bg-gray-50"}`} dir="rtl">
 			<Header />
 
 			{fetchingData ? (
@@ -672,18 +674,18 @@ const UCRRequestPage = () => {
 				<FormContainer title={isEditMode ? "تعديل طلب UCR" : "طلب رقم UCR (تصدير)"}>
 					<form onSubmit={handleSubmit} className="space-y-6">
 						{/* Step 1: Certification & Shipping Method */}
-						<div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-							<h3 className="text-lg font-bold text-gray-800 mb-4">
+						<div className={`p-6 rounded-2xl border mb-6 transition-all ${isDarkMode ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"}`}>
+							<h3 className={`text-lg font-bold mb-4 ${isDarkMode ? "text-gray-100" : "text-gray-800"}`}>
 								1. نوع الشهادة وطريقة الشحن
 							</h3>
 
 							{/* Certification Type */}
 							<div className="mb-4">
-								<label className="block text-sm font-medium text-gray-700 mb-2">
+								<label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
 									نوع الشهادة
 								</label>
 								<div className="flex gap-4">
-									<label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-green-50 transition-colors">
+									<label className={`p-4 rounded-lg transform transition-all ${isDarkMode ? "bg-white/5 hover:bg-white/10 text-gray-200" : "bg-white hover:bg-green-50 text-gray-800"}`}>
 										<input
 											type="radio"
 											name="certificationType"
@@ -722,11 +724,11 @@ const UCRRequestPage = () => {
 
 							{/* Shipping Method */}
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2">
+								<label className={`block text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
 									طريقة الشحن
 								</label>
 								<div className="flex gap-4">
-									<label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50 transition-colors">
+									<label className={`p-4 rounded-lg transform transition-all ${isDarkMode ? "bg-white/5 hover:bg-white/10 text-gray-200" : "bg-white hover:bg-blue-50 text-gray-800"}`}>
 										<input
 											type="radio"
 											name="shippingMethod"
@@ -738,7 +740,7 @@ const UCRRequestPage = () => {
 										<span className="text-xl">✈️</span>
 										<span className="font-medium">جوي</span>
 									</label>
-									<label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50 transition-colors">
+									<label className={`p-4 rounded-lg transform transition-all ${isDarkMode ? "bg-white/5 hover:bg-white/10 text-gray-200" : "bg-white hover:bg-blue-50 text-gray-800"}`}>
 										<input
 											type="radio"
 											name="shippingMethod"
@@ -755,8 +757,8 @@ const UCRRequestPage = () => {
 						</div>
 
 						{/* Step 2: Destination */}
-						<div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-							<h3 className="text-lg font-bold text-gray-800 mb-4">2. الوجهة</h3>
+						<div className={`p-6 rounded-2xl border mb-6 transition-all ${isDarkMode ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"}`}>
+							<h3 className={`text-lg font-bold mb-4 ${isDarkMode ? "text-gray-100" : "text-gray-800"}`}>2. الوجهة</h3>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<SelectField
 									id="destinationCountry"
@@ -788,8 +790,8 @@ const UCRRequestPage = () => {
 						</div>
 
 						{/* Step 3: Basic Goods Info - with Sea/Air specific fields */}
-						<div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-							<h3 className="text-lg font-bold text-gray-800 mb-4">
+						<div className={`p-6 rounded-2xl border mb-6 transition-all ${isDarkMode ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"}`}>
+							<h3 className={`text-lg font-bold mb-4 ${isDarkMode ? "text-gray-100" : "text-gray-800"}`}>
 								3. بيانات البضاعة الأساسية
 							</h3>
 							
@@ -842,7 +844,7 @@ const UCRRequestPage = () => {
 
 							{/* Sea Shipment Type Selection - only for sea */}
 							{formData.shippingMethod === "sea" && (
-								<div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+								<div className={`mb-4 p-4 rounded-lg border transition-all ${isDarkMode ? "bg-blue-900/20 border-blue-800/30 text-blue-200" : "bg-blue-50 border-blue-200 text-blue-900"}`}>
 									<label className="block text-sm font-medium text-gray-700 mb-3">
 										نوع الشحنة البحرية <span className="text-red-500">*</span>
 									</label>
@@ -943,7 +945,7 @@ const UCRRequestPage = () => {
 
 							{/* Containers - shown for SEA+FCL */}
 							{formData.shippingMethod === "sea" && formData.seaShipmentType === "fcl" && (
-								<div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+								<div className={`p-4 rounded-lg border transition-all ${isDarkMode ? "bg-blue-900/20 border-blue-800/30" : "bg-blue-50 border-blue-200"}`}>
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 										<InputField
 											id="containersCount"
@@ -1070,8 +1072,8 @@ const UCRRequestPage = () => {
 						</div>
 
 						{/* Step 4: Invoice Info */}
-						<div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-							<h3 className="text-lg font-bold text-gray-800 mb-2">
+						<div className={`p-6 rounded-2xl border mb-6 transition-all ${isDarkMode ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"}`}>
+							<h3 className={`text-lg font-bold mb-2 ${isDarkMode ? "text-gray-100" : "text-gray-800"}`}>
 								4. بيانات الفاتورة
 							</h3>
 							<p className="text-sm text-gray-600 mb-4">
@@ -1153,7 +1155,7 @@ const UCRRequestPage = () => {
 
 							{/* Fee Preview for Noran Certified */}
 							{formData.certificationType === "noran" && formData.valueInEGP && (
-								<div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+								<div className={`mt-4 p-3 rounded-lg border transition-all ${isDarkMode ? "bg-green-900/20 border-green-800/30 text-green-300" : "bg-green-50 border-green-200 text-green-800"}`}>
 									<div className="flex items-center gap-2 text-green-800">
 										<span className="w-3 h-3 bg-green-500 rounded-full"></span>
 										<span className="font-medium">
@@ -1169,8 +1171,8 @@ const UCRRequestPage = () => {
 						</div>
 
 						{/* Step 5: Multiple Items */}
-						<div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-							<h3 className="text-lg font-bold text-gray-800 mb-2">
+						<div className={`p-6 rounded-2xl border mb-6 transition-all ${isDarkMode ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"}`}>
+							<h3 className={`text-lg font-bold mb-2 ${isDarkMode ? "text-gray-100" : "text-gray-800"}`}>
 								5. تفاصيل البنود
 							</h3>
 							<p className="text-sm text-gray-600 mb-4">
@@ -1322,13 +1324,13 @@ const UCRRequestPage = () => {
 									: "border-gray-200"
 							}`}
 						>
-							<h3 className="text-lg font-bold text-gray-800 mb-2">
+							<h3 className={`text-lg font-bold mb-2 ${isDarkMode ? "text-gray-100" : "text-gray-800"}`}>
 								6. رفع المستندات
 							</h3>
 							
 							{/* Revision needed banner */}
 							{documentsNeedingRevision.length > 0 && (
-								<div className="mb-4 p-4 bg-orange-100 border-2 border-orange-400 rounded-lg">
+								<div className={`mb-4 p-4 rounded-lg border-2 transition-all ${isDarkMode ? "bg-orange-900/20 border-orange-500/50 text-orange-200" : "bg-orange-100 border-orange-400 text-orange-900"}`}>
 									<h4 className="font-bold text-orange-800 mb-2">⚠️ المستندات التالية تحتاج تعديل:</h4>
 									<div className="space-y-2">
 										{documentsNeedingRevision.map((ds, idx) => {
@@ -1360,7 +1362,7 @@ const UCRRequestPage = () => {
 							</p>
 
 							{/* Certification Type Indicator */}
-							<div className="mb-4 p-3 rounded-lg border bg-blue-50 border-blue-200">
+							<div className={`mb-4 p-3 rounded-lg border transition-all ${isDarkMode ? "bg-blue-900/20 border-blue-800/30" : "bg-blue-50 border-blue-200"}`}>
 								<div className="flex items-center gap-2">
 									<span
 										className={`w-4 h-4 rounded-full ${
@@ -1452,8 +1454,8 @@ const UCRRequestPage = () => {
 												</p>
 											</div>
 
-											{isUploaded ? (
-												/* Uploaded State */
+											{isUploaded && !needsRevision ? (
+												/* Uploaded State (Approved or Pending) */
 												<div className="text-center">
 													<div className="mb-2">
 														<span className="text-2xl">📄</span>
@@ -1480,6 +1482,100 @@ const UCRRequestPage = () => {
 														</button>
 													</div>
 												</div>
+											) : needsRevision ? (
+												/* Needs Revision State - Show current doc + reupload option */
+												<div className="text-center">
+													<div className="mb-2">
+														<span className="text-2xl">⚠️</span>
+													</div>
+													<p className="text-sm text-orange-700 font-medium truncate mb-2" title={uploadedDoc?.name}>
+														{uploadedDoc?.name || "المستند الحالي"}
+													</p>
+													{uploadedDoc?.url && (
+														<button
+															type="button"
+															onClick={() => window.open(uploadedDoc.url, "_blank")}
+															className="px-3 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 mb-3"
+														>
+															👁️ عرض المستند الحالي
+														</button>
+													)}
+													<div className="border-t border-orange-300 pt-3 mt-2">
+														<p className="text-xs text-orange-600 mb-2">📤 ارفع المستند المعدّل:</p>
+														<label className="cursor-pointer block">
+															<input
+																type="file"
+																onChange={(e) => {
+																	const file = e.target.files[0];
+																	if (file) {
+																		// Validate file size (10MB max)
+																		if (file.size > 10 * 1024 * 1024) {
+																			toast.error("حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت");
+																			e.target.value = "";
+																			return;
+																		}
+																		setSelectedFile(file);
+																		// Auto upload replacement
+																		const uploadReplacementFile = async () => {
+																			setUploading(true);
+																			try {
+																				// First delete the old document
+																				if (uploadedDoc?.id) {
+																					await removeDocument(uploadedDoc.id);
+																				}
+																				
+																				const uploadFormData = new FormData();
+																				uploadFormData.append("file", file);
+																				uploadFormData.append("category", "ucr_request");
+																				uploadFormData.append("userType", "client");
+																				uploadFormData.append("documentType", docType);
+
+																				const token = localStorage.getItem("token");
+																				const response = await axios.post(
+																					`${import.meta.env.VITE_API_URL}/api/uploads`,
+																					uploadFormData,
+																					{
+																						headers: {
+																							Authorization: `Bearer ${token}`,
+																							"Content-Type": "multipart/form-data",
+																						},
+																					}
+																				);
+
+																				if (response.data.success) {
+																					setUploadedDocuments((prev) => [
+																						...prev.filter((d) => d.type !== docType),
+																						{
+																							id: response.data.upload.id || response.data.upload._id,
+																							type: docType,
+																							name: file.name,
+																							url: response.data.upload.url || response.data.upload.publicUrl,
+																							key: response.data.upload.key,
+																						},
+																					]);
+																					toast.success(`تم رفع المستند المعدّل بنجاح`);
+																				}
+																			} catch (error) {
+																				console.error("Upload error:", error);
+																				toast.error("فشل رفع الملف: " + (error.response?.data?.message || error.message));
+																			} finally {
+																				setUploading(false);
+																				setSelectedFile(null);
+																			}
+																		};
+																		uploadReplacementFile();
+																	}
+																	e.target.value = "";
+																}}
+																accept=".pdf,.jpg,.jpeg,.png"
+																className="hidden"
+															/>
+															<span className="inline-block px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors">
+																{uploading ? "جاري الرفع..." : "📎 اختر ملف جديد"}
+															</span>
+														</label>
+													</div>
+												</div>
 											) : (
 												/* Upload State */
 												<div className="text-center">
@@ -1495,6 +1591,12 @@ const UCRRequestPage = () => {
 															onChange={(e) => {
 																const file = e.target.files[0];
 																if (file) {
+																	// Validate file size (10MB max)
+																	if (file.size > 10 * 1024 * 1024) {
+																		toast.error("حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت");
+																		e.target.value = "";
+																		return;
+																	}
 																	setSelectedFile(file);
 																	// Auto upload
 																	const uploadSelectedFile = async () => {
@@ -1591,8 +1693,8 @@ const UCRRequestPage = () => {
 						</div>
 
 						{/* Client Notes */}
-						<div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-							<h3 className="text-lg font-bold text-gray-800 mb-4">ملاحظات إضافية</h3>
+						<div className={`p-6 rounded-2xl border mb-6 transition-all ${isDarkMode ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200"}`}>
+							<h3 className={`text-lg font-bold mb-4 ${isDarkMode ? "text-gray-100" : "text-gray-800"}`}>ملاحظات إضافية</h3>
 							<TextAreaField
 								id="clientNotes"
 								label=""

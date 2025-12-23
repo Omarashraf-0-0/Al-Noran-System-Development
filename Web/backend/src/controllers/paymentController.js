@@ -1,6 +1,42 @@
 const Payment = require("../models/payment");
 const Invoice = require("../models/invoice");
 const User = require("../models/user"); // Assuming User model path
+const notificationService = require("../services/notificationService");
+const { getPresignedUrl } = require("../utils/s3Helpers");
+
+// Helper function to generate presigned URLs for payment transactions
+const generatePresignedUrlsForPayments = async (payments) => {
+    const paymentsWithUrls = [];
+    for (const payment of payments) {
+        const paymentObj = payment.toObject ? payment.toObject() : { ...payment };
+        const transactionsWithUrls = [];
+        
+        for (const tx of paymentObj.transactions) {
+            let imageUrl = tx.imageUrls;
+            // Check if it's an S3 key (not already a full URL or if it's an expired presigned URL)
+            if (imageUrl && !imageUrl.startsWith('blob:')) {
+                try {
+                    // If it's already a full S3 URL, extract the key
+                    if (imageUrl.includes('amazonaws.com')) {
+                        // Extract s3Key from URL: https://bucket.s3.region.amazonaws.com/key or presigned URL
+                        const urlObj = new URL(imageUrl.split('?')[0]); // Remove query params
+                        imageUrl = decodeURIComponent(urlObj.pathname.substring(1)); // Remove leading /
+                    }
+                    // Generate fresh presigned URL
+                    const presignedUrl = await getPresignedUrl(imageUrl, 3600); // 1 hour expiry
+                    transactionsWithUrls.push({ ...tx, imageUrls: presignedUrl });
+                } catch (err) {
+                    console.error(`Failed to generate presigned URL for: ${tx.imageUrls}`, err.message);
+                    transactionsWithUrls.push(tx); // Keep original if generation fails
+                }
+            } else {
+                transactionsWithUrls.push(tx);
+            }
+        }
+        paymentsWithUrls.push({ ...paymentObj, transactions: transactionsWithUrls });
+    }
+    return paymentsWithUrls;
+};
 
 // @desc    Create new payment
 // @route   POST /api/payments
@@ -26,6 +62,44 @@ const createPayment = async (req, res) => {
             transactions,
         });
 
+        // 📬 Send notification to client about payment receipt upload
+        try {
+            await notificationService.notifyPaymentReceiptUploaded(userId, payment._id);
+            console.log(`📬 Payment receipt notification sent to user: ${userId}`);
+        } catch (notifError) {
+            console.error("Failed to send payment receipt notification:", notifError.message);
+        }
+
+        // 📬 Notify assigned employee about client payment upload
+        try {
+            // Find if any invoices in the payment have related shipments with assigned employees
+            for (const transaction of transactions) {
+                if (transaction.invoiceId) {
+                    const invoice = await Invoice.findById(transaction.invoiceId).populate('shipmentId');
+                    if (invoice && invoice.shipmentId && invoice.shipmentId.employee_id) {
+                        await notificationService.createNotification({
+                            userId: invoice.shipmentId.employee_id,
+                            type: "payment_received",
+                            title: "العميل قام برفع إيصال دفع",
+                            message: `قام العميل برفع إيصال دفع للشحنة ${invoice.shipmentId.acid}`,
+                            data: {
+                                paymentId: payment._id,
+                                shipmentId: invoice.shipmentId._id,
+                                shipmentAcid: invoice.shipmentId.acid,
+                                amount: transaction.amount,
+                                actionUrl: `/employee/payments/${payment._id}`,
+                            },
+                            sendPush: true,
+                            priority: "high",
+                        });
+                        console.log(`📬 Employee notified about payment upload for shipment: ${invoice.shipmentId.acid}`);
+                    }
+                }
+            }
+        } catch (notifError) {
+            console.error("Failed to send employee payment notification:", notifError.message);
+        }
+
         res.status(201).json(payment);
     } catch (error) {
         console.error("Error creating payment:", error);
@@ -39,7 +113,9 @@ const createPayment = async (req, res) => {
 const getMyPayments = async (req, res) => {
     try {
         const payments = await Payment.find({ userId: req.user.id }).sort({ createdAt: -1 });
-        res.json(payments);
+        // Generate presigned URLs for payment receipt images
+        const paymentsWithUrls = await generatePresignedUrlsForPayments(payments);
+        res.json(paymentsWithUrls);
     } catch (error) {
         console.error("Error fetching payments:", error);
         res.status(500).json({ message: "Server Error" });
@@ -116,7 +192,13 @@ const getAdminFinancials = async (req, res) => {
             };
         });
 
-        res.json(summary);
+        // Generate presigned URLs for all payment images
+        const summaryWithUrls = await Promise.all(summary.map(async (item) => {
+            const paymentsWithUrls = await generatePresignedUrlsForPayments(item.payments);
+            return { ...item, payments: paymentsWithUrls };
+        }));
+
+        res.json(summaryWithUrls);
 
     } catch (error) {
         console.error("Error details:", error);
@@ -176,20 +258,88 @@ const updateTransactionStatus = async (req, res) => {
             return res.status(404).json({ message: "Transaction not found" });
         }
 
+        const oldStatus = transaction.status;
         transaction.status = status;
 
-        // If approved, should we auto-deduct? 
-        // User requested manual "Clear" button on client side. 
-        // But if admin approves a "Top Up" receipt, we might want to add to wallet?
-        // For now, adhere to instructions: "add new button in table named 'add in wallet'".
-        // So checking the image is just verification, adding money is manual.
-
         await payment.save();
+
+        // 📬 Send notification for payment status change
+        if (status !== oldStatus && (status === 'APPROVED' || status === 'REJECTED')) {
+            try {
+                await notificationService.notifyPaymentStatus(
+                    payment.userId,
+                    payment._id,
+                    status
+                );
+                console.log(`📬 Payment status notification (${status}) sent to user: ${payment.userId}`);
+            } catch (notifError) {
+                console.error("Failed to send payment status notification:", notifError.message);
+            }
+        }
 
         res.json(payment);
 
     } catch (error) {
         console.error("Error updating transaction:", error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// @desc    Update payment receipt (for PENDING or REJECTED payments)
+// @route   PATCH /api/payments/:paymentId/receipt
+// @access  Private
+const updatePaymentReceipt = async (req, res) => {
+    try {
+        const { paymentId } = req.params;
+        const { imageUrls } = req.body;
+        const userId = req.user.id;
+
+        if (!imageUrls) {
+            return res.status(400).json({ message: "Image URL is required" });
+        }
+
+        const payment = await Payment.findById(paymentId);
+        if (!payment) {
+            return res.status(404).json({ message: "Payment not found" });
+        }
+
+        // Check if user owns this payment
+        if (payment.userId.toString() !== userId) {
+            return res.status(403).json({ message: "Not authorized to update this payment" });
+        }
+
+        // Check if the transaction is in PENDING or REJECTED status
+        if (payment.transactions.length === 0) {
+            return res.status(400).json({ message: "No transactions found" });
+        }
+
+        const transaction = payment.transactions[0]; // Usually first transaction
+        if (transaction.status === 'APPROVED') {
+            return res.status(400).json({ message: "Cannot update an approved receipt" });
+        }
+
+        // Update the receipt image and reset status to PENDING
+        transaction.imageUrls = imageUrls;
+        transaction.status = 'PENDING';
+
+        await payment.save();
+
+        // 📬 Send notification for re-uploaded receipt
+        try {
+            await notificationService.notifyPaymentReceiptUploaded(userId, payment._id);
+            console.log(`📬 Updated receipt notification sent to user: ${userId}`);
+        } catch (notifError) {
+            console.error("Failed to send updated receipt notification:", notifError.message);
+        }
+
+        res.json({ 
+            success: true,
+            message: "Receipt updated successfully",
+            payment 
+        });
+
+    } catch (error) {
+        console.error("Error updating payment receipt:", error);
         res.status(500).json({ message: "Server Error" });
     }
 };
@@ -200,5 +350,6 @@ module.exports = {
     getAllPayments,
     getAdminFinancials,
     updateTransactionStatus,
-    updateUserWallet
+    updateUserWallet,
+    updatePaymentReceipt
 };

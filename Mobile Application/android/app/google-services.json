@@ -12,7 +12,20 @@
           "package_name": "com.example.alnoran_mobile_application"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "91905603876-0fnop9mvvomd3uhm531cb9qnu4l3o9jq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.alnoran_mobile_application",
+            "certificate_hash": "6ecd36deed5dac558e285d034a3717d0d07ab226"
+          }
+        },
+        {
+          "client_id": "91905603876-37179v7mfmf99gtjjdn1cua8v9l295el.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBlVNH2lrC3Ar2TL9zLMRp8WkrTGETVaC4"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "91905603876-37179v7mfmf99gtjjdn1cua8v9l295el.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "91905603876-c9qkfsa6m09992819f78s2nlq9gn43vd.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.alnoranMobileApplication"
+              }
+            }
+          ]
         }
       }
     }

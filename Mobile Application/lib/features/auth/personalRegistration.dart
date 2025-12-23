@@ -1,10 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import '../../Pop-ups/al_noran_popups.dart';
 import '../../core/network/api_service.dart';
+import '../../core/widgets/widgets.dart';
+import '../../theme/theme.dart';
 import '../../util/validators.dart';
-import '../../util/file_picker_helper.dart'; // FilePickerHelper for PDF support
+import '../../util/file_picker_helper.dart';
+import 'auth_dark_mode_mixin.dart';
 
 class PersonalRegistrationPage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -16,186 +19,185 @@ class PersonalRegistrationPage extends StatefulWidget {
       _PersonalRegistrationPageState();
 }
 
-class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
+class _PersonalRegistrationPageState extends State<PersonalRegistrationPage>
+    with SingleTickerProviderStateMixin, AuthDarkModeMixin {
   final TextEditingController _nationalIdController = TextEditingController();
   File? _powerOfAttorneyFile;
-  File? _nationalIdCardFile; // صورة البطاقة الشخصية
+  File? _nationalIdCardFile;
   bool _isLoading = false;
+
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _nationalIdController.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF690000),
-          elevation: 0,
-          title: const Text(
-            'التسجيل - حساب شخصي',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+    return Scaffold(
+      body: Stack(
+        children: [
+          // ============= PREMIUM GRADIENT BACKGROUND =============
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(gradient: backgroundGradientFull),
+          ),
+
+          // ============= DECORATIVE CIRCLES =============
+          Positioned(
+            top: -80,
+            right: -60,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: decorativeCircleColor,
+              ),
             ),
           ),
-          centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_forward, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
+          Positioned(
+            bottom: -100,
+            left: -80,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: decorativeCircleColorSmall,
+              ),
+            ),
           ),
-        ),
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Icon
-                Center(
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF690000).withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.person_outline,
-                      size: 50,
-                      color: Color(0xFF690000),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
 
-                // Title
-                const Text(
-                  'إكمال بيانات الحساب الشخصي',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Cairo',
-                    color: Color(0xFF690000),
-                  ),
+          // ============= GOLDEN ACCENT LINE =============
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 3,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Color(0xFFD4AF37),
+                    Color(0xFFF5E7A3),
+                    Color(0xFFD4AF37),
+                    Colors.transparent,
+                  ],
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'يرجى إدخال رقمك القومي وإرفاق التوكيل',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontFamily: 'Cairo',
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 32),
+              ),
+            ),
+          ),
 
-                // National ID Field
-                _buildTextField(
-                  controller: _nationalIdController,
-                  hint: 'الرقم القومي (14 رقم)',
-                  icon: Icons.credit_card,
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 24),
+          // ============= MAIN CONTENT =============
+          SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
 
-                // National ID Card Image Upload
-                _buildDocumentUpload(
-                  title: 'صورة البطاقة الشخصية',
-                  subtitle: 'صورة واضحة للبطاقة من الوجهين',
-                  file: _nationalIdCardFile,
-                  onTap: _pickNationalIdCard,
-                  onRemove: () {
-                    setState(() {
-                      _nationalIdCardFile = null;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
+                        // Back Button
+                        _buildBackButton(),
 
-                // Power of Attorney Upload
-                _buildDocumentUpload(
-                  title: 'التوكيل',
-                  subtitle: 'صورة أو ملف PDF للتوكيل',
-                  file: _powerOfAttorneyFile,
-                  onTap: _pickPowerOfAttorney,
-                  onRemove: () {
-                    setState(() {
-                      _powerOfAttorneyFile = null;
-                    });
-                  },
-                ),
-                const SizedBox(height: 32),
+                        const SizedBox(height: 24),
 
-                // Submit Button
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _handleSubmit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF690000),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child:
-                      _isLoading
-                          ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                          : const Text(
-                            'إتمام التسجيل',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo',
-                              color: Colors.white,
-                            ),
-                          ),
-                ),
-                const SizedBox(height: 16),
+                        // Icon
+                        _buildIcon(),
 
-                // Info Box
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1ba3b6).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFF1ba3b6).withOpacity(0.3),
-                      width: 1,
+                        const SizedBox(height: 20),
+
+                        // Title & Subtitle
+                        _buildHeader(),
+
+                        const SizedBox(height: 28),
+
+                        // Form Card
+                        _buildFormCard(),
+
+                        const SizedBox(height: 16),
+
+                        // Info Box
+                        _buildInfoBox(),
+
+                        const SizedBox(height: 32),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: const Color(0xFF1ba3b6),
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'سيتم مراجعة المستندات المرفوعة وتفعيل حسابك خلال 24 ساعة',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontFamily: 'Cairo',
-                            color: const Color(0xFF1ba3b6),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-              ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============= PREMIUM BACK BUTTON =============
+  Widget _buildBackButton() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.pop(),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: backButtonBgColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                width: 1.5,
+              ),
+            ),
+            child: const Icon(
+              Icons.arrow_forward_rounded,
+              color: Colors.white,
+              size: 24,
             ),
           ),
         ),
@@ -203,41 +205,292 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
     );
   }
 
-  Widget _buildTextField({
+  // ============= PREMIUM ICON WITH GOLD RING =============
+  Widget _buildIcon() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.elasticOut,
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: value,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFF5E7A3),
+                  Color(0xFFD4AF37),
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Container(
+              margin: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: logoContainerColor,
+              ),
+              child: const Icon(
+                Icons.person_rounded,
+                size: 48,
+                color: Color(0xFFD4AF37),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ============= PREMIUM HEADER WITH GOLD TEXT =============
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        ShaderMask(
+          shaderCallback:
+              (bounds) => const LinearGradient(
+                colors: [
+                  Color(0xFFD4AF37),
+                  Color(0xFFF5E7A3),
+                  Color(0xFFD4AF37),
+                ],
+              ).createShader(bounds),
+          child: const Text(
+            'حساب شخصي',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Cairo',
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'أدخل الرقم القومي وارفق المستندات المطلوبة',
+          style: TextStyle(
+            fontSize: 14,
+            fontFamily: 'Cairo',
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  // ============= PREMIUM FORM CARD =============
+  Widget _buildFormCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: cardDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // National ID Field
+          _buildLabeledTextField(
+            controller: _nationalIdController,
+            label: 'الرقم القومي',
+            hint: 'أدخل الرقم القومي (14 رقم)',
+            icon: Icons.credit_card_rounded,
+            keyboardType: TextInputType.number,
+          ),
+
+          const SizedBox(height: 20),
+
+          // National ID Card Upload
+          _buildDocumentUpload(
+            title: 'صورة البطاقة الشخصية',
+            subtitle: 'صورة واضحة للبطاقة من الوجهين',
+            file: _nationalIdCardFile,
+            onTap: _pickNationalIdCard,
+            onRemove: () => setState(() => _nationalIdCardFile = null),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Power of Attorney Upload
+          _buildDocumentUpload(
+            title: 'التوكيل',
+            subtitle: 'صورة أو ملف PDF للتوكيل',
+            file: _powerOfAttorneyFile,
+            onTap: _pickPowerOfAttorney,
+            onRemove: () => setState(() => _powerOfAttorneyFile = null),
+          ),
+
+          const SizedBox(height: 28),
+
+          // Premium Submit Button
+          _buildPremiumSubmitButton(),
+        ],
+      ),
+    );
+  }
+
+  // ============= PREMIUM SUBMIT BUTTON =============
+  Widget _buildPremiumSubmitButton() {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: buttonGradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: buttonShadowColor,
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isLoading ? null : _handleSubmit,
+          borderRadius: BorderRadius.circular(16),
+          child: Center(
+            child:
+                _isLoading
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                    : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.check_circle_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'إتمام التسجيل',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo',
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============= PREMIUM LABELED TEXT FIELD =============
+  Widget _buildLabeledTextField({
     required TextEditingController controller,
+    required String label,
     required String hint,
     required IconData icon,
     TextInputType? keyboardType,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
-      ),
-      child: TextField(
-        controller: controller,
-        textAlign: TextAlign.right,
-        keyboardType: keyboardType,
-        style: const TextStyle(fontFamily: 'Cairo', fontSize: 15),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(
-            color: Color(0xFFBDBDBD),
-            fontFamily: 'Cairo',
-            fontSize: 14,
-          ),
-          prefixIcon: Icon(icon, color: const Color(0xFF690000), size: 22),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10, right: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.w700,
+                  color: labelColor,
+                ),
+              ),
+            ],
           ),
         ),
-      ),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    isDark
+                        ? Colors.black.withValues(alpha: 0.2)
+                        : const Color(0xFF690000).withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 15,
+              fontFamily: 'Cairo',
+              fontWeight: FontWeight.w500,
+              color: inputTextColor,
+            ),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(
+                fontSize: 14,
+                fontFamily: 'Cairo',
+                color: hintColor,
+              ),
+              filled: true,
+              fillColor: fillColor,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 18,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: borderColor, width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: focusBorderColor, width: 2),
+              ),
+              suffixIcon: Icon(icon, color: iconColor, size: 22),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
+  // ============= PREMIUM DOCUMENT UPLOAD =============
   Widget _buildDocumentUpload({
     required String title,
     required String subtitle,
@@ -245,106 +498,192 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
     required VoidCallback onTap,
     required VoidCallback onRemove,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color:
-              file != null ? const Color(0xFF1ba3b6) : const Color(0xFFE0E0E0),
-          width: 1,
+    final bool hasFile = file != null;
+    final uploadBgColor =
+        isDark ? AppColors.darkSurface : const Color(0xFFF8F9FA);
+    final uploadBorderColor =
+        hasFile
+            ? const Color(0xFFD4AF37)
+            : (isDark ? AppColors.darkBorder : Colors.grey[200]!);
+    final iconBgColor =
+        hasFile
+            ? const Color(0xFFD4AF37).withValues(alpha: 0.15)
+            : (isDark
+                ? AppColors.darkCard
+                : const Color(0xFF690000).withValues(alpha: 0.1));
+    final uploadIconColor =
+        hasFile ? const Color(0xFFD4AF37) : const Color(0xFF690000);
+    final fileTextColor =
+        hasFile
+            ? const Color(0xFFD4AF37)
+            : (isDark ? AppColors.darkTextMuted : Colors.grey[500]);
+    final arrowColor = isDark ? AppColors.darkTextMuted : Colors.grey[400];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10, right: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4AF37),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.w700,
+                  color: labelColor,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color:
-                        file != null
-                            ? const Color(0xFF1ba3b6).withOpacity(0.1)
-                            : const Color(0xFF690000).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    file != null ? Icons.check_circle : Icons.upload_file,
-                    color:
-                        file != null
-                            ? const Color(0xFF1ba3b6)
-                            : const Color(0xFF690000),
-                    size: 28,
-                  ),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: uploadBgColor,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: uploadBorderColor,
+                  width: hasFile ? 2 : 1.5,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
-                          color: Color(0xFF424242),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        file != null ? file.path.split('/').last : subtitle,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontFamily: 'Cairo',
-                          color:
-                              file != null
-                                  ? const Color(0xFF1ba3b6)
-                                  : const Color(0xFFBDBDBD),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        hasFile
+                            ? const Color(0xFFD4AF37).withValues(alpha: 0.1)
+                            : (isDark
+                                ? Colors.black.withValues(alpha: 0.2)
+                                : const Color(
+                                  0xFF690000,
+                                ).withValues(alpha: 0.05)),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-                if (file != null)
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.red, size: 20),
-                    onPressed: onRemove,
-                  )
-                else
-                  const Icon(
-                    Icons.arrow_back_ios,
-                    color: Color(0xFFBDBDBD),
-                    size: 16,
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: iconBgColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      hasFile
+                          ? Icons.check_circle_rounded
+                          : Icons.upload_file_rounded,
+                      color: uploadIconColor,
+                      size: 24,
+                    ),
                   ),
-              ],
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      hasFile ? file.path.split('/').last : subtitle,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontFamily: 'Cairo',
+                        color: fileTextColor,
+                        fontWeight:
+                            hasFile ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (hasFile)
+                    IconButton(
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: const Color(0xFF690000),
+                        size: 20,
+                      ),
+                      onPressed: onRemove,
+                    )
+                  else
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: arrowColor,
+                      size: 16,
+                    ),
+                ],
+              ),
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  // ============= PREMIUM INFO BOX =============
+  Widget _buildInfoBox() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.info_outline_rounded,
+              color: Color(0xFFD4AF37),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Text(
+              'سيتم مراجعة المستندات المرفوعة وتفعيل حسابك خلال 24 ساعة',
+              style: TextStyle(
+                fontSize: 13,
+                fontFamily: 'Cairo',
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
+  // ============= PICK FILES =============
   Future<void> _pickNationalIdCard() async {
     try {
-      // استخدام FilePickerHelper الجديد اللي بيدعم القص
       final File? pickedFile = await FilePickerHelper.pickFile(context);
-
       if (pickedFile != null) {
-        setState(() {
-          _nationalIdCardFile = pickedFile;
-        });
+        setState(() => _nationalIdCardFile = pickedFile);
+        HapticFeedback.lightImpact();
       }
     } catch (e) {
-      AlNoranPopups.showError(
+      EnhancedPopups.showError(
         context: context,
+        title: 'خطأ',
         message: 'حدث خطأ أثناء اختيار الصورة',
       );
     }
@@ -352,38 +691,42 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
 
   Future<void> _pickPowerOfAttorney() async {
     try {
-      // استخدام FilePickerHelper الجديد اللي بيدعم PDF
       final File? pickedFile = await FilePickerHelper.pickFile(context);
-
       if (pickedFile != null) {
-        setState(() {
-          _powerOfAttorneyFile = pickedFile;
-        });
+        setState(() => _powerOfAttorneyFile = pickedFile);
+        HapticFeedback.lightImpact();
       }
     } catch (e) {
-      AlNoranPopups.showError(
+      EnhancedPopups.showError(
         context: context,
+        title: 'خطأ',
         message: 'حدث خطأ أثناء اختيار الملف',
       );
     }
   }
 
+  // ============= HANDLE SUBMIT =============
   Future<void> _handleSubmit() async {
+    FocusScope.of(context).unfocus();
+
     // Validation
     if (_nationalIdController.text.trim().isEmpty) {
-      AlNoranPopups.showError(
+      HapticFeedback.mediumImpact();
+      EnhancedPopups.showError(
         context: context,
+        title: 'تنبيه',
         message: 'من فضلك أدخل الرقم القومي',
       );
       return;
     }
 
-    // Egyptian National ID validation
     if (!AlNoranValidators.isValidEgyptianNationalId(
       _nationalIdController.text,
     )) {
-      AlNoranPopups.showError(
+      HapticFeedback.mediumImpact();
+      EnhancedPopups.showError(
         context: context,
+        title: 'خطأ',
         message: AlNoranValidators.getNationalIdErrorMessage(
           _nationalIdController.text,
         ),
@@ -391,30 +734,13 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
       return;
     }
 
-    if (_nationalIdCardFile == null) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'من فضلك قم بإرفاق صورة البطاقة الشخصية',
-      );
-      return;
-    }
-
-    if (_powerOfAttorneyFile == null) {
-      AlNoranPopups.showError(
-        context: context,
-        message: 'من فضلك قم بإرفاق التوكيل',
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
+    HapticFeedback.lightImpact();
 
     try {
-      // First, create the user account
+      // Create user account
       final registerResult = await ApiService.register(
-        name: widget.userData['name'],
+        name: widget.userData['fullname'] ?? widget.userData['name'],
         username: widget.userData['username'],
         email: widget.userData['email'],
         phone: widget.userData['phone'],
@@ -424,136 +750,99 @@ class _PersonalRegistrationPageState extends State<PersonalRegistrationPage> {
       );
 
       if (!registerResult['success']) {
-        setState(() {
-          _isLoading = false;
-        });
-        AlNoranPopups.showError(
+        setState(() => _isLoading = false);
+        HapticFeedback.mediumImpact();
+        EnhancedPopups.showError(
           context: context,
+          title: 'خطأ',
           message: registerResult['message'] ?? 'فشل إنشاء الحساب',
         );
         return;
       }
 
-      // JWT Token is automatically saved by ApiService.register
-      // Now we can upload to S3 using the token
-      // Add a small delay to ensure token is saved to SharedPreferences
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Verify token is saved before uploading
       final savedToken = await ApiService.getToken();
       if (savedToken == null || savedToken.isEmpty) {
-        setState(() {
-          _isLoading = false;
-        });
-        AlNoranPopups.showError(
+        setState(() => _isLoading = false);
+        EnhancedPopups.showWarning(
           context: context,
-          title: 'خطأ في التوثيق',
-          message:
-              'تم إنشاء الحساب لكن حدث خطأ في الجلسة. يرجى تسجيل الدخول ورفع المستندات من الإعدادات',
+          title: 'تنبيه',
+          message: 'تم إنشاء الحساب لكن حدث خطأ في الجلسة. يرجى تسجيل الدخول',
         );
-        if (mounted) {
-          context.go('/login');
-        }
+        if (mounted) context.go('/login');
         return;
       }
 
-      print(
-        '🔑 Token verified before upload: ${savedToken.substring(0, 20)}...',
-      );
-
-      // Upload National ID Card image to S3
-      print('📤 Uploading National ID Card...');
-      final idCardUploadResult = await ApiService.uploadToS3(
-        file: _nationalIdCardFile!,
-        category: 'registration',
-        documentType: 'personal_id',
-        description: 'صورة البطاقة الشخصية - حساب شخصي',
-        tags: ['personal_id', 'personal', 'registration'],
-        userType: 'client',
-        clientType: 'personal',
-      );
-
-      if (!idCardUploadResult['success']) {
-        setState(() {
-          _isLoading = false;
-        });
-        print('❌ ID Card upload failed: ${idCardUploadResult['error']}');
-        AlNoranPopups.showError(
-          context: context,
-          title: 'خطأ في رفع المستندات',
-          message:
-              'تم إنشاء الحساب لكن فشل رفع صورة البطاقة. السبب: ${idCardUploadResult['message'] ?? 'خطأ غير معروف'}',
+      // Upload documents
+      if (_nationalIdCardFile != null) {
+        final idCardResult = await ApiService.uploadToS3(
+          file: _nationalIdCardFile!,
+          category: 'registration',
+          documentType: 'personal_id',
+          description: 'صورة البطاقة الشخصية - حساب شخصي',
+          tags: ['personal_id', 'personal', 'registration'],
+          userType: 'client',
+          clientType: 'personal',
         );
-        if (mounted) {
-          context.go('/login');
+
+        if (!idCardResult['success']) {
+          setState(() => _isLoading = false);
+          EnhancedPopups.showWarning(
+            context: context,
+            title: 'تنبيه',
+            message: 'تم إنشاء الحساب لكن فشل رفع صورة البطاقة',
+          );
+          if (mounted) context.go('/login');
+          return;
         }
-        return;
-      }
-      print('✅ ID Card uploaded successfully');
-
-      // Upload power of attorney document to S3
-      print('📤 Uploading Power of Attorney...');
-      final uploadResult = await ApiService.uploadToS3(
-        file: _powerOfAttorneyFile!,
-        category: 'registration',
-        documentType: 'power_of_attorney',
-        description: 'التوكيل - حساب شخصي',
-        tags: ['power_of_attorney', 'personal', 'registration'],
-        userType: 'client',
-        clientType: 'personal',
-      );
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (!uploadResult['success']) {
-        print('❌ Power of Attorney upload failed: ${uploadResult['error']}');
-        AlNoranPopups.showError(
-          context: context,
-          title: 'خطأ في رفع المستندات',
-          message:
-              'تم إنشاء الحساب لكن فشل رفع التوكيل. السبب: ${uploadResult['message'] ?? 'خطأ غير معروف'}',
-        );
-        if (mounted) {
-          context.go('/login');
-        }
-        return;
       }
 
-      print('✅ Power of Attorney uploaded successfully');
-      print('✅✅✅ All documents uploaded successfully!');
+      if (_powerOfAttorneyFile != null) {
+        final uploadResult = await ApiService.uploadToS3(
+          file: _powerOfAttorneyFile!,
+          category: 'registration',
+          documentType: 'power_of_attorney',
+          description: 'التوكيل - حساب شخصي',
+          tags: ['power_of_attorney', 'personal', 'registration'],
+          userType: 'client',
+          clientType: 'personal',
+        );
 
-      await AlNoranPopups.showSuccess(
+        if (!uploadResult['success']) {
+          setState(() => _isLoading = false);
+          EnhancedPopups.showWarning(
+            context: context,
+            title: 'تنبيه',
+            message: 'تم إنشاء الحساب لكن فشل رفع التوكيل',
+          );
+          if (mounted) context.go('/login');
+          return;
+        }
+      }
+
+      setState(() => _isLoading = false);
+      HapticFeedback.heavyImpact();
+
+      EnhancedPopups.showSuccess(
         context: context,
         title: 'تم التسجيل بنجاح',
-        message:
-            'تم إنشاء حسابك وتحميل جميع المستندات إلى السحابة بنجاح. سيتم مراجعة حسابك وتفعيله خلال 24 ساعة',
+        message: 'سيتم مراجعة حسابك وتفعيله خلال 24 ساعة',
       );
 
-      if (mounted) {
-        // Navigate to login page using GoRouter
-        context.go('/login');
-      }
+      await Future.delayed(const Duration(milliseconds: 1500));
+      if (mounted) context.go('/login');
     } catch (e) {
-      print('❌ Registration exception: $e');
-      setState(() {
-        _isLoading = false;
-      });
-      // Only show error if context is still valid and we haven't navigated
+      setState(() => _isLoading = false);
+      HapticFeedback.mediumImpact();
+
       if (mounted) {
-        AlNoranPopups.showError(
+        EnhancedPopups.showError(
           context: context,
-          title: 'خطأ في الاتصال',
-          message: 'حدث خطأ أثناء الاتصال بالسيرفر. يرجى المحاولة مرة أخرى',
+          title: 'خطأ',
+          message: 'حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى',
         );
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _nationalIdController.dispose();
-    super.dispose();
   }
 }

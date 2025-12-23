@@ -37,6 +37,11 @@ const UserSchema = new mongoose.Schema(
 		},
 		resetOTP: { type: String },
 		otpExpires: { type: Date },
+		googleId: { 
+			type: String,
+			sparse: true,
+			index: true,
+		},
 		password: {
 			type: String,
 			required: [true, "Please provide a password"],
@@ -76,7 +81,16 @@ const UserSchema = new mongoose.Schema(
 				enum: ["commercial", "factory", "personal", null],
 				default: null,
 			},
+			nationality: {
+				type: String,
+				enum: ["egyptian", "nonEgyptian", ""],
+				default: "",
+			},
 			ssn: {
+				type: String,
+				default: "",
+			},
+			passportNumber: {
 				type: String,
 				default: "",
 			},

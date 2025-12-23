@@ -1,116 +1,176 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Hyperlink?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.PasswordField?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.layout.ColumnConstraints?>
-<?import javafx.scene.layout.GridPane?>
-<?import javafx.scene.layout.RowConstraints?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Font?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.text.*?>
 
-<AnchorPane prefHeight="780.0" prefWidth="1250.0"
-            style="-fx-background-image: url('noran/desktop/images/background.png');
-                   -fx-background-size: cover;
-                   -fx-background-position: center center;
-                   -fx-background-repeat: no-repeat;"
-            xmlns="http://javafx.com/javafx/23.0.1"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="noran.desktop.Controllers.LoginController">
+<HBox xmlns="http://javafx.com/javafx/17.0.12" 
+      xmlns:fx="http://javafx.com/fxml/1" 
+      fx:controller="noran.desktop.Controllers.LoginController"
+      stylesheets="@auth-styles.css"
+      styleClass="auth-container"
+      prefWidth="1200" prefHeight="700">
 
-    <ImageView fitHeight="768.0" fitWidth="1366.0" pickOnBounds="true" preserveRatio="false">
-        <image>
-            <Image url="@images/background.png" />
-        </image>
-    </ImageView>
-
-    <!-- Transparent Login Card with Poppins Font -->
-    <VBox alignment="CENTER" layoutX="500.0" layoutY="148.0"
-          minHeight="500" prefHeight="500.0" prefWidth="386.0" spacing="20"
-          style="-fx-background-color: rgba(199,230,234,0.6);
-                 -fx-background-radius: 20;
-                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 5,0,0,3);">
+    <!-- ==================== LEFT BRAND PANEL ==================== -->
+    <VBox HBox.hgrow="ALWAYS" alignment="CENTER" spacing="30" 
+          style="-fx-background-color: linear-gradient(to bottom right, #a40000, #690000, #3d0000);"
+          prefWidth="500">
         <padding>
-            <Insets bottom="30" left="40" right="40" top="30" />
+            <Insets top="60" right="50" bottom="60" left="50"/>
         </padding>
-
-        <!-- Title -->
-        <Label text="تسجيل الدخول"
-               style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
-                      -fx-font-size: 22; -fx-text-fill: #690000;" />
-        <Label text="اهلا بك في النوران"
-               style="-fx-font-family: 'Poppins'; -fx-font-weight: 300;
-                      -fx-font-size: 18; -fx-text-fill: #690000;" />
-
-        <!-- Fields -->
-        <GridPane hgap="10" vgap="20" nodeOrientation="RIGHT_TO_LEFT">
-            <columnConstraints>
-                <ColumnConstraints />
-            </columnConstraints>
-            <rowConstraints>
-                <RowConstraints />
-                <RowConstraints />
-                <RowConstraints />
-                <RowConstraints />
-            </rowConstraints>
-
-            <!-- Username -->
-            <Label text="البريد الالكتروني" GridPane.rowIndex="0"
-                   style="-fx-font-family: 'Poppins'; -fx-font-weight: 700;
-                          -fx-font-size: 14; -fx-text-fill: #690000;
-                          -fx-alignment: CENTER-RIGHT;" />
-
-            <TextField fx:id="usernameField" promptText="البريد الالكتروني"
-                       GridPane.rowIndex="1"
-                       prefHeight="26.0" prefWidth="266.0"
-                       nodeOrientation="RIGHT_TO_LEFT"
-                       style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
-                              -fx-font-size: 14; -fx-background-radius: 10;
-                              -fx-alignment: CENTER-RIGHT;
-                              -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" />
-
-            <!-- Password -->
-            <Label text="كلمة المرور" GridPane.rowIndex="2"
-                   style="-fx-font-family: 'Poppins'; -fx-font-weight: 700;
-                          -fx-font-size: 14; -fx-text-fill: #690000;
-                          -fx-alignment: CENTER-RIGHT;" />
-
-            <PasswordField fx:id="passwordField" promptText="*******"
-                           GridPane.rowIndex="3"
-                           nodeOrientation="RIGHT_TO_LEFT"
-                           style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
-                                  -fx-font-size: 14; -fx-background-radius: 10;
-                                  -fx-alignment: CENTER-RIGHT;
-                                  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 3,0,0,1);" />
-        </GridPane>
-
-        <!-- Forgot Password -->
-        <Hyperlink fx:id="forgotPasswordLink" onAction="#onForgotPasswordClicked"
-                   text="نسيت كلمة المرور"
-                   style="-fx-font-family: 'Poppins'; -fx-font-weight: 400;
-                          -fx-font-size: 13; -fx-text-fill: #690000; -fx-underline: true;"
-                   nodeOrientation="RIGHT_TO_LEFT" />
-
-        <!-- Login Button -->
-        <Button fx:id="loginButton" onAction="#onLoginClicked" text="تسجيل الدخول"
-                prefWidth="200"
-                style="-fx-font-family: 'Poppins'; -fx-font-weight: 600;
-                       -fx-font-size: 14; -fx-background-color: #690000;
-                       -fx-background-radius: 8; -fx-text-fill: white;" />
+        
+        <!-- Decorative Background Circles -->
+        <StackPane>
+            <!-- Large circle top-right -->
+            <Circle radius="180" fill="rgba(255,255,255,0.06)" 
+                    translateX="200" translateY="-150"/>
+            <!-- Medium circle bottom-left -->
+            <Circle radius="120" fill="rgba(255,255,255,0.04)" 
+                    translateX="-180" translateY="200"/>
+            <!-- Gold accent circle -->
+            <Circle radius="80" fill="rgba(212,175,55,0.12)" 
+                    translateX="150" translateY="180"/>
+            
+            <!-- Content -->
+            <VBox alignment="CENTER" spacing="25">
+                <!-- Logo -->
+                <ImageView fitHeight="180" fitWidth="180" preserveRatio="true" smooth="true">
+                    <effect>
+                        <DropShadow color="rgba(0,0,0,0.4)" radius="20" spread="0.1"/>
+                    </effect>
+                    <image>
+                        <Image url="@images/white-logo.png"/>
+                    </image>
+                </ImageView>
+                
+                <!-- Brand Text -->
+                <VBox alignment="CENTER" spacing="12">
+                    <Label text="نظام النوران" 
+                           style="-fx-font-family: 'Segoe UI'; -fx-font-size: 36px; -fx-font-weight: 700; -fx-text-fill: white;">
+                        <effect>
+                            <DropShadow color="rgba(0,0,0,0.3)" radius="10"/>
+                        </effect>
+                    </Label>
+                    <Label text="نظام إدارة الفواتير والشحنات"
+                           style="-fx-font-family: 'Segoe UI'; -fx-font-size: 16px; -fx-text-fill: rgba(255,255,255,0.85);"/>
+                </VBox>
+                
+                <!-- Decorative Line -->
+                <HBox alignment="CENTER" spacing="15">
+                    <Rectangle width="40" height="3" fill="rgba(212,175,55,0.8)" arcWidth="3" arcHeight="3"/>
+                    <Circle radius="4" fill="rgba(212,175,55,0.8)"/>
+                    <Rectangle width="40" height="3" fill="rgba(212,175,55,0.8)" arcWidth="3" arcHeight="3"/>
+                </HBox>
+                
+                <!-- Features List -->
+                <VBox spacing="15" alignment="CENTER">
+                    <padding>
+                        <Insets top="20"/>
+                    </padding>
+                    <HBox spacing="12" alignment="CENTER">
+                        <Label text="✓" style="-fx-text-fill: #D4AF37; -fx-font-size: 16px; -fx-font-weight: bold;"/>
+                        <Label text="إدارة الفواتير بكفاءة" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 14px;"/>
+                    </HBox>
+                    <HBox spacing="12" alignment="CENTER">
+                        <Label text="✓" style="-fx-text-fill: #D4AF37; -fx-font-size: 16px; -fx-font-weight: bold;"/>
+                        <Label text="تتبع الشحنات لحظياً" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 14px;"/>
+                    </HBox>
+                    <HBox spacing="12" alignment="CENTER">
+                        <Label text="✓" style="-fx-text-fill: #D4AF37; -fx-font-size: 16px; -fx-font-weight: bold;"/>
+                        <Label text="تقارير وإحصائيات شاملة" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 14px;"/>
+                    </HBox>
+                </VBox>
+            </VBox>
+        </StackPane>
     </VBox>
 
-    <!-- Logo Section -->
-    <ImageView fitHeight="262.0" fitWidth="250.0" layoutY="-13.0" pickOnBounds="true" preserveRatio="true">
-        <image>
-            <!-- Make sure this path exists in: src/main/resources/noran/desktop/images/Logo.png -->
-            <Image url="@images/Logo.png" />
-        </image>
-    </ImageView>
-
-</AnchorPane>
+    <!-- ==================== RIGHT FORM PANEL ==================== -->
+    <VBox HBox.hgrow="ALWAYS" alignment="CENTER" 
+          style="-fx-background-color: #f8f9fa;"
+          prefWidth="700">
+        
+        <!-- Form Card -->
+        <VBox alignment="CENTER" spacing="28" maxWidth="420"
+              style="-fx-background-color: white; -fx-background-radius: 28; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 40, 0, 0, 12);">
+            <padding>
+                <Insets top="50" right="55" bottom="50" left="55"/>
+            </padding>
+            
+            <!-- Header -->
+            <VBox alignment="CENTER" spacing="10" nodeOrientation="RIGHT_TO_LEFT">
+                <Label text="مرحباً بعودتك" 
+                       style="-fx-font-family: 'Segoe UI'; -fx-font-size: 28px; -fx-font-weight: 700; -fx-text-fill: #1a1a2e;"/>
+                <Label text="قم بتسجيل الدخول للمتابعة"
+                       style="-fx-font-family: 'Segoe UI'; -fx-font-size: 15px; -fx-text-fill: #6c757d;"/>
+            </VBox>
+            
+            <!-- Form Fields -->
+            <VBox spacing="20" nodeOrientation="RIGHT_TO_LEFT">
+                
+                <!-- Email Field -->
+                <VBox spacing="10">
+                    <Label text="البريد الإلكتروني" 
+                           style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #495057;"/>
+                    <HBox alignment="CENTER_LEFT" spacing="0"
+                          style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2;">
+                        <Label text="📧" style="-fx-font-size: 16px; -fx-padding: 0 0 0 15;"/>
+                        <TextField fx:id="usernameField" 
+                                   promptText="example@email.com"
+                                   prefHeight="50" maxWidth="Infinity" HBox.hgrow="ALWAYS"
+                                   nodeOrientation="LEFT_TO_RIGHT"
+                                   style="-fx-background-color: transparent; -fx-font-size: 15px; -fx-padding: 0 15 0 10; -fx-border-width: 0;"/>
+                    </HBox>
+                </VBox>
+                
+                <!-- Password Field -->
+                <VBox spacing="10">
+                    <Label text="كلمة المرور"
+                           style="-fx-font-family: 'Segoe UI'; -fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #495057;"/>
+                    <HBox alignment="CENTER_LEFT" spacing="0"
+                          style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2;">
+                        <Label text="🔒" style="-fx-font-size: 16px; -fx-padding: 0 0 0 15;"/>
+                        <PasswordField fx:id="passwordField"
+                                       promptText="••••••••"
+                                       prefHeight="50" maxWidth="Infinity" HBox.hgrow="ALWAYS"
+                                       nodeOrientation="LEFT_TO_RIGHT"
+                                       style="-fx-background-color: transparent; -fx-font-size: 15px; -fx-padding: 0 15 0 10; -fx-border-width: 0;"/>
+                    </HBox>
+                </VBox>
+                
+                <!-- Forgot Password Link -->
+                <HBox alignment="CENTER_LEFT">
+                    <Hyperlink fx:id="forgotPasswordLink" 
+                               text="نسيت كلمة المرور؟"
+                               onAction="#onForgotPasswordClicked"
+                               style="-fx-font-family: 'Segoe UI'; -fx-font-size: 13px; -fx-text-fill: #a40000; -fx-underline: false;"/>
+                </HBox>
+            </VBox>
+            
+            <!-- Login Button -->
+            <Button fx:id="loginButton" 
+                    text="تسجيل الدخول"
+                    onAction="#onLoginClicked"
+                    prefWidth="310" prefHeight="52"
+                    style="-fx-background-color: linear-gradient(to bottom, #c41e1e, #a40000, #7a0000); -fx-background-radius: 14; -fx-text-fill: white; -fx-font-family: 'Segoe UI'; -fx-font-size: 17px; -fx-font-weight: 700; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(164,0,0,0.4), 15, 0, 0, 5);">
+            </Button>
+            
+            <!-- Divider -->
+            <HBox alignment="CENTER" spacing="15">
+                <padding>
+                    <Insets top="5" bottom="5"/>
+                </padding>
+                <Line startX="0" endX="80" stroke="#e9ecef" strokeWidth="1"/>
+                <Label text="نظام النوران" style="-fx-font-size: 12px; -fx-text-fill: #adb5bd;"/>
+                <Line startX="0" endX="80" stroke="#e9ecef" strokeWidth="1"/>
+            </HBox>
+            
+            <!-- Copyright -->
+            <Label text="© 2024 Al-Noran System. جميع الحقوق محفوظة"
+                   style="-fx-font-size: 11px; -fx-text-fill: #adb5bd;"/>
+        </VBox>
+    </VBox>
+</HBox>

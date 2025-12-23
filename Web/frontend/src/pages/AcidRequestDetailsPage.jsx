@@ -11,15 +11,19 @@ import SupplierInfoSection from "../components/SupplierInfoSection";
 import GoodsInfoSection from "../components/GoodsInfoSection";
 import DocumentsSection from "../components/DocumentsSection";
 import mainIllustration from "../assets/images/Untitled design (7) 1.png";
-import { FileText, ArrowLeft } from "lucide-react";
+import { FileText, ArrowLeft, ArrowRight } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
+import FileViewerModal from "../components/FileViewerModal";
 
 const AcidRequestDetailsPage = () => {
 	const { requestId } = useParams();
 	const navigate = useNavigate();
+	const { isDarkMode } = useTheme();
 	const [requestData, setRequestData] = useState(null);
 	const [fileItems, setFileItems] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	const [viewerData, setViewerData] = useState({ open: false, url: null, name: null, type: null });
 
 	const token = localStorage.getItem("token");
 
@@ -66,6 +70,7 @@ const AcidRequestDetailsPage = () => {
 							// Handle both nested (res.data.upload) and flat (res.data) response structures
 							const upload = res.data.upload || res.data;
 							return {
+								id: upload._id,
 								name: upload.filename || upload.originalname || "ملف",
 								date: new Date(
 									upload.createdAt || upload.uploadedAt
@@ -76,6 +81,7 @@ const AcidRequestDetailsPage = () => {
 								}),
 								// Try presignedUrl first (new structure), then fallback to other URLs
 								url: upload.presignedUrl || upload.url || upload.s3Url,
+								type: upload.mimetype || upload.fileType, // Store type
 							};
 						});
 						setFileItems(formattedFiles);
@@ -105,11 +111,36 @@ const AcidRequestDetailsPage = () => {
 		}
 	}, [requestId, token]);
 
+	const handleViewFile = (file) => {
+		setViewerData({
+			open: true,
+			url: file.url,
+			name: file.name,
+			type: file.type || (file.name?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
+			fileId: file.id
+		});
+	};
+
 	return (
-		<div className="bg-gray-50 min-h-screen text-gray-800">
+		<div className={`min-h-screen flex flex-col transition-colors duration-300 relative overflow-hidden ${isDarkMode ? "bg-[#0a0505]" : "bg-gray-50"}`}>
+			{/* Animated Background Elements */}
+			<div className="fixed inset-0 pointer-events-none overflow-hidden">
+				{isDarkMode ? (
+					<>
+						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#690000]/20 rounded-full filter blur-[100px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#2b0000]/30 rounded-full filter blur-[120px] animate-float-slow"></div>
+					</>
+				) : (
+					<>
+						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#ffcccc]/40 rounded-full filter blur-[100px] animate-pulse-glow"></div>
+						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#ffe6e6]/60 rounded-full filter blur-[120px] animate-float-slow"></div>
+					</>
+				)}
+			</div>
+
 			<Header />
 
-			<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+			<main className="flex-grow relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-24 sm:pt-28">
 				{loading ? (
 					<LoadingSpinner message="جاري تحميل بيانات الطلب..." />
 				) : error ? (
@@ -123,38 +154,55 @@ const AcidRequestDetailsPage = () => {
 						{/* Back Button */}
 						<button
 							onClick={() => navigate("/acidrequests")}
-							className="flex items-center gap-2 text-red-800 hover:text-red-900 font-semibold mb-6 transition"
+							className={`flex items-center gap-2 font-semibold mb-6 transition-colors ${
+								isDarkMode ? "text-red-400 hover:text-red-300" : "text-red-800 hover:text-red-900"
+							}`}
 						>
-							<ArrowLeft className="w-5 h-5" />
+							<ArrowRight className="w-5 h-5" />
 							<span>العودة للطلبات</span>
 						</button>
 
-						<div className="bg-white p-6 sm:p-10 rounded-2xl shadow-sm">
+						<div className={`p-6 sm:p-10 rounded-3xl shadow-2xl border backdrop-blur-xl transition-all duration-300 ${
+							isDarkMode 
+								? "bg-[#1a1010]/80 border-white/10 text-gray-200" 
+								: "bg-white/90 border-white/40 text-gray-800"
+						}`}>
 							<AcidRequestHeader
 								requestData={requestData}
 								illustration={mainIllustration}
 							/>
 
-							<SupplierInfoSection supplier={requestData.supplier} />
-
-							<GoodsInfoSection goods={requestData.goods} />
-
-							<DocumentsSection fileItems={fileItems} />
+							<div className="mt-8 space-y-8">
+								<SupplierInfoSection supplier={requestData.supplier} />
+								<GoodsInfoSection goods={requestData.goods} />
+								<DocumentsSection 
+									fileItems={fileItems} 
+									onViewFile={handleViewFile}
+								/>
+							</div>
 
 							{/* Action Buttons */}
-							<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-12">
+							<div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-12 pt-8 border-t border-gray-200/20">
 								<button
 									onClick={() => navigate("/acidrequests")}
-									className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-gray-600 text-white font-bold rounded-lg shadow-md hover:bg-gray-700 transition-all transform hover:scale-105"
+									className={`flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3 rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg ${
+										isDarkMode
+											? "bg-gray-800 hover:bg-gray-700 text-gray-200"
+											: "bg-gray-100 hover:bg-gray-200 text-gray-700"
+									}`}
 								>
-									<ArrowLeft className="w-5 h-5" />
+									<ArrowRight className="w-5 h-5" />
 									<span>العودة للطلبات</span>
 								</button>
 
 								{requestData.status === "Pending" && (
 									<button
 										onClick={() => navigate(`/acidrequest/${requestId}/edit`)}
-										className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-red-900 text-white font-bold rounded-lg shadow-md hover:bg-red-800 transition-all transform hover:scale-105"
+										className={`flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3 rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg text-white ${
+											isDarkMode
+												? "bg-gradient-to-r from-red-700 to-red-900 hover:from-red-600 hover:to-red-800 shadow-red-900/40"
+												: "bg-gradient-to-r from-[#690000] to-[#8B0000] hover:from-[#8B0000] hover:to-[#A00000] shadow-red-900/20"
+										}`}
 									>
 										<FileText className="w-5 h-5" />
 										<span>تعديل الطلب</span>
@@ -167,6 +215,15 @@ const AcidRequestDetailsPage = () => {
 			</main>
 
 			<Footer />
+			
+			<FileViewerModal
+				isOpen={viewerData.open}
+				onClose={() => setViewerData(prev => ({ ...prev, open: false }))}
+				fileUrl={viewerData.url}
+				fileName={viewerData.name}
+				fileType={viewerData.type}
+				fileId={viewerData.fileId}
+			/>
 		</div>
 	);
 };

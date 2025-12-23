@@ -171,6 +171,7 @@ const createShipment = async (req, res) => {
 		await mailSender.send_mail(
 			decoded.email,
 			`Shipment Confirmation – ${ACID_ID}`,
+			`Your shipment request with ACID ID ${ACID_ID} has been received and is being processed.`,
 			htmlContent
 		);
 
@@ -193,6 +194,29 @@ const createShipment = async (req, res) => {
 			}
 		}
 
+		// 📬 Notify assigned employee about new customer/shipment assignment
+		if (shipmentData.employee_id) {
+			try {
+				await notificationService.createNotification({
+					userId: shipmentData.employee_id,
+					type: "shipment_created",
+					title: "تم تعيين عميل جديد لك",
+					message: `تم تعيين عميل جديد لك للشحنة ${shipment.acid}`,
+					data: {
+						shipmentId: shipment._id,
+						shipmentAcid: shipment.acid,
+						clientId: shipmentData.user_id,
+						actionUrl: `/employee/shipments/${shipment._id}`,
+					},
+					sendPush: true,
+					priority: "high",
+				});
+				console.log(`📬 Employee ${shipmentData.employee_id} notified about new customer assignment`);
+			} catch (notifError) {
+				console.error("Failed to send employee assignment notification:", notifError.message);
+			}
+		}
+
 		// ✅ Respond to client
 		res.status(201).json({
 			success: true,
@@ -211,6 +235,9 @@ const getAllShipments = async (req, res) => {
 		// Get userId from authenticated user (from protect middleware)
 		const userId = req.user ? req.user._id : null;
 		let userType = req.user ? req.user.type || req.user.userType : null;
+
+		console.log(`🔍 [getAllShipments] userId: ${userId}, userType: ${userType}`);
+		console.log(`🔍 [getAllShipments] req.user:`, JSON.stringify(req.user, null, 2));
 
 		if (!userId) {
 			return res.status(401).json({
@@ -242,12 +269,18 @@ const getAllShipments = async (req, res) => {
 		// If user is employee or admin, show all shipments (or filter by employee_id if needed)
 		// For now, employees and admins see all shipments
 
+		console.log(`📦 [getAllShipments] Query:`, JSON.stringify(query));
+
 		const shipments = await Shipment.find(query)
 			.populate("user_id", "username fullname email")
 			.populate("employee_id", "username fullname email")
 			.sort({ createdAt: -1 });
+
+		console.log(`📦 [getAllShipments] Found ${shipments.length} shipments for userType: ${userType}`);
+
 		res.json(shipments);
 	} catch (error) {
+		console.error(`❌ [getAllShipments] Error:`, error);
 		res.status(500).json({ message: error.message });
 	}
 };
@@ -359,14 +392,17 @@ const updateShipmentStatus = async (req, res) => {
 			updateData.invoiceUrl = `/uploads/shipments/${req.file.filename}`;
 		}
 
+		// Get the existing shipment to check what changed
+		const existingShipment = await Shipment.findOne({ acid });
+		if (!existingShipment) {
+			return res.status(404).json({ message: "Shipment not found" });
+		}
+
 		// (هنا يتم تحديث الداتا بيز)
 		const shipment = await Shipment.findOneAndUpdate({ acid }, updateData, {
 			new: true, // (مهم جداً لإرجاع الداتا بعد التحديث)
 			runValidators: true,
 		});
-
-		if (!shipment)
-			return res.status(404).json({ message: "Shipment not found" });
 
 		if (updateData.status) {
 			const { io } = req;
@@ -377,6 +413,49 @@ const updateShipmentStatus = async (req, res) => {
 			console.log(
 				`Socket event emitted for ACID: ${acid} with status: ${shipment.status}`
 			);
+		}
+
+		// 📬 Notify employee if client makes updates to shipment details
+		if (shipment.employee_id && req.user && req.user.type === "client") {
+			try {
+				const updateFields = [];
+
+				// Check what client updated
+				if (updateData.claimNumber && updateData.claimNumber !== existingShipment.claimNumber) {
+					updateFields.push("رقم المطالبة");
+				}
+				if (updateData.claimImageUrl && updateData.claimImageUrl !== existingShipment.claimImageUrl) {
+					updateFields.push("صورة المطالبة");
+				}
+				if (updateData.paymentParty && updateData.paymentParty !== existingShipment.paymentParty) {
+					updateFields.push(`جهة الدفع (${updateData.paymentParty})`);
+				}
+				if (updateData.customDuties && updateData.customDuties !== existingShipment.customDuties) {
+					updateFields.push("الرسوم الجمركية");
+				}
+
+				// Send notification if something relevant was updated
+				if (updateFields.length > 0) {
+					const fieldsText = updateFields.join("، ");
+					await notificationService.createNotification({
+						userId: shipment.employee_id,
+						type: "shipment_status_changed",
+						title: "العميل قام بتحديث بيانات الشحنة",
+						message: `قام العميل بتحديث ${fieldsText} للشحنة ${shipment.acid}`,
+						data: {
+							shipmentId: shipment._id,
+							shipmentAcid: shipment.acid,
+							updatedFields: updateFields,
+							actionUrl: `/employee/shipments/${shipment._id}`,
+						},
+						sendPush: true,
+						priority: "medium",
+					});
+					console.log(`📬 Employee notified about client updates: ${fieldsText}`);
+				}
+			} catch (notifError) {
+				console.error("Failed to send client update notification:", notifError.message);
+			}
 		}
 
 		res.json(shipment); // إرسال الرد الطبيعي للـ API
@@ -427,9 +506,11 @@ const getShipmentrelatedToEmployee = async (req, res) => {
 		const employeeId = req.params.employeeId;
 		console.log("Fetching shipments for employee:", employeeId);
 
-		const shipments = await Shipment.find({ employee_id: employeeId }).sort({
-			createdAt: -1,
-		});
+		const shipments = await Shipment.find({ employee_id: employeeId })
+			.populate('user_id', 'fullname username email phone')
+			.sort({
+				createdAt: -1,
+			});
 
 		console.log(
 			`Found ${shipments.length} shipments for employee ${employeeId}`
@@ -581,7 +662,7 @@ const updateShipmentStatusById = async (req, res) => {
 		// First, get the old status before updating
 		const existingShipment = await Shipment.findById(shipmentId);
 		const oldStatus = existingShipment?.status;
-		
+
 		const shipment = await Shipment.findByIdAndUpdate(shipmentId, updateData, {
 			new: true,
 			runValidators: true,
@@ -677,38 +758,43 @@ const requestRequiredDocuments = async (req, res) => {
 
 		const htmlContent = `
 			<!doctype html>
-			<html>
+			<html dir="rtl" lang="ar">
 			<head>
-			<meta charset="utf-8">
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
 			<title>Required Documents Request</title>
+			<style>
+				body { direction: rtl; text-align: right; }
+				.rtl-text { direction: rtl; text-align: right; unicode-bidi: embed; }
+			</style>
 			</head>
-			<body style="font-family:Arial, sans-serif; background:#f5f7fa; padding:20px;">
-			<div style="max-width:600px; margin:auto; background:#ffffff; padding:25px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.1);">
-				<h2 style="color:#dc2626; text-align:center;">📄 مستندات مطلوبة لشحنتك</h2>
-				<p>مرحباً <strong>${shipment.user_id?.username ||
+			<body style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; background:#f5f7fa; padding:20px; direction:rtl;">
+			<div class="rtl-text" style="max-width:600px; margin:auto; background:#ffffff; padding:25px; border-radius:10px; box-shadow:0 0 8px rgba(0,0,0,0.1);">
+				<h2 style="color:#dc2626; text-align:center; direction:rtl;">📄 مستندات مطلوبة لشحنتك</h2>
+				<p style="direction:rtl; text-align:right;">مرحباً <strong>${shipment.user_id?.username ||
 			shipment.user_id?.fullname ||
 			"عزيزي العميل"
 			}</strong>,</p>
-				<p>نود إعلامك بأننا نحتاج إلى المستندات التالية لاستكمال معالجة شحنتك:</p>
+				<p style="direction:rtl; text-align:right;">نود إعلامك بأننا نحتاج إلى المستندات التالية لاستكمال معالجة شحنتك:</p>
 
-				<div style="background:#fef2f2; border-right:4px solid #dc2626; padding:15px; margin:20px 0; border-radius:5px;">
-					<h3 style="color:#dc2626; margin-top:0;">تفاصيل الشحنة:</h3>
-					<p style="margin:5px 0;"><strong>رقم ACID:</strong> ${shipment.acid}</p>
-					<p style="margin:5px 0;"><strong>رقم البوليصة:</strong> ${shipment.number46 || "غير محدد"
+				<div style="background:#fef2f2; border-right:4px solid #dc2626; padding:15px; margin:20px 0; border-radius:5px; direction:rtl; text-align:right;">
+					<h3 style="color:#dc2626; margin-top:0; direction:rtl;">تفاصيل الشحنة:</h3>
+					<p style="margin:5px 0; direction:rtl;"><strong>رقم ACID:</strong> ${shipment.acid}</p>
+					<p style="margin:5px 0; direction:rtl;"><strong>رقم البوليصة:</strong> ${shipment.number46 || "غير محدد"
 			}</p>
-					<p style="margin:5px 0;"><strong>الحالة الحالية:</strong> ${shipment.status}</p>
+					<p style="margin:5px 0; direction:rtl;"><strong>الحالة الحالية:</strong> ${shipment.status}</p>
 				</div>
 
-				<h3 style="color:#dc2626;">المستندات المطلوبة:</h3>
-				<ul style="background:#f9fafb; padding:20px 40px; border-radius:5px; list-style:none;">
+				<h3 style="color:#dc2626; direction:rtl; text-align:right;">المستندات المطلوبة:</h3>
+				<ul style="background:#f9fafb; padding:20px 40px; border-radius:5px; list-style:disc; direction:rtl; text-align:right;">
 					${documentsList}
 				</ul>
 
-				<div style="background:#fef3c7; border:1px solid #fbbf24; padding:15px; margin:20px 0; border-radius:5px; text-align:center;">
-					<p style="margin:0; color:#92400e;"><strong>⚠️ مهم:</strong> يرجى رفع المستندات المطلوبة في أقرب وقت ممكن لتجنب أي تأخير في معالجة شحنتك.</p>
+				<div style="background:#fef3c7; border:1px solid #fbbf24; padding:15px; margin:20px 0; border-radius:5px; text-align:center; direction:rtl;">
+					<p style="margin:0; color:#92400e; direction:rtl;"><strong>⚠️ مهم:</strong> يرجى رفع المستندات المطلوبة في أقرب وقت ممكن لتجنب أي تأخير في معالجة شحنتك.</p>
 				</div>
 
-				<div style="text-align:center; margin-top:30px;">
+				<div style="text-align:center; margin-top:30px; direction:rtl;">
 					<a href="${process.env.FRONTEND_URL ||
 			"http://section-assignment-bucket.s3-website-us-east-1.amazonaws.com"
 			}/shipmentstatus/${shipment.acid}" 
@@ -717,12 +803,12 @@ const requestRequiredDocuments = async (req, res) => {
 					</a>
 				</div>
 
-				<p style="margin-top:25px;">إذا كانت لديك أي أسئلة، يرجى التواصل مع فريق الدعم.</p>
+				<p style="margin-top:25px; direction:rtl; text-align:right;">إذا كانت لديك أي أسئلة، يرجى التواصل مع فريق الدعم.</p>
 
-				<p style="margin-top:25px;">مع أطيب التحيات،<br><strong>فريق الدعم - النوران</strong></p>
+				<p style="margin-top:25px; direction:rtl; text-align:right;">مع أطيب التحيات،<br><strong>فريق الدعم - النوران</strong></p>
 
 				<hr style="margin-top:30px; border:none; border-top:1px solid #eee;">
-				<p style="font-size:12px; color:#888; text-align:center;">هذه رسالة آلية - يرجى عدم الرد عليها مباشرة.</p>
+				<p style="font-size:12px; color:#888; text-align:center; direction:rtl;">هذه رسالة آلية - يرجى عدم الرد عليها مباشرة.</p>
 			</div>
 			</body>
 			</html>
@@ -734,6 +820,7 @@ const requestRequiredDocuments = async (req, res) => {
 			await mailSender.send_mail(
 				clientEmail,
 				`مستندات مطلوبة - شحنة ${shipment.acid}`,
+				`يرجى تقديم المستندات المطلوبة للشحنة رقم ${shipment.acid}`,
 				htmlContent
 			);
 		}
@@ -893,6 +980,30 @@ const markDocumentAsUploaded = async (req, res) => {
 
 		console.log("✅ Returning updated document:", updatedDoc);
 
+		// 📬 Notify assigned employee about document upload
+		if (shipment.employee_id && req.user && req.user.type === "client") {
+			try {
+				await notificationService.createNotification({
+					userId: shipment.employee_id,
+					type: "document_uploaded",
+					title: "العميل قام برفع مستند",
+					message: `قام العميل برفع مستند "${document.name}" للشحنة ${shipment.acid}`,
+					data: {
+						shipmentId: shipment._id,
+						shipmentAcid: shipment.acid,
+						documentId: documentId,
+						documentName: document.name,
+						actionUrl: `/employee/shipments/${shipment._id}`,
+					},
+					sendPush: true,
+					priority: "medium",
+				});
+				console.log(`📬 Employee notified about document upload: ${document.name}`);
+			} catch (notifError) {
+				console.error("Failed to send document upload notification:", notifError.message);
+			}
+		}
+
 		res.json({
 			success: true,
 			message: "Document marked as uploaded successfully",
@@ -901,6 +1012,57 @@ const markDocumentAsUploaded = async (req, res) => {
 	} catch (error) {
 		console.error("Error marking document as uploaded:", error);
 		res.status(500).json({ message: error.message });
+	}
+};
+
+// ✅ Reset/Delete uploaded document (allows client to re-upload)
+const resetUploadedDocument = async (req, res) => {
+	try {
+		const { shipmentId, documentId } = req.params;
+
+		console.log("🗑️ Deleting document completely:", {
+			shipmentId,
+			documentId,
+		});
+
+		const shipment = await Shipment.findById(shipmentId);
+
+		if (!shipment) {
+			return res.status(404).json({ message: "Shipment not found" });
+		}
+
+		const document = shipment.requiredDocuments.id(documentId);
+
+		if (!document) {
+			return res.status(404).json({ message: "Document not found" });
+		}
+
+		const documentName = document.name;
+
+		// COMPLETELY REMOVE the document from the array
+		shipment.requiredDocuments.pull(documentId);
+
+		await shipment.save();
+
+		console.log("✅ Document removed completely:", documentName);
+
+		// Emit socket event
+		if (req.io) {
+			req.io.to(shipment.acid).emit("documentDeleted", {
+				shipmentId: shipment._id,
+				acid: shipment.acid,
+				documentId: documentId,
+				documentName: documentName,
+			});
+		}
+
+		res.json({
+			success: true,
+			message: "تم حذف المستند بنجاح.",
+		});
+	} catch (error) {
+		console.error("Error resetting document:", error);
+		res.status(500).json({ success: false, message: error.message });
 	}
 };
 
@@ -1264,20 +1426,12 @@ const searchShipments = async (req, res) => {
 	}
 };
 
-// ✅ Get distinct document names for autocomplete suggestions
+// ✅ Get predefined document names for autocomplete suggestions
+// Only returns predefined document types - does NOT save custom entries
 const getDistinctDocumentNames = async (req, res) => {
 	try {
-		// Aggregate to get all distinct document names from requiredDocuments array
-		const result = await Shipment.aggregate([
-			{ $unwind: "$requiredDocuments" },
-			{ $group: { _id: "$requiredDocuments.name" } },
-			{ $match: { _id: { $ne: null } } },
-			{ $sort: { _id: 1 } },
-		]);
-
-		const documentNames = result.map((item) => item._id);
-
-		// Add some common predefined document names if not already present
+		// Only return predefined document names - no database queries
+		// Custom entries typed by employee will NOT be saved for future use
 		const predefinedNames = [
 			"صورة البطاقة",
 			"صورة السجل التجاري",
@@ -1294,17 +1448,19 @@ const getDistinctDocumentNames = async (req, res) => {
 			"صورة بطاقة الاستيراد",
 			"صورة رخصة الاستيراد",
 			"صورة الموافقة الجمركية",
+			"الفاتورة التجارية",
+			"شهادة الصحة",
+			"شهادة التأمين",
+			"إذن الاستيراد",
+			"تصريح الجمارك",
 		];
-
-		// Merge predefined with database results (unique values only)
-		const allNames = [...new Set([...documentNames, ...predefinedNames])].sort();
 
 		res.json({
 			success: true,
-			documentNames: allNames,
+			documentNames: predefinedNames,
 		});
 	} catch (error) {
-		console.error("Error getting distinct document names:", error);
+		console.error("Error getting document names:", error);
 		res.status(500).json({
 			success: false,
 			message: "Server error while fetching document names",
@@ -1327,6 +1483,7 @@ module.exports = {
 	requestRequiredDocuments,
 	getRequiredDocuments,
 	markDocumentAsUploaded,
+	resetUploadedDocument,
 	getEmployeeShipmentStats,
 	getClientShipmentStats,
 	addShipments,

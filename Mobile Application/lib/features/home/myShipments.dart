@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_service.dart';
+import '../../core/services/cached_api_service.dart';
 import '../../core/services/shipments_cache_service.dart';
+import '../../core/services/recent_shipments_service.dart';
 import '../../core/widgets/unified_top_bar.dart';
 
 class MyShipmentsPage extends StatefulWidget {
@@ -24,10 +27,18 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   final ShipmentsCacheService _shipmentsCache = ShipmentsCacheService();
+  final CachedApiService _cachedApi = CachedApiService();
 
   int _selectedIndex = 1; // الوارد (index 1)
   String _selectedFilter = 'الكل';
   String _selectedSort = 'الأحدث';
+
+  // Premium Colors
+  static const Color primaryDark = Color(0xFF690000);
+  static const Color primaryLight = Color(0xFF8B0000);
+  static const Color accentColor = Color(0xFF1ba3b6);
+  static const Color goldAccent = Color(0xFFD4AF37);
+  static const Color bgColor = Color(0xFFF8F9FA);
 
   List<Map<String, dynamic>> _allCurrentShipments = [];
   List<Map<String, dynamic>> _allCompletedShipments = [];
@@ -240,10 +251,10 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
 
       print('🚢 [MyShipments] Loading shipments and ACID requests...');
 
-      // Load shipments from cache and ACID requests from API in parallel
+      // Load shipments from cache and ACID requests from cached API in parallel
       final results = await Future.wait([
         _shipmentsCache.getAllShipments(), // Use cache service
-        ApiService.getAllAcidRequests(),
+        _cachedApi.getAllAcidRequests(),
       ]);
 
       final shipments = results[0] as List<Map<String, dynamic>>;
@@ -410,64 +421,183 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
-        body: Column(
+        backgroundColor: bgColor,
+        body: Stack(
           children: [
-            UnifiedTopBar(showBackButton: true, showMenu: false),
-            Expanded(
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  children: [
-                    _buildSearchBar(),
-                    const SizedBox(height: 12),
-                    _buildTabs(),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child:
-                          _isLoading
-                              ? const Center(
-                                child: CircularProgressIndicator(
-                                  color: Color(0xFF690000),
-                                ),
-                              )
-                              : TabBarView(
-                                controller: _tabController,
-                                children: [
-                                  _buildShipmentsList(_currentShipments, true),
-                                  _buildShipmentsList(
-                                    _completedShipments,
-                                    false,
-                                  ),
-                                  _buildAcidRequestsList(),
-                                ],
-                              ),
-                    ),
-                  ],
+            // Premium Background with Multiple Gradient Layers
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 350,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      primaryDark.withOpacity(0.08),
+                      primaryLight.withOpacity(0.04),
+                      accentColor.withOpacity(0.02),
+                      bgColor,
+                    ],
+                    stops: const [0.0, 0.3, 0.6, 1.0],
+                  ),
                 ),
               ),
             ),
+            // Decorative Circles
+            Positioned(
+              top: -50,
+              right: -50,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      primaryDark.withOpacity(0.08),
+                      primaryDark.withOpacity(0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 100,
+              left: -30,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      accentColor.withOpacity(0.1),
+                      accentColor.withOpacity(0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Main Content
+            Column(
+              children: [
+                UnifiedTopBar(
+                  showBackButton: true,
+                  showMenu: false,
+                  title: 'الوارد',
+                  subtitle: 'شحنات الاستيراد الخاصة بك',
+                  titleIcon: Icons.download_rounded,
+                  showWelcome: false,
+                ),
+                Expanded(
+                  child: SafeArea(
+                    top: false,
+                    child: Column(
+                      children: [
+                        _buildPremiumSearchBar(),
+                        const SizedBox(height: 16),
+                        _buildPremiumTabs(),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child:
+                              _isLoading
+                                  ? _buildPremiumLoadingState()
+                                  : TabBarView(
+                                    controller: _tabController,
+                                    children: [
+                                      _buildShipmentsList(
+                                        _currentShipments,
+                                        true,
+                                      ),
+                                      _buildShipmentsList(
+                                        _completedShipments,
+                                        false,
+                                      ),
+                                      _buildAcidRequestsList(),
+                                    ],
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-        floatingActionButton: _buildFloatingActionButton(),
+        floatingActionButton: _buildPremiumFloatingActionButton(),
         floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-        bottomNavigationBar: _buildBottomNavigationBar(),
+        bottomNavigationBar: _buildPremiumBottomNav(),
       ),
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildPremiumLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: primaryDark.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: SizedBox(
+              width: 50,
+              height: 50,
+              child: CircularProgressIndicator(
+                color: primaryDark,
+                strokeWidth: 3,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'جاري تحميل الشحنات...',
+            style: TextStyle(
+              fontSize: 16,
+              fontFamily: 'Cairo',
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'يرجى الانتظار',
+            style: TextStyle(
+              fontSize: 13,
+              fontFamily: 'Cairo',
+              color: Colors.grey[400],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumSearchBar() {
     return Container(
       margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -477,29 +607,29 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(12),
+                color: bgColor,
+                borderRadius: BorderRadius.circular(16),
               ),
               child: TextField(
                 controller: _searchController,
                 textAlign: TextAlign.right,
                 style: const TextStyle(fontFamily: 'Cairo', fontSize: 14),
-                decoration: const InputDecoration(
-                  hintText: 'البحث برقم الشحنة',
+                decoration: InputDecoration(
+                  hintText: 'البحث برقم ACID أو رقم 46',
                   hintStyle: TextStyle(
-                    color: Color(0xFFBDBDBD),
+                    color: Colors.grey[400],
                     fontFamily: 'Cairo',
                     fontSize: 13,
                   ),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
+                  contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 12,
+                    vertical: 14,
                   ),
                   suffixIcon: Icon(
                     Icons.search_rounded,
-                    color: Color(0xFFBDBDBD),
-                    size: 22,
+                    color: Colors.grey[400],
+                    size: 24,
                   ),
                 ),
               ),
@@ -508,36 +638,52 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
           const SizedBox(width: 8),
           InkWell(
             onTap: _showFilterBottomSheet,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.all(10),
-              margin: const EdgeInsets.all(4),
+              padding: const EdgeInsets.all(11),
+              margin: const EdgeInsets.all(5),
               decoration: BoxDecoration(
-                color: const Color(0xFF1ba3b6).withOpacity(0.08),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [accentColor, accentColor.withValues(alpha: 0.8)],
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: accentColor.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.filter_list_rounded,
-                color: const Color(0xFF1ba3b6),
-                size: 22,
+                color: Colors.white,
+                size: 20,
               ),
             ),
           ),
           const SizedBox(width: 4),
           InkWell(
             onTap: _showSortBottomSheet,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.all(10),
-              margin: const EdgeInsets.all(4),
+              padding: const EdgeInsets.all(11),
+              margin: const EdgeInsets.all(5),
               decoration: BoxDecoration(
-                color: const Color(0xFF690000).withOpacity(0.08),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(colors: [primaryDark, primaryLight]),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryDark.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: const Icon(
                 Icons.sort_rounded,
-                color: Color(0xFF690000),
-                size: 22,
+                color: Colors.white,
+                size: 20,
               ),
             ),
           ),
@@ -546,44 +692,97 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     );
   }
 
-  Widget _buildTabs() {
+  Widget _buildPremiumTabs() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: primaryDark.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
+          BoxShadow(color: Colors.white, blurRadius: 0, spreadRadius: 0),
         ],
+        border: Border.all(color: primaryDark.withOpacity(0.05), width: 1),
       ),
       child: TabBar(
         controller: _tabController,
         labelColor: Colors.white,
-        unselectedLabelColor: const Color(0xFF690000),
+        unselectedLabelColor: primaryDark.withOpacity(0.7),
+        dividerColor: Colors.transparent,
         indicator: BoxDecoration(
-          color: const Color(0xFF690000),
-          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [primaryDark, primaryLight],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: primaryDark.withOpacity(0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         indicatorSize: TabBarIndicatorSize.tab,
-        indicatorPadding: const EdgeInsets.all(4),
         labelStyle: const TextStyle(
           fontFamily: 'Cairo',
-          fontSize: 15,
+          fontSize: 13,
           fontWeight: FontWeight.bold,
         ),
         unselectedLabelStyle: const TextStyle(
           fontFamily: 'Cairo',
-          fontSize: 15,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
         ),
-        tabs: const [
-          Tab(text: 'الجارية'),
-          Tab(text: 'المكتملة'),
-          Tab(text: 'طلبات ACID'),
+        splashBorderRadius: BorderRadius.circular(18),
+        overlayColor: WidgetStateProperty.all(primaryDark.withOpacity(0.05)),
+        tabs: [
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.pending_actions_rounded, size: 16),
+                SizedBox(width: 4),
+                Text('الجارية'),
+                if (_currentShipments.isNotEmpty) ...[
+                  SizedBox(width: 3),
+                  Text(
+                    '(${_currentShipments.length})',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle_rounded, size: 16),
+                SizedBox(width: 4),
+                Text('المكتملة'),
+              ],
+            ),
+          ),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.receipt_long_rounded, size: 16),
+                SizedBox(width: 4),
+                Text('ACID'),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -593,47 +792,37 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     List<Map<String, dynamic>> shipments,
     bool isCurrent,
   ) {
-    // Combine shipments and ACID requests
-    final combinedList = <Map<String, dynamic>>[];
+    // Only show SHIPMENTS in this list, not ACID requests
+    final shipmentsList = <Map<String, dynamic>>[];
 
     // If a type filter is selected (بحري/جوي), show from both current and completed
     if (_selectedFilter == 'بحري' || _selectedFilter == 'جوي') {
       // Add filtered shipments from both current and completed
-      combinedList.addAll(_currentShipments);
-      combinedList.addAll(_completedShipments);
+      shipmentsList.addAll(_currentShipments);
+      shipmentsList.addAll(_completedShipments);
       print(
-        '🔍 [MyShipments] Type Filter "$_selectedFilter" - Total: ${combinedList.length}',
+        '🔍 [MyShipments] Type Filter "$_selectedFilter" - Shipments: ${shipmentsList.length}',
       );
     } else if (isCurrent) {
-      combinedList.addAll(_currentShipments);
-      combinedList.addAll(_currentAcidRequests);
-      print(
-        '🔍 [MyShipments] Current - Shipments: ${_currentShipments.length}, ACID Requests: ${_currentAcidRequests.length}',
-      );
+      shipmentsList.addAll(_currentShipments);
+      print('🔍 [MyShipments] Current Shipments: ${_currentShipments.length}');
     } else {
-      combinedList.addAll(_completedShipments);
-      combinedList.addAll(_completedAcidRequests);
+      shipmentsList.addAll(_completedShipments);
       print(
-        '🔍 [MyShipments] Completed - Shipments: ${_completedShipments.length}, ACID Requests: ${_completedAcidRequests.length}',
+        '🔍 [MyShipments] Completed Shipments: ${_completedShipments.length}',
       );
     }
 
     print(
-      '🔍 [MyShipments] Combined list total: ${combinedList.length}, Filter: $_selectedFilter',
+      '🔍 [MyShipments] Total shipments: ${shipmentsList.length}, Filter: $_selectedFilter',
     );
 
-    if (combinedList.isEmpty) {
+    if (shipmentsList.isEmpty) {
       // Determine the empty message based on filter
       String emptyMessage;
       IconData emptyIcon;
 
-      if (_selectedFilter == 'طلبات ACID') {
-        emptyIcon = Icons.receipt_long_outlined;
-        emptyMessage =
-            isCurrent
-                ? 'لا توجد طلبات ACID جارية'
-                : 'لا توجد طلبات ACID مكتملة';
-      } else if (_selectedFilter == 'بحري') {
+      if (_selectedFilter == 'بحري') {
         emptyIcon = Icons.directions_boat_outlined;
         emptyMessage =
             isCurrent
@@ -648,14 +837,12 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
       } else {
         emptyIcon = Icons.inventory_2_outlined;
         emptyMessage =
-            isCurrent
-                ? 'لا توجد شحنات أو طلبات جارية'
-                : 'لا توجد شحنات أو طلبات مكتملة';
+            isCurrent ? 'لا توجد شحنات جارية' : 'لا توجد شحنات مكتملة';
       }
 
       return RefreshIndicator(
         onRefresh: _loadShipmentsAndRequests,
-        color: const Color(0xFF690000),
+        color: primaryDark,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: SizedBox(
@@ -664,24 +851,55 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(emptyIcon, size: 80, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(30),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey[200]!, width: 2),
+                    ),
+                    child: Icon(emptyIcon, size: 60, color: Colors.grey[400]),
+                  ),
+                  const SizedBox(height: 24),
                   Text(
                     emptyMessage,
                     style: TextStyle(
                       fontSize: 18,
                       fontFamily: 'Cairo',
-                      color: Colors.grey[500],
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[700],
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'اسحب لأسفل للتحديث',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontFamily: 'Cairo',
-                      color: Colors.grey[400],
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: primaryDark.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.arrow_downward_rounded,
+                          size: 16,
+                          color: primaryDark,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'اسحب لأسفل للتحديث',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontFamily: 'Cairo',
+                            color: primaryDark,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -694,17 +912,12 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
 
     return RefreshIndicator(
       onRefresh: _loadShipmentsAndRequests,
-      color: const Color(0xFF690000),
+      color: primaryDark,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: combinedList.length,
+        itemCount: shipmentsList.length,
         itemBuilder: (context, index) {
-          final item = combinedList[index];
-          if (item['itemType'] == 'acidRequest') {
-            return _buildAcidRequestCard(item);
-          } else {
-            return _buildShipmentCard(item);
-          }
+          return _buildShipmentCard(shipmentsList[index]);
         },
       ),
     );
@@ -719,7 +932,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     if (allAcidRequests.isEmpty) {
       return RefreshIndicator(
         onRefresh: _loadShipmentsAndRequests,
-        color: const Color(0xFF690000),
+        color: primaryDark,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: SizedBox(
@@ -728,28 +941,67 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.receipt_long_outlined,
-                    size: 80,
-                    color: Colors.grey[300],
+                  Container(
+                    padding: const EdgeInsets.all(30),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          accentColor.withOpacity(0.1),
+                          accentColor.withOpacity(0.05),
+                        ],
+                      ),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: accentColor.withOpacity(0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.receipt_long_outlined,
+                      size: 60,
+                      color: accentColor,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   Text(
                     'لا توجد طلبات ACID',
                     style: TextStyle(
                       fontSize: 18,
                       fontFamily: 'Cairo',
-                      color: Colors.grey[500],
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[700],
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'اسحب لأسفل للتحديث',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontFamily: 'Cairo',
-                      color: Colors.grey[400],
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: primaryDark.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.arrow_downward_rounded,
+                          size: 16,
+                          color: primaryDark,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'اسحب لأسفل للتحديث',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontFamily: 'Cairo',
+                            color: primaryDark,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -784,306 +1036,491 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     final typeText = isSea ? 'بحري' : 'جوي';
     final typeIcon =
         isSea ? Icons.directions_boat_rounded : Icons.flight_takeoff_rounded;
-    final typeColor = isSea ? const Color(0xFF1ba3b6) : Colors.orange[700]!;
+    final typeColor = isSea ? accentColor : goldAccent;
 
     // Get status color
     final statusColor = _getStatusColor(shipment['status']);
 
-    return InkWell(
-      onTap: () {
-        // Navigate to shipment details page
-        context.push('/shipment-details/${shipment['id']}');
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Row - Shipment Code and Type Badge
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      // Shipment Code Badge (if available)
-                      if (shipment['shipmentCode']?.toString().isNotEmpty ==
-                          true) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF690000),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            shipment['shipmentCode'],
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo',
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: typeColor.withOpacity(0.15), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: primaryDark.withOpacity(0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+          BoxShadow(
+            color: typeColor.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () async {
+            HapticFeedback.lightImpact();
+            await RecentShipmentsService.addRecentShipment(shipment);
+            if (mounted) {
+              context.push('/shipment-details/${shipment['id']}');
+            }
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Column(
+            children: [
+              // Premium Header with Gradient
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      typeColor.withOpacity(0.08),
+                      typeColor.withOpacity(0.03),
+                    ],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          // Shipment Code Badge
+                          if (shipment['shipmentCode']?.toString().isNotEmpty ==
+                              true) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [primaryDark, primaryLight],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: primaryDark.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                shipment['shipmentCode'],
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          // Type Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
                               color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: typeColor.withOpacity(0.3),
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: typeColor.withOpacity(0.15),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(typeIcon, size: 16, color: typeColor),
+                                const SizedBox(width: 5),
+                                Text(
+                                  typeText,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontFamily: 'Cairo',
+                                    fontWeight: FontWeight.bold,
+                                    color: typeColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          // Urgent Badge
+                          if (shipment['isUrgent']) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.red.shade600,
+                                    Colors.red.shade400,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withOpacity(0.3),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(
+                                    Icons.priority_high,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'عاجل',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Cairo',
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                        color: primaryDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Content Section
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ACID Number Row
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: primaryDark.withOpacity(0.08),
+                          width: 1,
                         ),
-                        const SizedBox(width: 8),
-                      ],
-                      // Type Badge
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  primaryDark.withOpacity(0.1),
+                                  primaryLight.withOpacity(0.05),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.qr_code_2_rounded,
+                              size: 22,
+                              color: primaryDark,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'رقم ACID',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontFamily: 'Cairo',
+                                    color: Colors.grey[500],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  shipment['id'],
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                    color: primaryDark,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Number 46 Row (if available)
+                    if (shipment['number46']?.toString().isNotEmpty ==
+                        true) ...[
+                      const SizedBox(height: 12),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: typeColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
+                          color: accentColor.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: accentColor.withOpacity(0.15),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(typeIcon, size: 14, color: typeColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              typeText,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontFamily: 'Cairo',
-                                fontWeight: FontWeight.bold,
-                                color: typeColor,
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: accentColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.description_outlined,
+                                size: 22,
+                                color: accentColor,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'رقم 46',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontFamily: 'Cairo',
+                                      color: Colors.grey[500],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    shipment['number46'],
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'Cairo',
+                                      color: accentColor,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                      // Urgent Badge
-                      if (shipment['isUrgent']) ...[
-                        const SizedBox(width: 8),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // Status and Date Row
+                    Row(
+                      children: [
+                        // Status Badge
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: statusColor.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: statusColor,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: statusColor.withOpacity(0.4),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    shipment['status'],
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontFamily: 'Cairo',
+                                      fontWeight: FontWeight.bold,
+                                      color: statusColor,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Date Badge
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                            horizontal: 14,
+                            vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
+                            color: Colors.grey.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(
-                                Icons.priority_high,
+                                Icons.schedule_rounded,
                                 size: 14,
-                                color: Colors.red,
+                                color: Colors.grey[600],
                               ),
-                              SizedBox(width: 2),
+                              const SizedBox(width: 6),
                               Text(
-                                'عاجل',
+                                shipment['date'],
                                 style: TextStyle(
                                   fontSize: 11,
-                                  fontWeight: FontWeight.bold,
                                   fontFamily: 'Cairo',
-                                  color: Colors.red,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[700],
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey.withOpacity(0.4),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 14),
-
-            // ACID Number Row
-            Row(
-              children: [
-                Icon(
-                  Icons.qr_code_2_rounded,
-                  size: 18,
-                  color: const Color(0xFF690000),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'رقم ACID',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'Cairo',
-                        color: Colors.grey[500],
-                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      shipment['id'],
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Cairo',
-                        color: Color(0xFF424242),
+
+                    const SizedBox(height: 16),
+
+                    // Premium View Details Button
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [primaryDark, primaryLight],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryDark.withOpacity(0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            context.push('/shipment-details/${shipment['id']}');
+                          },
+                          borderRadius: BorderRadius.circular(14),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Text(
+                                  'عرض تفاصيل الشحنة',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Icon(
+                                  Icons.visibility_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
-
-            // Number 46 Row (if available)
-            if (shipment['number46']?.toString().isNotEmpty == true) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Icon(
-                    Icons.description_outlined,
-                    size: 18,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'رقم 46',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontFamily: 'Cairo',
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        shipment['number46'],
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'Cairo',
-                          color: Color(0xFF424242),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ),
             ],
-
-            const SizedBox(height: 12),
-            const Divider(height: 1, thickness: 1),
-            const SizedBox(height: 12),
-
-            // Status and Date Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Status
-                Expanded(
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Icon(
-                          Icons.info_outline,
-                          size: 14,
-                          color: statusColor,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          shipment['status'],
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'Cairo',
-                            fontWeight: FontWeight.w600,
-                            color: statusColor,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Last Update Date
-                Row(
-                  children: [
-                    Icon(Icons.update, size: 13, color: Colors.grey[500]),
-                    const SizedBox(width: 6),
-                    Text(
-                      shipment['date'],
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'Cairo',
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            // Always show view details button
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  context.push('/shipment-details/${shipment['id']}');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF690000),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  elevation: 0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Text(
-                      'عرض تفاصيل الشحنة',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Cairo',
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.visibility_rounded, size: 18),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1098,18 +1535,15 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
           colors: [
-            const Color(0xFF1ba3b6).withOpacity(0.05),
-            const Color(0xFF1ba3b6).withOpacity(0.02),
+            accentColor.withOpacity(0.08),
+            accentColor.withOpacity(0.03),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFF1ba3b6).withOpacity(0.3),
-          width: 1.5,
-        ),
+        border: Border.all(color: accentColor.withOpacity(0.25), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1ba3b6).withOpacity(0.08),
+            color: accentColor.withOpacity(0.1),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -1126,7 +1560,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1ba3b6),
+                      color: accentColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -1145,7 +1579,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                           fontSize: 14,
                           fontFamily: 'Cairo',
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1ba3b6),
+                          color: accentColor,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -1188,11 +1622,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
           const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(
-                Icons.business_outlined,
-                size: 18,
-                color: Color(0xFF1ba3b6),
-              ),
+              const Icon(Icons.business_outlined, size: 18, color: accentColor),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -1227,7 +1657,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
               const Icon(
                 Icons.inventory_2_outlined,
                 size: 18,
-                color: Color(0xFF1ba3b6),
+                color: accentColor,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -1269,7 +1699,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                     const Icon(
                       Icons.scale_outlined,
                       size: 18,
-                      color: Color(0xFF1ba3b6),
+                      color: accentColor,
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -1347,65 +1777,70 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     }
   }
 
-  Widget _buildFloatingActionButton() {
-    return FloatingActionButton.extended(
-      onPressed: () {
-        // Navigate directly to ACID request page
-        context.push(
-          '/acid-request',
-          extra: {'userName': widget.userName, 'userEmail': widget.userEmail},
-        );
-      },
-      backgroundColor: const Color(0xFF690000),
-      elevation: 4,
-      label: const Text(
-        'طلب ACID',
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'Cairo',
-          color: Colors.white,
-        ),
-      ),
-      icon: const Icon(
-        Icons.receipt_long_rounded,
-        size: 24,
-        color: Colors.white,
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
+  Widget _buildPremiumFloatingActionButton() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF690000),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(25),
-          topRight: Radius.circular(25),
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [primaryDark, primaryLight],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: primaryDark.withOpacity(0.4),
             blurRadius: 15,
-            offset: const Offset(0, -5),
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: goldAccent.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(25),
-          topRight: Radius.circular(25),
-        ),
-        child: SafeArea(
-          child: SizedBox(
-            height: 65,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            context.push(
+              '/acid-request',
+              extra: {
+                'userName': widget.userName,
+                'userEmail': widget.userEmail,
+              },
+            );
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _buildNavItem(0, Icons.home_rounded, 'الرئيسية'),
-                _buildNavItem(1, Icons.flight_land_rounded, 'الوارد'),
-                _buildNavItem(2, Icons.flight_takeoff_rounded, 'الصادر'),
-                _buildNavItem(3, Icons.receipt_long_rounded, 'الفواتير'),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'طلب ACID',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Cairo',
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1414,96 +1849,133 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
-    final isSelected = _selectedIndex == index;
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          if (index == 0) {
-            // الرئيسية - navigate back
-            context.go(
-              '/home',
-              extra: {
-                'userName': widget.userName,
-                'userEmail': widget.userEmail,
-              },
-            );
-          } else if (index == 1) {
-            // الوارد - already here, ensure state is correct
-            if (_selectedIndex != 1) {
-              setState(() => _selectedIndex = 1);
-            }
-          } else if (index == 2) {
-            // الصادر - navigate to exports page
-            context.go(
-              '/exports',
-              extra: {
-                'userName': widget.userName,
-                'userEmail': widget.userEmail,
-              },
-            );
-          } else if (index == 3) {
-            // الفواتير (don't change state)
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('قسم الفواتير قيد التطوير'),
-                backgroundColor: Color(0xFF1ba3b6),
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
-        },
-        borderRadius: BorderRadius.circular(15),
+  // ==================== PREMIUM BOTTOM NAVIGATION ====================
+  Widget _buildPremiumBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color:
-                      isSelected
-                          ? const Color(0xFF1ba3b6)
-                          : Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow:
-                      isSelected
-                          ? [
-                            BoxShadow(
-                              color: const Color(0xFF1ba3b6).withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                          : [],
-                ),
-                child: Icon(
-                  icon,
-                  color: isSelected ? Colors.white : Colors.white70,
-                  size: 23,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontFamily: 'Cairo',
-                  color: isSelected ? Colors.white : Colors.white70,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                  height: 1.1,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+              _buildPremiumNavItem(0, Icons.home_rounded, 'الرئيسية'),
+              _buildPremiumNavItem(1, Icons.flight_land_rounded, 'الوارد'),
+              _buildPremiumNavItem(2, Icons.flight_takeoff_rounded, 'الصادر'),
+              _buildPremiumNavItem(3, Icons.receipt_long_rounded, 'الفواتير'),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildPremiumNavItem(int index, IconData icon, String label) {
+    final isSelected = _selectedIndex == index;
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _handleNavigationTap(index);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 20 : 16,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          gradient:
+              isSelected
+                  ? const LinearGradient(
+                    colors: [Color(0xFF690000), Color(0xFF8B0000)],
+                  )
+                  : null,
+          color: isSelected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: const Color(0xFF690000).withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                  : [],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey[500],
+              size: 22,
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleNavigationTap(int index) {
+    switch (index) {
+      case 0:
+        // الرئيسية - navigate to home
+        setState(() => _selectedIndex = index);
+        context.go(
+          '/home',
+          extra: {'userName': widget.userName, 'userEmail': widget.userEmail},
+        );
+        break;
+      case 1:
+        // الوارد - Navigate to incoming shipments (already here)
+        if (_selectedIndex != 1) {
+          setState(() => _selectedIndex = 1);
+        }
+        break;
+      case 2:
+        // الصادر - Navigate to exports page
+        setState(() => _selectedIndex = index);
+        context.go(
+          '/exports',
+          extra: {'userName': widget.userName, 'userEmail': widget.userEmail},
+        );
+        break;
+      case 3:
+        // الفواتير - Navigate to payments page
+        setState(() => _selectedIndex = index);
+        context.go(
+          '/payments',
+          extra: {'userName': widget.userName, 'userEmail': widget.userEmail},
+        );
+        break;
+    }
   }
 
   void _showFilterBottomSheet() {
@@ -1534,20 +2006,32 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
-                      children: const [
-                        Icon(
-                          Icons.filter_list_rounded,
-                          color: Color(0xFF690000),
-                          size: 28,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                accentColor,
+                                accentColor.withValues(alpha: 0.8),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.filter_list_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
                         ),
-                        SizedBox(width: 12),
-                        Text(
+                        const SizedBox(width: 12),
+                        const Text(
                           'تصفية حسب',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Cairo',
-                            color: Color(0xFF690000),
+                            color: primaryDark,
                           ),
                         ),
                       ],
@@ -1588,13 +2072,13 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
               decoration: BoxDecoration(
                 color:
                     isSelected
-                        ? const Color(0xFF690000).withOpacity(0.1)
-                        : Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+                        ? primaryDark.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
-                color: isSelected ? const Color(0xFF690000) : Colors.grey[600],
+                color: isSelected ? primaryDark : Colors.grey[600],
                 size: 22,
               ),
             ),
@@ -1654,20 +2138,29 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
-                      children: const [
-                        Icon(
-                          Icons.sort_rounded,
-                          color: Color(0xFF690000),
-                          size: 28,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [primaryDark, primaryLight],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.sort_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
                         ),
-                        SizedBox(width: 12),
-                        Text(
+                        const SizedBox(width: 12),
+                        const Text(
                           'ترتيب حسب',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Cairo',
-                            color: Color(0xFF690000),
+                            color: primaryDark,
                           ),
                         ),
                       ],
@@ -1705,18 +2198,16 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color:
+                gradient:
                     isSelected
-                        ? const Color(0xFF690000).withOpacity(0.1)
-                        : const Color(0xFF1ba3b6).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+                        ? LinearGradient(colors: [primaryDark, primaryLight])
+                        : null,
+                color: isSelected ? null : accentColor.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
-                color:
-                    isSelected
-                        ? const Color(0xFF690000)
-                        : const Color(0xFF1ba3b6),
+                color: isSelected ? Colors.white : accentColor,
                 size: 22,
               ),
             ),
@@ -1877,7 +2368,7 @@ class _MyShipmentsPageState extends State<MyShipmentsPage>
                 ),
               ),
             ),
-            Icon(Icons.arrow_back_ios, size: 16, color: Colors.grey[400]),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
           ],
         ),
       ),

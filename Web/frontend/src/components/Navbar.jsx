@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) => {
 	const [scrolled, setScrolled] = useState(false);
+	const [user, setUser] = useState(null);
 
 	// Handle scroll effect
 	useEffect(() => {
@@ -13,6 +14,18 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 
 		window.addEventListener("scroll", handleScroll);
 		return () => window.removeEventListener("scroll", handleScroll);
+	}, []);
+
+	// Load user from localStorage
+	useEffect(() => {
+		const storedUser = localStorage.getItem("user");
+		if (storedUser) {
+			try {
+				setUser(JSON.parse(storedUser));
+			} catch (error) {
+				console.error("Error parsing user data:", error);
+			}
+		}
 	}, []);
 
 	const handleSearchClick = () => {
@@ -61,10 +74,10 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 
 	return (
 		<header
-			className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+			className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
 				scrolled
-					? "bg-white shadow-md py-2"
-					: "bg-transparent py-4 md:py-6"
+					? "bg-white/95 backdrop-blur-md shadow-lg py-2"
+					: "bg-gradient-to-b from-black/30 to-transparent py-4 md:py-6"
 			}`}
 		>
 			<div className="container mx-auto px-4 flex items-center justify-between">
@@ -74,7 +87,7 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 					<Link to="/" className="flex items-center gap-2">
 						{/* Use colored logo when scrolled, white logo when transparent */}
 						<img
-							src="/src/assets/images/coloredLogo.png"
+							src="/images/coloredLogo.png"
 							alt="النوران"
 							className={`h-10 w-auto transition-transform hover:scale-105 ${
 								scrolled ? "" : "brightness-0 invert drop-shadow-md"
@@ -83,11 +96,11 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 						/>
 					</Link>
 
-					<nav className="hidden md:flex items-center gap-8">
+				<nav className="hidden md:flex items-center gap-8">
 						{[
 							{ label: "الرئيسية", path: "/" },
-							{ label: "عن النوران", path: "#about" },
-							{ label: "خدماتنا", path: "#services" },
+							{ label: "عن النوران", action: () => window.scrollTo({ top: 0, behavior: "smooth" }) },
+							{ label: "خدماتنا", action: () => document.getElementById("services")?.scrollIntoView({ behavior: "smooth" }) },
 							{ label: "تتبع الشحنة", action: () => document.getElementById("tracking-section")?.scrollIntoView({ behavior: "smooth" }) },
 						].map((item, index) => (
 							item.action ? (
@@ -149,14 +162,21 @@ const Navbar = ({ showAuth = false, showSearch = false, onSearchClick = null }) 
 
 					{showAuth && (
 						<Link
-							to="/login"
-							className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all transform hover:-translate-y-0.5 ${
+							to={user ? getDashboardPath() : "/login"}
+							className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all duration-300 transform hover:-translate-y-0.5 hover:scale-105 ${
 								scrolled
 									? themeColors.button
 									: "bg-white text-gray-900 hover:bg-gray-50 shadow-xl hover:shadow-2xl"
 							}`}
 						>
-							تسجيل الدخول
+							{user ? (
+								<span className="flex items-center gap-2">
+									<span>👤</span>
+									<span>لوحة التحكم</span>
+								</span>
+							) : (
+								<span>تسجيل الدخول</span>
+							)}
 						</Link>
 					)}
 				</div>

@@ -82,6 +82,11 @@ const generateS3Key = ({
 		case "payment":
 			fullPath = `${basePath}/payments/${uniqueFilename}`;
 			break;
+		case "export_shipment":
+			if (!relatedId)
+				throw new Error("relatedId required for export_shipment category");
+			fullPath = `${basePath}/export_shipments/${relatedId}/${uniqueFilename}`;
+			break;
 		default:
 			throw new Error(`Invalid category: ${category}`);
 	}
@@ -135,14 +140,20 @@ const uploadToS3 = async ({ fileBuffer, s3Key, mimetype }) => {
  * @param {Number} expiresIn - URL expiration in seconds (default 1 hour)
  * @returns {Promise<String>} Presigned URL
  */
-const getPresignedUrl = async (s3Key, expiresIn = 3600) => {
+const getPresignedUrl = async (s3Key, expiresIn = 3600, options = {}) => {
 	try {
 		console.log(`🔗 Generating presigned URL for: ${s3Key}`);
 
-		const command = new GetObjectCommand({
+		const commandParams = {
 			Bucket: BUCKET_NAME,
 			Key: s3Key,
-		});
+		};
+
+		if (options.isDownload) {
+			commandParams.ResponseContentDisposition = "attachment";
+		}
+
+		const command = new GetObjectCommand(commandParams);
 
 		const presignedUrl = await getSignedUrl(s3Client, command, {
 			expiresIn,
@@ -255,6 +266,25 @@ const validateFile = (file, maxSize = 10 * 1024 * 1024) => {
 	return { valid: true };
 };
 
+/**
+ * Get file stream from S3 for streaming download
+ * @param {String} s3Key - S3 key
+ * @returns {Promise<ReadableStream>} File stream
+ */
+const getFileStream = async (s3Key) => {
+	try {
+		const command = new GetObjectCommand({
+			Bucket: BUCKET_NAME,
+			Key: s3Key,
+		});
+		const response = await s3Client.send(command);
+		return response.Body;
+	} catch (error) {
+		console.error("S3 Get Stream Error:", error);
+		throw error;
+	}
+};
+
 module.exports = {
 	generateS3Key,
 	uploadToS3,
@@ -262,4 +292,5 @@ module.exports = {
 	deleteFromS3,
 	fileExistsInS3,
 	validateFile,
+	getFileStream,
 };

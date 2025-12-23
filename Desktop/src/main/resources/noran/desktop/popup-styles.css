@@ -1,0 +1,254 @@
+/* ==============================================
+   AL-NORAN POPUP STYLES - Matching Login/Dashboard Theme
+   Clean, professional design with brand colors
+   ============================================== */
+
+/* ========== ROOT POPUP CONTAINER ========== */
+.popup-container {
+    -fx-background-color: white;
+    -fx-background-radius: 24;
+    -fx-border-radius: 24;
+    -fx-border-color: #e9ecef;
+    -fx-border-width: 1;
+    -fx-padding: 36;
+}
+
+.popup-container-glass {
+    -fx-background-color: white;
+    -fx-background-radius: 24;
+    -fx-border-radius: 24;
+    -fx-border-color: #e9ecef;
+    -fx-border-width: 1;
+    -fx-padding: 32;
+}
+
+/* ========== POPUP HEADER ========== */
+.popup-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1a1a2e;
+}
+
+.popup-title-accent {
+    -fx-font-size: 24px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #690000;
+}
+
+.popup-subtitle {
+    -fx-font-size: 14px;
+    -fx-font-weight: 400;
+    -fx-text-fill: #6c757d;
+}
+
+/* ========== SECTION HEADERS ========== */
+.section-header {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #690000;
+    -fx-padding: 8 0 4 0;
+}
+
+/* ========== FORM INPUTS - Matching Login Style ========== */
+.popup-input {
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 14;
+    -fx-border-color: #e9ecef;
+    -fx-border-radius: 14;
+    -fx-border-width: 2;
+    -fx-padding: 12 16;
+    -fx-font-size: 15px;
+    -fx-prompt-text-fill: #adb5bd;
+}
+
+.popup-input:hover {
+    -fx-border-color: #ced4da;
+}
+
+.popup-input:focused {
+    -fx-background-color: white;
+    -fx-border-color: #a40000;
+    -fx-border-width: 2;
+}
+
+/* ========== FORM LABELS ========== */
+.popup-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #495057;
+}
+
+.popup-label-light {
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+    -fx-text-fill: #6b7280;
+}
+
+/* ========== PRIMARY BUTTON - Matching Login Button ========== */
+.popup-btn-primary {
+    -fx-background-color: linear-gradient(to bottom, #c41e1e, #a40000, #7a0000);
+    -fx-background-radius: 14;
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-padding: 14 36;
+    -fx-cursor: hand;
+}
+
+.popup-btn-primary:hover {
+    -fx-background-color: linear-gradient(to bottom, #d42a2a, #b80000, #8a0000);
+}
+
+.popup-btn-primary:pressed {
+    -fx-background-color: linear-gradient(to bottom, #a40000, #7a0000, #5a0000);
+}
+
+/* ========== SECONDARY BUTTON ========== */
+.popup-btn-secondary {
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 14;
+    -fx-text-fill: #495057;
+    -fx-font-size: 16px;
+    -fx-font-weight: 600;
+    -fx-padding: 14 36;
+    -fx-cursor: hand;
+    -fx-border-color: #e9ecef;
+    -fx-border-radius: 14;
+    -fx-border-width: 2;
+}
+
+.popup-btn-secondary:hover {
+    -fx-background-color: #e9ecef;
+    -fx-border-color: #ced4da;
+}
+
+.popup-btn-secondary:pressed {
+    -fx-background-color: #ced4da;
+}
+
+/* ========== TEAL ACCENT BUTTON ========== */
+.popup-btn-accent {
+    -fx-background-color: linear-gradient(to bottom, #22c4d8, #1ba3b6, #158a9a);
+    -fx-background-radius: 14;
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-padding: 14 36;
+    -fx-cursor: hand;
+}
+
+.popup-btn-accent:hover {
+    -fx-background-color: linear-gradient(to bottom, #2dd4e8, #1fb8cc, #179aab);
+}
+
+/* ========== CHECKBOX STYLING ========== */
+.popup-checkbox {
+    -fx-font-size: 14px;
+    -fx-text-fill: #495057;
+}
+
+.popup-checkbox .box {
+    -fx-background-color: #f8f9fa;
+    -fx-border-color: #e9ecef;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 3;
+}
+
+.popup-checkbox:selected .box {
+    -fx-background-color: #a40000;
+    -fx-border-color: #a40000;
+}
+
+.popup-checkbox:selected .mark {
+    -fx-background-color: white;
+}
+
+.popup-checkbox:hover .box {
+    -fx-border-color: #a40000;
+}
+
+/* ========== COMBOBOX STYLING ========== */
+.popup-combo {
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 14;
+    -fx-border-color: #e9ecef;
+    -fx-border-radius: 14;
+    -fx-border-width: 2;
+    -fx-padding: 6 12;
+    -fx-cursor: hand;
+}
+
+.popup-combo:hover {
+    -fx-border-color: #ced4da;
+}
+
+.popup-combo:focused {
+    -fx-border-color: #a40000;
+    -fx-border-width: 2;
+    -fx-background-color: white;
+}
+
+.popup-combo .arrow {
+    -fx-background-color: #a40000;
+}
+
+/* ========== DIVIDER ========== */
+.popup-divider {
+    -fx-background-color: #e9ecef;
+    -fx-pref-height: 1;
+    -fx-max-height: 1;
+}
+
+/* ========== SCROLLPANE ========== */
+.popup-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.popup-scroll>.viewport {
+    -fx-background-color: transparent;
+}
+
+.popup-scroll>.scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 8;
+    -fx-padding: 2;
+}
+
+.popup-scroll>.scroll-bar:vertical .track {
+    -fx-background-color: #f3f4f6;
+    -fx-background-radius: 4;
+}
+
+.popup-scroll>.scroll-bar:vertical .thumb {
+    -fx-background-color: #d1d5db;
+    -fx-background-radius: 4;
+}
+
+.popup-scroll>.scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #a40000;
+}
+
+/* ========== LOGO WRAPPER ========== */
+.popup-logo {
+    -fx-opacity: 0.95;
+}
+
+/* ========== FORM GROUP ========== */
+.form-group {
+    -fx-spacing: 6;
+}
+
+/* ========== FIELD ROW ========== */
+.field-row {
+    -fx-spacing: 16;
+    -fx-alignment: center;
+}
+
+/* ========== BUTTON ROW ========== */
+.button-row {
+    -fx-spacing: 14;
+    -fx-alignment: center;
+    -fx-padding: 20 0 0 0;
+}

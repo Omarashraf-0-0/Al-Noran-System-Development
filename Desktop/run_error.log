@@ -1,0 +1,20 @@
+﻿Dec 21, 2025 8:43:04 AM com.sun.javafx.application.PlatformImpl startup
+WARNING: Unsupported JavaFX configuration: classes were loaded from 'unnamed module @185fbcbd'
+Exception in Application start method
+Exception in thread "main" java.lang.RuntimeException: Exception in Application start method
+	at com.sun.javafx.application.LauncherImpl.launchApplication1(LauncherImpl.java:893)
+	at com.sun.javafx.application.LauncherImpl.lambda$launchApplication$2(LauncherImpl.java:196)
+	at java.base/java.lang.Thread.run(Thread.java:1575)
+Caused by: java.lang.NullPointerException: Input stream must not be null
+	at javafx.scene.image.Image.validateInputStream(Image.java:1140)
+	at javafx.scene.image.Image.<init>(Image.java:707)
+	at noran.desktop.Applications.LoginApplication.start(LoginApplication.java:17)
+	at com.sun.javafx.application.LauncherImpl.lambda$launchApplication1$9(LauncherImpl.java:839)
+	at com.sun.javafx.application.PlatformImpl.lambda$runAndWait$12(PlatformImpl.java:483)
+	at com.sun.javafx.application.PlatformImpl.lambda$runLater$10(PlatformImpl.java:456)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:400)
+	at com.sun.javafx.application.PlatformImpl.lambda$runLater$11(PlatformImpl.java:455)
+	at com.sun.glass.ui.InvokeLaterDispatcher$Future.run(InvokeLaterDispatcher.java:95)
+	at com.sun.glass.ui.win.WinApplication._runLoop(Native Method)
+	at com.sun.glass.ui.win.WinApplication.lambda$runLoop$3(WinApplication.java:185)
+	... 1 more

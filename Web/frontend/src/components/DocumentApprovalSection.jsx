@@ -29,7 +29,9 @@ const DocumentApprovalSection = () => {
 		"personal_id_of_representative",
 		"import_export_card",
 		"trade_certificates",
+
 		"personal_id",
+		"passport",
 	];
 
 	useEffect(() => {
@@ -215,6 +217,7 @@ const DocumentApprovalSection = () => {
 			import_export_card: "بطاقة استيراد/تصدير",
 			trade_certificates: "شهادات تجارية",
 			personal_id: "البطاقة الشخصية",
+			passport: "جواز السفر",
 		};
 		return labels[docType] || docType;
 	};

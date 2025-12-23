@@ -87,6 +87,8 @@ const notificationSchema = new mongoose.Schema(
 				"ucr_rejected",
 				"ucr_certificate_issued",
 				"ucr_documents_requested",
+				"export_shipment_status_changed",
+				"export_shipment_created",
 
 				// Finance
 				"invoice_created",
@@ -123,6 +125,10 @@ const notificationSchema = new mongoose.Schema(
 			shipmentId: {
 				type: mongoose.Schema.Types.ObjectId,
 				ref: "Shipment",
+			},
+			exportShipmentId: {
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "ExportShipment",
 			},
 			acidRequestId: {
 				type: mongoose.Schema.Types.ObjectId,

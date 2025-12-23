@@ -48,10 +48,27 @@ const ClientPaymentsPage = () => {
                 }
             );
 
-            const invoicesData = response.data.invoices || response.data || [];
+            let invoicesData = response.data.invoices || response.data || [];
+            if (!Array.isArray(invoicesData)) invoicesData = [];
             console.log("Fetched Invoices:", invoicesData);
-            setInvoices(invoicesData);
-            calculateTotal(invoicesData);
+
+            // ===========================================
+            // FILTERING LOGIC / منطق تصفية الفواتير
+            // ===========================================
+            // بناءً على طلب العميل، نقوم بتصفية الفواتير لعرض الفواتير المطلوبة فقط.
+            // نقوم باستبعاد الفواتير التي حالتها "في انتظار الموافقة" لأنها لم تعتمد بعد.
+            // نقوم أيضاً باستبعاد الفواتير "المرفوضة" لأنها لا تتطلب دافعاً.
+            //
+            // We filter out invoices that are "Pending Approval" or "Rejected".
+            // - "Pending Approval" (في انتظار الموافقة): Not ready for payment yet.
+            // - "Rejected" (مرفوض): Should not be displayed to the user.
+            // ===========================================
+            const filteredInvoices = invoicesData.filter(inv =>
+                inv.status !== "في انتظار الموافقة" && inv.status !== "مرفوض"
+            );
+
+            setInvoices(filteredInvoices);
+            calculateTotal(filteredInvoices);
             setLoading(false);
         } catch (error) {
             console.error("Error fetching invoices:", error);
@@ -124,6 +141,38 @@ const ClientPaymentsPage = () => {
         return total;
     };
 
+    /**
+     * =======================================================
+     *  HELPER FUNCTION: GET STATUS TEXT / دالة جلب نص الحالة
+     * =======================================================
+     * This function determines what text to display to the user based on the database status.
+     * The goal is to show user-friendly messages that urge action.
+     * 
+     * هذه الدالة تحدد النص الذي سيتم عرضه للمستخدم بناءً على حالة الفاتورة في قاعدة البيانات.
+     * الهدف هو عرض رسائل سهلة للمستخدم تحثه على اتخاذ إجراء.
+     */
+    const getStatusText = (status) => {
+        // ------------------------------------------------------------------
+        // Case 1: The invoice is "Approved" in the database.
+        // الحالة 1: الفاتورة "تمت الموافقة عليها" في قاعدة البيانات.
+        // ------------------------------------------------------------------
+        // Although the admin approved it, the client still needs to pay.
+        // Therefore, we MUST display "Waiting for Payment" instead of "Approved".
+        // على الرغم من موافقة المسؤول، إلا أن العميل لا يزال بحاجة للدفع.
+        // لذلك، يجب أن نعرض "فى انتظار الدفع" بدلاً من "تمت الموافقة".
+        if (status === 'مقبولة') {
+            return 'فى انتظار الدفع';
+        }
+
+        // ------------------------------------------------------------------
+        // Case 2: Other Statuses (e.g., "Paid").
+        // الحالة 2: الحالات الأخرى (مثل "تم الدفع").
+        // ------------------------------------------------------------------
+        // Display the status exactly as it is in the database.
+        // عرض الحالة كما هي مسجلة في قاعدة البيانات.
+        return status;
+    };
+
     // ... Return JSX ...
     // Note: I will inject the handleFileSelect and handleUploadPayment back in the rewrite or assume they persist if not replacing them.
     // Since I'm using replace_file_content with range, I need to be careful.
@@ -174,7 +223,8 @@ const ClientPaymentsPage = () => {
 
             // S3 controller returns { success: true, uploads: [...] }
             // where uploads is array of objects { url, s3Key, ... }
-            const filePaths = uploadRes.data.uploads.map(f => f.url || f.s3Key);
+            // IMPORTANT: Save s3Key (not presigned URL) so backend can generate fresh URLs
+            const filePaths = uploadRes.data.uploads.map(f => f.s3Key);
 
             // 2. Create Payment Record
             // Model expects transactions: [{ imageUrls: "...", status: "PENDING" }]
@@ -182,7 +232,7 @@ const ClientPaymentsPage = () => {
                 userId: user._id, // or from token
                 paymentMethod: "BANK_TRANSFER",
                 transactions: filePaths.map(path => ({
-                    imageUrls: path, // Prompt example showed string. Pass the path/url here.
+                    imageUrls: path, // Store S3 key for generating fresh presigned URLs
                     status: "PENDING"
                 }))
             };
@@ -296,10 +346,14 @@ const ClientPaymentsPage = () => {
                                             </td>
                                             <td className="py-3 px-6 align-top">
                                                 <span className={`px-2 py-1 rounded text-xs font-bold ${inv.status === 'تم الدفع' ? 'bg-green-100 text-green-800' :
-                                                        inv.status === 'مرفوض' ? 'bg-red-100 text-red-800' :
-                                                            'bg-yellow-100 text-yellow-800'
+                                                    inv.status === 'مرفوض' ? 'bg-red-100 text-red-800' :
+                                                        'bg-yellow-100 text-yellow-800'
                                                     }`}>
-                                                    {inv.status}
+                                                    {/* 
+                                                        Display the formatted status text using our helper function.
+                                                        استخدام الدالة المساعدة لعرض نص الحالة المنسق.
+                                                     */}
+                                                    {getStatusText(inv.status)}
                                                 </span>
                                             </td>
                                             <td className="py-3 px-6 align-top">
@@ -341,11 +395,15 @@ const ClientPaymentsPage = () => {
                                     {payment.transactions?.map((tx, idx) => (
                                         <div key={idx} className="flex items-center gap-3 border rounded-lg p-2">
                                             <div className="w-16 h-16 bg-gray-200 rounded-md overflow-hidden flex-shrink-0">
-                                                {/* Assuming imageUrls is a path segment, prepend base url if needed, or if it's full url */}
+                                                {/* Backend now returns presigned S3 URLs */}
                                                 <img
-                                                    src={tx.imageUrls.startsWith('http') ? tx.imageUrls : `${import.meta.env.VITE_API_URL}/${tx.imageUrls.replace(/\\/g, '/')}`}
+                                                    src={tx.imageUrls}
                                                     alt="receipt"
                                                     className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.onerror = null;
+                                                        e.target.src = '/placeholder-image.png';
+                                                    }}
                                                 />
                                             </div>
                                             <div className="flex-grow">

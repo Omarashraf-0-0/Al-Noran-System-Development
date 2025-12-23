@@ -90,7 +90,7 @@ const ucrRequestSchema = new mongoose.Schema(
 		},
 		packagesCount: {
 			type: Number,
-			required: true,
+			required: false, // Not required for FCL (full container load)
 			min: 1,
 		},
 		valueInEGP: {

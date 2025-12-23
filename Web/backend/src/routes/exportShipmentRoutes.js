@@ -13,6 +13,8 @@ const {
 	assignEmployeeToShipment,
 	addEmployeeNotes,
 	requestDocumentFromClient,
+	resetUploadedDocument,
+	getDistinctDocumentNames,
 	markPaymentCleared,
 	uploadForm46,
 	uploadCertificateOfOrigin,
@@ -36,6 +38,11 @@ router.get("/", protect, getMyExportShipments);
 // @desc    Get all export shipments for employee
 // @access  Private (Employee)
 router.get("/employee/all", protect, getAllExportShipmentsForEmployee);
+
+// @route   GET /api/export-shipments/document-names
+// @desc    Get distinct document names for export shipments
+// @access  Private (Employee)
+router.get("/document-names", protect, getDistinctDocumentNames);
 
 // =====================================================
 // CLIENT/SHARED ROUTES (with :id parameter - must be after /employee/ routes)
@@ -80,6 +87,11 @@ router.patch("/employee/:id/notes", protect, addEmployeeNotes);
 // @desc    Request document from client
 // @access  Private (Employee)
 router.post("/employee/:id/request-document", protect, requestDocumentFromClient);
+
+// @route   DELETE /api/export-shipments/employee/:id/required-documents/:documentId
+// @desc    Reset uploaded document (so client can re-upload)
+// @access  Private (Employee)
+router.delete("/employee/:id/required-documents/:documentId", protect, resetUploadedDocument);
 
 // @route   POST /api/export-shipments/employee/:id/payment-cleared
 // @desc    Mark payment as cleared

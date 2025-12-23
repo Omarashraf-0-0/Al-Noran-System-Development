@@ -1,34 +1,96 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.effect.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
 
-<HBox alignment="CENTER" prefHeight="136.0" prefWidth="1033.0" spacing="75" style="-fx-padding: 12 0; -fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0, 0, 2);" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.TopBarController">
+<BorderPane prefHeight="80" 
+            style="-fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 20, 0, 0, 4);" 
+            xmlns="http://javafx.com/javafx/17.0.12" 
+            xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="noran.desktop.Controllers.TopBarController">
+    
+    <padding>
+        <Insets top="12" right="28" bottom="12" left="28"/>
+    </padding>
 
-    <ImageView fitHeight="112" fitWidth="200" preserveRatio="true">
-        <image><Image url="@images/Logo.png" /></image>
-    </ImageView>
+    <!-- RIGHT SIDE (appears on left due to RTL): Logo + Page Name with Menu Icon -->
+    <left>
+        <HBox alignment="CENTER_RIGHT" spacing="16">
+            <!-- Menu Toggle Button -->
+            <HBox fx:id="menuArea" alignment="CENTER" spacing="10" 
+                  style="-fx-background-color: #f8f9fa; -fx-padding: 10 16; -fx-background-radius: 25; -fx-cursor: hand;"
+                  onMouseClicked="#toggleSidebar">
+                <ImageView fx:id="menuIcon" fitHeight="22" fitWidth="22">
+                    <image>
+                        <Image url="@images/menu.png"/>
+                    </image>
+                </ImageView>
+                <Label fx:id="pageName" 
+                       style="-fx-font-family: 'Segoe UI'; -fx-font-size: 15px; -fx-font-weight: 600; -fx-text-fill: #1a1a2e;" 
+                       text="لوحة التحكم"/>
+            </HBox>
+            
+            <!-- Logo -->
+            <ImageView fitHeight="65" fitWidth="120" preserveRatio="true" smooth="true">
+                <image>
+                    <Image url="@images/Logo.png"/>
+                </image>
+            </ImageView>
+        </HBox>
+    </left>
 
-    <HBox alignment="CENTER_RIGHT" spacing="8" style="-fx-background-color: #ffffff; -fx-padding: 6 10; -fx-background-radius: 20;">
-        <ImageView fitHeight="18" fitWidth="18"><image><Image url="@images/menu.png" /></image></ImageView>
-        <Label fx:id="pageName" prefHeight="22.0" prefWidth="141.0" style="-fx-font-size: 15; -fx-text-fill: #111;" text="لوحة التحكم" />
-    </HBox>
+    <!-- CENTER: Search Bar -->
+    <center>
+        <HBox alignment="CENTER">
+            <HBox fx:id="searchContainer" alignment="CENTER" spacing="12"
+                  style="-fx-background-color: #f3f4f6; -fx-padding: 12 24; -fx-background-radius: 30; -fx-border-color: #e5e7eb; -fx-border-radius: 30; -fx-border-width: 1;">
+                <ImageView fitHeight="18" fitWidth="18" opacity="0.5">
+                    <image>
+                        <Image url="@images/search.png"/>
+                    </image>
+                </ImageView>
+                <TextField fx:id="searchField" prefWidth="320" promptText="ابحث عن العملاء، الفواتير، الشحنات..."
+                           style="-fx-background-color: transparent; -fx-font-family: 'Segoe UI'; -fx-font-size: 14px; -fx-prompt-text-fill: #9ca3af;"/>
+            </HBox>
+        </HBox>
+    </center>
 
-    <HBox fx:id="searchContainer" alignment="CENTER_RIGHT" maxHeight="40" spacing="8" style="-fx-background-color: #f3f4f6; -fx-padding: 6 10; -fx-background-radius: 20;">
+    <!-- LEFT SIDE (appears on right due to RTL): User Profile -->
+    <right>
+        <HBox fx:id="userProfileArea" alignment="CENTER_LEFT" spacing="14" 
+              style="-fx-cursor: hand; -fx-background-color: transparent; -fx-padding: 6 12; -fx-background-radius: 16;"
+              onMouseClicked="#showUserMenu">
+            
+            <!-- User Info -->
+            <VBox alignment="CENTER_RIGHT" spacing="2">
+                <Label fx:id="userNameLabel" 
+                       style="-fx-font-family: 'Segoe UI'; -fx-font-weight: 600; -fx-font-size: 14px; -fx-text-fill: #1a1a2e;" 
+                       text="المستخدم"/>
+                <Label fx:id="userEmailLabel" 
+                       style="-fx-font-family: 'Segoe UI'; -fx-text-fill: #6b7280; -fx-font-size: 12px;" 
+                       text="user@email.com"/>
+            </VBox>
+            
+            <!-- Avatar with circular styling -->
+            <StackPane>
+                <Circle radius="28" style="-fx-fill: linear-gradient(to bottom right, #a40000, #690000);"/>
+                <ImageView fx:id="avatarImage" fitHeight="52" fitWidth="52" preserveRatio="true">
+                    <image>
+                        <Image url="@images/AVATAR%201.png"/>
+                    </image>
+                    <clip>
+                        <Circle radius="26" centerX="26" centerY="26"/>
+                    </clip>
+                </ImageView>
+                <!-- Online indicator -->
+                <Circle radius="6" style="-fx-fill: #10b981; -fx-stroke: white; -fx-stroke-width: 2;"
+                        translateX="18" translateY="18"/>
+            </StackPane>
+        </HBox>
+    </right>
 
-        <TextField fx:id="searchField" prefWidth="380" promptText="ابحث برقم الشحنة أو اسم العميل" style="-fx-background-color: transparent;" />
-        <ImageView fitHeight="18" fitWidth="18"><image><Image url="@images/search.png" /></image></ImageView>
-
-    </HBox>
-
-    <HBox alignment="CENTER" spacing="10">
-        <VBox alignment="CENTER_LEFT" prefHeight="112.0" prefWidth="113.0" spacing="2">
-            <Label fx:id="userNameLabel" style="-fx-font-weight: 600; -fx-font-size: 14;" text="Amr" />
-            <Label fx:id="userIdLabel" style="-fx-text-fill: #9b9b9b; -fx-font-size: 11;" text="ID: 1234567" />
-        </VBox>
-        <ImageView fitHeight="86.0" fitWidth="115.0" preserveRatio="true">
-            <image><Image url="@images/AVATAR%201.png" /></image>
-        </ImageView>
-    </HBox>
-</HBox>
+</BorderPane>

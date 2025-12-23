@@ -87,6 +87,35 @@ const uploadSingleFile = async (req, res) => {
 			}
 		}
 
+		// 📬 Send notification to employee if client uploads shipment document
+		if (uploadType === "shipments" && req.body.shipmentId && additionalData.uploadedBy) {
+			try {
+				const Shipment = require("../models/shipment");
+				const shipment = await Shipment.findById(req.body.shipmentId);
+				
+				if (shipment && shipment.employee_id && shipment.user_id.toString() === additionalData.uploadedBy.toString()) {
+					await notificationService.createNotification({
+						userId: shipment.employee_id,
+						type: "document_uploaded",
+						title: "العميل قام برفع مستند",
+						message: `قام العميل برفع مستند جديد للشحنة ${shipment.acid}`,
+						data: {
+							uploadId: uploadRecord._id,
+							shipmentId: shipment._id,
+							shipmentAcid: shipment.acid,
+							documentType: req.body.documentType || "document",
+							actionUrl: `/employee/shipments/${shipment._id}`,
+						},
+						sendPush: true,
+						priority: "medium",
+					});
+					console.log(`📬 Employee notified about client document upload for shipment: ${shipment.acid}`);
+				}
+			} catch (notifError) {
+				console.error("Failed to send employee document notification:", notifError.message);
+			}
+		}
+
 		res.status(200).json({
 			message: "File uploaded successfully",
 			file: {
@@ -229,7 +258,8 @@ const getUploadById = async (req, res) => {
 		if (upload.s3Key) {
 			try {
 				const { getPresignedUrl } = require("../utils/s3Helpers");
-				const presignedUrl = await getPresignedUrl(upload.s3Key, 3600); // 1 hour expiry
+				const isDownload = req.query.download === "true";
+				const presignedUrl = await getPresignedUrl(upload.s3Key, 3600, { isDownload }); // 1 hour expiry
 
 				// Return upload data with presigned URL
 				return res.json({
@@ -549,6 +579,40 @@ const rejectDocument = async (req, res) => {
 	}
 };
 
+// ✅ Proxy download through backend to hide S3 URL
+const proxyDownload = async (req, res) => {
+	try {
+		const upload = await Upload.findById(req.params.id);
+
+		if (!upload) {
+			return res.status(404).json({ message: "Upload not found" });
+		}
+
+		if (!upload.s3Key) {
+			return res.status(400).json({ message: "File does not exist in storage" });
+		}
+
+		const { getFileStream } = require("../utils/s3Helpers");
+		
+		try {
+			const s3Stream = await getFileStream(upload.s3Key);
+			
+			// Set headers for download
+			res.setHeader('Content-disposition', `attachment; filename="${encodeURIComponent(upload.originalname || upload.filename)}"`);
+			res.setHeader('Content-type', upload.mimetype || 'application/octet-stream');
+			
+			// Pipe stream to response
+			s3Stream.pipe(res);
+		} catch (s3Error) {
+			console.error("Proxy download failed:", s3Error);
+			res.status(500).json({ message: "Failed to download file from storage" });
+		}
+	} catch (error) {
+		console.error("Proxy download error:", error);
+		res.status(500).json({ message: error.message });
+	}
+};
+
 module.exports = {
 	uploadSingleFile,
 	uploadMultipleFiles,
@@ -562,4 +626,5 @@ module.exports = {
 	getPendingDocuments,
 	approveDocument,
 	rejectDocument,
+	proxyDownload,
 };
