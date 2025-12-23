@@ -76,11 +76,11 @@ export default function AcidRequestsPage() {
 					acid: request.acidCode,
 					link: `/acidrequest/${request._id}`,
 					createdAt: request.createdAt,
-					date: new Date(request.requestDate || request.createdAt).toLocaleDateString("ar-EG", {
+					date: (request.requestDate || request.createdAt) ? new Date(request.requestDate || request.createdAt).toLocaleDateString("ar-EG", {
 						day: "numeric",
 						month: "long",
 						year: "numeric",
-					}),
+					}) : "غير محدد",
 					// Helpers for filtering
 					rawStatus: request.status,
 					rawCode: request.acidCode || "",

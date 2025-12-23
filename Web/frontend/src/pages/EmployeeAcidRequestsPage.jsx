@@ -10,7 +10,7 @@ import ShipmentDetailsModal from "../components/ShipmentDetailsModal";
 import RequestDetailsModal from "../components/RequestDetailsModal";
 import AcidConfirmationModal from "../components/AcidConfirmationModal";
 import { useTheme } from "../context/ThemeContext";
-import { ChevronLeft, ChevronRight, Lock, Unlock, FileText, Anchor, Truck, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Unlock, FileText, Anchor, Truck, Eye, LayoutGrid, List } from "lucide-react";
 
 const EmployeeAcidRequestsPage = () => {
 	const { isDarkMode } = useTheme();
@@ -35,6 +35,7 @@ const EmployeeAcidRequestsPage = () => {
 	const [sortOption, setSortOption] = useState("newest");
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [isSortOpen, setIsSortOpen] = useState(false);
+	const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
 
 	// Pagination
 	const [currentPage, setCurrentPage] = useState(1);
@@ -393,7 +394,10 @@ const EmployeeAcidRequestsPage = () => {
 						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#0d5c66]/20 rounded-full filter blur-[120px]"></div>
 					</>
 				) : (
-					<div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-cyan-50/50 to-transparent"></div>
+					<>
+						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[100px] animate-pulse opacity-60"></div>
+						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-cyan-100/40 rounded-full filter blur-[120px]"></div>
+					</>
 				)}
 			</div>
 			
@@ -432,28 +436,64 @@ const EmployeeAcidRequestsPage = () => {
 						userType={user?.type}
 						isDarkMode={isDarkMode}
 						// Custom filters can be injected here or handled via extra UI, for now standard filters
-					/>
+					>
+						<div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+							<button
+								onClick={() => setViewMode("grid")}
+								className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								title="عرض شبكة"
+							>
+								<LayoutGrid size={20} />
+							</button>
+							<button
+								onClick={() => setViewMode("list")}
+								className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								title="عرض قائمة"
+							>
+								<List size={20} />
+							</button>
+						</div>
+					</SearchFilterSort>
 
-					{/* Custom Filter Checkboxes (below main bar) */}
-					<div className="flex justify-center gap-6 mb-8 text-sm font-medium">
-						<label className={`flex items-center gap-2 cursor-pointer ${themeText}`}>
-							<input
-								type="checkbox"
-								checked={issuedByMe}
-								onChange={(e) => setIssuedByMe(e.target.checked)}
-								className="w-4 h-4 text-[#1ba3b6] rounded focus:ring-0"
-							/>
-							طلبات أصدرتها أنا
-						</label>
-						<label className={`flex items-center gap-2 cursor-pointer ${themeText}`}>
-							<input
-								type="checkbox"
-								checked={lockedByMe}
-								onChange={(e) => setLockedByMe(e.target.checked)}
-								className="w-4 h-4 text-[#1ba3b6] rounded focus:ring-0"
-							/>
-							<span>🔒 طلبات مقفولة بواسطتي</span>
-						</label>
+					{/* Quick Filter Chips */}
+					<div className="flex flex-wrap justify-center gap-3 mb-8">
+						<button
+							onClick={() => setIssuedByMe(!issuedByMe)}
+							className={`group flex items-center gap-2.5 px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 border-2 ${
+								issuedByMe 
+									? (isDarkMode 
+										? "bg-[#1ba3b6]/20 border-[#1ba3b6] text-[#1ba3b6] shadow-lg shadow-[#1ba3b6]/20" 
+										: "bg-[#1ba3b6] border-[#1ba3b6] text-white shadow-lg shadow-[#1ba3b6]/30")
+									: (isDarkMode 
+										? "bg-white/5 border-white/10 text-gray-400 hover:border-[#1ba3b6]/50 hover:text-[#1ba3b6]" 
+										: "bg-white border-gray-200 text-gray-500 hover:border-[#1ba3b6] hover:text-[#1ba3b6]")
+							}`}
+						>
+							<FileText size={16} className={issuedByMe ? "" : "opacity-50 group-hover:opacity-100"} />
+							<span>طلبات أصدرتها أنا</span>
+							{issuedByMe && (
+								<span className={`w-2 h-2 rounded-full ${isDarkMode ? "bg-[#1ba3b6]" : "bg-white"} animate-pulse`}></span>
+							)}
+						</button>
+						
+						<button
+							onClick={() => setLockedByMe(!lockedByMe)}
+							className={`group flex items-center gap-2.5 px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 border-2 ${
+								lockedByMe 
+									? (isDarkMode 
+										? "bg-purple-500/20 border-purple-500 text-purple-400 shadow-lg shadow-purple-500/20" 
+										: "bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-600/30")
+									: (isDarkMode 
+										? "bg-white/5 border-white/10 text-gray-400 hover:border-purple-500/50 hover:text-purple-400" 
+										: "bg-white border-gray-200 text-gray-500 hover:border-purple-600 hover:text-purple-600")
+							}`}
+						>
+							<Lock size={16} className={lockedByMe ? "" : "opacity-50 group-hover:opacity-100"} />
+							<span>طلبات مقفولة بواسطتي</span>
+							{lockedByMe && (
+								<span className={`w-2 h-2 rounded-full ${isDarkMode ? "bg-purple-400" : "bg-white"} animate-pulse`}></span>
+							)}
+						</button>
 					</div>
 
 					{/* Grid of Cards */}
@@ -471,7 +511,7 @@ const EmployeeAcidRequestsPage = () => {
 						</div>
 					) : (
 						<>
-							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+							<div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"}`}>
 								{currentItems.map((request) => {
 									const statusConfig = getStatusConfig(request.status);
 									const isLocked = request.isLocked;
@@ -480,7 +520,7 @@ const EmployeeAcidRequestsPage = () => {
 									return (
 										<div
 											key={request._id}
-											className={`group relative rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between
+											className={`group relative rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex ${viewMode === "grid" ? "flex-col justify-between" : "grid grid-cols-12 gap-4 items-center"}
 												${themeCardBg} ${isDarkMode ? "hover:border-[#1ba3b6]/30" : "hover:border-[#1ba3b6]/30"}
 											`}
 											onClick={() => {
@@ -489,18 +529,18 @@ const EmployeeAcidRequestsPage = () => {
 											}}
 										>
 											{/* Top: Status & Date */}
-											<div className="flex justify-between items-start mb-4">
-												<span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border}`}>
+											<div className={`${viewMode === "list" ? "col-span-3 flex flex-col gap-2" : "flex justify-between items-start mb-4"}`}>
+												<span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border} w-fit`}>
 													<span>{statusConfig.icon}</span>
 													{statusConfig.label}
 												</span>
-												<span className={`text-xs ${themeSubText}`}>
-													{new Date(request.createdAt).toLocaleDateString("ar-EG")}
+												<span className={`text-xs ${themeSubText} ${viewMode === "list" ? "" : ""}`}>
+													{request.createdAt ? new Date(request.createdAt).toLocaleDateString("ar-EG") : (request.requestDate ? new Date(request.requestDate).toLocaleDateString("ar-EG") : "غير محدد")}
 												</span>
 											</div>
 
 											{/* Middle: Info */}
-											<div className="mb-4">
+											<div className={`${viewMode === "list" ? "col-span-4" : "mb-4"}`}>
 												<h3 className={`text-lg font-bold mb-1 break-all ${request.acidCode ? "text-[#1ba3b6]" : themeText}`}>
 													{request.acidCode || "لم يصدر بعد"}
 												</h3>
@@ -509,14 +549,17 @@ const EmployeeAcidRequestsPage = () => {
 														المورد: {request.supplier.name} ({request.supplier.country})
 													</p>
 												)}
-												<div className="flex items-center gap-2 mb-2">
-													<div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDarkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-700"}`}>
-														{request.userId?.username?.charAt(0).toUpperCase()}
+												
+												{viewMode === "grid" && (
+													<div className="flex items-center gap-2 mb-2">
+														<div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDarkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-700"}`}>
+															{request.userId?.username?.charAt(0).toUpperCase()}
+														</div>
+														<span className={`text-sm ${themeText}`}>
+															{request.userId?.fullname || request.userId?.username}
+														</span>
 													</div>
-													<span className={`text-sm ${themeText}`}>
-														{request.userId?.fullname || request.userId?.username}
-													</span>
-												</div>
+												)}
 												
 												{/* Locked Status */}
 												{isLocked && (
@@ -526,10 +569,24 @@ const EmployeeAcidRequestsPage = () => {
 													</div>
 												)}
 											</div>
+											
+											{/* User Column (List View Only) */}
+											{viewMode === "list" && (
+												<div className="col-span-3 flex items-center gap-2">
+													<div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDarkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-700"}`}>
+														{request.userId?.username?.charAt(0).toUpperCase()}
+													</div>
+													<div className="flex flex-col">
+														<span className={`text-sm font-bold ${themeText}`}>
+															{request.userId?.fullname || request.userId?.username}
+														</span>
+													</div>
+												</div>
+											)}
 
 											{/* Bottom: Actions */}
 											<div 
-												className={`pt-4 border-t flex flex-wrap gap-2 justify-end ${isDarkMode ? "border-white/5" : "border-gray-100"}`}
+												className={`${viewMode === "list" ? "col-span-2 flex justify-end gap-2" : "pt-4 border-t flex flex-wrap gap-2 justify-end"} ${isDarkMode ? "border-white/5" : "border-gray-100"}`}
 												onClick={(e) => e.stopPropagation()} // Prevent card click when clicking buttons
 											>
 												{/* View Details */}

@@ -9,7 +9,8 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import { 
     Truck, Calendar, MapPin, FileText, User, 
-    MoreVertical, Edit, Eye, CheckCircle, XCircle 
+    MoreVertical, Edit, Eye, CheckCircle, XCircle,
+    LayoutGrid, List
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 
@@ -49,8 +50,10 @@ export default function EmployeeExportShipmentsPage() {
     const [filteredShipments, setFilteredShipments] = useState([]);
 
     // Filters
+
 	const [statusFilter, setStatusFilter] = useState("all");
 	const [sortOption, setSortOption] = useState("newest");
+    const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
 
 	// Status Modal State
 	const [statusModal, setStatusModal] = useState(false);
@@ -235,8 +238,26 @@ export default function EmployeeExportShipmentsPage() {
                     onSortChange={setSortOption}
                     onSortApply={() => setIsSortOpen(false)}
                     userType="employee"
+
                     isDarkMode={isDarkMode}
-                />
+                >
+                    <div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+                        <button
+                            onClick={() => setViewMode("grid")}
+                            className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+                            title="عرض شبكة"
+                        >
+                            <LayoutGrid size={20} />
+                        </button>
+                        <button
+                            onClick={() => setViewMode("list")}
+                            className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+                            title="عرض قائمة"
+                        >
+                            <List size={20} />
+                        </button>
+                    </div>
+                </SearchFilterSort>
 
                 {loading ? (
                     <LoadingSpinner />
@@ -251,25 +272,25 @@ export default function EmployeeExportShipmentsPage() {
                         <p className={theme.subText}>لم يتم العثور على شحنات تطابق بحثك</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+                    <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3" : "grid-cols-1"}`}>
                         {filteredShipments.map((shipment) => {
                             const config = STATUS_CONFIG[shipment.status] || STATUS_CONFIG.documents_verification;
                             return (
                                 <div 
                                     key={shipment.id}
                                     onClick={() => navigate(`/employee/export-shipment/${shipment.id}`)}
-                                    className={`group relative rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer flex flex-col justify-between ${theme.cardBg} hover:border-[#1ba3b6]/30`}
+                                    className={`group relative rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer flex ${viewMode === "grid" ? "flex-col justify-between" : "grid grid-cols-12 gap-4 items-center"} ${theme.cardBg} hover:border-[#1ba3b6]/30`}
                                 >
                                     {/* Card Header */}
-                                    <div className="flex justify-between items-start mb-4">
-                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${config.bg} ${config.color} ${config.border}`}>
+                                    <div className={`${viewMode === "list" ? "col-span-3 flex flex-col gap-2" : "flex justify-between items-start mb-4"}`}>
+                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border w-fit ${config.bg} ${config.color} ${config.border}`}>
                                             {config.icon} {config.label}
                                         </span>
-                                        <span className={`text-xs ${theme.subText}`}>{new Date(shipment.createdAt).toLocaleDateString('ar-EG')}</span>
+                                        <span className={`text-xs ${theme.subText} ${viewMode === "list" ? "" : "mt-1"}`}>{new Date(shipment.createdAt).toLocaleDateString('ar-EG')}</span>
                                     </div>
 
                                     {/* Card Content */}
-                                    <div className="space-y-4 mb-6">
+                                    <div className={`${viewMode === "list" ? "col-span-4" : "space-y-4 mb-6"}`}>
                                         <div>
                                             <h3 className={`text-lg font-bold mb-1 ${theme.text} group-hover:text-[#1ba3b6] transition-colors`}>
                                                 {shipment.shipmentNo}
@@ -279,27 +300,36 @@ export default function EmployeeExportShipmentsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isDarkMode ? 'bg-white/10' : 'bg-gray-200 text-gray-700'}`}>
-												{shipment.username?.charAt(0).toUpperCase()}
-											</div>
-                                            <div className="overflow-hidden">
-                                                <p className={`text-sm font-bold truncate ${theme.text}`}>{shipment.clientName}</p>
-                                                <p className={`text-xs truncate ${theme.subText}`}>{shipment.destination}</p>
+                                        {viewMode === "grid" && (
+                                            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 w-fit">
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isDarkMode ? 'bg-white/10' : 'bg-gray-200 text-gray-700'}`}>
+                                                    {shipment.username?.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="overflow-hidden">
+                                                    <p className={`text-sm font-bold truncate ${theme.text}`}>{shipment.clientName}</p>
+                                                    <p className={`text-xs truncate ${theme.subText}`}>{shipment.destination}</p>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
 
+                                    {/* User Column (List View Only) */}
+                                    {viewMode === "list" && (
+                                        <div className="col-span-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isDarkMode ? 'bg-white/10' : 'bg-gray-200 text-gray-700'}`}>
+                                                    {shipment.username?.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="overflow-hidden">
+                                                    <p className={`text-sm font-bold truncate ${theme.text}`}>{shipment.clientName}</p>
+                                                    <p className={`text-xs truncate ${theme.subText}`}>{shipment.destination}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Card Footer actions */}
-                                    <div className={`pt-4 border-t flex items-center justify-end gap-2 ${isDarkMode ? 'border-white/10' : 'border-gray-100'}`}>
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); navigate(`/employee/export-shipment/${shipment.id}`) }}
-                                            className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
-											title="عرض التفاصيل"
-                                        >
-                                            <Eye size={18} />
-                                        </button>
-                                        
+                                    <div className={`${viewMode === "list" ? "col-span-2 flex justify-end gap-2" : "pt-4 border-t flex items-center justify-end gap-2"} ${isDarkMode ? 'border-white/10' : 'border-gray-100'}`}>
                                         {!["completed", "cancelled"].includes(shipment.status) && (
                                             <button 
                                                 onClick={(e) => openStatusModal(shipment, e)}
@@ -308,6 +338,14 @@ export default function EmployeeExportShipmentsPage() {
                                                 <Edit size={16} /> تحديث الحالة
                                             </button>
                                         )}
+                                        
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); navigate(`/employee/export-shipment/${shipment.id}`) }}
+                                            className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
+											title="عرض التفاصيل"
+                                        >
+                                            <Eye size={18} />
+                                        </button>
                                     </div>
                                 </div>
                             );

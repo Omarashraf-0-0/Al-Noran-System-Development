@@ -7,7 +7,8 @@ const ShipmentsTable = ({
 	maxItems = 5,
 	linkPrefix = "/employee-shipment",
 	userType = "client",
-	isDarkMode = true
+	isDarkMode = true,
+	viewMode = "grid"
 }) => {
 	const navigate = useNavigate();
 
@@ -36,7 +37,7 @@ const ShipmentsTable = ({
 		: shipments;
 
 	return (
-		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+		<div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
 			{displayedShipments.map((shipment) => (
 				<div
 					key={shipment.id}
@@ -48,12 +49,13 @@ const ShipmentsTable = ({
 								? "bg-white/5 border-white/5 hover:border-white/20 hover:shadow-lg hover:shadow-[#1ba3b6]/5 backdrop-blur-sm"
 								: "bg-white border-gray-100 hover:border-[#1ba3b6]/30 hover:shadow-lg hover:shadow-[#1ba3b6]/10"
 						}
+						${viewMode === "list" ? "grid grid-cols-12 gap-4 items-center p-4" : ""}
 					`}
 				>
 					{/* Top Row: Status & Date */}
-					<div className="flex justify-between items-start mb-4">
+					<div className={`${viewMode === "list" ? "col-span-3 flex flex-col gap-2" : "flex justify-between items-start mb-4"}`}>
 						<span
-							className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border
+							className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border w-fit
 								${userType === 'client' 
 									? "bg-white border-gray-200 text-gray-700" 
 									: "text-white"}
@@ -70,13 +72,15 @@ const ShipmentsTable = ({
 							{shipment.status}
 						</span>
 
-						<span className={`text-xs flex items-center gap-1 ${userType === 'client' || !isDarkMode ? "text-gray-400" : "text-white/40"}`}>
-							📅 {shipment.date}
-						</span>
+						{viewMode === "grid" && (
+							<span className={`text-xs flex items-center gap-1 mt-1 ${userType === 'client' || !isDarkMode ? "text-gray-400" : "text-white/40"}`}>
+								📅 {shipment.date}
+							</span>
+						)}
 					</div>
 
 					{/* Main Info */}
-					<div className="mb-6">
+					<div className={`${viewMode === "list" ? "col-span-4" : "mb-6"}`}>
 						<h3 className={`text-xl font-bold mb-2 break-all transition-colors ${
 							userType === 'client' 
 								? "text-gray-800 group-hover:text-red-700" 
@@ -86,27 +90,62 @@ const ShipmentsTable = ({
 						}`}>
 							{shipment.shipmentNo}
 						</h3>
-						<div className={`flex flex-col gap-2 text-sm ${userType === 'client' || !isDarkMode ? "text-gray-500" : "text-white/60"}`}>
-							<div className="flex items-center gap-2">
-								👤 <span>{shipment.clientName}</span>
+						
+						{viewMode === "list" && (
+							<div className={`text-xs flex items-center gap-1 ${userType === 'client' || !isDarkMode ? "text-gray-400" : "text-white/40"}`}>
+								📅 {shipment.date}
 							</div>
-						</div>
+						)}
+
+						{/* In List View show Client Name here if needed, or keep it consistent */}
+						{viewMode === "grid" && (
+							<div className={`flex flex-col gap-2 text-sm ${userType === 'client' || !isDarkMode ? "text-gray-500" : "text-white/60"}`}>
+								<div className="flex items-center gap-2">
+									👤 <span>{shipment.clientName}</span>
+								</div>
+							</div>
+						)}
 					</div>
 
-					{/* Action Footer */}
-					<div className={`pt-4 border-t flex justify-between items-center ${userType === 'client' || !isDarkMode ? "border-gray-50" : "border-white/5"}`}>
-						<div className="flex flex-col">
-							<span className={`text-xs ${userType === 'client' || !isDarkMode ? "text-gray-500" : "text-white/40"}`}>
-								رقم ACID
-							</span>
-							<span className={`font-mono text-sm ${
-								userType === 'client' || !isDarkMode 
-									? (shipment.acid ? "text-gray-700" : "text-gray-400 italic") 
-									: (shipment.acid ? "text-white/80" : "text-white/30 italic")
-							}`}>
-								{shipment.acid || "—"}
-							</span>
+					{/* Client Info Column (List View Only) */}
+					{viewMode === "list" && (
+						<div className="col-span-3">
+							<div className={`flex flex-col gap-1 text-sm ${userType === 'client' || !isDarkMode ? "text-gray-600" : "text-white/80"}`}>
+								<div className="flex items-center gap-2 font-medium">
+									👤 <span>{shipment.clientName}</span>
+								</div>
+								<div className="flex flex-col">
+									<span className={`text-xs ${userType === 'client' || !isDarkMode ? "text-gray-500" : "text-white/40"}`}>
+										رقم ACID
+									</span>
+									<span className={`font-mono text-xs ${
+										userType === 'client' || !isDarkMode 
+											? (shipment.acid ? "text-gray-700" : "text-gray-400 italic") 
+											: (shipment.acid ? "text-white/80" : "text-white/30 italic")
+									}`}>
+										{shipment.acid || "—"}
+									</span>
+								</div>
+							</div>
 						</div>
+					)}
+
+					{/* Action Footer */}
+					<div className={`${viewMode === "list" ? "col-span-2 flex justify-end" : "pt-4 border-t flex justify-between items-center"} ${userType === 'client' || !isDarkMode ? "border-gray-50" : "border-white/5"}`}>
+						{viewMode === "grid" && (
+							<div className="flex flex-col">
+								<span className={`text-xs ${userType === 'client' || !isDarkMode ? "text-gray-500" : "text-white/40"}`}>
+									رقم ACID
+								</span>
+								<span className={`font-mono text-sm ${
+									userType === 'client' || !isDarkMode 
+										? (shipment.acid ? "text-gray-700" : "text-gray-400 italic") 
+										: (shipment.acid ? "text-white/80" : "text-white/30 italic")
+								}`}>
+									{shipment.acid || "—"}
+								</span>
+							</div>
+						)}
 						
 						<button 
 							className={`px-4 py-2 rounded-lg text-sm font-bold transition-all

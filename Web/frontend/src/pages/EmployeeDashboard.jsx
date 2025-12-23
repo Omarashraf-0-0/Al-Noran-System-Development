@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { LayoutGrid, List } from "lucide-react";
 import Header from "../components/Header";
 import WelcomeBanner from "./WelcomeBanner";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -19,6 +20,11 @@ export default function ShipmentsList() {
 	const [error, setError] = useState(null);
 	const [selectedStatus, setSelectedStatus] = useState("الكل");
 	const [sortOption, setSortOption] = useState("newest");
+	const [notificationCount, setNotificationCount] = useState(0);
+	const [notifications, setNotifications] = useState([]);
+	const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
+	const notificationRef = useRef(null);
+	const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
 
 	// TODO: RBAC - Get user permissions from context/store
 	// Example: const { user, hasPermission } = useAuth();
@@ -243,8 +249,26 @@ export default function ShipmentsList() {
 						onSortChange={setSortOption}
 						onSortApply={handleSortApply}
 						userType={user?.type}
+
 						isDarkMode={isDarkMode}
-					/>
+					>
+						<div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+							<button
+								onClick={() => setViewMode("grid")}
+								className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								title="عرض شبكة"
+							>
+								<LayoutGrid size={20} />
+							</button>
+							<button
+								onClick={() => setViewMode("list")}
+								className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								title="عرض قائمة"
+							>
+								<List size={20} />
+							</button>
+						</div>
+					</SearchFilterSort>
 
 					{/* 📦 Shipments Grid */}
 					{loading ? (
@@ -271,6 +295,7 @@ export default function ShipmentsList() {
 								linkPrefix="/employee-shipment"
 								userType={user?.type}
 								isDarkMode={isDarkMode}
+								viewMode={viewMode}
 							/>
 
 							{/* View All Button */}

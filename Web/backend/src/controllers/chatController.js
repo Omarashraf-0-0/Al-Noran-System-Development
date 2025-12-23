@@ -565,12 +565,12 @@ const getMyCustomers = async (req, res) => {
 		// Find all ACID shipments assigned to this employee
 		const shipments = await Shipment.find({ employee_id: userId })
 			.populate("user_id", "fullname username email")
-			.select("acid status country user_id");
+			.select("acid status country user_id createdAt");
 
 		// Find all UCR requests assigned to this employee
 		const ucrRequests = await UCRRequest.find({ reviewingBy: userId })
 			.populate("userId", "fullname username email")
-			.select("requestNumber ucrNumber status destinationCountry userId");
+			.select("requestNumber ucrNumber status destinationCountry userId createdAt");
 
 		// Extract unique customers and combine their shipments and UCRs
 		const customersMap = new Map();
@@ -587,6 +587,7 @@ const getMyCustomers = async (req, res) => {
 						email: shipment.user_id.email,
 						shipments: [],
 						ucrRequests: [],
+						createdAt: shipment.createdAt, // Use first found date as customer association date
 					});
 				}
 				customersMap.get(clientId).shipments.push({
@@ -595,6 +596,7 @@ const getMyCustomers = async (req, res) => {
 					status: shipment.status,
 					country: shipment.country,
 					type: 'acid',
+					createdAt: shipment.createdAt,
 				});
 			}
 		});
@@ -611,6 +613,7 @@ const getMyCustomers = async (req, res) => {
 						email: ucr.userId.email,
 						shipments: [],
 						ucrRequests: [],
+						createdAt: ucr.createdAt,
 					});
 				}
 				customersMap.get(clientId).ucrRequests.push({
@@ -620,6 +623,7 @@ const getMyCustomers = async (req, res) => {
 					status: ucr.status,
 					country: ucr.destinationCountry,
 					type: 'ucr',
+					createdAt: ucr.createdAt,
 				});
 			}
 		});

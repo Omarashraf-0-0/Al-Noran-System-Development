@@ -5,8 +5,10 @@ import toast from "react-hot-toast";
 import Header from "../components/Header";
 import { useTheme } from "../context/ThemeContext";
 
+
 const EmployeeProfilePage = () => {
 	const navigate = useNavigate();
+	const [isVisible, setIsVisible] = useState(false);
 	const [user, setUser] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [isEditing, setIsEditing] = useState(false);
@@ -44,11 +46,12 @@ const EmployeeProfilePage = () => {
 		email: "",
 	});
 	const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+	
 
-	// const handleDeletePhoto = () => {
-	// 	if (!profilePhoto) return;
-	// 	setShowDeleteConfirmModal(true);
-	// };
+	const handleDeletePhoto = () => {
+		if (!profilePhoto) return;
+		setShowDeleteConfirmModal(true);
+	};
 
 	// Use Global Theme Context
 	const { isDarkMode, toggleTheme } = useTheme();

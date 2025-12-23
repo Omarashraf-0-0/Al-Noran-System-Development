@@ -8,7 +8,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorMessage from "../components/ErrorMessage";
 import { useTheme } from "../context/ThemeContext";
 
-import { ChevronLeft, ChevronRight, Lock, Unlock, CheckCircle, XCircle, AlertTriangle, FileText, Anchor, Truck, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Unlock, CheckCircle, XCircle, AlertTriangle, FileText, Anchor, Truck, Eye, LayoutGrid, List } from "lucide-react";
 
 // Status configurations
 const STATUS_CONFIG = {
@@ -35,7 +35,9 @@ const EmployeeUCRRequestsPage = () => {
 	const [statusFilter, setStatusFilter] = useState("all");
 	const [sortOption, setSortOption] = useState("newest");
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
+
 	const [isSortOpen, setIsSortOpen] = useState(false);
+	const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
 
 	// Pagination
 	const [currentPage, setCurrentPage] = useState(1);
@@ -106,6 +108,25 @@ const EmployeeUCRRequestsPage = () => {
 		} catch (error) {
 			console.error("Error locking request:", error);
 			toast.error(error.response?.data?.message || "فشل قفل الطلب");
+		}
+	};
+
+	const handleUnlock = async (requestId, e) => {
+		e?.stopPropagation();
+		try {
+			const response = await axios.post(
+				`${import.meta.env.VITE_API_URL}/api/ucr/employee/${requestId}/unlock`,
+				{},
+				{ headers: { Authorization: `Bearer ${token}` } }
+			);
+
+			if (response.data.success) {
+				toast.success("تم فتح الطلب");
+				fetchRequests();
+			}
+		} catch (error) {
+			console.error("Error unlocking request:", error);
+			toast.error(error.response?.data?.message || "فشل فتح الطلب");
 		}
 	};
 
@@ -294,7 +315,24 @@ const EmployeeUCRRequestsPage = () => {
 						onSortApply={() => setIsSortOpen(false)}
 						userType={user?.type}
 						isDarkMode={isDarkMode}
-					/>
+					>
+						<div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+							<button
+								onClick={() => setViewMode("grid")}
+								className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								title="عرض شبكة"
+							>
+								<LayoutGrid size={20} />
+							</button>
+							<button
+								onClick={() => setViewMode("list")}
+								className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								title="عرض قائمة"
+							>
+								<List size={20} />
+							</button>
+						</div>
+					</SearchFilterSort>
 
 					{/* Grid of Cards */}
 					{loading ? (
@@ -311,7 +349,7 @@ const EmployeeUCRRequestsPage = () => {
 						</div>
 					) : (
 						<>
-							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+							<div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"}`}>
 								{currentItems.map((request) => {
 									const statusConfig = STATUS_CONFIG[request.status] || STATUS_CONFIG.pending;
 									const isLocked = request.isLocked;
@@ -320,7 +358,7 @@ const EmployeeUCRRequestsPage = () => {
 									return (
 										<div
 											key={request._id}
-											className={`group relative rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between
+											className={`group relative rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex ${viewMode === "grid" ? "flex-col justify-between" : "grid grid-cols-12 gap-4 items-center"}
 												${themeCardBg} ${isDarkMode ? "hover:border-[#1ba3b6]/30" : "hover:border-[#1ba3b6]/30"}
 											`}
 											onClick={() => {
@@ -328,45 +366,66 @@ const EmployeeUCRRequestsPage = () => {
                       }}
 										>
 											{/* Top: Status & Date */}
-											<div className="flex justify-between items-start mb-4">
-												<span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border}`}>
+											<div className={`${viewMode === "list" ? "col-span-2 flex flex-col gap-1" : "flex justify-between items-start mb-4"}`}>
+												<span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border} w-fit`}>
 													<span>{statusConfig.icon}</span>
 													{statusConfig.label}
 												</span>
-												<span className={`text-xs ${themeSubText}`}>
+												<span className={`text-xs ${themeSubText} ${viewMode === "list" ? "" : ""}`}>
 													{new Date(request.createdAt).toLocaleDateString("ar-EG")}
 												</span>
 											</div>
 
 											{/* Middle: Info */}
-											<div className="mb-4">
+											<div className={`${viewMode === "list" ? "col-span-3" : "mb-4"}`}>
 												<h3 className={`text-lg font-bold mb-1 break-all ${request.ucrNumber ? "text-[#1ba3b6]" : themeText}`}>
-													{request.ucrNumber || `#${request._id.slice(-6)}`}
+													{request.ucrNumber || "لم يصدر بعد"}
 												</h3>
-												<div className={`flex items-center gap-1 text-sm mb-2 ${themeSubText}`}>
-													🌍 <span>{request.destinationCountry || "غير محدد"}</span>
-												</div>
-												<div className="flex items-center gap-2 mb-2">
-													<div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDarkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-700"}`}>
-														{request.userId?.username?.charAt(0).toUpperCase()}
+												{request.supplier && (
+													<p className={`text-sm mb-2 ${themeSubText}`}>
+														المورد: {request.supplier.name} ({request.supplier.country})
+													</p>
+												)}
+												
+												{viewMode === "grid" && (
+													<div className="flex items-center gap-2 mb-2">
+														<div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDarkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-700"}`}>
+															{request.userId?.username?.charAt(0).toUpperCase()}
+														</div>
+														<span className={`text-sm ${themeText}`}>
+															{request.userId?.fullname || request.userId?.username}
+														</span>
 													</div>
-													<span className={`text-sm ${themeText}`}>
-														{request.userId?.fullname || request.userId?.username}
-													</span>
-												</div>
+												)}
 												
 												{/* Locked Status */}
 												{isLocked && (
 													<div className="mt-2 text-xs flex items-center gap-1 text-red-500 font-medium bg-red-500/10 px-2 py-1 rounded-lg w-fit">
 														<Lock size={12} />
-														<span>مقفول للمراجعة</span>
+														<span>مقفول بواسطة: {request.reviewingBy?.username || "مستخدم"}</span>
 													</div>
 												)}
 											</div>
+											
+											{/* User Column (List View Only) */}
+											{viewMode === "list" && (
+												<div className="col-span-2 flex items-center gap-2 overflow-hidden">
+													<div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDarkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-700"}`}>
+														{request.userId?.username?.charAt(0).toUpperCase()}
+													</div>
+													<div className="flex flex-col">
+														<span className={`text-sm font-bold ${themeText}`}>
+															{request.userId?.fullname || request.userId?.username}
+														</span>
+													</div>
+												</div>
+											)}
 
 											{/* Bottom: Actions */}
-											<div className={`pt-4 border-t flex flex-wrap gap-2 justify-end ${isDarkMode ? "border-white/5" : "border-gray-100"}`}>
-												
+											<div 
+												className={`${viewMode === "list" ? "col-span-5 flex justify-end gap-1 flex-wrap" : "pt-4 border-t flex flex-wrap gap-2 justify-end"} ${isDarkMode ? "border-white/5" : "border-gray-100"}`}
+												onClick={(e) => e.stopPropagation()} // Prevent card click when clicking buttons
+											>
 												{/* View Details */}
 												<button
 													onClick={(e) => {
@@ -387,29 +446,41 @@ const EmployeeUCRRequestsPage = () => {
 														>
 															<Lock size={14} /> قفل
 														</button>
-													) : null
+													) : (
+														!isLockedByOthers && (
+															<button
+																onClick={(e) => handleUnlock(request._id, e)}
+																className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 bg-gray-200 text-gray-700 hover:bg-gray-300"
+															>
+																<Unlock size={14} /> فتح
+															</button>
+														)
+													)
 												)}
 
-												{/* Actions: Approve / Revise / Reject */}
+												{/* Actions: Approve / Revise / Reject with LABELS */}
 												{((request.status === "under_review" || (request.status === "pending" && isLocked)) && !isLockedByOthers) && (
 													<>
 														<button
 															onClick={(e) => openActionModal(request, "approve", e)}
 															className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 bg-green-100 text-green-700 hover:bg-green-200"
+															title="قبول"
 														>
-															<CheckCircle size={14} />
+															<CheckCircle size={14} /> قبول
 														</button>
 														<button
 															onClick={(e) => openActionModal(request, "revision", e)}
 															className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 bg-orange-100 text-orange-700 hover:bg-orange-200"
+															title="طلب تعديل"
 														>
-															<AlertTriangle size={14} />
+															<AlertTriangle size={14} /> تعديل
 														</button>
 														<button
 															onClick={(e) => openActionModal(request, "reject", e)}
 															className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 bg-red-100 text-red-700 hover:bg-red-200"
+															title="رفض"
 														>
-															<XCircle size={14} />
+															<XCircle size={14} /> رفض
 														</button>
 													</>
 												)}

@@ -35,11 +35,8 @@ import ClientProfilePage from "./pages/ClientUserProfilePage";
 import EmployeeProfilePage from "./pages/EmployeeProfilePage";
 import AdminProfilePage from "./pages/AdminProfilePage";
 import MyProfileClient from "./pages/MyProfileClient";
-import MyProfileClient from "./pages/MyProfileClient";
 import PaymentsManagementPage from "./pages/PaymentsManagementPage";
 import ClientPaymentsPage from "./pages/ClientPaymentsPage";
-import NotificationPage from "./pages/NotificationPage";
-import AllNotificationsPage from "./pages/AllNotificationsPage";
 import NotificationPage from "./pages/NotificationPage";
 import AllNotificationsPage from "./pages/AllNotificationsPage";
 
@@ -55,6 +52,11 @@ import ExportShipmentHistory from "./pages/ExportShipmentHistory";
 import EmployeeShipmentDetailsPage from "./pages/EmployeeShipmentDetailsPage";
 import EmployeeExportShipmentDetailsPage from "./pages/EmployeeExportShipmentDetailsPage";
 
+
+
+import ThemeContext from "./context/ThemeContext";
+import { useContext } from "react";
+import { ThemeProvider } from "./context/ThemeContext";
 
 // Admin Route Protection Component
 const AdminRoute = ({ children }) => {

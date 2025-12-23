@@ -31,8 +31,9 @@ import { useTheme } from "../context/ThemeContext";
 import NotificationBell from "./NotificationBell";
 
 
+
+
 const Header = () => {
-	const { isDarkMode, toggleTheme } = useTheme();
 	const { isDarkMode, toggleTheme } = useTheme();
 	const [user, setUser] = useState(null);
 	const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -42,11 +43,30 @@ const Header = () => {
 	const [openDropdown, setOpenDropdown] = useState(null);
 	const [isScrolled, setIsScrolled] = useState(false);
 	const [profilePhoto, setProfilePhoto] = useState(null);
-
+	const [notificationCount, setNotificationCount] = useState(0);	
+	const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
+	const checkNotifications = () => {
+		setIsNotificationMenuOpen(true);
+		setShowNotifications(true);
+	};
+	const closeNotifications = () => {
+		setIsNotificationMenuOpen(false);
+		setShowNotifications(false);
+	};
+	const markAllAsRead = () => {
+		setNotifications((prevNotifications) =>
+			prevNotifications.map((notification) => ({
+				...notification,
+				isRead: true,
+			}))
+		);
+		setNotificationCount(0);
+	};
 	const navigate = useNavigate();
 	const location = useLocation();
 	const profileMenuRef = useRef(null);
 	const dropdownRef = useRef(null);
+	const notificationRef = useRef(null);
 
 	// Load user from localStorage
 	useEffect(() => {
@@ -416,7 +436,7 @@ const Header = () => {
 			<div className="w-full px-4 md:px-6">
 				<div className="flex items-center justify-between h-16 w-full relative">
 					
-				<div className="flex items-center justify-between h-16 w-full relative">
+
 					
 					{/* ====================== */}
 					{/* 1. Right Section (User Info + Notifications + Mobile Toggle) */}
@@ -426,9 +446,7 @@ const Header = () => {
 						<button
 							onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
 							className="md:hidden p-1 rounded-md text-white hover:bg-white/10 focus:outline-none transition-colors"
-							className="md:hidden p-1 rounded-md text-white hover:bg-white/10 focus:outline-none transition-colors"
 						>
-							<img src={dehaze} alt="Menu" className="h-7 w-7 object-contain filter invert brightness-0" />
 							<img src={dehaze} alt="Menu" className="h-7 w-7 object-contain filter invert brightness-0" />
 						</button>
 
@@ -548,8 +566,6 @@ const Header = () => {
 													)
 														? "bg-white/20 text-white font-bold shadow-sm"
 														: "text-white/90 hover:bg-white/10 hover:text-white"
-														? "bg-white/20 text-white font-bold shadow-sm"
-														: "text-white/90 hover:bg-white/10 hover:text-white"
 												}`}
 											>
 												<item.icon className={`w-4 h-4 transition-colors ${item.dropdownItems?.some(sub => isActivePath(sub.path)) ? "text-white" : "text-gray-400 group-hover:text-[#690000]"}`} />
@@ -565,7 +581,6 @@ const Header = () => {
 															key={subIndex}
 															to={subItem.path}
 															onClick={() => setOpenDropdown(null)}
-															className={`group flex items-center px-4 py-3 text-sm transition-all duration-200 ${
 															className={`group flex items-center px-4 py-3 text-sm transition-all duration-200 ${
 																isActivePath(subItem.path)
 																	? `${accent.bg} ${accent.text} font-bold border-r-4 ${accent.border}`
@@ -588,8 +603,6 @@ const Header = () => {
 												isActivePath(item.path)
 													? "bg-white/20 text-white font-bold shadow-sm"
 													: "text-white/90 hover:bg-white/10 hover:text-white"
-													? "bg-white/20 text-white font-bold shadow-sm"
-													: "text-white/90 hover:bg-white/10 hover:text-white"
 											}`}
 										>
 											<item.icon className={`w-4 h-4 transition-colors ${isActivePath(item.path) ? "text-white" : "text-gray-400 group-hover:text-[#690000]"}`} />
@@ -598,212 +611,9 @@ const Header = () => {
 									)
 								)}
 						</div>
-<<<<<<< Updated upstream
 					</nav>
-=======
-
-						{/* ====================== */}
-						{/* Left Section (Notifications & Profile) */}
-						{/* ====================== */}
-						<div className="flex items-center gap-2 md:gap-3">
-							{user ? (
-								<>
-									{/* Notifications Bell */}
-									<div className="relative" ref={notificationRef}>
-										<button
-											onClick={() => setShowNotifications(!showNotifications)}
-											className={`
-												relative p-2.5 rounded-xl transition-all duration-300
-												${showNotifications 
-													? "bg-[#690000]/10 text-[#690000]" 
-													: "text-gray-500 hover:bg-gray-100 hover:text-[#690000]"}
-											`}
-										>
-											<Bell className="w-5 h-5" />
-											{notifications.length > 0 && (
-												<span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full animate-pulse"></span>
-											)}
-										</button>
-
-										{/* Glass Notifications Dropdown */}
-										{showNotifications && (
-											<div className="absolute left-0 mt-2 w-80 sm:w-96 bg-white/95 backdrop-blur-2xl rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-gray-100/50 overflow-hidden z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
-												<div className="p-4 border-b border-gray-100/50 flex justify-between items-center bg-gradient-to-r from-gray-50/50 to-white">
-													<div className="flex items-center gap-2">
-														<h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm">
-															<Bell className="w-4 h-4 text-[#690000]" />
-															الإشعارات
-														</h3>
-														<span className="text-xs bg-[#690000] text-white px-2 py-0.5 rounded-full font-bold">{notifications.length}</span>
-													</div>
-													{notifications.length > 0 && (
-														<button
-															onClick={() => {
-																setNotifications([]);
-																// TODO: Call API to mark all as read
-															}}
-															className="text-[10px] font-bold text-gray-400 hover:text-[#690000] transition-colors"
-														>
-															تحديد الكل كمقروء
-														</button>
-													)}
-												</div>
-												<div className="max-h-[50vh] overflow-y-auto">
-													{notifications.length === 0 ? (
-														<div className="p-8 text-center text-gray-400 flex flex-col items-center">
-															<Bell className="w-10 h-10 opacity-20 mb-2" />
-															<p className="text-sm font-medium">لا توجد إشعارات جديدة</p>
-														</div>
-													) : (
-														notifications.map((notif, index) => (
-															<div key={index} className="p-4 border-b border-gray-50 hover:bg-[#690000]/5 transition-colors cursor-pointer group">
-																<div className="flex gap-3">
-																	<div className="w-10 h-10 rounded-xl bg-[#690000]/10 flex items-center justify-center text-[#690000] flex-shrink-0 group-hover:bg-[#690000] group-hover:text-white transition-all">
-																		<FileText className="w-5 h-5" />
-																	</div>
-																	<div className="flex-1 min-w-0">
-																		<p className="text-sm text-gray-800 font-bold leading-relaxed truncate">
-																			{notif.title}
-																		</p>
-																		<span className="text-xs text-gray-400 mt-1 block font-medium">
-																			{notif.date}
-																		</span>
-																	</div>
-																</div>
-															</div>
-														))
-													)}
-												</div>
-												{/* Footer Actions */}
-												{notifications.length > 0 && (
-													<div className="p-2 border-t border-gray-100 bg-gray-50/50">
-														<Link
-															to="/notifications"
-															onClick={() => setShowNotifications(false)}
-															className="block w-full text-center text-xs font-bold text-[#690000] hover:bg-[#690000]/10 px-3 py-2 rounded-lg transition-all"
-														>
-															عرض جميع الإشعارات
-														</Link>
-													</div>
-												)}
-											</div>
-										)}
-									</div>
-
-									{/* User Profile */}
-									<div className="relative" ref={profileMenuRef}>
-										<button
-											onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-											className={`
-												flex items-center gap-2 p-1.5 pr-3 rounded-xl border transition-all duration-300
-												${isProfileMenuOpen 
-													? "border-[#690000]/30 bg-[#690000]/5" 
-													: "border-transparent hover:bg-gray-100"}
-											`}
-										>
-											{/* Avatar with Frame */}
-											<div className="relative p-0.5 rounded-full border-2 border-[#690000] bg-white shadow-sm ring-1 ring-black/5">
-												<div className={`absolute inset-0 rounded-full bg-[#690000]/20 blur-md transition-opacity ${isProfileMenuOpen ? "opacity-100" : "opacity-0"}`}></div>
-												<img
-													src={profilePhoto || account_circle}
-													alt="Avatar"
-													className="w-8 h-8 rounded-full object-cover relative z-10"
-												/>
-											</div>
-											<div className="hidden md:flex flex-col items-start leading-tight">
-												<span className="text-sm font-bold text-gray-800">
-													{getUserDisplayName().split(' ')[0]}
-												</span>
-												<span className="text-[10px] text-gray-500 font-medium">
-													{user.type === "employee" ? "موظف" : "عميل"}
-												</span>
-											</div>
-											<ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isProfileMenuOpen ? "rotate-180" : ""} hidden md:block`} />
-										</button>
-
-										{/* Glass Profile Dropdown */}
-										{isProfileMenuOpen && (
-											<div className="absolute left-0 mt-2 w-64 bg-white/95 backdrop-blur-2xl rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-gray-100/50 p-2 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 text-right">
-												
-												{/* User Header */}
-												<div className="p-3 mb-1.5 bg-gradient-to-br from-[#690000]/5 to-transparent rounded-lg flex items-center gap-3">
-													<div className="w-11 h-11 relative p-0.5 rounded-full border-2 border-[#690000] bg-white shadow-sm ring-1 ring-black/5 flex-shrink-0">
-														{profilePhoto ? (
-															<img src={profilePhoto} alt="Profile" className="w-full h-full rounded-full object-cover" />
-														) : (
-															<div className="w-full h-full rounded-full flex items-center justify-center font-bold text-lg bg-gradient-to-br from-[#690000] to-[#8B0000] text-white">
-																{getUserDisplayName().charAt(0)}
-															</div>
-														)}
-													</div>
-													<div className="overflow-hidden flex-1">
-														<p className="text-sm font-bold text-gray-900 truncate">
-															{getUserDisplayName()}
-														</p>
-														<p className="text-xs text-gray-500 truncate font-medium">{user.email}</p>
-													</div>
-												</div>
-
-												{/* Actions */}
-												<div className="space-y-0.5">
-													<Link
-														to="/profile"
-														className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-[#690000] transition-all"
-														onClick={() => setIsProfileMenuOpen(false)}
-													>
-														<User className="w-4 h-4" />
-														الملف الشخصي
-													</Link>
-
-													{user?.type === "employee" && user?.employeeDetails?.employeeType === "System Admin" && (
-														<>
-															<Link
-																to="/admindashboard"
-																className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-[#690000] transition-all"
-																onClick={() => setIsProfileMenuOpen(false)}
-															>
-																<LayoutDashboard className="w-4 h-4" />
-																لوحة التحكم
-															</Link>
-															<Link
-																to="/settings"
-																className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-[#690000] transition-all"
-																onClick={() => setIsProfileMenuOpen(false)}
-															>
-																<Settings className="w-4 h-4" />
-																الإعدادات
-															</Link>
-														</>
-													)}
-
-													<div className="h-px bg-gray-100 my-1"></div>
-
-													<button
-														onClick={handleLogout}
-														className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50 transition-all"
-													>
-														<LogOut className="w-4 h-4" />
-														تسجيل الخروج
-													</button>
-												</div>
-											</div>
-										)}
-									</div>
-								</>
-							) : (
-								<div className="flex items-center gap-2">
-									<Link
-										to="/login"
-										className="px-5 py-2 rounded-xl text-sm font-bold bg-[#690000] text-white shadow-lg shadow-[#690000]/20 hover:bg-[#800000] hover:shadow-xl hover:shadow-[#690000]/30 active:scale-95 transition-all"
-									>
-										تسجيل الدخول
-									</Link>
-								</div>
-							)}
-						</div>
 					</div>
->>>>>>> Stashed changes
-				</div>
+
 
 				{/* ====================== */}
 				{/* 3. Left Section (Logo) */}

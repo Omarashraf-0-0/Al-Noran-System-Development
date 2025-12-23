@@ -28,7 +28,8 @@ const SearchFilterSort = ({
 	],
 	onSortApply,
 	userType = "client", // 'client' | 'employee' | 'admin'
-	isDarkMode = true // Default to dark mode
+	isDarkMode = true, // Default to dark mode
+    children
 }) => {
 	// Determine theme colors with more detailed palette
 	const getTheme = () => {
@@ -193,6 +194,7 @@ const SearchFilterSort = ({
 						</div>
 					)}
 				</div>
+				{children}
 			</div>
 		</div>
 	);

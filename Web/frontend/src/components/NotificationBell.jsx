@@ -1,26 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-hot-toast";
+import { useTheme } from "../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { io } from "socket.io-client";
+import axios from "axios";
 
-const NotificationBell = ({ isDarkMode }) => {
+const NotificationBell = () => {
 	const [notifications, setNotifications] = useState([]);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 	const socketRef = useRef(null);
-
-	// Get token from localStorage
-	const token = localStorage.getItem("token");
-	const user = JSON.parse(localStorage.getItem("user") || "{}");
-	const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3500";
-
-	// Load cached notifications on mount
-	const [loading, setLoading] = useState(false);
-	const navigate = useNavigate();
-	const socketRef = useRef(null);
+	const { isDarkMode } = useTheme();
 
 	// Get token from localStorage
 	const token = localStorage.getItem("token");
@@ -122,7 +114,9 @@ const NotificationBell = ({ isDarkMode }) => {
 	};
 
 	// Fetch notifications from API
+	// Fetch notifications from API
 	const fetchNotifications = useCallback(async () => {
+		if (!token) return;
 		try {
 			setLoading(true);
 			
@@ -138,28 +132,21 @@ const NotificationBell = ({ isDarkMode }) => {
 
 			if (response.data.success) {
 				const notifs = response.data.notifications || [];
-				const count = response.data.unreadCount || 0;
 				
 				setNotifications(notifs);
-				setUnreadCount(count);
-
-				// Save to cache
-				saveToCache(notifs, count);
+				setUnreadCount(notifs.filter((n) => !n.read).length);
 			}
 		} catch (error) {
 			console.error("Error fetching notifications:", error);
-			if (error.response?.status !== 401) {
-				// Silent fail for better UX or use toast if critical
-			}
 		} finally {
 			setLoading(false);
 		}
-	}, [apiUrl, token, saveToCache]);
+	}, [token, apiUrl]);
 
+	// Initial fetch and Socket.IO connection
 	useEffect(() => {
-		if (!token || !user._id) return;
+		if (!token) return;
 
-		// Fetch notifications (cache already loaded in separate useEffect)
 		fetchNotifications();
 
 		// Connect to Socket.IO
@@ -215,8 +202,7 @@ const NotificationBell = ({ isDarkMode }) => {
 				socketRef.current.disconnect();
 			}
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [token, user._id, apiUrl, fetchNotifications]);
+	}, [token, apiUrl, user._id, user.role, fetchNotifications]);
 
 	// Handle notification click - delete notification and navigate to notification page
 	const handleNotificationClick = async (notifId) => {
@@ -361,11 +347,8 @@ const NotificationBell = ({ isDarkMode }) => {
 												{notif.title}
 											</p>
 											<p className={`text-xs mt-1 line-clamp-2 ${theme.textSub}`}>
-											<p className={`text-xs mt-1 line-clamp-2 ${theme.textSub}`}>
 												{notif.message}
 											</p>
-											<p className="text-[10px] text-gray-400 mt-2">
-												{formatNotificationTime(notif.createdAt)}
 											<p className="text-[10px] text-gray-400 mt-2">
 												{formatNotificationTime(notif.createdAt)}
 											</p>
