@@ -7,7 +7,7 @@ const FileViewerModal = (props) => {
 	// ✅ Handle props: support both viewerData object (new) and individual props (legacy)
 	const { viewerData, onClose } = props;
 	const data = viewerData || props;
-	
+
 	const isOpen = data.open || data.isOpen;
 	const fileUrl = data.url || data.fileUrl || (data.fileId && typeof data.fileId === 'string' && data.fileId.includes('http') ? data.fileId : null);
 	const fileName = data.name || data.fileName;
@@ -61,7 +61,7 @@ const FileViewerModal = (props) => {
 	// ✅ Load file through proxy to bypass CORS
 	useEffect(() => {
 		if (!isOpen) return;
-		
+
 		// 🔍 DEBUG: Log all props
 		console.log("📂 FileViewerModal opened with:", {
 			fileUrl,
@@ -71,7 +71,7 @@ const FileViewerModal = (props) => {
 			propS3Key,
 			isMongoId: fileId && /^[0-9a-fA-F]{24}$/.test(fileId)
 		});
-		
+
 		setLoading(true);
 		setError(false);
 		setBlobUrl(null);
@@ -81,10 +81,10 @@ const FileViewerModal = (props) => {
 		const loadFile = async () => {
 			const token = localStorage.getItem("token");
 			console.log("🔑 Token exists:", !!token);
-			
+
 			// Try multiple approaches
 			let response = null;
-			
+
 			// Approach 1: If fileId is a MongoDB ID, use proxy by ID
 			if (fileId && /^[0-9a-fA-F]{24}$/.test(fileId)) {
 				console.log("🚀 Approach 1: Using proxy with fileId:", fileId);
@@ -99,7 +99,7 @@ const FileViewerModal = (props) => {
 			} else {
 				console.log("⏭️ Skipping Approach 1: fileId is not a valid MongoDB ID");
 			}
-			
+
 			// Approach 2: If no success yet, try by S3 Key from URL (our robust fallback)
 			if ((!response || !response.ok) && (propS3Key || (fileUrl && fileUrl.includes('amazonaws.com')))) {
 				console.log("🚀 Approach 2: Extracting s3Key from URL for Proxy Download");
@@ -118,10 +118,10 @@ const FileViewerModal = (props) => {
 						// but let's trust the extraction for now.
 					} catch (e) {
 						// Fallback split
-						extractedS3Key = fileUrl.split('.com/')[1]?.split('?')[0]; 
+						extractedS3Key = fileUrl.split('.com/')[1]?.split('?')[0];
 					}
 				}
-				
+
 				if (extractedS3Key) {
 					console.log("🔑 Extracted s3Key:", extractedS3Key);
 					try {
@@ -141,7 +141,7 @@ const FileViewerModal = (props) => {
 			} else {
 				if (!response) console.log("⏭️ Skipping Approach 2: response not ok");
 			}
-			
+
 			// Approach 3: Direct fetch (CORS prone, but worth last shot)
 			if (!response || !response.ok) {
 				console.log("🚀 Approach 3: Direct fetch from fileUrl");
@@ -170,7 +170,7 @@ const FileViewerModal = (props) => {
 			} else {
 				console.log("⚠️ All approaches failed. Will try to display fileUrl directly.");
 			}
-			
+
 			// All approaches failed - just try to use fileUrl directly and let browser handle it
 			setLoading(false);
 		};
@@ -199,7 +199,7 @@ const FileViewerModal = (props) => {
 			} else if (fileUrl && fileUrl.includes('amazonaws.com')) {
 				// Strategy 2: S3 URL -> Extract Key and use PROXY download (bypasses CORS)
 				const extractedS3Key = propS3Key || fileUrl.split('.com/')[1]?.split('?')[0];
-				
+
 				if (extractedS3Key) {
 					// Use our new backend proxy endpoint that streams the file from S3 (via query param to handle slashes)
 					downloadUrl = `${import.meta.env.VITE_API_URL}/api/uploads/proxy-download-key?key=${encodeURIComponent(extractedS3Key)}`;
@@ -222,7 +222,7 @@ const FileViewerModal = (props) => {
 				});
 
 				if (!response.ok) throw new Error("Proxy download failed");
-				
+
 				let downloadName = fileName || "document";
 				const disposition = response.headers.get('Content-Disposition');
 				if (disposition) {
@@ -233,7 +233,7 @@ const FileViewerModal = (props) => {
 					} else {
 						const filenameRegex = /filename[^;=\n]*((['"]).*?\2|[^;\n]*)/;
 						const matches = filenameRegex.exec(disposition);
-						if (matches != null && matches[1]) { 
+						if (matches != null && matches[1]) {
 							downloadName = decodeURIComponent(matches[1].replace(/['"]/g, ''));
 						}
 					}
@@ -281,7 +281,8 @@ const FileViewerModal = (props) => {
 	// Use blobUrl if available, otherwise fall back to fileUrl
 	const displayUrl = blobUrl || fileUrl;
 
-	if (!displayUrl) {
+	// Don't show error if still loading - wait for proxy to complete
+	if (!displayUrl && !loading) {
 		return (
 			<div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
 				<div className="absolute inset-0 bg-black/80" onClick={onClose}></div>
@@ -294,13 +295,33 @@ const FileViewerModal = (props) => {
 		);
 	}
 
+	// Show loading state while proxy is fetching the file
+	if (!displayUrl && loading) {
+		return (
+			<div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+				<div className="absolute inset-0 bg-black/80" onClick={onClose}></div>
+				<div className={`relative w-full max-w-5xl h-[85vh] rounded-2xl flex flex-col items-center justify-center shadow-2xl overflow-hidden transition-colors duration-300 ${isDarkMode ? "bg-[#1a1010] text-white border border-white/10" : "bg-white text-gray-900"
+					}`}>
+					<Loader2 className="w-12 h-12 animate-spin mb-4 text-red-500" />
+					<p className="text-lg font-bold">جاري تحميل الملف...</p>
+					<button
+						onClick={onClose}
+						className="mt-6 px-6 py-2 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 transition"
+					>
+						إلغاء
+					</button>
+				</div>
+			</div>
+		);
+	}
+
 	const cleanUrl = (fileUrl || fileName || "").split('?')[0].toLowerCase();
 	// Use resolvedType (from Blob) if available, otherwise fallback
 	const finalType = resolvedType || fileType;
-	
+
 	const isPdf = finalType === "application/pdf" || cleanUrl.endsWith('.pdf');
 	const isImage = finalType?.startsWith("image/") || cleanUrl.match(/\.(jpeg|jpg|png|gif|webp|bmp|svg)$/i) || (!finalType && !isPdf);
-	
+
 	const handleLoad = () => setLoading(false);
 	const handleError = (e) => {
 		console.warn("🖼️ Image render error ignored:", e);
@@ -311,18 +332,16 @@ const FileViewerModal = (props) => {
 
 	return (
 		<div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
-			<div 
+			<div
 				className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
 				onClick={onClose}
 			></div>
 
-			<div className={`relative w-full max-w-5xl h-[85vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden transition-colors duration-300 ${
-				isDarkMode ? "bg-[#1a1010] text-white border border-white/10" : "bg-white text-gray-900"
-			}`}>
-				{/* Header */}
-				<div className={`px-6 py-4 flex items-center justify-between border-b ${
-					isDarkMode ? "border-white/10 bg-black/20" : "border-gray-100 bg-gray-50/50"
+			<div className={`relative w-full max-w-5xl h-[85vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden transition-colors duration-300 ${isDarkMode ? "bg-[#1a1010] text-white border border-white/10" : "bg-white text-gray-900"
 				}`}>
+				{/* Header */}
+				<div className={`px-6 py-4 flex items-center justify-between border-b ${isDarkMode ? "border-white/10 bg-black/20" : "border-gray-100 bg-gray-50/50"
+					}`}>
 					<div className="flex items-center gap-3 overflow-hidden">
 						<div className={`p-2 rounded-lg ${isDarkMode ? "bg-red-500/20 text-red-400" : "bg-red-100 text-red-600"}`}>
 							<FileText className="w-5 h-5" />
@@ -333,36 +352,33 @@ const FileViewerModal = (props) => {
 							</h3>
 						</div>
 					</div>
-					
+
 					<div className="flex items-center gap-2">
-                        {/* Open in New Tab Button */}
+						{/* Open in New Tab Button */}
 						{displayUrl && (
-							<a 
+							<a
 								href={displayUrl}
-                                target="_blank"
-                                rel="noreferrer"
-								className={`p-2 rounded-lg transition-colors ${
-									isDarkMode ? "hover:bg-white/10 text-gray-400 hover:text-white" : "hover:bg-gray-200 text-gray-600 hover:text-black"
-								}`}
+								target="_blank"
+								rel="noreferrer"
+								className={`p-2 rounded-lg transition-colors ${isDarkMode ? "hover:bg-white/10 text-gray-400 hover:text-white" : "hover:bg-gray-200 text-gray-600 hover:text-black"
+									}`}
 								title="فتح في نافذة جديدة"
 							>
 								<Eye className="w-5 h-5" />
 							</a>
 						)}
-						<button 
+						<button
 							onClick={handleDownload}
-							className={`p-2 rounded-lg transition-colors ${
-								isDarkMode ? "hover:bg-white/10 text-gray-400 hover:text-white" : "hover:bg-gray-200 text-gray-600 hover:text-black"
-							}`}
+							className={`p-2 rounded-lg transition-colors ${isDarkMode ? "hover:bg-white/10 text-gray-400 hover:text-white" : "hover:bg-gray-200 text-gray-600 hover:text-black"
+								}`}
 							title="تحميل"
 						>
 							<Download className="w-5 h-5" />
 						</button>
-						<button 
+						<button
 							onClick={onClose}
-							className={`p-2 rounded-lg transition-colors ${
-								isDarkMode ? "hover:bg-red-900/50 text-gray-400 hover:text-red-400" : "hover:bg-red-100 text-gray-600 hover:text-red-600"
-							}`}
+							className={`p-2 rounded-lg transition-colors ${isDarkMode ? "hover:bg-red-900/50 text-gray-400 hover:text-red-400" : "hover:bg-red-100 text-gray-600 hover:text-red-600"
+								}`}
 						>
 							<X className="w-6 h-6" />
 						</button>
@@ -385,7 +401,7 @@ const FileViewerModal = (props) => {
 							</div>
 							<p className="text-lg font-bold mb-2">تعذر عرض الملف</p>
 							<p className="opacity-70 text-sm mb-6">قد يكون الملف تالفاً أو أن الصيغة غير مدعومة للمعاينة المباشرة.</p>
-							<button 
+							<button
 								onClick={handleDownload}
 								className="px-6 py-2 bg-white text-black rounded-lg font-bold hover:bg-gray-200 transition"
 							>
@@ -398,28 +414,28 @@ const FileViewerModal = (props) => {
 					) : (
 						<>
 							{isImage ? (
-								<img 
-									src={displayUrl} 
-									alt={fileName} 
+								<img
+									src={displayUrl}
+									alt={fileName}
 									className={`max-w-full max-h-full object-contain transition-opacity duration-300 ${loading ? "opacity-0" : "opacity-100"}`}
 									onLoad={handleLoad}
 									onError={handleError}
 								/>
 							) : isPdf ? (
-								<iframe 
-									src={`${displayUrl}#toolbar=0`} 
+								<iframe
+									src={`${displayUrl}#toolbar=0`}
 									title={fileName}
 									className={`w-full h-full rounded-lg bg-white transition-opacity duration-300 ${loading ? "opacity-0" : "opacity-100"}`}
 									onLoad={handleLoad}
-                                    // Remove onError for iframe to avoid cross-origin noise
-                                    // onError={handleError} 
+								// Remove onError for iframe to avoid cross-origin noise
+								// onError={handleError} 
 								/>
 							) : (
 								<div className="text-center text-white p-6">
 									<FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
 									<p className="text-lg font-bold mb-2">المعاينة غير متاحة لهذه الصيغة</p>
 									<p className="opacity-70 text-sm mb-6">يرجى تحميل الملف لعرضه.</p>
-									<button 
+									<button
 										onClick={handleDownload}
 										className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition"
 									>

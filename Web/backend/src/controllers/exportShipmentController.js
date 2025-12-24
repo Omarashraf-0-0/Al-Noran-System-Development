@@ -37,7 +37,7 @@ const logExportEvent = async ({
 // Helper function to add presigned URLs to documents array
 const addPresignedUrlsToDocuments = async (documents) => {
 	if (!documents || documents.length === 0) return documents;
-	
+
 	return Promise.all(
 		documents.map(async (doc) => {
 			try {
@@ -621,15 +621,33 @@ const uploadRequiredDocument = async (req, res) => {
 			});
 		}
 
-		// Find and update the required document
-		const docIndex = shipment.requiredDocuments.findIndex(
-			(doc) => doc.name.toLowerCase() === docName.toLowerCase()
+		// Decode docName from URL (handles Arabic characters)
+		const decodedDocName = decodeURIComponent(docName);
+		console.log("📝 Looking for document:", {
+			rawDocName: docName,
+			decodedDocName,
+			uploadId,
+			requiredDocuments: shipment.requiredDocuments.map(d => d.name)
+		});
+
+		// Find matching document - prioritize one that hasn't been uploaded yet
+		// This handles cases where there are duplicate request names (e.g. two requests for "فاتورة تصدير")
+		let docIndex = shipment.requiredDocuments.findIndex(
+			(doc) => doc.name.toLowerCase().trim() === decodedDocName.toLowerCase().trim() && !doc.uploaded
 		);
 
+		// If no un-uploaded document found, fall back to any matching document (overwriting)
 		if (docIndex === -1) {
+			docIndex = shipment.requiredDocuments.findIndex(
+				(doc) => doc.name.toLowerCase().trim() === decodedDocName.toLowerCase().trim()
+			);
+		}
+
+		if (docIndex === -1) {
+			console.error("❌ Document not found:", decodedDocName);
 			return res.status(404).json({
 				success: false,
-				message: "المستند المطلوب غير موجود",
+				message: `المستند المطلوب غير موجود: ${decodedDocName}`,
 			});
 		}
 
@@ -926,6 +944,150 @@ const getDistinctDocumentNames = async (req, res) => {
 	}
 };
 
+/**
+ * Add completed document directly (Employee Action)
+ * @route POST /api/export-shipments/employee/:id/completed-document
+ * @access Private (Employee)
+ */
+const addCompletedDocument = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { name, fileId } = req.body;
+
+		if (!name || !fileId) {
+			return res.status(400).json({
+				success: false,
+				message: "Missing document name or fileId",
+			});
+		}
+
+		const shipment = await ExportShipment.findById(id);
+		if (!shipment) {
+			return res.status(404).json({
+				success: false,
+				message: "شحنة التصدير غير موجودة",
+			});
+		}
+
+		// Add to requiredDocuments as already completed
+		shipment.requiredDocuments.push({
+			name,
+			uploaded: true,
+			fileId,
+			requestedAt: new Date(),
+			uploadedAt: new Date(),
+		});
+
+		await shipment.save();
+
+		console.log(`✅ [ExportShipment] Document added directly by employee: ${name}`);
+
+		// 📝 Log Document Addition
+		await logExportEvent({
+			shipmentId: shipment._id,
+			action: "DOC_UPLOAD",
+			description: `Document added by employee: ${name}`,
+			publicDescription: `تم إضافة مستند بواسطة الموظف: ${name}`,
+			performedBy: req.user._id,
+			performedByType: "employee",
+			metadata: { documentName: name },
+		});
+
+		res.json({
+			success: true,
+			message: "تم إضافة المستند بنجاح",
+			shipment,
+		});
+	} catch (error) {
+		console.error("Error adding completed document:", error);
+		res.status(500).json({
+			success: false,
+			message: "حدث خطأ أثناء إضافة المستند",
+		});
+	}
+};
+
+/**
+ * Reject uploaded document (Employee rejects document so client must re-upload)
+ * @route PUT /api/export-shipments/:id/required-documents/:documentId/reject
+ * @access Private (Employee)
+ */
+const rejectUploadedDocument = async (req, res) => {
+	try {
+		const { id, documentId } = req.params;
+
+		const shipment = await ExportShipment.findById(id).populate('userId', 'username fullname');
+
+		if (!shipment) {
+			return res.status(404).json({
+				success: false,
+				message: "شحنة التصدير غير موجودة",
+			});
+		}
+
+		const document = shipment.requiredDocuments.id(documentId);
+
+		if (!document) {
+			return res.status(404).json({
+				success: false,
+				message: "المستند غير موجود",
+			});
+		}
+
+		if (!document.uploaded) {
+			return res.status(400).json({
+				success: false,
+				message: "هذا المستند لم يتم رفعه بعد",
+			});
+		}
+
+		// Reset the document upload status (keep request, clear upload data)
+		document.uploaded = false;
+		document.fileId = undefined;
+		document.uploadedAt = undefined;
+
+		await shipment.save();
+
+		// Send notification to client
+		try {
+			await notificationService.createNotification({
+				userId: shipment.userId._id,
+				type: 'export_document_rejected',
+				title: 'مستند مرفوض - يرجى إعادة الرفع',
+				message: `تم رفض المستند "${document.name}" في شحنة التصدير. يرجى رفعه مرة أخرى.`,
+				data: {
+					shipmentId: shipment._id,
+					documentName: document.name
+				}
+			});
+		} catch (notifError) {
+			console.error('Failed to send rejection notification:', notifError);
+		}
+
+		// Log the event
+		await logExportEvent({
+			shipmentId: shipment._id,
+			action: 'document_rejected',
+			description: `تم رفض المستند: ${document.name}`,
+			publicDescription: `تم رفض المستند "${document.name}" - يرجى إعادة الرفع`,
+			performedBy: req.user._id,
+			performedByType: 'employee',
+		});
+
+		res.json({
+			success: true,
+			message: "تم رفض المستند بنجاح وإشعار العميل",
+			shipment,
+		});
+	} catch (error) {
+		console.error("Error rejecting document:", error);
+		res.status(500).json({
+			success: false,
+			message: "خطأ في رفض المستند",
+		});
+	}
+};
+
 module.exports = {
 	// Client
 	getMyExportShipments,
@@ -939,9 +1101,11 @@ module.exports = {
 	addEmployeeNotes,
 	requestDocumentFromClient,
 	resetUploadedDocument,
+	rejectUploadedDocument,
 	getDistinctDocumentNames,
 	markPaymentCleared,
 	uploadForm46,
 	uploadCertificateOfOrigin,
 	getShipmentStatusHistory,
+	addCompletedDocument,
 };

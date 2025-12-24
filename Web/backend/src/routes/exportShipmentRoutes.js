@@ -14,11 +14,13 @@ const {
 	addEmployeeNotes,
 	requestDocumentFromClient,
 	resetUploadedDocument,
+	rejectUploadedDocument,
 	getDistinctDocumentNames,
 	markPaymentCleared,
 	uploadForm46,
 	uploadCertificateOfOrigin,
 	getShipmentStatusHistory,
+	addCompletedDocument,
 } = require("../controllers/exportShipmentController");
 
 // =====================================================
@@ -88,10 +90,20 @@ router.patch("/employee/:id/notes", protect, addEmployeeNotes);
 // @access  Private (Employee)
 router.post("/employee/:id/request-document", protect, requestDocumentFromClient);
 
+// @route   POST /api/export-shipments/employee/:id/completed-document
+// @desc    Add completed document directly (employee action)
+// @access  Private (Employee)
+router.post("/employee/:id/completed-document", protect, addCompletedDocument);
+
 // @route   DELETE /api/export-shipments/employee/:id/required-documents/:documentId
 // @desc    Reset uploaded document (so client can re-upload)
 // @access  Private (Employee)
 router.delete("/employee/:id/required-documents/:documentId", protect, resetUploadedDocument);
+
+// @route   PUT /api/export-shipments/:id/required-documents/:documentId/reject
+// @desc    Reject uploaded document (employee rejects so client must re-upload)
+// @access  Private (Employee)
+router.put("/:id/required-documents/:documentId/reject", protect, rejectUploadedDocument);
 
 // @route   POST /api/export-shipments/employee/:id/payment-cleared
 // @desc    Mark payment as cleared

@@ -7,8 +7,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import { useTheme } from '../context/ThemeContext';
 import FileViewerModal from '../components/FileViewerModal';
-import { 
-    ChevronRight, Package, Truck, Calendar, MapPin, 
+import {
+    ChevronRight, Package, Truck, Calendar, MapPin,
     FileText, User, Users, CheckCircle, Clock, AlertCircle,
     Download, Upload, Edit, ArrowLeft, MessageCircle, History,
     Anchor, Plane, FileQuestion, X, Plus, Trash2, Eye, XCircle, AlertTriangle
@@ -23,15 +23,15 @@ const EmployeeShipmentDetailsPage = () => {
     const [error, setError] = useState(null);
 
     // Document Preview State (New)
-    const [viewerData, setViewerData] = useState({ 
-        open: false, 
-        url: null, 
-        name: null, 
-        type: null, 
-        fileId: null 
+    const [viewerData, setViewerData] = useState({
+        open: false,
+        url: null,
+        name: null,
+        type: null,
+        fileId: null
     });
 
-     // Request Docs State
+    // Request Docs State
     const [requestDocsModal, setRequestDocsModal] = useState(false);
     const [docInput, setDocInput] = useState("");
     const [requestedDocsList, setRequestedDocsList] = useState([]);
@@ -42,7 +42,7 @@ const EmployeeShipmentDetailsPage = () => {
     // Document Upload State
     const [uploadingDocId, setUploadingDocId] = useState(null);
     const fileInputRef = useRef(null);
-    
+
     // Direct Upload State (Employee)
     const [directUploadModal, setDirectUploadModal] = useState(false);
     const [directUploadName, setDirectUploadName] = useState("");
@@ -50,14 +50,14 @@ const EmployeeShipmentDetailsPage = () => {
     const [isDirectUploading, setIsDirectUploading] = useState(false);
     const [showDirectUploadSuggestions, setShowDirectUploadSuggestions] = useState(false);
     const directFileInputRef = useRef(null);
-    
+
     // ✅ Open Preview Modal - Logic delegated to FileViewerModal component
     const openPreviewModal = (doc) => {
         const fileId = doc.fileId || doc._id || doc.id;
         const fileUrl = doc.url || doc.s3Url || doc.fileUrl;
         const fileName = doc.name || doc.originalName || doc.filename || "مستند";
         const fileType = doc.mimeType || doc.mimetype || doc.type;
-        
+
         // Pass everything to the modal
         setViewerData({
             open: true,
@@ -74,12 +74,12 @@ const EmployeeShipmentDetailsPage = () => {
     };
 
     // Confirmation Modal State
-    const [confirmModal, setConfirmModal] = useState({ 
-        open: false, 
-        title: "", 
-        message: "", 
+    const [confirmModal, setConfirmModal] = useState({
+        open: false,
+        title: "",
+        message: "",
         type: "danger", // 'danger' | 'warning'
-        onConfirm: null 
+        onConfirm: null
     });
 
     const token = localStorage.getItem('token');
@@ -121,7 +121,7 @@ const EmployeeShipmentDetailsPage = () => {
             } else {
                 console.log("⚠️ No Proforma Invoice in response");
                 if (response.data.acid_request_id) {
-                     console.log("🔗 Linked ACID Request:", response.data.acid_request_id);
+                    console.log("🔗 Linked ACID Request:", response.data.acid_request_id);
                 }
             }
             setShipment(response.data);
@@ -140,13 +140,13 @@ const EmployeeShipmentDetailsPage = () => {
         try {
             setUpdatingStatus(true);
             setIsStatusOpen(false); // Close dropdown immediately
-            
+
             const response = await axios.put(
                 `${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
                 { status: newStatus },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            
+
             setShipment(prev => ({ ...prev, status: newStatus }));
             toast.success("تم تحديث حالة الشحنة بنجاح");
         } catch (err) {
@@ -167,7 +167,7 @@ const EmployeeShipmentDetailsPage = () => {
             const toastId = toast.loading("جاري فتح المحادثة...");
             const response = await axios.post(
                 `${import.meta.env.VITE_API_URL}/api/chat`,
-                { shipmentId: shipmentId }, 
+                { shipmentId: shipmentId },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -216,7 +216,7 @@ const EmployeeShipmentDetailsPage = () => {
                 { documents: requestedDocsList },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            
+
             toast.success("تم إرسال طلب المستندات بنجاح");
             setRequestDocsModal(false);
             setRequestedDocsList([]);
@@ -263,21 +263,21 @@ const EmployeeShipmentDetailsPage = () => {
 
         try {
             const toastId = toast.loading("جاري رفع الملف...");
-            
+
             // 1. Upload to S3
             const uploadResponse = await uploadFileToServer(file);
-            const { _id } = uploadResponse.data.upload; 
+            const { _id } = uploadResponse.data.upload;
 
             // 2. Identify Type: Required Doc OR General Upload
             if (uploadingDocId === 'general') {
                 toast.success("تم إضافة المستند بنجاح", { id: toastId });
                 setUploadingDocId(null);
-                fetchShipmentDetails(); 
+                fetchShipmentDetails();
             } else {
                 // It is a Required Document
                 await axios.patch(
                     `${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}/required-documents/${uploadingDocId}`,
-                    { fileId: _id }, 
+                    { fileId: _id },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 toast.success("تم رفع المستند بنجاح", { id: toastId });
@@ -293,7 +293,7 @@ const EmployeeShipmentDetailsPage = () => {
     };
 
     // --- Document Controls: Delete Request & Reject Upload ---
-    
+
     // TRIGGER DELETE CONFIRMATION
     const handleDeleteRequestClick = (docId) => {
         setConfirmModal({
@@ -334,7 +334,7 @@ const EmployeeShipmentDetailsPage = () => {
     };
 
     // Filter suggestions for Direct Upload
-    const directUploadFilteredSuggestions = predefinedDocs.filter(doc => 
+    const directUploadFilteredSuggestions = predefinedDocs.filter(doc =>
         doc.toLowerCase().includes(directUploadName.toLowerCase())
     );
 
@@ -344,20 +344,21 @@ const EmployeeShipmentDetailsPage = () => {
             return;
         }
 
+        let toastId;
         try {
             setIsDirectUploading(true);
-            const toastId = toast.loading("جاري رفع المستند...");
+            toastId = toast.loading("جاري رفع المستند...");
 
             // 1. Upload to S3
             const uploadResponse = await uploadFileToServer(directUploadFile);
-            const { _id } = uploadResponse.data.upload;
+            const fileId = uploadResponse.data.upload.id;
 
             // 2. Call Add Completed Document Endpoint
             await axios.post(
                 `${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}/completed-document`,
-                { 
+                {
                     name: directUploadName,
-                    fileId: _id
+                    fileId: fileId
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -369,8 +370,10 @@ const EmployeeShipmentDetailsPage = () => {
             fetchShipmentDetails();
 
         } catch (err) {
-            console.error(err);
-            toast.error("فشل إضافة المستند");
+            console.error("Direct upload error:", err);
+            console.error("Error response:", err.response?.data);
+            if (toastId) toast.dismiss(toastId);
+            toast.error(err.response?.data?.message || "فشل إضافة المستند");
         } finally {
             setIsDirectUploading(false);
         }
@@ -406,7 +409,7 @@ const EmployeeShipmentDetailsPage = () => {
     };
 
     // Filter suggestions
-    const filteredSuggestions = predefinedDocs.filter(doc => 
+    const filteredSuggestions = predefinedDocs.filter(doc =>
         doc.toLowerCase().includes(docInput.toLowerCase()) && !requestedDocsList.includes(doc)
     );
 
@@ -415,7 +418,7 @@ const EmployeeShipmentDetailsPage = () => {
         bg: isDarkMode ? 'bg-[#050a0d]' : 'bg-gray-50',
         cardBg: isDarkMode ? 'bg-[#1e1e1e] border-white/10' : 'bg-white border-gray-200',
         text: isDarkMode ? 'text-gray-100' : 'text-gray-900',
-        subText: isDarkMode ? 'text-gray-400' : 'text-gray-500', 
+        subText: isDarkMode ? 'text-gray-400' : 'text-gray-500',
         accent: 'text-[#1ba3b6]',
         accentBg: 'bg-[#1ba3b6]',
         divider: isDarkMode ? 'border-white/10' : 'border-gray-100',
@@ -450,15 +453,15 @@ const EmployeeShipmentDetailsPage = () => {
     return (
         <div className={`min-h-screen font-sans ${theme.bg}`}>
             <Header />
-            
+
             <main className="pt-24 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
-                <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
                     onChange={handleFileChange}
                 />
-                
+
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <div>
@@ -473,9 +476,8 @@ const EmployeeShipmentDetailsPage = () => {
                         </div>
                         <h1 className={`text-3xl font-bold flex items-center gap-3 ${theme.text}`}>
                             شحنة {shipment.shipmentCode || shipment.tracking_number}
-                            <span className={`px-3 py-1 rounded-full text-sm font-normal border ${
-                                shipment.shipment_type === 'air' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-cyan-100 text-cyan-700 border-cyan-200'
-                            }`}>
+                            <span className={`px-3 py-1 rounded-full text-sm font-normal border ${shipment.shipment_type === 'air' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-cyan-100 text-cyan-700 border-cyan-200'
+                                }`}>
                                 {shipment.shipment_type === 'air' ? '✈️ جوي' : '🚢 بحري'}
                             </span>
                         </h1>
@@ -483,7 +485,7 @@ const EmployeeShipmentDetailsPage = () => {
 
                     <div className="flex flex-wrap gap-3">
                         <div className="relative">
-                            <button 
+                            <button
                                 onClick={() => setIsStatusOpen(!isStatusOpen)}
                                 disabled={updatingStatus}
                                 className="bg-[#1ba3b6] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#158a9b] transition-all shadow-lg shadow-[#1ba3b6]/20 flex items-center gap-2 disabled:opacity-70"
@@ -491,7 +493,7 @@ const EmployeeShipmentDetailsPage = () => {
                                 {updatingStatus ? <LoadingSpinner size="sm" color="white" /> : <Edit size={18} />}
                                 {updatingStatus ? 'جاري التحديث...' : 'تغيير الحالة'}
                             </button>
-                            
+
                             {/* Status Dropdown */}
                             {isStatusOpen && (
                                 <>
@@ -513,8 +515,8 @@ const EmployeeShipmentDetailsPage = () => {
                                 </>
                             )}
                         </div>
-                        
-                        <button 
+
+                        <button
                             onClick={() => setRequestDocsModal(true)}
                             className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-8 py-2.5 rounded-xl font-bold hover:shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] transition-all flex items-center gap-2 border border-white/10"
                         >
@@ -522,7 +524,7 @@ const EmployeeShipmentDetailsPage = () => {
                             طلب مستندات جديدة
                         </button>
 
-                        <button 
+                        <button
                             onClick={() => setDirectUploadModal(true)}
                             className="bg-[#1ba3b6] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#158a9b] transition-all shadow-lg shadow-[#1ba3b6]/20 flex items-center gap-2"
                         >
@@ -538,7 +540,7 @@ const EmployeeShipmentDetailsPage = () => {
                         {statusSteps.map((step, index) => {
                             const isCompleted = index <= currentStatusIndex;
                             const isCurrent = index === currentStatusIndex;
-                            
+
                             return (
                                 <div key={index} className="flex flex-col items-center text-center relative z-10 group" style={{ width: `${100 / statusSteps.length}%` }}>
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 border-4 
@@ -550,7 +552,7 @@ const EmployeeShipmentDetailsPage = () => {
                                     <p className={`mt-3 text-xs font-bold px-1 transition-colors duration-300 ${isCompleted ? theme.accent : theme.subText}`}>
                                         {step.label}
                                     </p>
-                                    
+
                                     {/* Connecting Line */}
                                     {index < statusSteps.length - 1 && (
                                         <div className={`absolute top-4 right-[50%] w-full h-1 -z-10 transition-colors duration-500 
@@ -564,17 +566,17 @@ const EmployeeShipmentDetailsPage = () => {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
+
                     {/* Right Column: Details Grid */}
                     <div className="lg:col-span-2 space-y-8">
-                        
+
                         {/* Main Info Grid */}
                         <div className={`p-6 md:p-8 rounded-3xl border ${theme.cardBg} shadow-sm`}>
                             <h3 className={`font-bold text-xl mb-6 flex items-center gap-2 ${theme.text}`}>
                                 <Package className="text-[#1ba3b6]" />
                                 تفاصيل الشحنة
                             </h3>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* Field Component */}
                                 <DataField label="اسم العميل" value={shipment.user_id?.fullname || shipment.user_id?.username} icon={<User size={18} />} theme={theme} />
@@ -605,34 +607,33 @@ const EmployeeShipmentDetailsPage = () => {
                                     {shipment.requiredDocuments.map((doc) => (
                                         <div key={doc._id} className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${theme.inputBg}`}>
                                             <div className="flex items-center gap-4">
-                                                <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
-                                                    doc.uploaded 
-                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-600' 
+                                                <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${doc.uploaded
+                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-600'
                                                     : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600'
-                                                }`}>
+                                                    }`}>
                                                     {doc.uploaded ? <CheckCircle size={20} /> : <Clock size={20} />}
                                                 </div>
                                                 <div>
                                                     <p className={`font-bold ${theme.text}`}>{doc.name}</p>
                                                     <p className={`text-xs ${theme.subText}`}>
-                                                        {doc.uploaded 
-                                                            ? `تم الرفع: ${new Date(doc.uploadedAt).toLocaleDateString('ar-EG')}` 
+                                                        {doc.uploaded
+                                                            ? `تم الرفع: ${new Date(doc.uploadedAt).toLocaleDateString('ar-EG')}`
                                                             : `تاريخ الطلب: ${new Date(doc.requestedAt).toLocaleDateString('ar-EG')}`
                                                         }
                                                     </p>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="flex items-center gap-2">
                                                 {doc.uploaded ? (
                                                     <>
-                                                        <button 
+                                                        <button
                                                             onClick={() => openPreviewModal(doc)}
                                                             className="px-4 py-2 bg-green-600/10 text-green-600 hover:bg-green-600 hover:text-white rounded-lg font-bold text-sm transition-all flex items-center gap-2"
                                                         >
                                                             <Eye size={16} /> عرض
                                                         </button>
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleRejectDocumentClick(doc._id)}
                                                             className="p-2 bg-red-600/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all"
                                                             title="رفض المستند وطلب إعادة الرفع"
@@ -642,13 +643,13 @@ const EmployeeShipmentDetailsPage = () => {
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleEmployeeUploadClick(doc._id)}
                                                             className="px-4 py-2 bg-[#1ba3b6] text-white hover:bg-[#158a9b] rounded-lg font-bold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[#1ba3b6]/20"
                                                         >
                                                             <Upload size={16} /> رفع
                                                         </button>
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleDeleteRequestClick(doc._id)}
                                                             className="p-2 bg-red-600/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all"
                                                             title="حذف هذا الطلب"
@@ -666,13 +667,13 @@ const EmployeeShipmentDetailsPage = () => {
 
 
 
-                         {/* ACID Request Documents (Proforma Invoice) */}
-                         {shipment.proformaInvoice && (
+                        {/* ACID Request Documents (Proforma Invoice) */}
+                        {shipment.proformaInvoice && (
                             <div className={`p-6 rounded-3xl border ${theme.cardBg} shadow-sm`}>
                                 <h3 className={`font-bold text-xl mb-4 flex items-center gap-2 ${theme.text}`}>
                                     <FileText className="text-purple-500" /> مستندات طلب ACID
                                 </h3>
-                                
+
                                 <div className={`p-4 rounded-xl border flex items-center justify-between group ${theme.inputBg} hover:border-purple-500/50 transition-all`}>
                                     <div className="flex items-center gap-3 overflow-hidden">
                                         <div className="shrink-0 w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
@@ -683,7 +684,7 @@ const EmployeeShipmentDetailsPage = () => {
                                             <p className={`text-xs truncate ${theme.subText}`}>مرفق من طلب ACID</p>
                                         </div>
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={() => openPreviewModal({
                                             url: shipment.proformaInvoice.url,
                                             name: "الفاتورة المبدئية",
@@ -701,21 +702,21 @@ const EmployeeShipmentDetailsPage = () => {
 
                     {/* Left Column: Actions & Contact */}
                     <div className="lg:col-span-1 space-y-6">
-                        
+
                         {/* Quick Actions Card */}
                         <div className={`p-6 rounded-3xl border ${theme.cardBg} shadow-sm sticky top-24`}>
                             <h3 className={`font-bold text-lg mb-6 ${theme.text}`}>إجراءات سريعة</h3>
-                            
+
                             <div className="space-y-4">
-                                <button 
+                                <button
                                     onClick={handleOpenChat}
                                     className="w-full py-4 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold transition-all shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 transform hover:scale-[1.02]"
                                 >
                                     <MessageCircle size={20} />
                                     تواصل مع العميل
                                 </button>
-                                
-                                <button 
+
+                                <button
                                     onClick={handleViewHistory}
                                     className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 transform hover:scale-[1.02]"
                                 >
@@ -764,11 +765,10 @@ const EmployeeShipmentDetailsPage = () => {
                                     <input
                                         type="text"
                                         placeholder="اسم المستند المطلوب (مثال: شهادة منشأ)"
-                                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#1ba3b6] outline-none transition-all ${
-                                            isDarkMode 
-                                            ? 'bg-black/20 border-white/10 text-white placeholder-gray-500' 
+                                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#1ba3b6] outline-none transition-all ${isDarkMode
+                                            ? 'bg-black/20 border-white/10 text-white placeholder-gray-500'
                                             : 'bg-white border-gray-300 text-gray-900'
-                                        }`}
+                                            }`}
                                         value={docInput}
                                         onChange={(e) => {
                                             setDocInput(e.target.value);
@@ -776,20 +776,18 @@ const EmployeeShipmentDetailsPage = () => {
                                         }}
                                         onFocus={() => setShowSuggestions(true)}
                                     />
-                                    
+
                                     {/* Suggestions Dropdown */}
                                     {showSuggestions && filteredSuggestions.length > 0 && (
-                                        <div className={`absolute z-10 w-full mt-1 border rounded-lg shadow-xl max-h-48 overflow-y-auto ${
-                                            isDarkMode ? 'bg-[#2a2a2a] border-white/10' : 'bg-white border-gray-200'
-                                        }`}>
+                                        <div className={`absolute z-10 w-full mt-1 border rounded-lg shadow-xl max-h-48 overflow-y-auto ${isDarkMode ? 'bg-[#2a2a2a] border-white/10' : 'bg-white border-gray-200'
+                                            }`}>
                                             {filteredSuggestions.map((doc, idx) => (
                                                 <button
                                                     key={idx}
                                                     type="button"
                                                     onClick={() => handleAddDoc(doc)}
-                                                    className={`w-full px-4 py-2 text-right hover:bg-[#1ba3b6]/10 hover:text-[#1ba3b6] border-b last:border-b-0 transition flex items-center justify-between ${
-                                                        isDarkMode ? 'border-white/5 text-gray-300' : 'border-gray-100 text-gray-700'
-                                                    }`}
+                                                    className={`w-full px-4 py-2 text-right hover:bg-[#1ba3b6]/10 hover:text-[#1ba3b6] border-b last:border-b-0 transition flex items-center justify-between ${isDarkMode ? 'border-white/5 text-gray-300' : 'border-gray-100 text-gray-700'
+                                                        }`}
                                                 >
                                                     {doc}
                                                     <Plus size={14} />
@@ -798,7 +796,7 @@ const EmployeeShipmentDetailsPage = () => {
                                         </div>
                                     )}
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => handleAddDoc(docInput)}
                                     className="px-6 py-2 bg-[#1ba3b6] text-white rounded-xl font-bold hover:bg-[#158a9b] transition-all shadow-lg shadow-[#1ba3b6]/20"
                                 >
@@ -810,11 +808,10 @@ const EmployeeShipmentDetailsPage = () => {
                                 {requestedDocsList.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {requestedDocsList.map((doc, idx) => (
-                                            <div key={idx} className={`flex justify-between items-center p-3 rounded-lg border ${
-                                                isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
-                                            }`}>
+                                            <div key={idx} className={`flex justify-between items-center p-3 rounded-lg border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+                                                }`}>
                                                 <span className="font-bold text-sm">{doc}</span>
-                                                <button 
+                                                <button
                                                     onClick={() => handleRemoveDoc(idx)}
                                                     className="text-red-500 hover:bg-red-500/10 p-1.5 rounded-full transition"
                                                 >
@@ -824,33 +821,30 @@ const EmployeeShipmentDetailsPage = () => {
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className={`text-center py-8 rounded-xl border-2 border-dashed ${
-                                        isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
-                                    }`}>
+                                    <div className={`text-center py-8 rounded-xl border-2 border-dashed ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+                                        }`}>
                                         <p className="text-gray-500">لم يتم إضافة مستندات بعد</p>
                                     </div>
                                 )}
                             </div>
 
                             <div className="flex gap-3">
-                                <button 
+                                <button
                                     onClick={() => setRequestDocsModal(false)}
-                                    className={`flex-1 px-4 py-3 rounded-xl font-bold transition-all ${
-                                        isDarkMode 
-                                        ? 'bg-white/10 hover:bg-white/20 text-gray-300' 
+                                    className={`flex-1 px-4 py-3 rounded-xl font-bold transition-all ${isDarkMode
+                                        ? 'bg-white/10 hover:bg-white/20 text-gray-300'
                                         : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                                    }`}
+                                        }`}
                                 >
                                     إلغاء
                                 </button>
-                                <button 
+                                <button
                                     onClick={handleSendRequest}
                                     disabled={requestedDocsList.length === 0 || sendingRequest}
-                                    className={`flex-1 px-4 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 ${
-                                        requestedDocsList.length === 0 || sendingRequest
-                                        ? 'bg-gray-400 cursor-not-allowed opacity-50' 
+                                    className={`flex-1 px-4 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 ${requestedDocsList.length === 0 || sendingRequest
+                                        ? 'bg-gray-400 cursor-not-allowed opacity-50'
                                         : 'bg-[#1ba3b6] hover:bg-[#158a9b] text-white shadow-[#1ba3b6]/20'
-                                    }`}
+                                        }`}
                                 >
                                     {sendingRequest && <LoadingSpinner size="sm" color="white" />}
                                     {sendingRequest ? 'جاري الإرسال...' : 'إرسال الطلب للعميل'}
@@ -866,12 +860,11 @@ const EmployeeShipmentDetailsPage = () => {
                 {confirmModal.open && (
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                         <div className={`rounded-3xl shadow-2xl max-w-md w-full p-6 text-center transform transition-all scale-100 ${isDarkMode ? 'bg-[#1e1e1e] border border-white/10' : 'bg-white'}`}>
-                            
-                            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 ${
-                                confirmModal.type === 'danger' 
-                                ? 'bg-red-100 text-red-500 dark:bg-red-900/30' 
+
+                            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 ${confirmModal.type === 'danger'
+                                ? 'bg-red-100 text-red-500 dark:bg-red-900/30'
                                 : 'bg-amber-100 text-amber-500 dark:bg-amber-900/30'
-                            }`}>
+                                }`}>
                                 {confirmModal.type === 'danger' ? <Trash2 size={36} /> : <AlertTriangle size={36} />}
                             </div>
 
@@ -879,23 +872,21 @@ const EmployeeShipmentDetailsPage = () => {
                             <p className={`text-base mb-8 ${theme.subText}`}>{confirmModal.message}</p>
 
                             <div className="flex gap-4">
-                                <button 
+                                <button
                                     onClick={() => setConfirmModal({ ...confirmModal, open: false })}
-                                    className={`flex-1 py-3.5 rounded-xl font-bold transition-all ${
-                                        isDarkMode 
-                                        ? 'bg-white/5 hover:bg-white/10 text-gray-300' 
+                                    className={`flex-1 py-3.5 rounded-xl font-bold transition-all ${isDarkMode
+                                        ? 'bg-white/5 hover:bg-white/10 text-gray-300'
                                         : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                                    }`}
+                                        }`}
                                 >
                                     إلغاء
                                 </button>
-                                <button 
+                                <button
                                     onClick={confirmModal.onConfirm}
-                                    className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all transform hover:scale-[1.02] ${
-                                        confirmModal.type === 'danger' 
-                                        ? 'bg-red-500 hover:bg-red-600 shadow-red-500/25' 
+                                    className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all transform hover:scale-[1.02] ${confirmModal.type === 'danger'
+                                        ? 'bg-red-500 hover:bg-red-600 shadow-red-500/25'
                                         : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/25'
-                                    }`}
+                                        }`}
                                 >
                                     تأكيد
                                 </button>
@@ -903,9 +894,9 @@ const EmployeeShipmentDetailsPage = () => {
                         </div>
                     </div>
                 )}
-                
-                 {/* --- Direct Upload Modal --- */}
-                 {directUploadModal && (
+
+                {/* --- Direct Upload Modal --- */}
+                {directUploadModal && (
                     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => !isDirectUploading && setDirectUploadModal(false)}>
                         <div className={`w-full max-w-md rounded-2xl shadow-2xl p-6 ${theme.cardBg} border ${theme.divider}`} onClick={e => e.stopPropagation()}>
                             <div className="flex justify-between items-center mb-6">
@@ -923,9 +914,9 @@ const EmployeeShipmentDetailsPage = () => {
                                 <div>
                                     <label className={`block text-sm font-bold mb-2 ${theme.text}`}>اسم المستند</label>
                                     <div className="relative">
-                                        <input 
-                                            type="text" 
-                                            placeholder="أدخل اسم المستند (مثلاً: شهادة الفحص)" 
+                                        <input
+                                            type="text"
+                                            placeholder="أدخل اسم المستند (مثلاً: شهادة الفحص)"
                                             value={directUploadName}
                                             onChange={handleDirectUploadNameChange}
                                             onFocus={() => setShowDirectUploadSuggestions(true)}
@@ -933,12 +924,12 @@ const EmployeeShipmentDetailsPage = () => {
                                             className={`w-full p-3 pl-10 rounded-xl border outline-none focus:ring-2 focus:ring-[#1ba3b6] transition-all ${theme.inputBg} ${theme.text}`}
                                         />
                                         <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                        
+
                                         {/* Suggestions Dropdown */}
-                                        {showDirectUploadSuggestions && directUploadName && directUploadFilteredSuggestions.length > 0 && (
+                                        {showDirectUploadSuggestions && directUploadFilteredSuggestions.length > 0 && (
                                             <div className={`absolute top-full right-0 w-full mt-1 max-h-48 overflow-y-auto rounded-xl border shadow-xl z-10 ${theme.cardBg} ${theme.divider}`}>
                                                 {directUploadFilteredSuggestions.map((doc, index) => (
-                                                    <div 
+                                                    <div
                                                         key={index}
                                                         onClick={() => handleSelectDirectUploadName(doc)}
                                                         className={`p-3 cursor-pointer transition-colors border-b last:border-0 ${theme.divider} hover:bg-[#1ba3b6]/10 hover:text-[#1ba3b6] relative group flex items-center justify-between`}
@@ -954,25 +945,24 @@ const EmployeeShipmentDetailsPage = () => {
 
                                 <div>
                                     <label className={`block text-sm font-bold mb-2 ${theme.text}`}>الملف</label>
-                                    <div 
-                                        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all hover:border-[#1ba3b6] ${
-                                            directUploadFile ? 'border-[#1ba3b6] bg-[#1ba3b6]/5' : isDarkMode ? 'border-gray-700' : 'border-gray-300'
-                                        }`}
+                                    <div
+                                        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all hover:border-[#1ba3b6] ${directUploadFile ? 'border-[#1ba3b6] bg-[#1ba3b6]/5' : isDarkMode ? 'border-gray-700' : 'border-gray-300'
+                                            }`}
                                         onClick={() => directFileInputRef.current.click()}
                                     >
-                                        <input 
-                                            type="file" 
+                                        <input
+                                            type="file"
                                             ref={directFileInputRef}
                                             className="hidden"
                                             onChange={(e) => setDirectUploadFile(e.target.files[0])}
                                         />
-                                        
+
                                         {directUploadFile ? (
                                             <div className="flex flex-col items-center gap-2">
                                                 <FileText className="text-[#1ba3b6]" size={32} />
                                                 <p className={`font-bold ${theme.text}`}>{directUploadFile.name}</p>
                                                 <p className="text-xs text-gray-500">{(directUploadFile.size / 1024).toFixed(1)} KB</p>
-                                                <button 
+                                                <button
                                                     onClick={(e) => { e.stopPropagation(); setDirectUploadFile(null); }}
                                                     className="mt-2 text-red-500 text-xs font-bold hover:underline"
                                                 >
@@ -990,14 +980,14 @@ const EmployeeShipmentDetailsPage = () => {
                                 </div>
 
                                 <div className="flex gap-3 mt-6">
-                                    <button 
+                                    <button
                                         onClick={() => setDirectUploadModal(false)}
                                         disabled={isDirectUploading}
                                         className={`flex-1 py-3 rounded-xl font-bold transition-all border ${isDarkMode ? 'border-gray-700 hover:bg-gray-800 text-gray-300' : 'border-gray-200 hover:bg-gray-100 text-gray-600'}`}
                                     >
                                         إلغاء
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={handleDirectUpload}
                                         disabled={isDirectUploading || !directUploadName || !directUploadFile}
                                         className="flex-1 py-3 bg-[#1ba3b6] hover:bg-[#158a9b] text-white rounded-xl font-bold transition-all shadow-lg shadow-[#1ba3b6]/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1012,9 +1002,9 @@ const EmployeeShipmentDetailsPage = () => {
                 )}
 
                 {/* File Viewer Modal */}
-                <FileViewerModal 
-                    viewerData={viewerData} 
-                    onClose={closeViewer} 
+                <FileViewerModal
+                    viewerData={viewerData}
+                    onClose={closeViewer}
                 />
 
             </main>
@@ -1038,7 +1028,7 @@ const DataField = ({ label, value, icon, isStatus, theme }) => (
                     {value}
                 </span>
             )}
-            
+
             {icon && (
                 <div className="absolute top-1/2 -translate-y-1/2 left-3 pointer-events-none transition-colors duration-300 text-gray-400 group-hover:text-[#1ba3b6]">
                     {icon}
