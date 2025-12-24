@@ -2,6 +2,37 @@ const ExportShipment = require("../models/exportShipment");
 const UCRRequest = require("../models/ucrRequest");
 const { getPresignedUrl } = require("../utils/s3Helpers");
 const notificationService = require("../services/notificationService");
+const ShipmentLog = require("../models/ShipmentLog");
+
+// 🛠️ Helper to log export shipment events
+const logExportEvent = async ({
+	shipmentId,
+	action,
+	description,
+	publicDescription,
+	performedBy,
+	performedByType,
+	previousStatus,
+	newStatus,
+	metadata,
+}) => {
+	try {
+		await ShipmentLog.create({
+			shipmentId,
+			shipmentModel: 'ExportShipment', // 👈 Explicitly set model
+			action,
+			description,
+			publicDescription: publicDescription || description,
+			performedBy,
+			performedByType,
+			previousStatus,
+			newStatus,
+			metadata,
+		});
+	} catch (error) {
+		console.error("❌ Failed to create export shipment log:", error.message);
+	}
+};
 
 // Helper function to add presigned URLs to documents array
 const addPresignedUrlsToDocuments = async (documents) => {
@@ -339,6 +370,19 @@ const updateExportShipmentStatus = async (req, res) => {
 			}
 		}
 
+		// 📝 Log Status Change
+		await logExportEvent({
+			shipmentId: shipment._id,
+			action: "STATUS_UPDATE",
+			description: `Status changed from ${oldStatus} to ${status}`,
+			publicDescription: `تم تغيير حالة الشحنة إلى: ${status}`,
+			performedBy: employeeId,
+			performedByType: "employee",
+			previousStatus: oldStatus,
+			newStatus: status,
+			metadata: { notes }
+		});
+
 		res.json({
 			success: true,
 			message: "تم تحديث حالة الشحنة بنجاح",
@@ -396,6 +440,17 @@ const assignEmployeeToShipment = async (req, res) => {
 		} catch (notifError) {
 			console.error("Failed to send employee assignment notification:", notifError.message);
 		}
+
+		// 📝 Log Assignment
+		await logExportEvent({
+			shipmentId: shipment._id,
+			action: "ASSIGNMENT",
+			description: `Employee assigned: ${assignedEmployeeId}`,
+			publicDescription: "تم تعيين موظف لمتابعة الشحنة",
+			performedBy: req.user._id,
+			performedByType: "employee",
+			metadata: { assignedEmployeeId }
+		});
 
 		res.json({
 			success: true,
@@ -513,6 +568,17 @@ const requestDocumentFromClient = async (req, res) => {
 			// Don't fail the request if notification fails
 		}
 
+		// 📝 Log Document Request
+		await logExportEvent({
+			shipmentId: shipment._id,
+			action: "DOC_REQUEST",
+			description: `Requested document: ${documentName}`,
+			publicDescription: `تم طلب مستند: ${documentName}`,
+			performedBy: req.user._id,
+			performedByType: "employee",
+			metadata: { documentName }
+		});
+
 		res.json({
 			success: true,
 			message: "تم طلب المستند من العميل",
@@ -601,6 +667,17 @@ const uploadRequiredDocument = async (req, res) => {
 				console.error("Failed to send export document upload notification:", notifError.message);
 			}
 		}
+
+		// 📝 Log Document Upload
+		await logExportEvent({
+			shipmentId: shipment._id,
+			action: "DOC_UPLOAD",
+			description: `Document uploaded: ${docName}`,
+			publicDescription: `تم رفع المستند: ${docName}`,
+			performedBy: userId,
+			performedByType: "client",
+			metadata: { documentName: docName, uploadId }
+		});
 
 		res.json({
 			success: true,

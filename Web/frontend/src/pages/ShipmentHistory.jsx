@@ -2,517 +2,387 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
+import { 
+    Calendar, CheckCircle, Clock, FileText, MapPin, 
+    ArrowRight, Box, Anchor, DollarSign, FileCheck,
+    Download, Eye, Shield, Truck, Package, User, AlertCircle
+} from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { useTheme } from "../context/ThemeContext";
+import FileViewerModal from "../components/FileViewerModal";
 
 const ShipmentHistory = () => {
-	const { shipmentId } = useParams();
-	const navigate = useNavigate();
-	const [shipment, setShipment] = useState(null);
-	const [uploads, setUploads] = useState([]);
-	const [loading, setLoading] = useState(true);
-	const [user, setUser] = useState(null);
+    const { shipmentId } = useParams();
+    const navigate = useNavigate();
+    const { isDarkMode } = useTheme();
+    const [shipment, setShipment] = useState(null);
+    const [historyLogs, setHistoryLogs] = useState([]);
+    const [uploads, setUploads] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [viewerData, setViewerData] = useState({ open: false, url: null, name: null, type: null });
 
-	const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-	useEffect(() => {
-		// Get user from localStorage
-		const storedUser = localStorage.getItem("user");
-		if (storedUser) {
-			const parsedUser = JSON.parse(storedUser);
-			setUser(parsedUser);
-		} else {
-			toast.error("يجب تسجيل الدخول أولاً");
-			navigate("/login");
-		}
-	}, [navigate]);
+    // Theme Colors
+    const theme = {
+        bg: isDarkMode ? "bg-[#0a0a0a]" : "bg-gray-50",
+        cardBg: isDarkMode ? "bg-[#141419]/80 backdrop-blur-md border-white/5" : "bg-white border-gray-100",
+        text: isDarkMode ? "text-white" : "text-gray-900",
+        subText: isDarkMode ? "text-gray-400" : "text-gray-500",
+        accent: "text-[#D4AF37]", // Gold
+        primary: "bg-[#1ba3b6]", // Teal
+        primaryText: "text-[#1ba3b6]",
+        divider: isDarkMode ? "border-white/10" : "border-gray-100",
+    };
 
-	useEffect(() => {
-		if (shipmentId && token) {
-			fetchShipmentHistory();
-		}
-	}, [shipmentId, token]);
+    useEffect(() => {
+        if (!token) {
+            toast.error("يجب تسجيل الدخول أولاً");
+            navigate("/login");
+            return;
+        }
+        fetchShipmentData();
+    }, [shipmentId, token]);
 
-	const fetchShipmentHistory = async () => {
-		try {
-			setLoading(true);
+    const fetchShipmentData = async () => {
+        try {
+            setLoading(true);
+            
+            // 1. Fetch Shipment Details
+            const shipmentRes = await axios.get(
+                `${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setShipment(shipmentRes.data);
 
-			// Fetch shipment details
-			const shipmentResponse = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}`,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				}
-			);
-			setShipment(shipmentResponse.data);
+            // 2. Fetch History Logs (Real Data)
+            try {
+                const historyRes = await axios.get(
+                    `${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}/history`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                
+                // If logs allow, merge or use them. If empty (legacy shipment), fallback to heuristic?
+                // For now, let's prefer real logs if they exist, but maybe show a "Legacy" note if empty?
+                // Actually, let's mix them if we want, or just show logs.
+                // The user asked for "everything that happens".
+                
+                if (historyRes.data && historyRes.data.length > 0) {
+                     setHistoryLogs(historyRes.data);
+                } else {
+                     // Fallback for old shipments before this feature
+                     const legacyEvents = generateLegacyTimeline(shipmentRes.data);
+                     setHistoryLogs(legacyEvents);
+                }
 
-			// Fetch uploads/documents related to this shipment
-			try {
-				const uploadsResponse = await axios.get(
-					`${
-						import.meta.env.VITE_API_URL
-					}/api/uploads?category=shipment&relatedId=${
-						shipmentResponse.data._id
-					}`,
-					{
-						headers: {
-							Authorization: `Bearer ${token}`,
-						},
-					}
-				);
-				setUploads(uploadsResponse.data?.uploads || []);
-			} catch (uploadError) {
-				console.log("Could not fetch uploads:", uploadError);
-				setUploads([]);
-			}
+            } catch (historyErr) {
+                console.warn("History API not ready yet or failed:", historyErr);
+                // Fallback
+                setHistoryLogs(generateLegacyTimeline(shipmentRes.data));
+            }
 
-			setLoading(false);
-		} catch (error) {
-			console.error("Error fetching shipment history:", error);
-			toast.error("فشل تحميل تاريخ الشحنة");
-			setLoading(false);
-		}
-	};
+            // 3. Fetch extra uploads
+            try {
+                const uploadsRes = await axios.get(
+                    `${import.meta.env.VITE_API_URL}/api/uploads?category=shipment&relatedId=${shipmentRes.data._id}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                setUploads(uploadsRes.data?.uploads || []);
+            } catch (err) {
+                console.log("No extra uploads found");
+            }
 
-	const getStatusColor = (status) => {
-		switch (status) {
-			case "مكتملة":
-			case "تمت بنجاح":
-				return "bg-green-100 text-green-800 border-green-300";
-			case "في الطريق":
-				return "bg-blue-100 text-blue-800 border-blue-300";
-			case "تم وصول البضاعة":
-				return "bg-cyan-100 text-cyan-800 border-cyan-300";
-			case "التخليص الجمركي":
-			case "جاري الكشف والتثمين":
-			case "جارى ادراج الشحنة واستكمال الاجراءات":
-				return "bg-indigo-100 text-indigo-800 border-indigo-300";
-			case "في انتظار وصول الإذن":
-			case "تم وصول الإذن":
-				return "bg-purple-100 text-purple-800 border-purple-300";
-			case "في انتظار الشحن":
-				return "bg-orange-100 text-orange-800 border-orange-300";
-			default:
-				return "bg-gray-100 text-gray-800 border-gray-300";
-		}
-	};
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            toast.error("فشل تحميل بيانات الشحنة");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-	const getStatusIcon = (status) => {
-		switch (status) {
-			case "مكتملة":
-			case "تمت بنجاح":
-				return "✅";
-			case "في الطريق":
-				return "🚢";
-			case "تم وصول البضاعة":
-				return "📦";
-			case "التخليص الجمركي":
-			case "جاري الكشف والتثمين":
-			case "جارى ادراج الشحنة واستكمال الاجراءات":
-				return "🔍";
-			case "في انتظار وصول الإذن":
-			case "تم وصول الإذن":
-				return "⏳";
-			case "في انتظار الشحن":
-				return "⏸️";
-			default:
-				return "📋";
-		}
-	};
+    // Fallback generator for old shipments
+    const generateLegacyTimeline = (data) => {
+        const events = [];
+        if (data.createdAt) {
+            events.push({
+                action: "CREATED",
+                publicDescription: "تم إنشاء الشحنة",
+                createdAt: data.createdAt,
+                 performedBy: data.user_id // approximations
+            });
+        }
+        if (data.status) {
+             events.push({
+                action: "STATUS_UPDATE",
+                publicDescription: `الحالة الحالية: ${data.status}`,
+                createdAt: data.updatedAt,
+                isLatest: true
+            });
+        }
+        return events.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    };
 
-	const handleDownloadDocument = async (fileId, fileName) => {
-		try {
-			toast.loading("جاري تحميل المستند...");
-			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/uploads/${fileId}`,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				}
-			);
+    const handlePreview = async (fileIdOrUrl, name, type) => {
+        // If it looks like a MongoID, fetch fresh presigned URL from API
+        const isMongoId = fileIdOrUrl && /^[0-9a-fA-F]{24}$/.test(fileIdOrUrl);
+        
+        if (isMongoId) {
+            const toastId = toast.loading("جاري جلب المستند...");
+            try {
+                const response = await axios.get(
+                    `${import.meta.env.VITE_API_URL}/api/uploads/${fileIdOrUrl}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                
+                if (response.data?.url || response.data?.upload?.url || response.data?.presignedUrl) {
+                    const freshUrl = response.data.url || response.data.upload?.url || response.data.presignedUrl;
+                    const fileName = response.data.upload?.filename || name;
+                    const fileType = response.data.upload?.mimetype || type;
+                    toast.success("تم جلب المستند", { id: toastId });
+                    
+                    setViewerData({
+                        open: true,
+                        url: freshUrl,
+                        name: fileName,
+                        type: fileType || (fileName?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
+                        fileId: fileIdOrUrl // ✅ Pass fileId for proxy download fallback
+                    });
+                } else {
+                    toast.error("فشل العثور على رابط المستند", { id: toastId });
+                }
+            } catch (err) {
+                console.error("Error fetching document:", err);
+                toast.error("فشل تحميل المستند", { id: toastId });
+            }
+        } else if (fileIdOrUrl) {
+            // If it's already a URL, use it directly (for extra uploads that already have presigned URLs)
+            setViewerData({
+                open: true,
+                url: fileIdOrUrl,
+                name: name,
+                type: type || (name?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg')
+            });
+        } else {
+            toast.error("رابط الملف غير متوفر");
+        }
+    };
 
-			toast.dismiss();
-			const fileUrl =
-				response.data?.upload?.presignedUrl || response.data?.presignedUrl;
-			if (fileUrl) {
-				window.open(fileUrl, "_blank");
-			} else {
-				toast.error("لم يتم العثور على رابط الملف");
-			}
-		} catch (error) {
-			console.error("Error downloading document:", error);
-			toast.dismiss();
-			toast.error("فشل تحميل المستند");
-		}
-	};
+    const getIconForAction = (action) => {
+        switch (action) {
+            case "CREATED": return <Box size={20} />;
+            case "STATUS_UPDATE": return <Truck size={20} />;
+            case "ASSIGNMENT": return <User size={20} />;
+            case "DOC_REQUEST": return <FileText size={20} />;
+            case "DOC_UPLOAD": return <FileCheck size={20} />;
+            case "INFO_UPDATE": return <CheckCircle size={20} />;
+            default: return <Clock size={20} />;
+        }
+    };
 
-	if (loading) {
-		return (
-			<div className="bg-gray-50 min-h-screen">
-				<Header />
-				<div className="flex justify-center items-center py-12 gap-4">
-					<div className="spinner border-4 border-gray-300 border-t-red-800 rounded-full w-12 h-12 animate-spin"></div>
-					<span className="text-gray-600 text-lg">جاري التحميل...</span>
-				</div>
-			</div>
-		);
-	}
+    const getColorForAction = (action) => {
+        switch (action) {
+            case "CREATED": return "blue";
+            case "STATUS_UPDATE": return "teal";
+            case "ASSIGNMENT": return "purple";
+            case "DOC_REQUEST": return "amber";
+            case "DOC_UPLOAD": return "green";
+            default: return "gray";
+        }
+    };
 
-	if (!shipment) {
-		return (
-			<div className="bg-gray-50 min-h-screen">
-				<Header />
-				<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-					<div className="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-sm">
-						<div className="text-center">
-							<p className="text-red-600 text-lg mb-4">
-								لم يتم العثور على الشحنة
-							</p>
-							<button
-								onClick={() => navigate(-1)}
-								className="bg-red-800 text-white px-6 py-2 rounded-lg hover:bg-red-900 transition"
-							>
-								← العودة
-							</button>
-						</div>
-					</div>
-				</main>
-			</div>
-		);
-	}
+    if (loading) {
+        return (
+            <div className={`min-h-screen flex items-center justify-center ${theme.bg}`}>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1ba3b6]"></div>
+            </div>
+        );
+    }
 
-	return (
-		<div className="bg-gray-50 min-h-screen">
-			<Header />
+    if (!shipment) return null;
 
-			<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-				<div className="max-w-5xl mx-auto">
-					{/* Header */}
-					<div className="bg-white p-6 rounded-2xl shadow-sm mb-6">
-						<div className="flex items-center justify-between mb-4">
-							<h1 className="text-3xl font-bold text-red-900">
-								📜 تاريخ الشحنة
-							</h1>
-							<button
-								onClick={() => navigate(-1)}
-								className="text-gray-600 hover:text-red-800 text-sm font-medium flex items-center gap-2"
-							>
-								<span>←</span>
-								<span>العودة</span>
-							</button>
-						</div>
+    return (
+        <div className={`min-h-screen transition-colors duration-300 ${theme.bg}`} dir="rtl">
+            <Header />
 
-						{/* Shipment Basic Info */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-							<div className="text-center">
-								<p className="text-sm text-gray-500 mb-1">رقم ACID</p>
-								<p className="font-bold text-gray-900 text-lg">
-									{shipment.acid}
-								</p>
-							</div>
-							<div className="text-center">
-								<p className="text-sm text-gray-500 mb-1">الحالة الحالية</p>
-								<span
-									className={`inline-block px-4 py-2 rounded-full text-sm font-bold border-2 ${getStatusColor(
-										shipment.status
-									)}`}
-								>
-									{getStatusIcon(shipment.status)} {shipment.status}
-								</span>
-							</div>
-							<div className="text-center">
-								<p className="text-sm text-gray-500 mb-1">الدولة</p>
-								<p className="font-bold text-gray-900">{shipment.country}</p>
-							</div>
-						</div>
-					</div>
+            <main className="pt-28 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                    <div>
+                        <button 
+                            onClick={() => navigate(-1)}
+                            className={`mb-4 flex items-center gap-2 text-sm font-bold transition-colors ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`}
+                        >
+                            <ArrowRight size={18} /> العودة للشحنات
+                        </button>
+                        <h1 className={`text-3xl md:text-4xl font-extrabold flex items-center gap-3 ${theme.text}`}>
+                            سجل حركات الشحنة
+                            <span className="text-lg font-normal px-3 py-1 rounded-full bg-[#1ba3b6]/10 text-[#1ba3b6] border border-[#1ba3b6]/20">
+                                {shipment.acid || `#${shipment._id.slice(-6)}`}
+                            </span>
+                        </h1>
+                    </div>
+                </div>
 
-					{/* Timeline Section */}
-					<div className="bg-white p-6 rounded-2xl shadow-sm mb-6">
-						<h2 className="text-2xl font-bold text-red-900 mb-6">
-							⏱️ المراحل الزمنية
-						</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    {/* Left Column: Timeline */}
+                    <div className="lg:col-span-2 space-y-8">
+                        <div className={`rounded-3xl p-8 border shadow-lg ${theme.cardBg} ${theme.divider}`}>
+                            <h2 className={`text-xl font-bold mb-8 flex items-center gap-2 ${theme.text}`}>
+                                <Clock className="text-[#D4AF37]" /> سجل العمليات
+                            </h2>
 
-						<div className="relative">
-							{/* Timeline Line */}
-							<div className="absolute right-6 top-0 bottom-0 w-0.5 bg-gray-300"></div>
+                            {historyLogs.length === 0 ? (
+                                <div className="text-center py-10 opacity-50">
+                                    <AlertCircle className="mx-auto mb-2" size={32}/>
+                                    <p>لا توجد سجلات بعد</p>
+                                </div>
+                            ) : (
+                                <div className="relative border-r-2 border-[#1ba3b6]/20 mr-4 space-y-8">
+                                    {historyLogs.map((log, index) => {
+                                        const color = getColorForAction(log.action);
+                                        const performerName = log.performedBy?.fullname || log.performedBy?.username || "النظام";
+                                        
+                                        return (
+                                            <div key={index} className="relative pr-8 group">
+                                                {/* Dot/Icon */}
+                                                <div className={`absolute -right-[9px] top-0 w-4 h-4 rounded-full border-2 transition-all duration-300 group-hover:scale-125
+                                                    ${index === 0 ? 'bg-[#1ba3b6] border-[#1ba3b6] shadow-[0_0_15px_#1ba3b6]' : 'bg-[#0a0a0a] border-gray-500'}
+                                                `}></div>
 
-							{/* Creation Event */}
-							<div className="relative flex items-start gap-4 mb-8">
-								<div className="flex-shrink-0 w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl font-bold z-10">
-									🆕
-								</div>
-								<div className="flex-1 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-									<h3 className="font-bold text-gray-900 text-lg mb-1">
-										إنشاء الشحنة
-									</h3>
-									<p className="text-sm text-gray-600 mb-2">
-										تم إنشاء الشحنة في النظام
-									</p>
-									<p className="text-xs text-gray-500">
-										📅{" "}
-										{new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
-											weekday: "long",
-											year: "numeric",
-											month: "long",
-											day: "numeric",
-											hour: "2-digit",
-											minute: "2-digit",
-										})}
-									</p>
-								</div>
-							</div>
+                                                {/* Card */}
+                                                <div className={`p-5 rounded-2xl border transition-all duration-300 hover:bg-[#1ba3b6]/5 ${theme.cardBg} ${theme.divider}`}>
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className={`p-2 rounded-lg 
+                                                                ${color === 'green' ? 'bg-green-500/10 text-green-500' :
+                                                                  color === 'blue' ? 'bg-blue-500/10 text-blue-500' :
+                                                                  color === 'purple' ? 'bg-purple-500/10 text-purple-500' :
+                                                                  color === 'amber' ? 'bg-amber-500/10 text-amber-500' :
+                                                                  'bg-[#1ba3b6]/10 text-[#1ba3b6]'
+                                                                }`}>
+                                                                {getIconForAction(log.action)}
+                                                            </span>
+                                                            <div>
+                                                                <h3 className={`font-bold text-lg ${theme.text}`}>
+                                                                    {log.publicDescription || log.description}
+                                                                </h3>
+                                                                {log.performedBy && (
+                                                                     <p className="text-xs opacity-50 mt-1">قام بها: {performerName}</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-xs font-mono opacity-60 dir-ltr text-left whitespace-nowrap">
+                                                            {new Date(log.createdAt).toLocaleDateString("ar-EG")} <br/>
+                                                            {new Date(log.createdAt).toLocaleTimeString("ar-EG", {hour: '2-digit', minute:'2-digit'})}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-							{/* Current Status Event */}
-							<div className="relative flex items-start gap-4 mb-8">
-								<div className="flex-shrink-0 w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold z-10">
-									{getStatusIcon(shipment.status)}
-								</div>
-								<div className="flex-1 bg-green-50 border-2 border-green-200 rounded-lg p-4">
-									<h3 className="font-bold text-gray-900 text-lg mb-1">
-										الحالة: {shipment.status}
-									</h3>
-									<p className="text-sm text-gray-600 mb-2">آخر تحديث للشحنة</p>
-									<p className="text-xs text-gray-500">
-										📅{" "}
-										{new Date(shipment.updatedAt).toLocaleDateString("ar-EG", {
-											weekday: "long",
-											year: "numeric",
-											month: "long",
-											day: "numeric",
-											hour: "2-digit",
-											minute: "2-digit",
-										})}
-									</p>
-								</div>
-							</div>
+                    {/* Right Column: Details & Documents */}
+                    <div className="space-y-6">
+                        
+                         {/* Shipment Info Card */}
+                         <div className={`rounded-3xl p-6 border shadow-lg ${theme.cardBg} ${theme.divider}`}>
+                            <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${theme.text}`}>
+                                <FileText className="text-[#1ba3b6]" /> بيانات الشحنة
+                            </h3>
+                            
+                            <div className="space-y-4">
+                                <InfoRow label="الميناء" value={shipment.port_name} icon={<Anchor size={16}/>} theme={theme} />
+                                <InfoRow label="الدولة" value={shipment.country} icon={<MapPin size={16}/>} theme={theme} />
+                                <InfoRow label="عدد الحاويات" value={shipment.num_of_containers} icon={<Box size={16}/>} theme={theme} />
+                                <InfoRow label="البوليصة" value={shipment.number46 || "غير محدد"} icon={<FileCheck size={16}/>} theme={theme} />
+                                
+                                <div className={`h-px w-full my-4 ${theme.divider}`}></div>
+                                
+                                <InfoRow label="رسوم التخليص" value={`${shipment.clearance_fees || 0} ج.م`} icon={<DollarSign size={16}/>} theme={theme} />
+                                <InfoRow label="مصروفات" value={`${shipment.expenses_and_tips || 0} ج.م`} icon={<DollarSign size={16}/>} theme={theme} />
+                            </div>
+                        </div>
 
-							{/* Assigned Employee */}
-							{shipment.employee_id && (
-								<div className="relative flex items-start gap-4 mb-8">
-									<div className="flex-shrink-0 w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold z-10">
-										👔
-									</div>
-									<div className="flex-1 bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
-										<h3 className="font-bold text-gray-900 text-lg mb-1">
-											تعيين موظف
-										</h3>
-										<p className="text-sm text-gray-600 mb-2">
-											تم تعيين:{" "}
-											<span className="font-semibold">
-												{shipment.employee_id.username ||
-													shipment.employee_id.fullname ||
-													"موظف"}
-											</span>
-										</p>
-										{shipment.employee_id.email && (
-											<p className="text-xs text-gray-500">
-												📧 {shipment.employee_id.email}
-											</p>
-										)}
-									</div>
-								</div>
-							)}
-						</div>
-					</div>
+                         {/* Documents Card */}
+                        {(shipment.requiredDocuments?.some(d => d.uploaded) || uploads.length > 0) && (
+                            <div className={`rounded-3xl p-6 border shadow-lg ${theme.cardBg} ${theme.divider}`}>
+                                <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${theme.text}`}>
+                                    <Download className="text-green-500" /> الملفات المتاحة
+                                </h3>
 
-					{/* Documents Section */}
-					<div className="bg-white p-6 rounded-2xl shadow-sm mb-6">
-						<h2 className="text-2xl font-bold text-red-900 mb-6">
-							📄 المستندات المرفقة
-						</h2>
-
-						{shipment.requiredDocuments &&
-						shipment.requiredDocuments.length > 0 ? (
-							<div className="space-y-3">
-								{shipment.requiredDocuments.map((doc, index) => (
-									<div
-										key={index}
-										className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-red-300 transition-all"
-									>
-										<div className="flex items-center gap-3">
-											<span
-												className={`px-3 py-1 rounded-full text-sm font-semibold ${
-													doc.uploaded
-														? "bg-green-100 text-green-800"
-														: "bg-yellow-100 text-yellow-800"
-												}`}
-											>
-												{doc.uploaded ? "✓ مرفوع" : "⏳ مطلوب"}
-											</span>
-											{doc.uploaded && doc.fileId && (
-												<button
-													onClick={() =>
-														handleDownloadDocument(doc.fileId, doc.name)
-													}
-													className="text-blue-600 hover:text-blue-800 text-sm font-medium underline flex items-center gap-1"
-												>
-													<span>📥</span>
-													<span>تحميل</span>
-												</button>
-											)}
-										</div>
-										<div className="text-right">
-											<p className="font-bold text-gray-900">{doc.name}</p>
-											{doc.uploadedAt && (
-												<p className="text-sm text-gray-500">
-													{new Date(doc.uploadedAt).toLocaleDateString("ar-EG")}
-												</p>
-											)}
-											{!doc.uploaded && doc.requestedAt && (
-												<p className="text-sm text-gray-500">
-													تم الطلب:{" "}
-													{new Date(doc.requestedAt).toLocaleDateString(
-														"ar-EG"
-													)}
-												</p>
-											)}
-										</div>
-									</div>
-								))}
-							</div>
-						) : (
-							<div className="text-center py-8 bg-gray-50 rounded-lg">
-								<svg
-									className="w-16 h-16 mx-auto text-gray-400 mb-4"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-									/>
-								</svg>
-								<p className="text-gray-500">لا توجد مستندات مرفقة</p>
-							</div>
-						)}
-					</div>
-
-					{/* Uploaded Files from S3 */}
-					{uploads.length > 0 && (
-						<div className="bg-white p-6 rounded-2xl shadow-sm mb-6">
-							<h2 className="text-2xl font-bold text-red-900 mb-6">
-								📎 ملفات إضافية
-							</h2>
-							<div className="space-y-3">
-								{uploads.map((upload, index) => (
-									<div
-										key={index}
-										className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-red-300 transition-all"
-									>
-										<button
-											onClick={() =>
-												handleDownloadDocument(upload._id, upload.originalname)
-											}
-											className="text-blue-600 hover:text-blue-800 text-sm font-medium underline flex items-center gap-2"
-										>
-											<span>📥</span>
-											<span>تحميل</span>
-										</button>
-										<div className="text-right">
-											<p className="font-bold text-gray-900">
-												{upload.originalname || upload.filename}
-											</p>
-											<p className="text-sm text-gray-500">
-												{new Date(
-													upload.uploadedAt || upload.createdAt
-												).toLocaleDateString("ar-EG")}
-											</p>
-											{upload.documentType && (
-												<span className="text-xs text-gray-400">
-													{upload.documentType}
-												</span>
-											)}
-										</div>
-									</div>
-								))}
-							</div>
-						</div>
-					)}
-
-					{/* Shipment Details */}
-					<div className="bg-white p-6 rounded-2xl shadow-sm">
-						<h2 className="text-2xl font-bold text-red-900 mb-6">
-							ℹ️ تفاصيل الشحنة
-						</h2>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<div className="p-4 bg-gray-50 rounded-lg">
-								<p className="text-sm text-gray-500 mb-1">الميناء</p>
-								<p className="font-semibold text-gray-900">
-									{shipment.port_name}
-								</p>
-							</div>
-							<div className="p-4 bg-gray-50 rounded-lg">
-								<p className="text-sm text-gray-500 mb-1">عدد الحاويات</p>
-								<p className="font-semibold text-gray-900">
-									{shipment.num_of_containers}
-								</p>
-							</div>
-							{shipment.type_of_containers &&
-								shipment.type_of_containers.length > 0 && (
-									<div className="p-4 bg-gray-50 rounded-lg">
-										<p className="text-sm text-gray-500 mb-1">أنواع الحاويات</p>
-										<p className="font-semibold text-gray-900">
-											{shipment.type_of_containers.join(", ")}
-										</p>
-									</div>
-								)}
-							{shipment.number46 && (
-								<div className="p-4 bg-gray-50 rounded-lg">
-									<p className="text-sm text-gray-500 mb-1">رقم البوليصة</p>
-									<p className="font-semibold text-gray-900">
-										{shipment.number46}
-									</p>
-								</div>
-							)}
-							{(shipment.clearance_fees > 0 ||
-								shipment.expenses_and_tips > 0 ||
-								shipment.sundries > 0) && (
-								<>
-									{shipment.clearance_fees > 0 && (
-										<div className="p-4 bg-gray-50 rounded-lg">
-											<p className="text-sm text-gray-500 mb-1">رسوم التخليص</p>
-											<p className="font-semibold text-gray-900">
-												{shipment.clearance_fees} جنيه
-											</p>
-										</div>
-									)}
-									{shipment.expenses_and_tips > 0 && (
-										<div className="p-4 bg-gray-50 rounded-lg">
-											<p className="text-sm text-gray-500 mb-1">
-												المصروفات والإكراميات
-											</p>
-											<p className="font-semibold text-gray-900">
-												{shipment.expenses_and_tips} جنيه
-											</p>
-										</div>
-									)}
-									{shipment.sundries > 0 && (
-										<div className="p-4 bg-gray-50 rounded-lg">
-											<p className="text-sm text-gray-500 mb-1">
-												مصروفات متنوعة
-											</p>
-											<p className="font-semibold text-gray-900">
-												{shipment.sundries} جنيه
-											</p>
-										</div>
-									)}
-								</>
-							)}
-						</div>
-					</div>
-				</div>
-			</main>
-
-			<Footer />
-		</div>
-	);
+                                <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar">
+                                    {/* Required Docs */}
+                                    {shipment.requiredDocuments?.filter(d => d.uploaded).map((doc, idx) => (
+                                        <DocItem 
+                                            key={`req-${idx}`}
+                                            name={doc.name}
+                                            date={doc.uploadedAt}
+                                            onClick={() => handlePreview(doc.fileId, doc.name)}
+                                            theme={theme}
+                                        />
+                                    ))}
+                                    
+                                    {/* Extra Uploads */}
+                                    {uploads.map((up, idx) => (
+                                        <DocItem 
+                                            key={`up-${idx}`}
+                                            name={up.originalname}
+                                            date={up.uploadedAt}
+                                            isNew
+                                            onClick={() => handlePreview(up.presignedUrl || up.url, up.originalname, up.mimetype)}
+                                            theme={theme}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </main>
+            
+            <FileViewerModal 
+                isOpen={viewerData.open}
+                onClose={() => setViewerData({...viewerData, open: false})}
+                fileUrl={viewerData.url}
+                fileName={viewerData.name}
+                fileType={viewerData.type}
+            />
+        </div>
+    );
 };
+
+// Helper Components
+const InfoRow = ({ label, value, icon, theme }) => (
+    <div className="flex justify-between items-center group">
+        <span className={`text-sm flex items-center gap-2 ${theme.subText}`}>
+            <span className="opacity-50 group-hover:opacity-100 transition-opacity">{icon}</span> {label}
+        </span>
+        <span className={`font-bold ${theme.text}`}>{value || "-"}</span>
+    </div>
+);
+
+const DocItem = ({ name, date, onClick, isNew, theme }) => (
+    <button 
+        onClick={onClick}
+        className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all hover:translate-x-1 ${theme.divider} hover:border-[#1ba3b6]/30 group text-right`}
+    >
+        <div className="flex items-center gap-3 overflow-hidden">
+            <div className={`p-2 rounded-lg ${isNew ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}>
+                <FileText size={16} />
+            </div>
+            <div className="min-w-0">
+                <p className={`text-sm font-bold truncate ${theme.text} group-hover:text-[#1ba3b6]`}>{name}</p>
+                <p className="text-[10px] opacity-60">{new Date(date).toLocaleDateString("ar-EG")}</p>
+            </div>
+        </div>
+        <Eye size={16} className={`opacity-0 group-hover:opacity-100 transition-opacity ${theme.subText}`} />
+    </button>
+);
 
 export default ShipmentHistory;

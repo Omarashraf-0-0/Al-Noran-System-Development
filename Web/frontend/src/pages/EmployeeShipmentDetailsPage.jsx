@@ -50,65 +50,22 @@ const EmployeeShipmentDetailsPage = () => {
     const [isDirectUploading, setIsDirectUploading] = useState(false);
     const [showDirectUploadSuggestions, setShowDirectUploadSuggestions] = useState(false);
     const directFileInputRef = useRef(null);
-
-    // Old viewDocModal state removed in favor of viewerData
-
-    const openPreviewModal = async (doc) => {
-        let fileUrl = doc.fileId || doc.s3Url || doc.url;
-        let fileName = doc.name || doc.originalName || "مستند";
-        let fileType = doc.mimeType || doc.mimetype;
-        const fileId = (doc.uploaded || doc.requestedAt) ? null : (doc._id || doc.id);
-
-        // Check if fileId looks like a MongoID (24 hex chars) - indicating a Client Upload
-        const isMongoId = doc.fileId && /^[0-9a-fA-F]{24}$/.test(doc.fileId);
-
-        if (isMongoId) {
-            const toastId = toast.loading("جاري جلب المستند...");
-            try {
-                const response = await axios.get(
-                    `${import.meta.env.VITE_API_URL}/api/uploads/${doc.fileId}`,
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                
-                if (response.data?.url || response.data?.upload?.url || response.data?.presignedUrl) {
-                    fileUrl = response.data.url || response.data.upload?.url || response.data.presignedUrl;
-                    fileName = response.data.upload?.filename || fileName;
-                    fileType = response.data.upload?.mimetype || fileType;
-                    toast.success("تم جلب المستند", { id: toastId });
-                } else {
-                    toast.error("فشل العثور على رابط المستند", { id: toastId });
-                    return;
-                }
-            } catch (err) {
-                console.error("Error fetching document:", err);
-                // Fallback: If fetch fails, try using the original fileId if it *might* be a URL (unlikely but safe)
-                toast.dismiss(toastId);
-                if (!fileUrl) {
-                    toast.error("فشل تحميل المستند. قد يكون الملف محذوفاً أو لا تملك صلاحية الوصول.");
-                    return;
-                }
-            }
-        }
-
-        // Fix: Clean URL for extension check (remove query params)
-        const cleanUrl = fileUrl?.split('?')[0]?.toLowerCase();
+    
+    // ✅ Open Preview Modal - Logic delegated to FileViewerModal component
+    const openPreviewModal = (doc) => {
+        const fileId = doc.fileId || doc._id || doc.id;
+        const fileUrl = doc.url || doc.s3Url || doc.fileUrl;
+        const fileName = doc.name || doc.originalName || doc.filename || "مستند";
+        const fileType = doc.mimeType || doc.mimetype || doc.type;
         
-        // Fix: Case-insensitive mimetype check if still unknown
-        if (!fileType) {
-            fileType = cleanUrl?.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg';
-        }
-
-        if (!fileUrl) {
-            toast.error("رابط الملف غير متوفر");
-            return;
-        }
-
+        // Pass everything to the modal
         setViewerData({
             open: true,
             url: fileUrl,
             name: fileName,
             type: fileType,
-            fileId: fileId // For proxy download if needed
+            fileId: fileId,
+            s3Key: doc.s3Key // Pass s3Key if available directly
         });
     };
 
@@ -200,8 +157,30 @@ const EmployeeShipmentDetailsPage = () => {
         }
     };
 
-    const handleOpenChat = () => {
-        navigate(`/shipment-chat/${shipmentId}`);
+    const handleOpenChat = async () => {
+        if (!shipment?.user_id?._id) {
+            toast.error("بيانات العميل غير متوفرة");
+            return;
+        }
+
+        try {
+            const toastId = toast.loading("جاري فتح المحادثة...");
+            const response = await axios.post(
+                `${import.meta.env.VITE_API_URL}/api/chat`,
+                { shipmentId: shipmentId }, 
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success && response.data.chat) {
+                toast.success("تم فتح المحادثة", { id: toastId });
+                navigate(`/chat?chatId=${response.data.chat._id}`);
+            } else {
+                toast.error("فشل في فتح المحادثة", { id: toastId });
+            }
+        } catch (err) {
+            console.error("Error creating chat:", err);
+            toast.error("حدث خطأ أثناء فتح المحادثة");
+        }
     };
 
     const handleViewHistory = () => {
@@ -287,7 +266,7 @@ const EmployeeShipmentDetailsPage = () => {
             
             // 1. Upload to S3
             const uploadResponse = await uploadFileToServer(file);
-            const { url } = uploadResponse.data.upload; 
+            const { _id } = uploadResponse.data.upload; 
 
             // 2. Identify Type: Required Doc OR General Upload
             if (uploadingDocId === 'general') {
@@ -298,7 +277,7 @@ const EmployeeShipmentDetailsPage = () => {
                 // It is a Required Document
                 await axios.patch(
                     `${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}/required-documents/${uploadingDocId}`,
-                    { fileId: url }, 
+                    { fileId: _id }, 
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 toast.success("تم رفع المستند بنجاح", { id: toastId });
@@ -371,14 +350,14 @@ const EmployeeShipmentDetailsPage = () => {
 
             // 1. Upload to S3
             const uploadResponse = await uploadFileToServer(directUploadFile);
-            const { url } = uploadResponse.data.upload;
+            const { _id } = uploadResponse.data.upload;
 
             // 2. Call Add Completed Document Endpoint
             await axios.post(
                 `${import.meta.env.VITE_API_URL}/api/shipments/id/${shipmentId}/completed-document`,
                 { 
                     name: directUploadName,
-                    fileId: url
+                    fileId: _id
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -881,15 +860,7 @@ const EmployeeShipmentDetailsPage = () => {
                     </div>
                 )}
 
-                {/* --- File Preview Modal --- */}
-                <FileViewerModal
-                    isOpen={viewerData.open}
-                    onClose={closeViewer}
-                    fileUrl={viewerData.url}
-                    fileName={viewerData.name}
-                    fileType={viewerData.type}
-                    fileId={viewerData.fileId}
-                />
+
 
                 {/* --- Confirmation Modal --- */}
                 {confirmModal.open && (
@@ -1039,6 +1010,12 @@ const EmployeeShipmentDetailsPage = () => {
                         </div>
                     </div>
                 )}
+
+                {/* File Viewer Modal */}
+                <FileViewerModal 
+                    viewerData={viewerData} 
+                    onClose={closeViewer} 
+                />
 
             </main>
         </div>

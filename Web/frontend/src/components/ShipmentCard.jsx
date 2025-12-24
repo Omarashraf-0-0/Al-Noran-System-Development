@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Calendar, User, Truck, Anchor, CheckCircle, Clock, Package, AlertCircle } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 
-const ShipmentCard = ({ shipment }) => {
+const ShipmentCard = ({ shipment, viewMode = "grid" }) => {
 	const { isDarkMode } = useTheme();
 
 	// Normalize status for comparison
@@ -62,6 +62,64 @@ const ShipmentCard = ({ shipment }) => {
 	// Determine link destination
 	const linkDestination = shipment.link || `/shipmentstatus/${(shipment.shipmentNo && shipment.shipmentNo !== "N/A") ? shipment.shipmentNo : shipment.acid || shipment.id || ""}`;
 
+	// ===== LIST VIEW =====
+	if (viewMode === "list") {
+		return (
+			<Link
+				to={linkDestination}
+				className={`group flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 hover:shadow-lg text-right ${
+					isDarkMode 
+						? "bg-[#1a1010]/90 border-white/5 hover:border-red-500/30" 
+						: "bg-white border-gray-100 hover:border-red-200"
+				}`}
+			>
+				{/* Icon */}
+				<div className={`shrink-0 p-3 rounded-xl ${isDarkMode ? "bg-red-900/30" : "bg-red-50"}`}>
+					<Package className={isDarkMode ? "text-red-400" : "text-red-700"} size={24} />
+				</div>
+				
+				{/* Main Info */}
+				<div className="flex-1 min-w-0">
+					<div className="flex items-center gap-3 mb-1 flex-wrap">
+						<h3 className={`font-bold truncate ${isDarkMode ? "text-gray-100 group-hover:text-red-400" : "text-gray-800 group-hover:text-red-700"} transition-colors`}>
+							{shipment.shipmentNo}
+						</h3>
+						<span className={`px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 ${isDarkMode ? statusStyle.darkBg + " " + statusStyle.darkText : statusStyle.bg + " " + statusStyle.text}`}>
+							<StatusIcon size={12} />
+							{normalizeStatus(shipment.status)}
+						</span>
+					</div>
+					<div className={`flex items-center gap-4 text-sm flex-wrap ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+						<span className="flex items-center gap-1">
+							<User size={12} />
+							{shipment.clientName}
+						</span>
+						<span className="flex items-center gap-1">
+							<Calendar size={12} />
+							{shipment.date}
+						</span>
+						{shipment.portName && (
+							<span className="flex items-center gap-1">
+								<Anchor size={12} />
+								{shipment.portName}
+							</span>
+						)}
+					</div>
+				</div>
+
+				{/* Arrow */}
+				<div className={`shrink-0 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+					isDarkMode 
+						? "bg-white/5 group-hover:bg-red-600 group-hover:text-white text-gray-300" 
+						: "bg-gray-50 group-hover:bg-red-800 group-hover:text-white text-gray-700"
+				}`}>
+					التفاصيل
+				</div>
+			</Link>
+		);
+	}
+
+	// ===== GRID VIEW (Default) =====
 	return (
 		<Link
 			to={linkDestination}

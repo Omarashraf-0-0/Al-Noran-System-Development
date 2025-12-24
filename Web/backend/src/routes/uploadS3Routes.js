@@ -14,6 +14,7 @@ const {
 	checkRequiredDocuments,
 	getPresignedUrlForKey,
 	proxyDownload,
+	proxyFileByKey,
 } = require("../controllers/uploadS3Controller");
 
 /**
@@ -61,6 +62,13 @@ router.get("/check-required/:userId", protect, checkRequiredDocuments);
  * @access  Private
  */
 router.get("/presigned-url/:s3Key", protect, getPresignedUrlForKey);
+
+/**
+ * @route   GET /api/uploads/proxy-download-key
+ * @desc    Secure proxy download by S3 Key (query param ?key=...)
+ * @access  Private
+ */
+router.get("/proxy-download-key", protect, proxyFileByKey);
 
 /**
  * @route   GET /api/uploads/:id/download

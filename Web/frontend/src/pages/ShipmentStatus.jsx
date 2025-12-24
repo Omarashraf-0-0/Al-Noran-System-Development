@@ -12,6 +12,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useTheme } from "../context/ThemeContext";
 import { Download, Eye } from "lucide-react";
+import FileViewerModal from "../components/FileViewerModal";
 
 // Proxy download function to handle S3 files securely
 const handleProxyDownload = async (fileId, fileName) => {
@@ -97,6 +98,7 @@ const ShipmentStatus = () => {
 	// State for pending files (selected but not yet uploaded)
 	const [pendingFiles, setPendingFiles] = useState({});
 	const [uploadingDoc, setUploadingDoc] = useState(null);
+	const [viewerData, setViewerData] = useState({ open: false, url: null, name: null, type: null, fileId: null });
 
 	const token = localStorage.getItem("token");
 
@@ -634,55 +636,78 @@ const ShipmentStatus = () => {
 															<>
 																<button
 																	onClick={async () => {
-																		try {
-																			console.log(
-																				"Fetching file with ID:",
-																				doc.fileId
-																			);
-																			toast.loading("جاري تحميل الملف...");
-																			const fileResponse = await axios.get(
-																				`${
-																					import.meta.env.VITE_API_URL
-																				}/api/uploads/${doc.fileId}`,
-																				{
-																					headers: {
-																						Authorization: `Bearer ${token}`,
-																					},
-																				}
-																			);
-																			console.log(
-																				"File response:",
-																				fileResponse.data
-																			);
-																			toast.dismiss();
-																			const fileUrl =
-																				fileResponse.data?.upload?.presignedUrl ||
-																				fileResponse.data?.presignedUrl;
-																			console.log("Presigned URL:", fileUrl);
-																			if (fileUrl) {
-																				window.open(fileUrl, "_blank");
-																			} else {
-																				toast.error(
-																					"لم يتم العثور على رابط الملف"
-																				);
-																				console.error(
-																					"No presigned URL found in response"
-																				);
-																			}
-																		} catch (error) {
-																			toast.dismiss();
-																			const errorMsg =
-																				error.response?.data?.message ||
-																				error.message;
-																			toast.error(`فشل تحميل الملف: ${errorMsg}`);
-																			console.error("File fetch error:", {
-																				fileId: doc.fileId,
-																				error:
-																					error.response?.data || error.message,
-																				fullError: error,
-																			});
-																		}
-																	}}
+													try {
+														const fileIdOrUrl = doc.fileId;
+														console.log("Fetching file with ID:", fileIdOrUrl);
+														toast.loading("جاري تحميل الملف...");
+														
+														let fileUrl = null;
+														
+														// Check if fileId is already a URL
+														if (fileIdOrUrl && fileIdOrUrl.startsWith('http')) {
+															// It's a presigned URL - extract s3Key and get fresh one
+															if (fileIdOrUrl.includes('amazonaws.com')) {
+																const s3Key = fileIdOrUrl.split('.com/')[1]?.split('?')[0];
+																console.log("Extracted s3Key:", s3Key);
+																
+																if (s3Key) {
+																	try {
+																		const freshUrlResponse = await axios.get(
+																			`${import.meta.env.VITE_API_URL}/api/uploads/presigned-url/${encodeURIComponent(s3Key)}`,
+																			{ headers: { Authorization: `Bearer ${token}` } }
+																		);
+																		fileUrl = freshUrlResponse.data?.url;
+																		console.log("Fresh presigned URL:", fileUrl);
+																	} catch (e) {
+																		console.log("Failed to get fresh URL, using original:", e);
+																		// Fallback to original URL (might be expired)
+																		fileUrl = fileIdOrUrl;
+																	}
+																} else {
+																	fileUrl = fileIdOrUrl;
+																}
+															} else {
+																fileUrl = fileIdOrUrl;
+															}
+														} else if (fileIdOrUrl && /^[0-9a-fA-F]{24}$/.test(fileIdOrUrl)) {
+															// It's a MongoDB ID - fetch from API
+															const fileResponse = await axios.get(
+																`${import.meta.env.VITE_API_URL}/api/uploads/${fileIdOrUrl}`,
+																{ headers: { Authorization: `Bearer ${token}` } }
+															);
+															console.log("File response:", fileResponse.data);
+															fileUrl = fileResponse.data?.upload?.url || 
+																	fileResponse.data?.upload?.presignedUrl ||
+																	fileResponse.data?.presignedUrl;
+														}
+														
+														toast.dismiss();
+														console.log("Final URL:", fileUrl);
+														
+														if (fileUrl) {
+															// Open in FileViewerModal instead of new tab
+															setViewerData({
+																open: true,
+																url: fileUrl,
+																name: doc.name || "مستند",
+																type: doc.mimeType || 'image/jpeg',
+																fileId: /^[0-9a-fA-F]{24}$/.test(doc.fileId) ? doc.fileId : null
+															});
+														} else {
+															toast.error("لم يتم العثور على رابط الملف");
+															console.error("No URL found");
+														}
+													} catch (error) {
+														toast.dismiss();
+														const errorMsg = error.response?.data?.message || error.message;
+														toast.error(`فشل تحميل الملف: ${errorMsg}`);
+														console.error("File fetch error:", {
+															fileId: doc.fileId,
+															error: error.response?.data || error.message,
+															fullError: error,
+														});
+													}
+												}}
 																	className="bg-blue-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-1"
 																	title="عرض"
 																>
@@ -1055,6 +1080,16 @@ const ShipmentStatus = () => {
 
 			{/* Footer Section */}
 			<Footer />
+
+			{/* File Preview Modal */}
+			<FileViewerModal
+				isOpen={viewerData.open}
+				onClose={() => setViewerData(prev => ({ ...prev, open: false }))}
+				fileUrl={viewerData.url}
+				fileName={viewerData.name}
+				fileType={viewerData.type}
+				fileId={viewerData.fileId}
+			/>
 		</div>
 	);
 };

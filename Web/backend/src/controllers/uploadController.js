@@ -613,6 +613,43 @@ const proxyDownload = async (req, res) => {
 	}
 };
 
+// ✅ Proxy download by S3 Key (when MongoDB ID is not available)
+const proxyFileByKey = async (req, res) => {
+	try {
+		console.log("Proxy download request received. Query:", req.query);
+		const s3Key = req.query.key; 
+		
+		if (!s3Key) {
+			console.error("Missing S3 Key in query params");
+			return res.status(400).json({ message: "S3 Key is required", receivedQuery: req.query });
+		}
+
+		console.log("Proxying file by key:", s3Key);
+
+		const { getFileStream } = require("../utils/s3Helpers");
+		
+		try {
+			const s3Stream = await getFileStream(s3Key);
+			
+			// Detect mime type or filename from key
+			const filename = s3Key.split('/').pop() || "download";
+			
+			// Set headers for download
+			res.setHeader('Content-disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+			res.setHeader('Content-type', 'application/octet-stream');
+			
+			// Pipe stream to response
+			s3Stream.pipe(res);
+		} catch (s3Error) {
+			console.error("Proxy download by key failed:", s3Error);
+			res.status(500).json({ message: "Failed to download file from storage", error: s3Error.message });
+		}
+	} catch (error) {
+		console.error("Proxy download error:", error);
+		res.status(500).json({ message: error.message });
+	}
+};
+
 module.exports = {
 	uploadSingleFile,
 	uploadMultipleFiles,
@@ -627,4 +664,5 @@ module.exports = {
 	approveDocument,
 	rejectDocument,
 	proxyDownload,
+	proxyFileByKey,
 };

@@ -80,6 +80,10 @@ router.get("/stats/summary", uploadController.getUploadStats);
 // @desc    Secure proxy download (hides S3 URL)
 router.get("/:id/download", protect, uploadController.proxyDownload);
 
+// @route   GET /api/upload/proxy-download-key
+// @desc    Secure proxy download by S3 Key (query param ?key=...)
+router.get("/proxy-download-key", protect, uploadController.proxyFileByKey);
+
 // @route   GET /api/upload/:id
 // @desc    Get upload by ID (protected route)
 router.get("/:id", protect, uploadController.getUploadById);

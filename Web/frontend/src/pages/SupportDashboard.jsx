@@ -5,8 +5,10 @@ import { toast } from "react-hot-toast";
 import ChatInterface from "../components/ChatInterface";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { useTheme } from "../context/ThemeContext";
 
 const SupportDashboard = () => {
+	const { isDarkMode } = useTheme();
 	const [stats, setStats] = useState({
 		active: 0,
 		pending: 0,
@@ -17,11 +19,48 @@ const SupportDashboard = () => {
 	const navigate = useNavigate();
 	const mountedRef = React.useRef(false);
 
+	// Get user from local storage to determine theme accents
+	const user = JSON.parse(localStorage.getItem("user") || "{}");
+	const userType = user?.type;
+	const employeeType = user?.employeeDetails?.employeeType;
+
+	// Determine Theme Colors based on Role
+	const getThemeColors = () => {
+		if (userType === "admin" || (userType === "employee" && employeeType === "System Admin")) {
+			return {
+				primary: "#D4AF37", // Gold
+				primaryHover: "#B5952F",
+				bgLight: "bg-[#D4AF37]/10",
+				bgGlow: "bg-[#D4AF37]/20",
+				text: "text-[#D4AF37]",
+				border: isDarkMode ? "border-[#D4AF37]/20" : "border-gray-300 shadow-lg",
+				gradient: "from-gray-900 to-[#1a1600]",
+				cardBg: isDarkMode ? "bg-black/40" : "bg-white",
+				statsCardBg: isDarkMode ? "rgba(20, 20, 25, 0.6)" : "rgba(255, 255, 255, 0.95)",
+				statsBorder: isDarkMode ? "border-white/10" : "border-gray-300 shadow-lg"
+			};
+		}
+		// Default Employee Theme (Teal/Blue)
+		return {
+			primary: "#1ba3b6", // Teal
+			primaryHover: "#158A9A",
+			bgLight: "bg-[#1ba3b6]/10",
+			bgGlow: "bg-[#1ba3b6]/20",
+			text: "text-[#1ba3b6]",
+			border: isDarkMode ? "border-[#1ba3b6]/20" : "border-gray-300 shadow-lg",
+			gradient: isDarkMode ? "from-gray-900 to-[#0d2b2e]" : "from-gray-50 to-blue-50",
+			cardBg: isDarkMode ? "bg-[#1a1c23]/60" : "bg-white",
+			statsCardBg: isDarkMode ? "rgba(20, 20, 25, 0.6)" : "rgba(255, 255, 255, 0.95)",
+			statsBorder: isDarkMode ? "border-white/10" : "border-gray-300 shadow-lg"
+		};
+	};
+
+	const themeColors = getThemeColors();
+
 	useEffect(() => {
 		if (mountedRef.current) return;
 		mountedRef.current = true;
 		
-		const user = JSON.parse(localStorage.getItem("user") || "null");
 		const token = localStorage.getItem("token");
 
 		if (!token || !user) {
@@ -30,7 +69,7 @@ const SupportDashboard = () => {
 			return;
 		}
 
-		if (user.type !== "employee") {
+		if (user.type !== "employee" && user.type !== "admin") {
 			toast.error("غير مصرح لك بالوصول");
 			navigate("/");
 			return;
@@ -80,155 +119,189 @@ const SupportDashboard = () => {
 		} catch (error) {
 			console.error("Error loading stats:", error);
 			// Don't show error toast, just log it
-			setStats({
-				active: 0,
-				pending: 0,
-				resolved: 0,
-				onlineEmployees: 0,
-			});
 		} finally {
 			setLoading(false);
 		}
 	};
 
+	const StatCard = ({ title, value, icon, colorClass, delay }) => (
+		<div 
+			className={`relative overflow-hidden rounded-2xl p-6 border transition-all duration-300 transform hover:-translate-y-1 group animate-fade-in-up ${themeColors.statsBorder}`}
+			style={{ 
+				animationDelay: `${delay}ms`,
+				backgroundColor: themeColors.statsCardBg,
+				backdropFilter: "blur(12px)"
+			}}
+		>
+			<div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-10 transition-transform group-hover:scale-150 ${colorClass}`}></div>
+			
+			<div className="relative z-10 flex items-center justify-between">
+				<div>
+					<p className={`text-sm font-medium mb-1 ${isDarkMode ? "text-gray-400" : "text-gray-600 font-bold"}`}>{title}</p>
+					<h3 className={`text-3xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>{value}</h3>
+				</div>
+				<div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${colorClass.replace('bg-', 'bg-opacity-10 text-')} ${!isDarkMode && 'border border-gray-100 shadow-sm'}`}>
+					{icon}
+				</div>
+			</div>
+			
+			{/* Bottom decorative line */}
+			<div className={`absolute bottom-0 left-0 h-1 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left ${colorClass}`}></div>
+		</div>
+	);
+
 	if (loading) {
 		return (
-			<div className="flex flex-col min-h-screen">
+			<div className={`min-h-screen flex flex-col ${isDarkMode ? "bg-[#0a0a0a]" : "bg-gray-50"}`}>
 				<Header />
 				<div className="flex-grow flex items-center justify-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-900"></div>
+					<div 
+						className="animate-spin rounded-full h-16 w-16 border-4 border-t-transparent"
+						style={{ borderColor: `${themeColors.primary} transparent ${themeColors.primary} ${themeColors.primary}` }}
+					></div>
 				</div>
-				<Footer />
 			</div>
 		);
 	}
 
 	return (
-		<div className="flex flex-col min-h-screen bg-gray-50">
-			<Header />
-			<main className="flex-grow py-8" dir="rtl">
-				<div className="container mx-auto px-4">
-				{/* Page Header */}
-				<div className="mb-8">
-					<h1 className="text-3xl font-bold text-gray-900 mb-2">
-						لوحة الدعم الفني
-					</h1>
-					<p className="text-gray-600">إدارة محادثات العملاء والدعم الفني</p>
-				</div>
-
-				{/* Statistics Cards */}
-				<div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-					<div className="bg-white rounded-lg shadow p-6 border-r-4 border-blue-500">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-gray-600 text-sm mb-1">محادثات نشطة</p>
-								<p className="text-3xl font-bold text-gray-900">{stats.active}</p>
-							</div>
-							<div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-								<svg
-									className="w-6 h-6 text-blue-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-									/>
-								</svg>
-							</div>
-						</div>
-					</div>
-
-					<div className="bg-white rounded-lg shadow p-6 border-r-4 border-yellow-500">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-gray-600 text-sm mb-1">في الانتظار</p>
-								<p className="text-3xl font-bold text-gray-900">
-									{stats.pending}
-								</p>
-							</div>
-							<div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-								<svg
-									className="w-6 h-6 text-yellow-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-									/>
-								</svg>
-							</div>
-						</div>
-					</div>
-
-					<div className="bg-white rounded-lg shadow p-6 border-r-4 border-green-500">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-gray-600 text-sm mb-1">محادثات منتهية</p>
-								<p className="text-3xl font-bold text-gray-900">
-									{stats.resolved}
-								</p>
-							</div>
-							<div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-								<svg
-									className="w-6 h-6 text-green-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-									/>
-								</svg>
-							</div>
-						</div>
-					</div>
-
-					<div className="bg-white rounded-lg shadow p-6 border-r-4 border-red-900">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-gray-600 text-sm mb-1">موظفون متصلون</p>
-								<p className="text-3xl font-bold text-gray-900">
-									{stats.onlineEmployees}
-								</p>
-							</div>
-							<div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-								<svg
-									className="w-6 h-6 text-red-900"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-									/>
-								</svg>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				{/* Chat Interface */}
-				<div className="bg-white rounded-lg shadow-lg p-6">
-					<ChatInterface />
-				</div>
+		<div className={`min-h-screen flex flex-col relative transition-colors duration-300 ${isDarkMode ? "bg-[#0a0a0a]" : "bg-gray-50/50"}`} dir="rtl">
+			
+			{/* Animated Background Elements */}
+			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+				{isDarkMode ? (
+					<>
+						<div 
+							className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full filter blur-[120px] opacity-20 animate-pulse-glow"
+							style={{ backgroundColor: themeColors.primary }}
+						></div>
+						<div 
+							className="absolute bottom-0 left-0 w-[600px] h-[600px] rounded-full filter blur-[150px] opacity-10 animate-float-slow"
+							style={{ backgroundColor: themeColors.primary }}
+						></div>
+					</>
+				) : (
+					<>
+						<div 
+							className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full filter blur-[100px] opacity-10"
+							style={{ backgroundColor: themeColors.primary }}
+						></div>
+						<div className="absolute bottom-0 left-0 w-full h-full bg-gradient-to-tr from-white to-gray-100/50"></div>
+					</>
+				)}
 			</div>
-		</main>
-		<Footer />
-	</div>
+
+			<Header />
+
+			<main className="flex-grow pt-28 pb-8 px-4 md:px-8 relative z-0">
+				<div className="max-w-7xl mx-auto space-y-8">
+					
+					{/* Header Section */}
+					<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in-down">
+						<div>
+							<h1 className={`text-3xl md:text-4xl font-bold mb-2 ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+								لوحة الدعم الفني
+							</h1>
+							<p className={`${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+								إدارة محادثات العملاء والمتابعة الحية
+							</p>
+						</div>
+						
+						<div className={`px-4 py-2 rounded-full border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"} flex items-center gap-2 shadow-sm`}>
+							<span className="relative flex h-3 w-3">
+							  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${themeColors.bgLight.replace('/10', '')} bg-opacity-100`}></span>
+							  <span className={`relative inline-flex rounded-full h-3 w-3 ${themeColors.bgLight.replace('/10', '')} bg-opacity-100`}></span>
+							</span>
+							<span className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+								النظام متصل
+							</span>
+						</div>
+					</div>
+
+					{/* Statistics Grid */}
+					<div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+						<StatCard 
+							title="محادثات نشطة" 
+							value={stats.active} 
+							icon="💬" 
+							colorClass="bg-blue-500"
+							delay={100} 
+						/>
+						<StatCard 
+							title="في الانتظار" 
+							value={stats.pending} 
+							icon="⏳" 
+							colorClass="bg-amber-500" 
+							delay={200}
+						/>
+						<StatCard 
+							title="تم حلها" 
+							value={stats.resolved} 
+							icon="✅" 
+							colorClass="bg-green-500" 
+							delay={300}
+						/>
+						<StatCard 
+							title="موظفون متصلون" 
+							value={stats.onlineEmployees} 
+							icon="👥" 
+							colorClass={userType === "admin" ? "bg-[#D4AF37]" : "bg-teal-500"}
+							delay={400}
+						/>
+					</div>
+
+					{/* Chat Interface Container */}
+					<div 
+						className={`rounded-2xl border overflow-hidden transition-all duration-300 animate-slide-up ${
+							isDarkMode 
+								? "bg-[#141419]/80 backdrop-blur-md" 
+								: "bg-white"
+						} ${themeColors.border}`}
+						style={{ animationDelay: '500ms' }}
+					>
+						<div className={`p-4 border-b ${isDarkMode ? "border-white/5 bg-white/5" : "border-gray-200 bg-gray-50/50"}`}>
+							<div className="flex items-center gap-3">
+								<div className={`p-2 rounded-lg ${themeColors.bgLight}`}>
+									<svg className={`w-5 h-5 ${themeColors.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+									</svg>
+								</div>
+								<h2 className={`text-lg font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+									غرفة المحادثات المباشرة
+								</h2>
+							</div>
+						</div>
+						
+						<div className="p-1">
+							<ChatInterface />
+						</div>
+					</div>
+				</div>
+			</main>
+			
+			{/* <Footer /> */}
+
+			<style>{`
+				@keyframes float-slow { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+				.animate-float-slow { animation: float-slow 10s ease-in-out infinite; }
+				.animate-pulse-glow { animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+				.animate-fade-in-up { animation: fadeInUp 0.5s ease-out forwards; opacity: 0; }
+				.animate-fade-in-down { animation: fadeInDown 0.5s ease-out forwards; opacity: 0; }
+				.animate-slide-up { animation: slideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); }
+				
+				@keyframes fadeInUp {
+					from { opacity: 0; transform: translateY(20px); }
+					to { opacity: 1; transform: translateY(0); }
+				}
+				@keyframes fadeInDown {
+					from { opacity: 0; transform: translateY(-20px); }
+					to { opacity: 1; transform: translateY(0); }
+				}
+				@keyframes slideUp {
+					to { opacity: 1; transform: translateY(0); }
+				}
+			`}</style>
+		</div>
 	);
 };
 

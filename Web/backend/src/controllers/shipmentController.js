@@ -5,6 +5,37 @@ const mailSender = require("../services/mailer");
 const jwt = require("jsonwebtoken");
 const notificationService = require("../services/notificationService");
 const s3Helpers = require("../utils/s3Helpers");
+const ShipmentLog = require("../models/ShipmentLog");
+
+// 🛠️ Helper to log shipment events
+const logShipmentEvent = async ({
+	shipmentId,
+	action,
+	description,
+	publicDescription,
+	performedBy,
+	performedByType,
+	previousStatus,
+	newStatus,
+	metadata,
+}) => {
+	try {
+		await ShipmentLog.create({
+			shipmentId,
+			action,
+			description,
+			publicDescription: publicDescription || description, // Fallback
+			performedBy,
+			performedByType,
+			previousStatus,
+			newStatus,
+			metadata,
+		});
+	} catch (error) {
+		console.error("❌ Failed to create shipment log:", error.message);
+		// Don't block the main flow if logging fails
+	}
+};
 
 // ✅ إنشاء شحنة جديدة
 const createShipment = async (req, res) => {
@@ -224,6 +255,17 @@ const createShipment = async (req, res) => {
 			success: true,
 			message: "Shipment created successfully. Confirmation email sent.",
 			data: shipment,
+		});
+
+		// 📝 Log Creation
+		logShipmentEvent({
+			shipmentId: shipment._id,
+			action: "CREATED",
+			description: `Shipment created with ACID: ${shipment.acid}`,
+			publicDescription: "تم إنشاء الشحنة بنجاح",
+			performedBy: decoded._id || shipment.user_id, // Use decoded ID if available (creator), else owner
+			performedByType: isEmployee ? "employee" : "client",
+			metadata: { acid: shipment.acid }
 		});
 	} catch (error) {
 		console.error("Error creating shipment:", error);
@@ -781,6 +823,31 @@ const updateShipmentStatusById = async (req, res) => {
 			}
 		}
 
+		
+		// 📝 Log Status/Info Update
+		// Determine action type
+		let logAction = "INFO_UPDATE";
+		let logDesc = "Updated shipment details";
+		let publicDesc = "تم تحديث بيانات الشحنة";
+
+		if (status && oldStatus !== status) {
+			logAction = "STATUS_UPDATE";
+			logDesc = `Status changed from ${oldStatus} to ${status}`;
+			publicDesc = `تم تغيير حالة الشحنة إلى: ${status}`;
+		}
+
+		await logShipmentEvent({
+			shipmentId: shipment._id,
+			action: logAction,
+			description: logDesc,
+			publicDescription: publicDesc,
+			performedBy: req.user._id,
+			performedByType: req.user.type || req.user.userType,
+			previousStatus: oldStatus,
+			newStatus: status || oldStatus,
+			metadata: updateData
+		});
+		
 		res.json({
 			success: true,
 			message: "Shipment status updated successfully",
@@ -928,6 +995,17 @@ const requestRequiredDocuments = async (req, res) => {
 				`Documents request notification sent for shipment: ${shipment.acid}`
 			);
 		}
+
+		// 📝 Log Document Request
+		await logShipmentEvent({
+			shipmentId: shipment._id,
+			action: "DOC_REQUEST",
+			description: `Requested documents: ${formattedDocuments.map(d => d.name).join(", ")}`,
+			publicDescription: `تم طلب مستندات: ${formattedDocuments.map(d => d.name).join("، ")}`,
+			performedBy: req.user._id,
+			performedByType: "employee",
+			metadata: { documents: formattedDocuments.map(d => d.name) }
+		});
 
 		res.json({
 			success: true,
@@ -1081,6 +1159,17 @@ const markDocumentAsUploaded = async (req, res) => {
 				console.error("Failed to send document upload notification:", notifError.message);
 			}
 		}
+
+		// 📝 Log Document Upload
+		await logShipmentEvent({
+			shipmentId: shipment._id,
+			action: "DOC_UPLOAD",
+			description: `Document uploaded: ${document.name}`,
+			publicDescription: `تم رفع المستند: ${document.name}`,
+			performedBy: req.user._id,
+			performedByType: req.user.type || "client",
+			metadata: { documentId, documentName: document.name }
+		});
 
 		res.json({
 			success: true,
@@ -1610,6 +1699,17 @@ const rejectUploadedDocument = async (req, res) => {
             }
         }
 
+		// 📝 Log Document Rejection
+		await logShipmentEvent({
+			shipmentId: shipment._id,
+			action: "DOC_REJECT",
+			description: `Document rejected: ${documentName}`,
+			publicDescription: `تم رفض المستند: ${documentName}`,
+			performedBy: req.user._id,
+			performedByType: "employee",
+			metadata: { documentId, documentName }
+		});
+
 		res.json({
 			success: true,
 			message: "تم رفض المستند وإعادة تعيين حالته.",
@@ -1654,6 +1754,17 @@ const addCompletedDocument = async (req, res) => {
         
         console.log(`✅ Document added directly by employee: ${name}`);
 
+		// 📝 Log Document Addition
+		await logShipmentEvent({
+			shipmentId: shipment._id,
+			action: "DOC_UPLOAD",
+			description: `Document added by employee: ${name}`,
+			publicDescription: `تم إضافة مستند بواسطة الموظف: ${name}`,
+			performedBy: req.user._id,
+			performedByType: "employee",
+			metadata: { documentName: name }
+		});
+
         res.json({
             success: true,
             message: "تم إضافة المستند بنجاح",
@@ -1664,6 +1775,21 @@ const addCompletedDocument = async (req, res) => {
         console.error("Error adding completed document:", error);
         res.status(500).json({ message: "حدث خطأ أثناء إضافة المستند" });
     }
+};
+
+// ✅ Get Shipment History
+const getShipmentHistory = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const logs = await ShipmentLog.find({ shipmentId: id })
+			.populate("performedBy", "fullname username email type role") // Populate user details
+			.sort({ createdAt: -1 });
+
+		res.json(logs);
+	} catch (error) {
+		console.error("Error fetching shipment history:", error);
+		res.status(500).json({ message: "Failed to fetch shipment history" });
+	}
 };
 
 module.exports = {
@@ -1682,8 +1808,8 @@ module.exports = {
 	getRequiredDocuments,
 	markDocumentAsUploaded,
 	resetUploadedDocument,
-    rejectUploadedDocument,
-    addCompletedDocument,
+	rejectUploadedDocument,
+	addCompletedDocument,
 	getEmployeeShipmentStats,
 	getClientShipmentStats,
 	addShipments,
@@ -1692,4 +1818,5 @@ module.exports = {
 	getRevenueComparison,
 	searchShipments,
 	getDistinctDocumentNames,
+	getShipmentHistory
 };

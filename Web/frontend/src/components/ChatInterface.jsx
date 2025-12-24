@@ -6,10 +6,12 @@ import ChatList from "./ChatList";
 import ChatWindow from "./ChatWindow";
 import AvatarImg from "../assets/images/AVATAR.png";
 import chatService from "../services/chatService";
+import { useTheme } from "../context/ThemeContext";
 
 const AVATAR_URL = AvatarImg;
 
 const ChatInterface = ({ preselectedChatId }) => {
+	const { isDarkMode } = useTheme();
 	const [chats, setChats] = useState([]);
 	const [selectedChat, setSelectedChat] = useState(null);
 	const [messages, setMessages] = useState([]);
@@ -26,7 +28,31 @@ const ChatInterface = ({ preselectedChatId }) => {
 	const user = useRef(JSON.parse(localStorage.getItem("user") || "null")).current;
 	const token = useRef(localStorage.getItem("token")).current;
 	const userType = user?.type;
+	const employeeType = user?.employeeDetails?.employeeType;
 	const userId = user?._id || user?.id; // Support both _id and id fields
+
+	// Determine accent colors based on role
+	const getAccents = () => {
+		if (userType === 'admin' || (userType === 'employee' && employeeType === 'System Admin')) {
+			return {
+				primary: "bg-[#D4AF37]",
+				primaryText: "text-[#D4AF37]",
+				primaryHover: "hover:bg-[#B5952F]",
+				border: "border-[#D4AF37]/30",
+				bgLight: "bg-[#D4AF37]/10",
+			};
+		}
+		// Default Employee
+		return {
+			primary: "bg-[#1ba3b6]",
+			primaryText: "text-[#1ba3b6]",
+			primaryHover: "hover:bg-[#158A9A]",
+			border: "border-[#1ba3b6]/30",
+			bgLight: "bg-[#1ba3b6]/10",
+		};
+	};
+
+	const accents = getAccents();
 
 	// Check authentication
 	useEffect(() => {
@@ -35,12 +61,6 @@ const ChatInterface = ({ preselectedChatId }) => {
 			navigate("/login");
 			return;
 		}
-		console.log("User authenticated:", { 
-			type: userType, 
-			id: userId,
-			name: user.fullname,
-			userKeys: Object.keys(user)
-		});
 	}, []);
 
 	// Update ref whenever selectedChat changes
@@ -67,13 +87,6 @@ const ChatInterface = ({ preselectedChatId }) => {
 			const chatId = data.chatId;
 			const message = data.message || data; // Support both formats
 			
-			console.log("New message received:", {
-				messageId: message._id,
-				messageChatId: chatId,
-				selectedChatId: selectedChatRef.current?._id,
-				willAdd: selectedChatRef.current && chatId === selectedChatRef.current._id
-			});
-
 			// Only add message to messages array if it belongs to currently selected chat
 			setMessages((prev) => {
 				// Check if message belongs to the selected chat
@@ -82,11 +95,8 @@ const ChatInterface = ({ preselectedChatId }) => {
 					if (message._id && prev.find((m) => m._id === message._id)) {
 						return prev;
 					}
-					console.log("Adding message to display");
 					return [...prev, message];
 				}
-				// If not for selected chat, don't add to messages
-				console.log("Message not for selected chat - skipping");
 				return prev;
 			});
 
@@ -175,27 +185,15 @@ const ChatInterface = ({ preselectedChatId }) => {
 
 			const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3500";
 
-			console.log("Initializing chat for user:", { userType, userId: user?._id });
-
 			// Both clients and employees now just load their chats
 			await loadChats();
 			
 		} catch (error) {
 			console.error("Error initializing chat:", error);
-			console.error("Error details:", {
-				message: error.message,
-				responseData: error.response?.data,
-				responseMessage: error.response?.data?.message,
-				status: error.response?.status,
-				userType: userType,
-				userId: user?._id,
-				token: token ? "present" : "missing",
-			});
 			
 			// Show user-friendly error message
 			if (error.response?.status === 403) {
 				console.warn("403 Forbidden - User may not have permission or token is invalid");
-				// Don't show error toast for 403 - it's expected for employees on POST endpoint
 			} else if (error.response?.status === 401) {
 				toast.error("جلسة منتهية، يرجى تسجيل الدخول مرة أخرى");
 				navigate("/login");
@@ -221,7 +219,8 @@ const ChatInterface = ({ preselectedChatId }) => {
 				const fetchedChats = response.data.chats;
 				setChats(fetchedChats);
 
-				if (fetchedChats.length > 0 && !selectedChat) {
+				// Only auto-select first chat if NO preselected chat and NO currently selected chat
+				if (fetchedChats.length > 0 && !selectedChat && !preselectedChatId) {
 					const firstChat = fetchedChats[0];
 					setSelectedChat(firstChat);
 					await loadMessages(firstChat._id);
@@ -232,7 +231,6 @@ const ChatInterface = ({ preselectedChatId }) => {
 			}
 		} catch (error) {
 			console.error("Error loading chats:", error);
-			// Don't show error toast - might just be no chats yet
 		}
 	};
 
@@ -251,7 +249,6 @@ const ChatInterface = ({ preselectedChatId }) => {
 			}
 		} catch (error) {
 			console.error("Error loading messages:", error);
-			// Don't show error toast - user will see empty chat
 		}
 	};
 
@@ -268,13 +265,6 @@ const ChatInterface = ({ preselectedChatId }) => {
 
 		try {
 			setSending(true);
-
-			console.log("Sending message:", {
-				chatId: selectedChat._id,
-				senderId: userId,
-				senderType: userType,
-				textLength: newMessageText.length,
-			});
 
 			// Send via WebSocket for real-time delivery
 			await chatService.sendMessage(
@@ -327,13 +317,9 @@ const ChatInterface = ({ preselectedChatId }) => {
 			: 'مستخدم';
 		
 		const isOwn = senderId ? String(senderId) === String(userId) : false;
-		console.log("Message ownership check:", {
-			messageSenderId: senderId,
-			currentUserId: userId,
-			isOwn: isOwn,
-		});
+		
 		return {
-			id: msg._id || `temp-${index}-${Date.now()}`, // Fallback key for messages without _id
+			id: msg._id || `temp-${index}-${Date.now()}`,
 			senderId: senderId,
 			senderName: senderName,
 			text: msg.text,
@@ -348,19 +334,19 @@ const ChatInterface = ({ preselectedChatId }) => {
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center h-96">
-				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-900"></div>
+				<div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${accents.border.replace('/30','')} border-t-transparent`}></div>
 			</div>
 		);
 	}
 
 	if (userType === "client" && !selectedChat) {
 		return (
-			<div className="flex items-center justify-center h-96 bg-white rounded-lg shadow">
+			<div className={`flex items-center justify-center h-96 rounded-lg ${isDarkMode ? "bg-white/5 border border-white/10" : "bg-white border border-gray-100"}`}>
 				<div className="text-center">
-					<p className="text-gray-600 mb-4">لا توجد محادثة نشطة</p>
+					<p className={`mb-4 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>لا توجد محادثة نشطة</p>
 					<button
 						onClick={initializeChat}
-						className="px-6 py-3 bg-red-900 text-white rounded-lg hover:bg-red-800"
+						className={`px-6 py-3 text-white rounded-lg transition-colors ${accents.primary} ${accents.primaryHover}`}
 					>
 						بدء محادثة جديدة
 					</button>
@@ -380,12 +366,18 @@ const ChatInterface = ({ preselectedChatId }) => {
 			: typingUsers["client"];
 
 	return (
-		<div className="flex flex-col md:flex-row h-[75vh] max-h-[800px] bg-white rounded-lg overflow-hidden shadow-lg shadow-gray-300/50 border border-gray-200">
+		<div className={`flex flex-col md:flex-row h-[75vh] max-h-[800px] rounded-xl overflow-hidden shadow-lg border backdrop-blur-sm ${
+			isDarkMode 
+				? "bg-[#141419]/90 border-white/10 shadow-black/50" 
+				: "bg-white border-gray-200 shadow-xl"
+		}`}>
 			{userType === "employee" && (
-				<div className="w-full md:w-1/3 lg:w-1/4 bg-gray-50 md:border-l md:border-gray-200">
+				<div className={`w-full md:w-1/3 lg:w-1/4 md:border-l ${isDarkMode ? "bg-black/20 border-white/5" : "bg-gray-50 border-gray-100"}`}>
 					<ChatList
 						users={formattedChats}
 						selectedUser={currentChatUser}
+						theme={isDarkMode ? 'dark' : 'light'}
+						accents={accents}
 						onSelectUser={(formattedChat) => {
 							const actualChat = chats.find((c) => c._id === formattedChat.id);
 							handleSelectChat(actualChat);
@@ -396,7 +388,7 @@ const ChatInterface = ({ preselectedChatId }) => {
 			<div
 				className={`flex-1 flex flex-col ${
 					userType === "client" ? "w-full" : ""
-				}`}
+				} ${isDarkMode ? "bg-transparent" : "bg-white"}`}
 			>
 				{selectedChat && currentChatUser ? (
 					<ChatWindow
@@ -407,10 +399,19 @@ const ChatInterface = ({ preselectedChatId }) => {
 					currentUserId={userId}
 					onTyping={handleTyping}
 					isOtherUserTyping={isOtherUserTyping}
+					theme={isDarkMode ? 'dark' : 'light'}
+					accents={accents}
 				/>
 				) : (
 					<div className="flex items-center justify-center h-full">
-						<p className="text-gray-500">اختر محادثة لعرض الرسائل</p>
+						<div className="text-center">
+							<div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center ${accents.bgLight}`}>
+								<svg className={`w-10 h-10 ${accents.primaryText}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+								</svg>
+							</div>
+							<p className={`${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>اختر محادثة لعرض الرسائل</p>
+						</div>
 					</div>
 				)}
 			</div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { LayoutGrid, List } from "lucide-react";
+import { LayoutGrid, List, Package, Ship } from "lucide-react";
 import Header from "../components/Header";
 import WelcomeBanner from "./WelcomeBanner";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -19,17 +19,9 @@ export default function ShipmentsList() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [selectedStatus, setSelectedStatus] = useState("الكل");
+	const [selectedType, setSelectedType] = useState("all"); // 'all' | 'import' | 'export'
 	const [sortOption, setSortOption] = useState("newest");
-	const [notificationCount, setNotificationCount] = useState(0);
-	const [notifications, setNotifications] = useState([]);
-	const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
-	const notificationRef = useRef(null);
 	const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
-
-	// TODO: RBAC - Get user permissions from context/store
-	// Example: const { user, hasPermission } = useAuth();
-	// const canViewShipments = hasPermission('shipment:view');
-	// const canManageShipments = hasPermission('shipment:manage');
 
 	const user = JSON.parse(localStorage.getItem("user"));
 	const userID = user?.id;
@@ -51,61 +43,74 @@ export default function ShipmentsList() {
 	];
 
 	useEffect(() => {
-		const fetchShipments = async () => {
+		const fetchAllShipments = async () => {
 			try {
 				setLoading(true);
 				setError(null);
 
 				if (!userID) {
 					setError("User ID not found. Please login again.");
-					toast.error("User ID not found. Please login again.");
 					return;
 				}
 
-				const response = await axios.get(
-					`${import.meta.env.VITE_API_URL}/api/shipments/employee/${userID}`,
-					{
-						headers: {
-							Authorization: `Bearer ${token}`,
-						},
-					}
-				);
-
-				console.log("Fetched shipments:", response.data);
-
-				const formattedShipments = (response.data || []).map((shipment) => ({
-					id: shipment._id,
-					clientName: shipment.employerName || "Unknown Client",
-					shipmentNo: shipment.shipmentCode || shipment.shipmentNumber || shipment.acid || shipment.number46 || "N/A",
-					acid: shipment.acid || "N/A",
-					status: shipment.status || "pending",
-					createdAt: shipment.createdAt, // Keep raw date for sorting
-					date: new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
-						day: "numeric",
-						month: "long",
-						year: "numeric",
+				const [importRes, exportRes] = await Promise.allSettled([
+					axios.get(`${import.meta.env.VITE_API_URL}/api/shipments/employee/${userID}`, {
+						headers: { Authorization: `Bearer ${token}` },
 					}),
-				}));
+					axios.get(`${import.meta.env.VITE_API_URL}/api/export-shipments/employee/all`, {
+						headers: { Authorization: `Bearer ${token}` },
+					})
+				]);
 
-				setShipments(formattedShipments);
+				let mergedShipments = [];
 
-				if (formattedShipments.length === 0) {
-					toast("لا توجد شحنات");
+				// Process Import Shipments
+				if (importRes.status === 'fulfilled') {
+					const imports = (importRes.value.data || []).map((shipment) => ({
+						id: shipment._id,
+						type: 'import',
+						clientName: shipment.employerName || "Unknown Client",
+						shipmentNo: shipment.shipmentCode || shipment.shipmentNumber || shipment.acid || shipment.number46 || "N/A",
+						acid: shipment.acid || "N/A",
+						status: shipment.status || "pending",
+						createdAt: shipment.createdAt,
+						date: new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
+							day: "numeric", month: "long", year: "numeric",
+						}),
+					}));
+					mergedShipments = [...mergedShipments, ...imports];
 				}
+
+				// Process Export Shipments
+				if (exportRes.status === 'fulfilled' && exportRes.value.data.success) {
+					const exports = (exportRes.value.data.shipments || []).map((shipment) => ({
+						id: shipment._id,
+						type: 'export',
+						clientName: shipment.userId?.fullname || shipment.userId?.name || "Unknown Client",
+						shipmentNo: shipment.shipmentNumber || `EXP-${shipment._id.slice(-6)}`,
+						acid: shipment.ucrNumber || "—", // Using UCR as equivalent to ACID for display
+						status: shipment.currentStatus || "pending",
+						createdAt: shipment.createdAt,
+						date: new Date(shipment.createdAt).toLocaleDateString("ar-EG", {
+							day: "numeric", month: "long", year: "numeric",
+						}),
+					}));
+					mergedShipments = [...mergedShipments, ...exports];
+				}
+
+				// Sort by newest initially
+				mergedShipments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+				setShipments(mergedShipments);
+
 			} catch (error) {
 				console.error("Error fetching shipments:", error);
-				const errorMessage =
-					error.response?.data?.message ||
-					error.message ||
-					"Failed to fetch shipments";
-				setError(errorMessage);
-				toast.error(errorMessage);
+				setError("Failed to fetch some data");
 			} finally {
 				setLoading(false);
 			}
 		};
 
-		fetchShipments();
+		fetchAllShipments();
 	}, [userID, token]);
 
 	const toggleFilter = () => {
@@ -117,91 +122,67 @@ export default function ShipmentsList() {
 		setIsFilterOpen(false);
 	};
 
-	const handleFilterApply = () => {
-		setIsFilterOpen(false);
-	};
+	const handleFilterApply = () => setIsFilterOpen(false);
+	const handleSortApply = () => setIsSortOpen(false);
 
-	const handleSortApply = () => {
-		setIsSortOpen(false);
-	};
-
-	// Normalize status for comparison (all Arabic)
+	// Normalize status for comparison
 	const normalizeStatus = (status) => {
 		const statusNormalization = {
 			"Pending": "في انتظار الشحن",
-			"قيد الانتظار": "في انتظار الشحن",
-			"في انتظار الشحن": "في انتظار الشحن",
-			"In Transit": "في الطريق",
-			"في الطريق": "في الطريق",
-			"Arrived": "تم وصول البضاعة",
-			"تم وصول البضاعة": "تم وصول البضاعة",
-			"في انتظار وصول الإذن": "في انتظار وصول الإذن",
-			"تم وصول الإذن": "تم وصول الإذن",
-			"Customs Clearance": "التخليص الجمركي",
-			"التخليص الجمركي": "التخليص الجمركي",
-			"جارى ادراج الشحنة واستكمال الاجراءات": "جارى ادراج الشحنة واستكمال الاجراءات",
-			"جاري الكشف والتثمين": "جاري الكشف والتثمين",
-			"Completed": "مكتملة",
-			"مكتملة": "مكتملة",
-			"تمت بنجاح": "تمت بنجاح",
+			"documents_verification": "التحقق من المستندات",
+			"regulatory_inspection": "فحص الجهات الرقابية",
+			"payment_cleared": "تم السداد",
+			"goods_loaded": "تم التحميل",
+			"in_transit": "في الطريق",
+			"delivered": "تم التسليم",
+			"completed": "مكتملة",
+			"cancelled": "ملغي",
+			// ... add other mappings as needed
 		};
 		return statusNormalization[status] || status;
 	};
 
 	// Filter and sort shipments
 	let filteredShipments = shipments.filter((shipment) => {
-		// Filter by search term (shipment number, client name, ACID)
 		const matchesSearch =
 			shipment.shipmentNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
 			shipment.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
 			shipment.acid.toLowerCase().includes(searchTerm.toLowerCase());
 
-		// Filter by status - normalize both the filter and shipment status for comparison
 		const matchesStatus =
 			selectedStatus === "الكل" ||
 			normalizeStatus(shipment.status) === normalizeStatus(selectedStatus);
+			
+		const matchesType = 
+			selectedType === "all" ||
+			shipment.type === selectedType;
 
-		return matchesSearch && matchesStatus;
+		return matchesSearch && matchesStatus && matchesType;
 	});
 
 	// Sort shipments
 	filteredShipments = [...filteredShipments].sort((a, b) => {
 		switch (sortOption) {
-			case "newest": {
-				const dateA = new Date(a.createdAt).getTime();
-				const dateB = new Date(b.createdAt).getTime();
-				return dateB - dateA;
-			}
-			case "oldest": {
-				const dateA = new Date(a.createdAt).getTime();
-				const dateB = new Date(b.createdAt).getTime();
-				return dateA - dateB;
-			}
-			case "clientAZ":
-				return a.clientName.localeCompare(b.clientName, "ar");
-			case "clientZA":
-				return b.clientName.localeCompare(a.clientName, "ar");
-			default:
-				return 0;
+			case "newest": return new Date(b.createdAt) - new Date(a.createdAt);
+			case "oldest": return new Date(a.createdAt) - new Date(b.createdAt);
+			case "clientAZ": return a.clientName.localeCompare(b.clientName, "ar");
+			case "clientZA": return b.clientName.localeCompare(a.clientName, "ar");
+			default: return 0;
 		}
 	});
 
-	// Determine Theme based on User - Default Employee Turquoise
-	const theme = {
-		pageBg: isDarkMode 
-			? "bg-[#050f14]" 
-			: "bg-[#F0FEFF]",
-		sectionBg: isDarkMode 
-			? "bg-[#0a1a1f] border-[#163a42]" 
-			: "bg-white border-cyan-50",
-		heading: isDarkMode ? "text-[#1ba3b6]" : "text-[#1ba3b6]",
-		button: "bg-gradient-to-r from-[#1ba3b6] to-[#158A9A] hover:bg-[#158A9A] text-white shadow-lg hover:shadow-[#1ba3b6]/30",
+	// Calculate statistics for the banner
+	const stats = {
+		total: shipments.length,
+		importCount: shipments.filter(s => s.type === 'import').length,
+		exportCount: shipments.filter(s => s.type === 'export').length,
+		active: shipments.filter(s => s.status !== 'مكتملة').length 
 	};
 
 	return (
 		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#050a0d]" : "bg-gray-50"}`}>
 			
-			{/* Animated Background - Turquoise Theme */}
+			{/* Animated Background */}
 			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
 				{isDarkMode ? (
 					<>
@@ -215,13 +196,13 @@ export default function ShipmentsList() {
 
 			<Header />
 			
-			<section className="flex-grow w-full pt-24 pb-12 px-4 md:px-8 relative z-10">
+			<section className="flex-grow w-full pt-28 pb-12 px-4 md:px-8 relative z-10">
 				<div className="max-w-7xl mx-auto">
-					{/* Welcome Banner - Same width as content */}
-					<WelcomeBanner />
+					{/* Welcome Banner with Custom Stats */}
+					<WelcomeBanner customStats={stats} />
 
-					{/* Header Section */}
-					<div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+					{/* Header & Type Filter */}
+					<div className="flex flex-col lg:flex-row justify-between items-center mb-8 gap-6">
 						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-[#1ba3b6]"}`}>
 							<span className="text-4xl">📦</span>
 							شحناتي
@@ -229,13 +210,43 @@ export default function ShipmentsList() {
 								{filteredShipments.length} شحنة
 							</span>
 						</h1>
+						
+						{/* Type Filter Buttons */}
+						<div className={`flex p-1.5 rounded-xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
+							<button 
+								onClick={() => setSelectedType("all")}
+								className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${selectedType === "all" 
+									? "bg-[#1ba3b6] text-white shadow-lg" 
+									: (isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-800")}`}
+							>
+								الكل
+							</button>
+							<button 
+								onClick={() => setSelectedType("import")}
+								className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${selectedType === "import" 
+									? "bg-[#1ba3b6] text-white shadow-lg" 
+									: (isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-800")}`}
+							>
+								<Package size={16} />
+								وارد
+							</button>
+							<button 
+								onClick={() => setSelectedType("export")}
+								className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${selectedType === "export" 
+									? "bg-[#1ba3b6] text-white shadow-lg" 
+									: (isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-800")}`}
+							>
+								<Ship size={16} />
+								صادر
+							</button>
+						</div>
 					</div>
 
 					{/* 🔍 Search + Filter + Sort */}
 					<SearchFilterSort
 						searchTerm={searchTerm}
 						onSearchChange={setSearchTerm}
-						searchPlaceholder="ابحث برقم الشحنة، اسم العميل، أو ACID"
+						searchPlaceholder="ابحث برقم الشحنة، اسم العميل، أو ACID/UCR"
 						isFilterOpen={isFilterOpen}
 						onToggleFilter={toggleFilter}
 						filterValue={selectedStatus}
@@ -249,7 +260,6 @@ export default function ShipmentsList() {
 						onSortChange={setSortOption}
 						onSortApply={handleSortApply}
 						userType={user?.type}
-
 						isDarkMode={isDarkMode}
 					>
 						<div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
@@ -292,25 +302,38 @@ export default function ShipmentsList() {
 							<ShipmentsTable
 								shipments={filteredShipments}
 								maxItems={12}
-								linkPrefix="/employee-shipment"
 								userType={user?.type}
 								isDarkMode={isDarkMode}
 								viewMode={viewMode}
 							/>
 
-							{/* View All Button */}
+							{/* Dynamic View All Buttons */}
 							{filteredShipments.length > 12 && (
-								<div className="flex justify-center mt-8">
-									<a
-										href="/employee-shipments"
-										className={`px-8 py-3 rounded-xl font-bold transition-all transform hover:-translate-y-1 ${
-											isDarkMode 
-												? "bg-gradient-to-r from-[#1ba3b6] to-[#158A9A] text-white shadow-lg hover:shadow-[#1ba3b6]/30" 
-												: "bg-[#1ba3b6] text-white hover:bg-[#158A9A]"
-										}`}
-									>
-										عرض جميع الشحنات ({filteredShipments.length})
-									</a>
+								<div className="flex justify-center mt-8 gap-4">
+									{(selectedType === 'all' || selectedType === 'import') && (
+										<a
+											href="/employee-shipments"
+											className={`px-6 py-3 rounded-xl font-bold transition-all text-sm ${
+												isDarkMode 
+													? "bg-white/5 hover:bg-white/10 text-white" 
+													: "bg-gray-100 hover:bg-gray-200 text-gray-800"
+											}`}
+										>
+											عرض كل الوارد
+										</a>
+									)}
+									{(selectedType === 'all' || selectedType === 'export') && (
+										<a
+											href="/employee/export-shipments"
+											className={`px-6 py-3 rounded-xl font-bold transition-all text-sm ${
+												isDarkMode 
+													? "bg-white/5 hover:bg-white/10 text-white" 
+													: "bg-gray-100 hover:bg-gray-200 text-gray-800"
+											}`}
+										>
+											عرض كل الصادر
+										</a>
+									)}
 								</div>
 							)}
 						</>

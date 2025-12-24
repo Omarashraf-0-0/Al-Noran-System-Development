@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { Search, Filter, SortAsc, ChevronLeft, ChevronRight, Globe, AlertCircle } from "lucide-react";
+import { Search, Filter, SortAsc, ChevronLeft, ChevronRight, Globe, AlertCircle, LayoutGrid, List } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useTheme } from "../context/ThemeContext";
@@ -31,6 +31,7 @@ export default function ExportShipmentsPage() {
 	const [error, setError] = useState(null);
 	const [selectedStatus, setSelectedStatus] = useState("الكل");
 	const [sortOption, setSortOption] = useState("newest");
+	const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
 
 	// Pagination State
 	const [currentPage, setCurrentPage] = useState(1);
@@ -198,11 +199,29 @@ export default function ExportShipmentsPage() {
 								<span className="hidden sm:inline">تصفية</span>
 							</button>
 							<button onClick={toggleSort} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
-								isSortOpen || isDarkMode ? "bg-[#2b1515] text-red-400 border border-red-900/30 hover:bg-[#3d1a1a]" : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+								isSortOpen ? "bg-red-600 text-white" : (isDarkMode ? "bg-white/10 text-gray-300 hover:bg-white/20" : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50")
 							}`}>
 								<SortAsc size={20} />
 								<span className="hidden sm:inline">ترتيب</span>
 							</button>
+
+							{/* View Mode Toggle */}
+							<div className={`flex items-center p-1 rounded-xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+								<button
+									onClick={() => setViewMode("grid")}
+									className={`p-2.5 rounded-lg transition-all ${viewMode === "grid" ? (isDarkMode ? "bg-red-900/50 text-red-400" : "bg-red-100 text-red-700") : (isDarkMode ? "text-gray-500" : "text-gray-400")}`}
+									title="عرض شبكة"
+								>
+									<LayoutGrid size={18} />
+								</button>
+								<button
+									onClick={() => setViewMode("list")}
+									className={`p-2.5 rounded-lg transition-all ${viewMode === "list" ? (isDarkMode ? "bg-red-900/50 text-red-400" : "bg-red-100 text-red-700") : (isDarkMode ? "text-gray-500" : "text-gray-400")}`}
+									title="عرض قائمة"
+								>
+									<List size={18} />
+								</button>
+							</div>
 						</div>
 
 						{/* Filter Dropdown */}
@@ -276,9 +295,9 @@ export default function ExportShipmentsPage() {
 						</div>
 					) : (
 						<>
-							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+							<div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10" : "flex flex-col gap-4 mb-10"}>
 								{currentItems.map((shipment) => (
-									<ShipmentCard key={shipment.id} shipment={shipment} />
+									<ShipmentCard key={shipment.id} shipment={shipment} viewMode={viewMode} />
 								))}
 							</div>
 

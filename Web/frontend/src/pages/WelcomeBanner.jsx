@@ -30,7 +30,7 @@ StatCard.propTypes = {
 	label: PropTypes.string,
 };
 
-const WelcomeBanner = () => {
+const WelcomeBanner = ({ customStats }) => {
 	const user = JSON.parse(localStorage.getItem("user"));
 	const userName = user?.username || user?.fullname || user?.name || "الزائر";
 	const userID = user?.id || user?._id;
@@ -68,6 +68,11 @@ const WelcomeBanner = () => {
 	};
 
 	useEffect(() => {
+		if (customStats) {
+			setLoading(false);
+			return;
+		}
+
 		const fetchStats = async () => {
 			try {
 				if (!userID) {
@@ -103,7 +108,10 @@ const WelcomeBanner = () => {
 		};
 
 		fetchStats();
-	}, [userID, userType, token, isEmployee, isAdmin]);
+	}, [userID, userType, token, isEmployee, isAdmin, customStats]);
+
+	// Use customStats if provided, otherwise default to fetched stats
+	const displayStats = customStats || stats;
 
 	return (
 		<section className="relative w-full mb-6">
@@ -121,7 +129,8 @@ const WelcomeBanner = () => {
 
 			{/* Stats Cards - Compact Grid */}
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-				{/* Completed Shipments */}
+				
+				{/* Card 1: Total Shipments / Completed */}
 				<div className={`relative overflow-hidden group p-4 rounded-xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
 					isEmployee || isAdmin 
 						? `${themeColors.cardBg} ${themeColors.cardBorder} hover:shadow-[#1ba3b6]/10` 
@@ -129,22 +138,23 @@ const WelcomeBanner = () => {
 				}`}>
 					<div className="flex items-center justify-between relative z-10">
 						<div>
-							<p className={`text-xs font-bold mb-1 ${themeColors.cardSubText}`}>الشحنات المكتملة</p>
+							<p className={`text-xs font-bold mb-1 ${themeColors.cardSubText}`}>
+								{customStats ? "إجمالي الشحنات" : "الشحنات المكتملة"}
+							</p>
 							<h3 className={`text-2xl font-black ${themeColors.cardText}`}>
-								{loading ? "..." : stats.completed}
+								{loading ? "..." : (customStats ? displayStats.total : displayStats.completed)}
 							</h3>
 						</div>
 						<div className={`p-3 rounded-lg ${isEmployee || isAdmin ? "bg-[#1ba3b6]/20 text-[#1ba3b6]" : "bg-green-50 text-green-600"}`}>
 							<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 						</div>
 					</div>
-					{/* Glow Effect */}
 					<div className={`absolute -right-10 -bottom-10 w-32 h-32 rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity ${
 						isEmployee || isAdmin ? "bg-[#1ba3b6]" : "bg-green-500"
 					}`}></div>
 				</div>
 
-				{/* In Progress Shipments */}
+				{/* Card 2: Import / In Progress */}
 				<div className={`relative overflow-hidden group p-4 rounded-xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
 					isEmployee || isAdmin 
 						? `${themeColors.cardBg} ${themeColors.cardBorder} hover:shadow-[#1ba3b6]/10` 
@@ -152,22 +162,27 @@ const WelcomeBanner = () => {
 				}`}>
 					<div className="flex items-center justify-between relative z-10">
 						<div>
-							<p className={`text-xs font-bold mb-1 ${themeColors.cardSubText}`}>قيد التوصيل</p>
+							<p className={`text-xs font-bold mb-1 ${themeColors.cardSubText}`}>
+								{customStats ? "شحنات الوارد" : "قيد التوصيل"}
+							</p>
 							<h3 className={`text-2xl font-black ${themeColors.cardText}`}>
-								{loading ? "..." : stats.inProgress}
+								{loading ? "..." : (customStats ? displayStats.importCount : displayStats.inProgress)}
 							</h3>
 						</div>
 						<div className={`p-3 rounded-lg ${isEmployee || isAdmin ? "bg-amber-400/20 text-amber-400" : "bg-orange-50 text-orange-600"}`}>
-							<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+							{customStats ? (
+								<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg> // Package
+							) : (
+								<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+							)}
 						</div>
 					</div>
-					{/* Glow Effect */}
 					<div className={`absolute -right-10 -bottom-10 w-24 h-24 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity ${
 						isEmployee || isAdmin ? "bg-amber-400" : "bg-orange-500"
 					}`}></div>
 				</div>
 
-				{/* Total Shipments (Calculated) */}
+				{/* Card 3: Export / Total (Legacy) */}
 				<div className={`relative overflow-hidden group p-4 rounded-xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
 					isEmployee || isAdmin 
 						? `${themeColors.cardBg} ${themeColors.cardBorder} hover:shadow-[#1ba3b6]/10` 
@@ -175,13 +190,19 @@ const WelcomeBanner = () => {
 				}`}>
 					<div className="flex items-center justify-between relative z-10">
 						<div>
-							<p className={`text-xs font-bold mb-1 ${themeColors.cardSubText}`}>إجمالي العمليات</p>
+							<p className={`text-xs font-bold mb-1 ${themeColors.cardSubText}`}>
+								{customStats ? "شحنات الصادر" : "إجمالي العمليات"}
+							</p>
 							<h3 className={`text-2xl font-black ${themeColors.cardText}`}>
-								{loading ? "..." : (stats.completed + stats.inProgress)}
+								{loading ? "..." : (customStats ? displayStats.exportCount : (displayStats.completed + displayStats.inProgress))}
 							</h3>
 						</div>
 						<div className={`p-3 rounded-lg ${isEmployee || isAdmin ? "bg-purple-400/20 text-purple-400" : "bg-blue-50 text-blue-600"}`}>
-							<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+							{customStats ? (
+								<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg> // Ship container
+							) : (
+								<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+							)}
 						</div>
 					</div>
 					<div className={`absolute -right-10 -bottom-10 w-24 h-24 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity ${

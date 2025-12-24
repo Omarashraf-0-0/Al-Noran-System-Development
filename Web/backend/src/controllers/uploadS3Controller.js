@@ -13,13 +13,18 @@ const notificationService = require("../services/notificationService");
 // ✅ Proxy download through backend to hide S3 URL
 const proxyDownload = async (req, res) => {
 	try {
+        console.log("📥 [ProxyDownload] Starting for ID:", req.params.id);
 		const upload = await Upload.findById(req.params.id);
 
 		if (!upload) {
+            console.log("❌ [ProxyDownload] Upload not found in DB with ID:", req.params.id);
 			return res.status(404).json({ message: "Upload not found" });
 		}
+        
+        console.log("✅ [ProxyDownload] Upload found:", upload._id, "S3Key:", upload.s3Key);
 
 		if (!upload.s3Key) {
+            console.log("❌ [ProxyDownload] Upload has no s3Key");
 			return res.status(400).json({ message: "File does not exist in storage" });
 		}
 		
@@ -818,6 +823,46 @@ const getPresignedUrlForKey = async (req, res) => {
 	}
 };
 
+/**
+ * @route   GET /api/uploads/proxy-download-key
+ * @desc    Secure proxy download by S3 Key (query param ?key=...)
+ * @access  Private (JWT required)
+ */
+const proxyFileByKey = async (req, res) => {
+	try {
+		const s3Key = req.query.key; // Use query param to avoid slash issues
+		
+		if (!s3Key) {
+			console.error("Missing S3 Key in query params");
+			return res.status(400).json({ message: "S3 Key is required" });
+		}
+
+		console.log("Proxying file by key:", s3Key);
+
+		const { getFileStream } = require("../utils/s3Helpers");
+		
+		try {
+			const s3Stream = await getFileStream(s3Key);
+			
+			// Detect mime type or filename from key
+			const filename = s3Key.split('/').pop() || "download";
+			
+			// Set headers for download
+			res.setHeader('Content-disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+			res.setHeader('Content-type', 'application/octet-stream');
+			
+			// Pipe stream to response
+			s3Stream.pipe(res);
+		} catch (s3Error) {
+			console.error("Proxy download by key failed:", s3Error);
+			res.status(500).json({ message: "Failed to download file from storage", error: s3Error.message });
+		}
+	} catch (error) {
+		console.error("Proxy download error:", error);
+		res.status(500).json({ message: error.message });
+	}
+};
+
 module.exports = {
 	uploadFile,
 	uploadMultipleFiles,
@@ -828,4 +873,5 @@ module.exports = {
 	checkRequiredDocuments,
 	getPresignedUrlForKey,
 	proxyDownload,
+	proxyFileByKey,
 };

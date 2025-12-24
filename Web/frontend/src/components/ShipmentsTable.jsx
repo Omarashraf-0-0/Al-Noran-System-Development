@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import quickReorderIcon from "../assets/images/quick_reorder.png";
+import { Package, Ship } from "lucide-react"; // Import icons
 
 const ShipmentsTable = ({
 	shipments,
@@ -36,12 +36,21 @@ const ShipmentsTable = ({
 		? shipments.slice(0, maxItems)
 		: shipments;
 
+	const handleNavigate = (shipment) => {
+		if (shipment.type === 'export') {
+			navigate(`/employee/export-shipment/${shipment.id}`);
+		} else {
+			// Default to import (or whatever linkPrefix was set to, usually /employee-shipment)
+			navigate(`${linkPrefix}/${shipment.id}`);
+		}
+	};
+
 	return (
 		<div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
 			{displayedShipments.map((shipment) => (
 				<div
 					key={shipment.id}
-					onClick={() => navigate(`${linkPrefix}/${shipment.id}`)}
+					onClick={() => handleNavigate(shipment)}
 					className={`group relative rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer block text-right
 						${userType === 'client' 
 							? "bg-white border-gray-100 hover:border-red-100 hover:shadow-lg" 
@@ -52,25 +61,39 @@ const ShipmentsTable = ({
 						${viewMode === "list" ? "grid grid-cols-12 gap-4 items-center p-4" : ""}
 					`}
 				>
-					{/* Top Row: Status & Date */}
-					<div className={`${viewMode === "list" ? "col-span-3 flex flex-col gap-2" : "flex justify-between items-start mb-4"}`}>
-						<span
-							className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border w-fit
-								${userType === 'client' 
-									? "bg-white border-gray-200 text-gray-700" 
-									: "text-white"}
-							`}
-							style={userType !== 'client' ? { 
-								backgroundColor: `${theme.statusColor}20`, 
-								borderColor: `${theme.statusColor}40`,
-								color: isDarkMode ? 'white' : theme.statusColor 
-							} : {}}
-						>
-							<span className={`w-1.5 h-1.5 rounded-full animate-pulse ${userType === 'client' ? "bg-green-500" : "bg-white"}`}
-								style={userType !== 'client' ? { backgroundColor: isDarkMode ? 'white' : theme.statusColor } : {}}
-							></span>
-							{shipment.status}
-						</span>
+					{/* Top Row: Status & Type & Date */}
+					<div className={`${viewMode === "list" ? "col-span-4 flex flex-col gap-2" : "flex justify-between items-start mb-4"}`}>
+						<div className="flex flex-col gap-2">
+							{/* Type Badge (Only if mixed types are expected or type is present) */}
+							{shipment.type && (
+								<div className={`flex items-center gap-1 text-[10px] font-bold w-fit px-2 py-0.5 rounded-full ${
+									shipment.type === 'export' 
+										? (isDarkMode ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-orange-50 text-orange-600 border border-orange-100')
+										: (isDarkMode ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-blue-50 text-blue-600 border border-blue-100')
+								}`}>
+									{shipment.type === 'export' ? <Ship size={10} /> : <Package size={10} />}
+									{shipment.type === 'export' ? 'صادر' : 'وارد'}
+								</div>
+							)}
+
+							<span
+								className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border w-fit
+									${userType === 'client' 
+										? "bg-white border-gray-200 text-gray-700" 
+										: "text-white"}
+								`}
+								style={userType !== 'client' ? { 
+									backgroundColor: `${theme.statusColor}20`, 
+									borderColor: `${theme.statusColor}40`,
+									color: isDarkMode ? 'white' : theme.statusColor 
+								} : {}}
+							>
+								<span className={`w-1.5 h-1.5 rounded-full animate-pulse ${userType === 'client' ? "bg-green-500" : "bg-white"}`}
+									style={userType !== 'client' ? { backgroundColor: isDarkMode ? 'white' : theme.statusColor } : {}}
+								></span>
+								{shipment.status}
+							</span>
+						</div>
 
 						{viewMode === "grid" && (
 							<span className={`text-xs flex items-center gap-1 mt-1 ${userType === 'client' || !isDarkMode ? "text-gray-400" : "text-white/40"}`}>
@@ -97,7 +120,7 @@ const ShipmentsTable = ({
 							</div>
 						)}
 
-						{/* In List View show Client Name here if needed, or keep it consistent */}
+						{/* Client Name */}
 						{viewMode === "grid" && (
 							<div className={`flex flex-col gap-2 text-sm ${userType === 'client' || !isDarkMode ? "text-gray-500" : "text-white/60"}`}>
 								<div className="flex items-center gap-2">
@@ -109,14 +132,14 @@ const ShipmentsTable = ({
 
 					{/* Client Info Column (List View Only) */}
 					{viewMode === "list" && (
-						<div className="col-span-3">
+						<div className="col-span-2">
 							<div className={`flex flex-col gap-1 text-sm ${userType === 'client' || !isDarkMode ? "text-gray-600" : "text-white/80"}`}>
 								<div className="flex items-center gap-2 font-medium">
 									👤 <span>{shipment.clientName}</span>
 								</div>
 								<div className="flex flex-col">
 									<span className={`text-xs ${userType === 'client' || !isDarkMode ? "text-gray-500" : "text-white/40"}`}>
-										رقم ACID
+										{shipment.type === 'export' ? 'UCR' : 'ACID'}
 									</span>
 									<span className={`font-mono text-xs ${
 										userType === 'client' || !isDarkMode 
@@ -135,7 +158,7 @@ const ShipmentsTable = ({
 						{viewMode === "grid" && (
 							<div className="flex flex-col">
 								<span className={`text-xs ${userType === 'client' || !isDarkMode ? "text-gray-500" : "text-white/40"}`}>
-									رقم ACID
+									{shipment.type === 'export' ? 'UCR' : 'ACID'}
 								</span>
 								<span className={`font-mono text-sm ${
 									userType === 'client' || !isDarkMode 

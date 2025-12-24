@@ -81,6 +81,7 @@ router.put(
 	protect,
 	require("../controllers/shipmentController").rejectUploadedDocument
 );
+router.get("/id/:id/history", protect, require("../controllers/shipmentController").getShipmentHistory); // ✅ New History Route
 router.get("/id/:shipmentId", protect, getShipmentById);
 
 // ACID-based routes (more generic, must come after specific routes)
