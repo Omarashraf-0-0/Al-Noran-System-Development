@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import ReactDOM from "react-dom";
 import { X, Download, Loader2, FileText, Eye } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { toast } from "react-hot-toast";
@@ -330,8 +331,8 @@ const FileViewerModal = (props) => {
 		// setError(true); <--- Disabled to prevent blocking UI
 	};
 
-	return (
-		<div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+	return ReactDOM.createPortal(
+		<div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 text-right" dir="rtl">
 			<div
 				className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
 				onClick={onClose}
@@ -447,7 +448,8 @@ const FileViewerModal = (props) => {
 					)}
 				</div>
 			</div>
-		</div>
+		</div>,
+		document.body
 	);
 };
 

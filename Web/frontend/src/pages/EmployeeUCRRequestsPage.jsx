@@ -262,22 +262,27 @@ const EmployeeUCRRequestsPage = () => {
 	};
 
 	// Constants for UI
-	const themeCardBg = isDarkMode ? "bg-white/5 border-white/5" : "bg-white border-gray-100";
-	const themeText = isDarkMode ? "text-white" : "text-gray-900";
+	const isAdmin = user?.type === 'admin' || user?.employeeDetails?.employeeType === 'System Admin';
+
+	const themeCardBg = isDarkMode ? (isAdmin ? "bg-[#1a1600]/80 border-[#D4AF37]/20" : "bg-white/5 border-white/5") : (isAdmin ? "bg-white border-gray-100 shadow-sm" : "bg-white border-gray-100");
+	const themeText = isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-white") : (isAdmin ? "text-[#690000]" : "text-gray-900");
 	const themeSubText = isDarkMode ? "text-gray-400" : "text-gray-500";
+	const themePageBg = isDarkMode ? (isAdmin ? "bg-[#0a0800]" : "bg-[#050a0d]") : (isAdmin ? "bg-[#FFFDF5]" : "bg-gray-50");
+	const themeAccentText = isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-[#1ba3b6]") : (isAdmin ? "text-[#690000]" : "text-[#1ba3b6]");
+	const themeAccentBg = isDarkMode ? (isAdmin ? "bg-[#D4AF37]/10" : "bg-white/10") : (isAdmin ? "bg-amber-100" : "bg-cyan-100");
 
 	return (
-		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#050a0d]" : "bg-gray-50"}`}>
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${themePageBg}`}>
 			
 			{/* Animated Background */}
 			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
 				{isDarkMode ? (
 					<>
-						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[100px] animate-pulse"></div>
-						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#0d5c66]/20 rounded-full filter blur-[120px]"></div>
+						<div className={`absolute top-[10%] left-[5%] w-[500px] h-[500px] rounded-full filter blur-[100px] animate-pulse ${isAdmin ? "bg-[#D4AF37]/10" : "bg-[#1ba3b6]/10"}`}></div>
+						<div className={`absolute bottom-[20%] right-[10%] w-[600px] h-[600px] rounded-full filter blur-[120px] ${isAdmin ? "bg-[#690000]/10" : "bg-[#0d5c66]/20"}`}></div>
 					</>
 				) : (
-					<div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-cyan-50/50 to-transparent"></div>
+					<div className={`absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b ${isAdmin ? "from-amber-50/50" : "from-cyan-50/50"} to-transparent`}></div>
 				)}
 			</div>
 			
@@ -287,10 +292,10 @@ const EmployeeUCRRequestsPage = () => {
 				<div className="max-w-7xl mx-auto">
 					{/* Header Section */}
 					<div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-[#1ba3b6]"}`}>
+						<h1 className={`text-3xl font-bold flex items-center gap-3 ${themeAccentText}`}>
 							<span className="text-4xl">📋</span>
 							إدارة طلبات UCR
-							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-cyan-100 text-[#1ba3b6]"}`}>
+							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? (isAdmin ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "bg-white/10 text-gray-400") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-cyan-100 text-[#1ba3b6]")}`}>
 								{filteredRequests.length} طلب
 							</span>
 						</h1>
@@ -316,17 +321,17 @@ const EmployeeUCRRequestsPage = () => {
 						userType={user?.type}
 						isDarkMode={isDarkMode}
 					>
-						<div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+						<div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? (isAdmin ? "bg-black/20 border-[#D4AF37]/20" : "bg-white/5 border-white/10") : (isAdmin ? "bg-white border-gray-200" : "bg-white border-gray-200")}`}>
 							<button
 								onClick={() => setViewMode("grid")}
-								className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/10 text-[#1ba3b6]") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gray-100 text-[#1ba3b6]")) : "text-gray-400"}`}
 								title="عرض شبكة"
 							>
 								<LayoutGrid size={20} />
 							</button>
 							<button
 								onClick={() => setViewMode("list")}
-								className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/10 text-[#1ba3b6]") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gray-100 text-[#1ba3b6]")) : "text-gray-400"}`}
 								title="عرض قائمة"
 							>
 								<List size={20} />
@@ -359,7 +364,7 @@ const EmployeeUCRRequestsPage = () => {
 										<div
 											key={request._id}
 											className={`group relative rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex ${viewMode === "grid" ? "flex-col justify-between" : "grid grid-cols-12 gap-4 items-center"}
-												${themeCardBg} ${isDarkMode ? "hover:border-[#1ba3b6]/30" : "hover:border-[#1ba3b6]/30"}
+												${themeCardBg} ${isDarkMode ? (isAdmin ? "hover:border-[#D4AF37]/50" : "hover:border-[#1ba3b6]/30") : (isAdmin ? "hover:border-[#D4AF37]/50" : "hover:border-[#1ba3b6]/30")}
 											`}
 											onClick={() => {
                         navigate(`/employee/ucr-request/${request._id}`);
@@ -378,7 +383,7 @@ const EmployeeUCRRequestsPage = () => {
 
 											{/* Middle: Info */}
 											<div className={`${viewMode === "list" ? "col-span-3" : "mb-4"}`}>
-												<h3 className={`text-lg font-bold mb-1 break-all ${request.ucrNumber ? "text-[#1ba3b6]" : themeText}`}>
+												<h3 className={`text-lg font-bold mb-1 break-all ${request.ucrNumber ? (isAdmin ? (isDarkMode ? "text-[#D4AF37]" : "text-[#690000]") : "text-[#1ba3b6]") : themeText}`}>
 													{request.ucrNumber || "لم يصدر بعد"}
 												</h3>
 												{request.supplier && (
@@ -389,7 +394,7 @@ const EmployeeUCRRequestsPage = () => {
 												
 												{viewMode === "grid" && (
 													<div className="flex items-center gap-2 mb-2">
-														<div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDarkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-700"}`}>
+														<div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/10 text-white") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gray-100 text-gray-700")}`}>
 															{request.userId?.username?.charAt(0).toUpperCase()}
 														</div>
 														<span className={`text-sm ${themeText}`}>
@@ -410,7 +415,7 @@ const EmployeeUCRRequestsPage = () => {
 											{/* User Column (List View Only) */}
 											{viewMode === "list" && (
 												<div className="col-span-2 flex items-center gap-2 overflow-hidden">
-													<div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDarkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-700"}`}>
+													<div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/10 text-white") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gray-100 text-gray-700")}`}>
 														{request.userId?.username?.charAt(0).toUpperCase()}
 													</div>
 													<div className="flex flex-col">
@@ -521,14 +526,14 @@ const EmployeeUCRRequestsPage = () => {
 										className={`p-3 rounded-full transition-all duration-300 ${
 											currentPage === 1 
 												? (isDarkMode ? "text-gray-700 bg-white/5 cursor-not-allowed" : "text-gray-300 bg-gray-100 cursor-not-allowed") 
-												: (isDarkMode ? "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm")
+												: (isDarkMode ? (isAdmin ? "hover:bg-[#D4AF37] hover:text-black bg-[#D4AF37]/10 text-[#D4AF37]" : "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white") : (isAdmin ? "hover:bg-[#D4AF37] hover:text-white bg-white text-gray-700 shadow-sm" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm"))
 										}`}
 									>
 										<ChevronLeft size={24} />
 									</button>
 									
 									<div className={`px-6 py-2 rounded-xl font-bold ${isDarkMode ? "bg-white/5 text-white border border-white/10" : "bg-white text-gray-800 shadow-sm"}`}>
-										<span className="text-[#1ba3b6]">{currentPage}</span>
+										<span className={isAdmin ? (isDarkMode ? "text-[#D4AF37]" : "text-[#690000]") : "text-[#1ba3b6]"}>{currentPage}</span>
 										<span className="mx-2 opacity-50">/</span>
 										<span className="opacity-70">{totalPages}</span>
 									</div>
@@ -539,7 +544,7 @@ const EmployeeUCRRequestsPage = () => {
 										className={`p-3 rounded-full transition-all duration-300 ${
 											currentPage === totalPages 
 												? (isDarkMode ? "text-gray-700 bg-white/5 cursor-not-allowed" : "text-gray-300 bg-gray-100 cursor-not-allowed") 
-												: (isDarkMode ? "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm")
+												: (isDarkMode ? (isAdmin ? "hover:bg-[#D4AF37] hover:text-black bg-[#D4AF37]/10 text-[#D4AF37]" : "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white") : (isAdmin ? "hover:bg-[#D4AF37] hover:text-white bg-white text-gray-700 shadow-sm" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm"))
 										}`}
 									>
 										<ChevronRight size={24} />
@@ -576,7 +581,9 @@ const EmployeeUCRRequestsPage = () => {
 								value={actionNotes}
 								onChange={(e) => setActionNotes(e.target.value)}
 								rows={3}
-								className={`w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#1ba3b6] outline-none transition-all resize-none ${
+								className={`w-full p-3 border rounded-xl focus:ring-2 outline-none transition-all resize-none ${
+									isAdmin ? "focus:ring-[#D4AF37]" : "focus:ring-[#1ba3b6]"
+								} ${
 									isDarkMode 
 										? "bg-black/30 border-white/10 text-white placeholder-gray-500" 
 										: "bg-white border-gray-300 text-gray-900"
@@ -638,7 +645,7 @@ const EmployeeUCRRequestsPage = () => {
 								type="text"
 								value={ucrNumber}
 								onChange={(e) => setUcrNumber(e.target.value)}
-								className={`w-full p-3 border rounded-xl focus:ring-2 focus:ring-[#1ba3b6] outline-none transition-all text-left ${
+								className={`w-full p-3 border rounded-xl focus:ring-2 outline-none transition-all text-left ${isAdmin ? "focus:ring-[#D4AF37]" : "focus:ring-[#1ba3b6]"} ${
 									isDarkMode 
 										? "bg-black/30 border-white/10 text-white placeholder-gray-500" 
 										: "bg-white border-gray-300 text-gray-900"
@@ -663,7 +670,11 @@ const EmployeeUCRRequestsPage = () => {
 							<button
 								onClick={handleIssueUCR}
 								disabled={processingAction || !ucrNumber.trim()}
-								className="px-5 py-2.5 bg-[#1ba3b6] text-white rounded-xl font-bold hover:bg-[#158a9b] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#1ba3b6]/20"
+								className={`px-5 py-2.5 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${
+									isAdmin 
+									? "bg-[#D4AF37] hover:bg-[#b5952f] shadow-[#D4AF37]/20" 
+									: "bg-[#1ba3b6] hover:bg-[#158a9b] shadow-[#1ba3b6]/20"
+								}`}
 							>
 								{processingAction ? "جاري الإصدار..." : "إصدار وإنشاء الشحنة"}
 							</button>

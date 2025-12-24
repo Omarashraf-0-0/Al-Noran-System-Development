@@ -56,27 +56,33 @@ const EmployeeProfilePage = () => {
 	// Use Global Theme Context
 	const { isDarkMode, toggleTheme } = useTheme();
 
-	// Theme classes - PREMIUM TURQUOISE EMPLOYEE DESIGN
+    const userType = JSON.parse(localStorage.getItem("user"))?.type;
+    const employeeType = JSON.parse(localStorage.getItem("user"))?.employeeDetails?.employeeType;
+    const isAdmin = userType === 'admin' || employeeType === 'System Admin';
+
+	// Theme classes - PREMIUM TURQUOISE EMPLOYEE DESIGN / GOLD ADMIN DESIGN
 	const theme = {
 		pageBg: isDarkMode 
-			? "bg-[#050f14]" // Very dark cyan/black tint
-			: "bg-[#F0FEFF]", // Cool minty white
+			? (isAdmin ? "bg-[#0a0800]" : "bg-[#050f14]") // Very dark cyan/black tint
+			: (isAdmin ? "bg-[#FFFDF5]" : "bg-[#F0FEFF]"), // Cool minty white
 		headerBg: isDarkMode
-			? "bg-gradient-to-r from-[#1ba3b6] to-[#0e5c66]" // Dark Turquoise Gradient
-			: "bg-gradient-to-r from-[#22d3eb] to-[#1ba3b6]", // Bright Turquoise Gradient
+			? (isAdmin ? "bg-gradient-to-r from-[#D4AF37] to-[#8C7323]" : "bg-gradient-to-r from-[#1ba3b6] to-[#0e5c66]") // Dark Turquoise Gradient
+			: (isAdmin ? "bg-gradient-to-r from-[#FFD700] to-[#D4AF37]" : "bg-gradient-to-r from-[#22d3eb] to-[#1ba3b6]"), // Bright Turquoise Gradient
 		card: isDarkMode 
-			? "bg-[#0a1a1f] border-[#163a42]" 
-			: "bg-white border-cyan-50 shadow-sm",
-		textPrimary: isDarkMode ? "text-cyan-50" : "text-gray-900",
-		textSecondary: isDarkMode ? "text-cyan-200/60" : "text-gray-500",
+			? (isAdmin ? "bg-[#1a1600]/80 border-[#D4AF37]/20" : "bg-[#0a1a1f] border-[#163a42]") 
+			: (isAdmin ? "bg-white border-amber-50 shadow-sm" : "bg-white border-cyan-50 shadow-sm"),
+		textPrimary: isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-cyan-50") : (isAdmin ? "text-[#690000]" : "text-gray-900"),
+		textSecondary: isDarkMode ? "text-gray-400" : "text-gray-500",
 		input: isDarkMode 
-			? "bg-[#102a30] border-[#1b434d] text-cyan-50 focus:border-cyan-500" 
-			: "bg-cyan-50/50 border-cyan-200/50 text-gray-900 focus:border-cyan-500",
-		buttonPrimary: "bg-gradient-to-r from-[#1ba3b6] to-[#158A9A] text-white hover:shadow-lg hover:shadow-cyan-500/30",
+			? (isAdmin ? "bg-black/30 border-[#D4AF37]/20 text-white focus:border-[#D4AF37]" : "bg-[#102a30] border-[#1b434d] text-cyan-50 focus:border-cyan-500") 
+			: (isAdmin ? "bg-white border-gray-300 text-gray-900 focus:border-[#D4AF37]" : "bg-cyan-50/50 border-cyan-200/50 text-gray-900 focus:border-cyan-500"),
+		buttonPrimary: isAdmin 
+            ? "bg-gradient-to-r from-[#D4AF37] to-[#b5952f] text-white hover:shadow-lg hover:shadow-[#D4AF37]/30"
+            : "bg-gradient-to-r from-[#1ba3b6] to-[#158A9A] text-white hover:shadow-lg hover:shadow-cyan-500/30",
 		buttonSecondary: isDarkMode 
-			? "bg-[#102a30] text-cyan-200 hover:bg-[#163a42]" 
-			: "bg-white text-cyan-700 hover:bg-cyan-50 border border-cyan-200",
-		iconBg: isDarkMode ? "bg-cyan-500/10 text-cyan-400" : "bg-cyan-50 text-cyan-600",
+			? (isAdmin ? "bg-[#1a1600] text-[#D4AF37] hover:bg-[#D4AF37]/10" : "bg-[#102a30] text-cyan-200 hover:bg-[#163a42]") 
+			: (isAdmin ? "bg-white text-[#690000] hover:bg-amber-50 border border-amber-200" : "bg-white text-cyan-700 hover:bg-cyan-50 border border-cyan-200"),
+		iconBg: isDarkMode ? (isAdmin ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "bg-cyan-500/10 text-cyan-400") : (isAdmin ? "bg-amber-50 text-[#D4AF37]" : "bg-cyan-50 text-cyan-600"),
 		modalOverlay: isDarkMode ? "bg-black/80" : "bg-black/50",
 	};
 
@@ -353,19 +359,19 @@ const EmployeeProfilePage = () => {
 			<div className="fixed inset-0 pointer-events-none overflow-hidden">
 				{isDarkMode ? (
 					<>
-						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[150px] animate-pulse-glow"></div>
-						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#158A9A]/10 rounded-full filter blur-[180px] animate-float-slow"></div>
-						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#22d3eb]/10 rounded-full filter blur-[120px] animate-float-reverse"></div>
-						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#1ba3b6]/20 rounded-xl animate-float rotate-45"></div>
-						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#158A9A]/20 rounded-full animate-float-reverse"></div>
+						<div className={`absolute top-[5%] left-[5%] w-[500px] h-[500px] rounded-full filter blur-[150px] animate-pulse-glow ${isAdmin ? "bg-[#D4AF37]/10" : "bg-[#1ba3b6]/10"}`}></div>
+						<div className={`absolute bottom-[10%] right-[10%] w-[600px] h-[600px] rounded-full filter blur-[180px] animate-float-slow ${isAdmin ? "bg-[#b5952f]/10" : "bg-[#158A9A]/10"}`}></div>
+						<div className={`absolute top-[40%] right-[20%] w-[400px] h-[400px] rounded-full filter blur-[120px] animate-float-reverse ${isAdmin ? "bg-[#D4AF37]/10" : "bg-[#22d3eb]/10"}`}></div>
+						<div className={`absolute top-[10%] right-[10%] w-20 h-20 border-2 rounded-xl animate-float rotate-45 ${isAdmin ? "border-[#D4AF37]/20" : "border-[#1ba3b6]/20"}`}></div>
+						<div className={`absolute bottom-[20%] left-[8%] w-16 h-16 border-2 rounded-full animate-float-reverse ${isAdmin ? "border-[#b5952f]/20" : "border-[#158A9A]/20"}`}></div>
 					</>
 				) : (
 					<>
-						<div className="absolute top-[5%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/5 rounded-full filter blur-[150px] animate-pulse-glow"></div>
-						<div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-[#22d3eb]/10 rounded-full filter blur-[180px] animate-float-slow"></div>
-						<div className="absolute top-[40%] right-[20%] w-[400px] h-[400px] bg-[#1ba3b6]/5 rounded-full filter blur-[120px] animate-float-reverse"></div>
-						<div className="absolute top-[10%] right-[10%] w-20 h-20 border-2 border-[#1ba3b6]/20 rounded-xl animate-float rotate-45"></div>
-						<div className="absolute bottom-[20%] left-[8%] w-16 h-16 border-2 border-[#158A9A]/20 rounded-full animate-float-reverse"></div>
+						<div className={`absolute top-[5%] left-[5%] w-[500px] h-[500px] rounded-full filter blur-[150px] animate-pulse-glow ${isAdmin ? "bg-[#D4AF37]/5" : "bg-[#1ba3b6]/5"}`}></div>
+						<div className={`absolute bottom-[10%] right-[10%] w-[600px] h-[600px] rounded-full filter blur-[180px] animate-float-slow ${isAdmin ? "bg-[#FFD700]/10" : "bg-[#22d3eb]/10"}`}></div>
+						<div className={`absolute top-[40%] right-[20%] w-[400px] h-[400px] rounded-full filter blur-[120px] animate-float-reverse ${isAdmin ? "bg-[#D4AF37]/5" : "bg-[#1ba3b6]/5"}`}></div>
+						<div className={`absolute top-[10%] right-[10%] w-20 h-20 border-2 rounded-xl animate-float rotate-45 ${isAdmin ? "border-[#D4AF37]/20" : "border-[#1ba3b6]/20"}`}></div>
+						<div className={`absolute bottom-[20%] left-[8%] w-16 h-16 border-2 rounded-full animate-float-reverse ${isAdmin ? "border-[#b5952f]/20" : "border-[#158A9A]/20"}`}></div>
 					</>
 				)}
 			</div>
@@ -393,7 +399,7 @@ const EmployeeProfilePage = () => {
 									<div className="w-full h-full rounded-full overflow-hidden relative bg-gray-100">
 										{loadingPhoto || uploadingPhoto ? (
 											<div className="w-full h-full flex items-center justify-center bg-gray-100">
-												<div className="animate-spin rounded-full h-8 w-8 border-2 border-[#1ba3b6] border-t-transparent"></div>
+												<div className={`animate-spin rounded-full h-8 w-8 border-2 ${isAdmin ? "border-[#D4AF37]" : "border-[#1ba3b6]"} border-t-transparent`}></div>
 											</div>
 										) : profilePhoto ? (
 											<img src={profilePhoto} alt="Profile" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
@@ -438,7 +444,7 @@ const EmployeeProfilePage = () => {
 							<div className="flex items-center gap-3">
 								<button 
 									onClick={toggleTheme}
-									className={`p-3 rounded-full transition-all ${isDarkMode ? "bg-cyan-400/10 text-cyan-400 hover:bg-cyan-400/20" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+									className={`p-3 rounded-full transition-all ${isDarkMode ? (isAdmin ? "bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20" : "bg-cyan-400/10 text-cyan-400 hover:bg-cyan-400/20") : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
 								>
 									{isDarkMode ? "☀️" : "🌙"}
 								</button>

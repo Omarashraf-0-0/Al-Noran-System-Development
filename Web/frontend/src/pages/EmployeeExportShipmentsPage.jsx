@@ -63,7 +63,9 @@ export default function EmployeeExportShipmentsPage() {
 	// processingAction wasn't explicitly in Stashed state block but used in handleStatusUpdate. adding it.
 	const [processingAction, setProcessingAction] = useState(false);
 
+	const user = JSON.parse(localStorage.getItem("user"));
 	const token = localStorage.getItem("token");
+    const isAdmin = user?.type === 'admin' || user?.employeeDetails?.employeeType === 'System Admin';
 
     const statusOptions = [
         { value: "all", label: "الكل" },
@@ -186,11 +188,15 @@ export default function EmployeeExportShipmentsPage() {
 
     // Theme Variables
     const theme = {
-        bg: isDarkMode ? "bg-[#050a0d]" : "bg-gray-50",
-        cardBg: isDarkMode ? "bg-white/5 border-white/5" : "bg-white border-gray-100",
-        text: isDarkMode ? "text-gray-100" : "text-gray-900",
+        bg: isDarkMode ? (isAdmin ? "bg-[#0a0800]" : "bg-[#050a0d]") : (isAdmin ? "bg-[#FFFDF5]" : "bg-gray-50"),
+        cardBg: isDarkMode ? (isAdmin ? "bg-[#1a1600]/80 border-[#D4AF37]/20" : "bg-white/5 border-white/5") : (isAdmin ? "bg-white border-gray-100 shadow-sm" : "bg-white border-gray-100"),
+        text: isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-gray-100") : (isAdmin ? "text-[#690000]" : "text-gray-900"),
         subText: isDarkMode ? "text-gray-400" : "text-gray-500",
-        inputBg: isDarkMode ? "bg-black/30 border-white/10" : "bg-white border-gray-300",
+        inputBg: isDarkMode ? (isAdmin ? "bg-black/30 border-[#D4AF37]/20" : "bg-black/30 border-white/10") : "bg-white border-gray-300",
+        accentText: isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-[#1ba3b6]") : (isAdmin ? "text-[#690000]" : "text-[#1ba3b6]"),
+        accentBg: isDarkMode ? (isAdmin ? "bg-[#D4AF37]/10" : "bg-white/10") : (isAdmin ? "bg-amber-100" : "bg-cyan-100"),
+        accentBorder: isAdmin ? "border-[#D4AF37]/50" : "border-[#1ba3b6]/30",
+        buttonBg: isAdmin ? "bg-[#D4AF37] hover:bg-[#b5952f]" : "bg-[#1ba3b6] hover:bg-[#158a9b]",
     };
 
 	return (
@@ -200,11 +206,11 @@ export default function EmployeeExportShipmentsPage() {
              <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
                 {isDarkMode ? (
                     <>
-                        <div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[100px] animate-pulse"></div>
-                        <div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#0d5c66]/20 rounded-full filter blur-[120px]"></div>
+                        <div className={`absolute top-[10%] left-[5%] w-[500px] h-[500px] rounded-full filter blur-[100px] animate-pulse ${isAdmin ? "bg-[#D4AF37]/10" : "bg-[#1ba3b6]/10"}`}></div>
+                        <div className={`absolute bottom-[20%] right-[10%] w-[600px] h-[600px] rounded-full filter blur-[120px] ${isAdmin ? "bg-[#690000]/10" : "bg-[#0d5c66]/20"}`}></div>
                     </>
                 ) : (
-                    <div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-cyan-50/50 to-transparent"></div>
+                    <div className={`absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b ${isAdmin ? "from-amber-50/50" : "from-cyan-50/50"} to-transparent`}></div>
                 )}
             </div>
 
@@ -212,10 +218,10 @@ export default function EmployeeExportShipmentsPage() {
 
 			<main className="flex-grow w-full pt-24 pb-12 px-4 md:px-8 relative z-10 max-w-7xl mx-auto">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-                    <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-[#1ba3b6]"}`}>
+                    <h1 className={`text-3xl font-bold flex items-center gap-3 ${theme.accentText}`}>
                         <span className="text-4xl">🚢</span>
                         الشحنات التصديرية
-                        <span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-cyan-100 text-[#1ba3b6]"}`}>
+                        <span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? (isAdmin ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "bg-white/10 text-gray-400") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-cyan-100 text-[#1ba3b6]")}`}>
                             {filteredShipments.length} شحنة
                         </span>
                     </h1>
@@ -241,17 +247,17 @@ export default function EmployeeExportShipmentsPage() {
 
                     isDarkMode={isDarkMode}
                 >
-                    <div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+                    <div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? (isAdmin ? "bg-black/20 border-[#D4AF37]/20" : "bg-white/5 border-white/10") : (isAdmin ? "bg-white border-gray-200" : "bg-white border-gray-200")}`}>
                         <button
                             onClick={() => setViewMode("grid")}
-                            className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+                            className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/10 text-[#1ba3b6]") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gray-100 text-[#1ba3b6]")) : "text-gray-400"}`}
                             title="عرض شبكة"
                         >
                             <LayoutGrid size={20} />
                         </button>
                         <button
                             onClick={() => setViewMode("list")}
-                            className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+                            className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/10 text-[#1ba3b6]") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gray-100 text-[#1ba3b6]")) : "text-gray-400"}`}
                             title="عرض قائمة"
                         >
                             <List size={20} />
@@ -279,7 +285,7 @@ export default function EmployeeExportShipmentsPage() {
                                 <div 
                                     key={shipment.id}
                                     onClick={() => navigate(`/employee/export-shipment/${shipment.id}`)}
-                                    className={`group relative rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer flex ${viewMode === "grid" ? "flex-col justify-between" : "grid grid-cols-12 gap-4 items-center"} ${theme.cardBg} hover:border-[#1ba3b6]/30`}
+                                    className={`group relative rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer flex ${viewMode === "grid" ? "flex-col justify-between" : "grid grid-cols-12 gap-4 items-center"} ${theme.cardBg} hover:${theme.accentBorder}`}
                                 >
                                     {/* Card Header */}
                                     <div className={`${viewMode === "list" ? "col-span-3 flex flex-col gap-2" : "flex justify-between items-start mb-4"}`}>
@@ -292,7 +298,7 @@ export default function EmployeeExportShipmentsPage() {
                                     {/* Card Content */}
                                     <div className={`${viewMode === "list" ? "col-span-4" : "space-y-4 mb-6"}`}>
                                         <div>
-                                            <h3 className={`text-lg font-bold mb-1 ${theme.text} group-hover:text-[#1ba3b6] transition-colors`}>
+                                            <h3 className={`text-lg font-bold mb-1 ${theme.text} group-hover:${isAdmin ? "text-[#D4AF37]" : "text-[#1ba3b6]"} transition-colors`}>
                                                 {shipment.shipmentNo}
                                             </h3>
                                             <div className={`text-sm ${theme.subText} flex items-center gap-1`}>
@@ -302,7 +308,7 @@ export default function EmployeeExportShipmentsPage() {
 
                                         {viewMode === "grid" && (
                                             <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/5 w-fit">
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isDarkMode ? 'bg-white/10' : 'bg-gray-200 text-gray-700'}`}>
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/10 text-white") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gray-200 text-gray-700")}`}>
                                                     {shipment.username?.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div className="overflow-hidden">
@@ -317,7 +323,7 @@ export default function EmployeeExportShipmentsPage() {
                                     {viewMode === "list" && (
                                         <div className="col-span-3">
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isDarkMode ? 'bg-white/10' : 'bg-gray-200 text-gray-700'}`}>
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/10 text-white") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gray-200 text-gray-700")}`}>
                                                     {shipment.username?.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div className="overflow-hidden">
@@ -333,7 +339,7 @@ export default function EmployeeExportShipmentsPage() {
                                         {!["completed", "cancelled"].includes(shipment.status) && (
                                             <button 
                                                 onClick={(e) => openStatusModal(shipment, e)}
-                                                className="px-4 py-2 rounded-lg bg-[#1ba3b6] text-white font-bold hover:bg-[#158a9b] transition-colors flex items-center gap-2 text-sm"
+                                                className={`px-4 py-2 rounded-lg text-white font-bold transition-colors flex items-center gap-2 text-sm ${theme.buttonBg}`}
                                             >
                                                 <Edit size={16} /> تحديث الحالة
                                             </button>
@@ -357,7 +363,7 @@ export default function EmployeeExportShipmentsPage() {
              {/* Status Update Modal */}
              {statusModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4" onClick={() => setStatusModal(false)}>
-                    <div className={`w-full max-w-md p-6 rounded-2xl shadow-2xl relative ${theme.bg} border ${isDarkMode ? 'border-gray-700' : 'border-white'}`} onClick={e => e.stopPropagation()}>
+                    <div className={`w-full max-w-md p-6 rounded-2xl shadow-2xl relative ${theme.bg} border ${isDarkMode ? (isAdmin ? "border-[#D4AF37]/20" : "border-gray-700") : "border-white"}`} onClick={e => e.stopPropagation()}>
                         <h3 className={`text-xl font-bold mb-6 ${theme.text}`}>تحديث حالة الشحنة</h3>
                         
                         <div className="space-y-4">
@@ -396,7 +402,7 @@ export default function EmployeeExportShipmentsPage() {
                                 <button
                                     onClick={handleStatusUpdate}
                                     disabled={!newStatus || processingAction}
-                                    className="flex-1 py-3 rounded-xl font-bold bg-[#1ba3b6] text-white hover:bg-[#158a9b] disabled:opacity-50"
+                                    className={`flex-1 py-3 rounded-xl font-bold text-white disabled:opacity-50 ${theme.buttonBg}`}
                                 >
                                     {processingAction ? "جاري التحديث..." : "حفظ التغييرات"}
                                 </button>

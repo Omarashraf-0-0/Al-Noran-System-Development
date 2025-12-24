@@ -379,24 +379,29 @@ const EmployeeAcidRequestsPage = () => {
 	};
 	
 	// Theme Helpers
-	const themeCardBg = isDarkMode ? "bg-white/5 border-white/5" : "bg-white border-gray-100";
-	const themeText = isDarkMode ? "text-white" : "text-gray-900";
+	const isAdmin = user?.type === 'admin' || user?.employeeDetails?.employeeType === 'System Admin';
+	
+	const themeCardBg = isDarkMode ? (isAdmin ? "bg-[#1a1600]/80 border-[#D4AF37]/20" : "bg-white/5 border-white/5") : (isAdmin ? "bg-white border-gray-100 shadow-sm" : "bg-white border-gray-100");
+	const themeText = isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-white") : (isAdmin ? "text-[#690000]" : "text-gray-900");
 	const themeSubText = isDarkMode ? "text-gray-400" : "text-gray-500";
+	const themePageBg = isDarkMode ? (isAdmin ? "bg-[#0a0800]" : "bg-[#050a0d]") : (isAdmin ? "bg-[#FFFDF5]" : "bg-gray-50");
+	const themeAccentText = isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-[#1ba3b6]") : (isAdmin ? "text-[#690000]" : "text-[#1ba3b6]");
+	const themeAccentBg = isDarkMode ? (isAdmin ? "bg-[#D4AF37]/10" : "bg-white/10") : (isAdmin ? "bg-amber-100" : "bg-cyan-100");
 
 	return (
-		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#050a0d]" : "bg-gray-50"}`}>
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${themePageBg}`}>
 			
 			{/* Animated Background */}
 			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
 				{isDarkMode ? (
 					<>
-						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[100px] animate-pulse"></div>
-						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#0d5c66]/20 rounded-full filter blur-[120px]"></div>
+						<div className={`absolute top-[10%] left-[5%] w-[500px] h-[500px] rounded-full filter blur-[100px] animate-pulse ${isAdmin ? "bg-[#D4AF37]/10" : "bg-[#1ba3b6]/10"}`}></div>
+						<div className={`absolute bottom-[20%] right-[10%] w-[600px] h-[600px] rounded-full filter blur-[120px] ${isAdmin ? "bg-[#690000]/10" : "bg-[#0d5c66]/20"}`}></div>
 					</>
 				) : (
 					<>
-						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[100px] animate-pulse opacity-60"></div>
-						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-cyan-100/40 rounded-full filter blur-[120px]"></div>
+						<div className={`absolute top-[10%] left-[5%] w-[500px] h-[500px] rounded-full filter blur-[100px] animate-pulse opacity-60 ${isAdmin ? "bg-amber-100/40" : "bg-[#1ba3b6]/10"}`}></div>
+						<div className={`absolute bottom-[20%] right-[10%] w-[600px] h-[600px] rounded-full filter blur-[120px] ${isAdmin ? "bg-amber-50/40" : "bg-cyan-100/40"}`}></div>
 					</>
 				)}
 			</div>
@@ -407,10 +412,10 @@ const EmployeeAcidRequestsPage = () => {
 				<div className="max-w-7xl mx-auto">
 					{/* Header Section */}
 					<div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-[#1ba3b6]"}`}>
+						<h1 className={`text-3xl font-bold flex items-center gap-3 ${themeAccentText}`}>
 							<span className="text-4xl">🧾</span>
 							إدارة طلبات ACID
-							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-cyan-100 text-[#1ba3b6]"}`}>
+							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? (isAdmin ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "bg-white/10 text-gray-400") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-cyan-100 text-[#1ba3b6]")}`}>
 								{filteredRequests.length} طلب
 							</span>
 						</h1>
@@ -462,17 +467,17 @@ const EmployeeAcidRequestsPage = () => {
 							className={`group flex items-center gap-2.5 px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 border-2 ${
 								issuedByMe 
 									? (isDarkMode 
-										? "bg-[#1ba3b6]/20 border-[#1ba3b6] text-[#1ba3b6] shadow-lg shadow-[#1ba3b6]/20" 
-										: "bg-[#1ba3b6] border-[#1ba3b6] text-white shadow-lg shadow-[#1ba3b6]/30")
+										? (isAdmin ? "bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37] shadow-lg shadow-[#D4AF37]/20" : "bg-[#1ba3b6]/20 border-[#1ba3b6] text-[#1ba3b6] shadow-lg shadow-[#1ba3b6]/20") 
+										: (isAdmin ? "bg-[#D4AF37] border-[#D4AF37] text-white shadow-lg shadow-[#D4AF37]/30" : "bg-[#1ba3b6] border-[#1ba3b6] text-white shadow-lg shadow-[#1ba3b6]/30"))
 									: (isDarkMode 
-										? "bg-white/5 border-white/10 text-gray-400 hover:border-[#1ba3b6]/50 hover:text-[#1ba3b6]" 
-										: "bg-white border-gray-200 text-gray-500 hover:border-[#1ba3b6] hover:text-[#1ba3b6]")
+										? (isAdmin ? "bg-white/5 border-white/10 text-gray-400 hover:border-[#D4AF37]/50 hover:text-[#D4AF37]" : "bg-white/5 border-white/10 text-gray-400 hover:border-[#1ba3b6]/50 hover:text-[#1ba3b6]") 
+										: (isAdmin ? "bg-white border-gray-200 text-gray-500 hover:border-[#D4AF37] hover:text-[#D4AF37]" : "bg-white border-gray-200 text-gray-500 hover:border-[#1ba3b6] hover:text-[#1ba3b6]"))
 							}`}
 						>
 							<FileText size={16} className={issuedByMe ? "" : "opacity-50 group-hover:opacity-100"} />
 							<span>طلبات أصدرتها أنا</span>
 							{issuedByMe && (
-								<span className={`w-2 h-2 rounded-full ${isDarkMode ? "bg-[#1ba3b6]" : "bg-white"} animate-pulse`}></span>
+								<span className={`w-2 h-2 rounded-full ${isDarkMode ? (isAdmin ? "bg-[#D4AF37]" : "bg-[#1ba3b6]") : "bg-white"} animate-pulse`}></span>
 							)}
 						</button>
 						

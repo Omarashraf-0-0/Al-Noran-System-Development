@@ -1,243 +1,497 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import AdminHeader from "../components/AdminHeader";
-import Footer from "../components/Footer";
+import Header from "../components/Header";
+import { useTheme } from "../context/ThemeContext";
+import { 
+	Search, Filter, FileText, CheckCircle, 
+	Clock, XCircle, AlertTriangle, Eye, Trash2,
+	RefreshCw, Inbox, Upload, Download,
+	Truck, Anchor, Edit, MapPin, Box
+} from "lucide-react";
 import ShipmentDetailsModal from "../components/ShipmentDetailsModal";
-import bannerPic from "../assets/images/Untitled design (8) 2.png";
-import searchIcon from "../assets/images/search.svg";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { useNavigate } from "react-router-dom";
 
 export default function ShipmentsManagement() {
-	const [shipments, setShipments] = useState([]);
-	const [search, setSearch] = useState("");
+	const navigate = useNavigate();
+	const { isDarkMode } = useTheme();
+	const [activeTab, setActiveTab] = useState("import"); // 'import' (Clearance) or 'export' (Freight)
 	const [loading, setLoading] = useState(true);
-	const [selectedShipment, setSelectedShipment] = useState(null);
+	const [data, setData] = useState([]);
+	const [filteredData, setFilteredData] = useState([]);
+	
+	// Filter State
+	const [search, setSearch] = useState("");
+	const [statusFilter, setStatusFilter] = useState("all");
+
+	// Modals
+	const [selectedShipmentId, setSelectedShipmentId] = useState(null);
 	const [showDetailsModal, setShowDetailsModal] = useState(false);
+	
+	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+	const [shipmentToDelete, setShipmentToDelete] = useState(null);
+
+	// Status Update Modal
+	const [showStatusModal, setShowStatusModal] = useState(false);
+	const [selectedForStatus, setSelectedForStatus] = useState(null);
+	const [newStatus, setNewStatus] = useState("");
+	const [statusNotes, setStatusNotes] = useState("");
+	const [processingAction, setProcessingAction] = useState(false);
 
 	const user = JSON.parse(localStorage.getItem("user"));
-	const adminName = user?.fullname || user?.username || "المدير";
 	const token = localStorage.getItem("token");
 
-	// Fetch Shipments from backend
-	const fetchShipments = async () => {
-		try {
-			setLoading(true);
-			const response = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/shipments/getAll`,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				}
-			);
-
-			// Transform backend data
-			const shipmentsData = response.data.map((ship) => ({
-				id: ship._id,
-				acid: ship.acid,
-				clientName:
-					ship.user_id?.username || ship.user_id?.fullname || "غير متاح",
-				clientEmail: ship.user_id?.email || "",
-				employeeName:
-					ship.employee_id?.username ||
-					ship.employee_id?.fullname ||
-					"لم يعين بعد",
-				status: ship.status,
-				port: ship.port_name,
-				country: ship.country,
-				numContainers: ship.num_of_containers,
-				createdAt: ship.createdAt,
-				dragt: ship.dragt,
-			}));
-
-			setShipments(shipmentsData);
-			setLoading(false);
-		} catch (error) {
-			console.error("Error fetching shipments:", error);
-			toast.error("فشل تحميل بيانات الشحنات");
-			setLoading(false);
-		}
+	// Theme Classes
+	const theme = {
+		pageBg: isDarkMode ? "bg-[#1a1600]" : "bg-[#FFFDF5]",
+		cardBg: isDarkMode ? "bg-[#2d2600]/60 border-[#D4AF37]/20" : "bg-white border-gray-100",
+		headerText: isDarkMode ? "text-[#D4AF37]" : "text-[#690000]",
+		textPrimary: isDarkMode ? "text-[#F3E5AB]" : "text-gray-800",
+		textSecondary: isDarkMode ? "text-[#D4AF37]/60" : "text-gray-500",
+		inputBg: isDarkMode ? "bg-[#2d2600] border-[#D4AF37]/30 text-white" : "bg-white border-gray-300 text-gray-900",
+		tabActive: isDarkMode ? "bg-[#D4AF37] text-black" : "bg-[#690000] text-white",
+		tabInactive: isDarkMode ? "bg-white/5 text-[#D4AF37] hover:bg-white/10" : "bg-gray-100 text-gray-600 hover:bg-gray-200",
+		modalBg: isDarkMode ? "bg-[#2d2600] border-[#D4AF37]/30 shadow-2xl shadow-black/50" : "bg-white shadow-xl",
 	};
+
+	// Export Status Flow (Freight) - Internal Keys
+	const EXPORT_STATUS_KEYS = [
+		"documents_verification", "regulatory_inspection", "payment_cleared",
+		"goods_loaded", "in_transit", "delivered", "completed", "cancelled"
+	];
+
+	// Export Status Labels (Arabic)
+	const EXPORT_STATUS_LABELS = {
+		"documents_verification": "مراجعة المستندات",
+		"regulatory_inspection": "فحص الجهات الرقابية",
+		"payment_cleared": "تم السداد",
+		"goods_loaded": "تم التحميل",
+		"in_transit": "في الطريق",
+		"delivered": "تم الوصول",
+		"completed": "مكتملة",
+		"cancelled": "ملغية"
+	};
+
+	// Import Status Flow (Clearance) - Arabic Values (Backend stores these strings directly usually)
+	const IMPORT_STATUS_FLOW = [
+		"في انتظار الشحن", 
+		"في الطريق", 
+		"تم وصول البضاعة", 
+		"في انتظار وصول الإذن", 
+		"تم وصول الإذن", 
+		"التخليص الجمركي", 
+		"جارى ادراج الشحنة واستكمال الاجراءات", 
+		"جاري الكشف والتثمين", 
+		"مكتملة", 
+		"تمت بنجاح"
+	];
 
 	useEffect(() => {
-		fetchShipments();
-	}, []);
+		fetchData();
+	}, [activeTab]);
 
-	// Filter shipments
-	const filteredShipments = shipments.filter(
-		(ship) =>
-			ship.acid.toLowerCase().includes(search.toLowerCase()) ||
-			ship.clientName.toLowerCase().includes(search.toLowerCase()) ||
-			ship.employeeName.toLowerCase().includes(search.toLowerCase()) ||
-			ship.port.toLowerCase().includes(search.toLowerCase())
-	);
+	useEffect(() => {
+		filterData();
+	}, [data, search, statusFilter]);
 
-	const handleDeleteShipment = async (shipmentAcid) => {
-		if (!window.confirm("هل أنت متأكد من حذف هذه الشحنة؟")) {
-			return;
-		}
-
+	const fetchData = async () => {
+		setLoading(true);
 		try {
-			await axios.delete(
-				`${import.meta.env.VITE_API_URL}/api/shipments/${shipmentAcid}`,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				}
-			);
+			if (!token) return;
+			let formattedData = [];
 
-			toast.success("تم حذف الشحنة بنجاح");
-			fetchShipments();
+			if (activeTab === "import") {
+				// Import (Clearance) Shipments
+				const response = await axios.get(
+					`${import.meta.env.VITE_API_URL}/api/shipments/getAll`,
+					{ headers: { Authorization: `Bearer ${token}` } }
+				);
+				
+				const rawData = Array.isArray(response.data) ? response.data : response.data.data || [];
+				
+				formattedData = rawData.map(item => ({
+					id: item._id,
+					type: "import",
+					number: item.acid || "N/A",
+					clientName: item.user_id?.username || item.user_id?.fullname || "غير معروف",
+					status: item.status,
+					port: item.port_name || "-",
+					country: item.country || "-",
+					date: item.createdAt,
+					details: item
+				}));
+
+			} else {
+				// Export (Freight) Shipments
+				const response = await axios.get(
+					`${import.meta.env.VITE_API_URL}/api/export-shipments/employee/all`,
+					{ headers: { Authorization: `Bearer ${token}` } }
+				);
+
+				const rawData = response.data.shipments || [];
+
+				formattedData = rawData.map(item => ({
+					id: item._id,
+					type: "export",
+					number: item.shipmentNumber || item.ucrNumber || "N/A",
+					clientName: item.userId?.username || item.userId?.fullname || "غير معروف",
+					status: item.currentStatus || "documents_verification",
+					port: item.destinationCountry || "-",
+					country: "مصر",
+					date: item.createdAt,
+					details: item
+				}));
+			}
+
+			setData(formattedData);
 		} catch (error) {
-			console.error("Error deleting shipment:", error);
-			toast.error("فشل حذف الشحنة");
+			console.error("Fetch error:", error);
+			setData([]);
+		} finally {
+			setLoading(false);
 		}
 	};
 
-	const getStatusColor = (status) => {
-		switch (status) {
-			case "تمت بنجاح":
-			case "مكتملة":
-			case "Completed":
-				return "text-green-600";
-			case "في الطريق":
-			case "In Transit":
-				return "text-blue-600";
-			case "تم وصول البضاعة":
-			case "Arrived":
-			case "التخليص الجمركي":
-			case "Customs Clearance":
-			case "جاري الكشف والتثمين":
-			case "في انتظار وصول الإذن":
-			case "تم وصول الإذن":
-			case "جارى ادراج الشحنة واستكمال الاجراءات":
-				return "text-yellow-600";
-			case "في انتظار الشحن":
-			case "Pending":
-				return "text-gray-600";
-			default:
-				return "text-gray-600";
+	const filterData = () => {
+		let result = [...data];
+
+		if (search.trim()) {
+			const query = search.toLowerCase();
+			result = result.filter(item => 
+				item.number?.toLowerCase().includes(query) ||
+				item.clientName?.toLowerCase().includes(query) ||
+				item.port?.toLowerCase().includes(query)
+			);
 		}
+
+		if (statusFilter !== "all") {
+			result = result.filter(item => item.status === statusFilter);
+		}
+
+		result.sort((a, b) => new Date(b.date) - new Date(a.date));
+		setFilteredData(result);
+	};
+
+	// --- Handlers ---
+
+	const handleDelete = async () => {
+		if (!shipmentToDelete) return;
+
+		const endpoint = activeTab === "import"
+			? `${import.meta.env.VITE_API_URL}/api/shipments/${shipmentToDelete}`
+			: `${import.meta.env.VITE_API_URL}/api/export-shipments/${shipmentToDelete}`;
+
+		try {
+			await axios.delete(endpoint, {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+			toast.success("تم الحذف بنجاح");
+			fetchData();
+			setShowDeleteDialog(false);
+		} catch (error) {
+			toast.error(error.response?.data?.message || "فشل الحذف");
+		}
+	};
+
+	const openStatusModal = (item, e) => {
+		e?.stopPropagation();
+		setSelectedForStatus(item);
+		setNewStatus(item.status);
+		setStatusNotes("");
+		setShowStatusModal(true);
+	};
+
+	const handleStatusUpdate = async () => {
+		if (!selectedForStatus || !newStatus) return;
+		setProcessingAction(true);
+
+		try {
+			if (activeTab === "import") {
+				// Import Update
+				await axios.put(
+					`${import.meta.env.VITE_API_URL}/api/shipments/id/${selectedForStatus.id}`,
+					{ status: newStatus }, 
+					{ headers: { Authorization: `Bearer ${token}` } }
+				);
+			} else {
+				// Export Update
+				await axios.patch(
+					`${import.meta.env.VITE_API_URL}/api/export-shipments/employee/${selectedForStatus.id}/status`,
+					{ status: newStatus, notes: statusNotes },
+					{ headers: { Authorization: `Bearer ${token}` } }
+				);
+			}
+
+			toast.success("تم تحديث الحالة بنجاح");
+			setShowStatusModal(false);
+			fetchData();
+		} catch (error) {
+			console.error("Status update error:", error);
+			toast.error("فشل تحديث الحالة");
+		} finally {
+			setProcessingAction(false);
+		}
+	};
+
+	const getStatusBadge = (status) => {
+		// Define Mapping
+		const styles = {
+			// Export Keys
+			"documents_verification": { bg: "bg-blue-100 text-blue-700", icon: FileText, label: EXPORT_STATUS_LABELS["documents_verification"] },
+			"regulatory_inspection": { bg: "bg-purple-100 text-purple-700", icon: Search, label: EXPORT_STATUS_LABELS["regulatory_inspection"] },
+			"payment_cleared": { bg: "bg-yellow-100 text-yellow-700", icon: CheckCircle, label: EXPORT_STATUS_LABELS["payment_cleared"] },
+			"goods_loaded": { bg: "bg-cyan-100 text-cyan-700", icon: Box, label: EXPORT_STATUS_LABELS["goods_loaded"] },
+			"in_transit": { bg: "bg-indigo-100 text-indigo-700", icon: Truck, label: EXPORT_STATUS_LABELS["in_transit"] },
+			"delivered": { bg: "bg-green-100 text-green-700", icon: MapPin, label: EXPORT_STATUS_LABELS["delivered"] },
+			"completed": { bg: "bg-emerald-100 text-emerald-700", icon: CheckCircle, label: EXPORT_STATUS_LABELS["completed"] },
+			"cancelled": { bg: "bg-red-100 text-red-700", icon: XCircle, label: EXPORT_STATUS_LABELS["cancelled"] },
+
+			// Import Strings (Arabic) - mapped to styles
+			"في انتظار الشحن": { bg: "bg-gray-100 text-gray-700", icon: Clock },
+			"في الطريق": { bg: "bg-indigo-100 text-indigo-700", icon: Truck },
+			"تم وصول البضاعة": { bg: "bg-yellow-100 text-yellow-700", icon: MapPin },
+			"في انتظار وصول الإذن": { bg: "bg-purple-100 text-purple-700", icon: Clock },
+			"تم وصول الإذن": { bg: "bg-teal-100 text-teal-700", icon: FileText },
+			"التخليص الجمركي": { bg: "bg-blue-100 text-blue-700", icon: FileText },
+			"جارى ادراج الشحنة واستكمال الاجراءات": { bg: "bg-amber-100 text-amber-700", icon: RefreshCw },
+			"جاري الكشف والتثمين": { bg: "bg-pink-100 text-pink-700", icon: Search },
+			"اخر": { bg: "bg-gray-100 text-gray-600", icon: AlertTriangle },
+			"مكتملة": { bg: "bg-emerald-100 text-emerald-700", icon: CheckCircle },
+			"تمت بنجاح": { bg: "bg-emerald-100 text-emerald-700", icon: CheckCircle },
+		};
+
+		// Fallback
+		let config = styles[status] || { bg: "bg-gray-100 text-gray-600", icon: AlertTriangle, label: status };
+		
+		const Icon = config.icon;
+
+		return (
+			<span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${config.bg}`}>
+				<Icon className="w-3.5 h-3.5" />
+				{config.label || status}
+			</span>
+		);
+	};
+	
+	const stats = {
+		total: data.length,
+		active: data.filter(d => !["completed", "cancelled", "تمت بنجاح", "مكتملة"].includes(d.status)).length,
+		completed: data.filter(d => ["completed", "تمت بنجاح", "مكتملة"].includes(d.status)).length
 	};
 
 	return (
-		<div className="flex flex-col min-h-screen bg-gray-50 font-sans relative">
-			<AdminHeader />
+		<div className={`min-h-screen ${theme.pageBg} transition-colors duration-300 font-sans pt-28 pb-12`}>
+			<Header />
 
-			{/* Welcome Message */}
-			<h1 className="text-4xl font-bold text-[#690000] text-right mb-8 mt-8 px-16">
-				مرحباً ، {adminName} !
-			</h1>
-
-			{/* Banner */}
-			<div className="flex justify-center mb-10">
-				<img
-					src={bannerPic}
-					alt="admin illustration"
-					className="w-[350px] md:w-[450px] lg:w-[550px] object-contain"
-				/>
-			</div>
-
-			{/* Section Title */}
-			<h2 className="text-4xl font-bold text-[#690000] text-right my-8 px-16">
-				إدارة الشحنات
-			</h2>
-
-			{/* Search Bar */}
-			<div className="flex justify-center mb-8">
-				<div className="relative w-full max-w-xl">
-					<input
-						type="text"
-						placeholder="البحث برقم ACID / اسم العميل / اسم الموظف / الميناء"
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-						className="w-full bg-white text-gray-900 placeholder-gray-400 border border-gray-600 rounded-full py-2 pr-4 pl-10 text-right focus:outline-none focus:ring-2 focus:ring-[#6B0F1A]"
-					/>
-
-					<img
-						src={searchIcon}
-						alt="search icon"
-						className="absolute left-4 top-2.5 w-5 h-5 opacity-100"
-					/>
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				
+				{/* Welcome Section */}
+				<div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+					<div>
+						<h1 className={`text-3xl font-bold ${theme.headerText} mb-2`}>
+							إدارة الشحنات 🚢
+						</h1>
+						<p className={`${theme.textSecondary}`}>إدارة عمليات التخليص (الوارد) والشحن (الصادر)</p>
+					</div>
+					
+					{/* Actions */}
+					<div className="flex gap-3">
+						<button 
+							onClick={fetchData}
+							className={`p-2 rounded-xl transition-all active:scale-95 ${isDarkMode ? "bg-white/10 hover:bg-white/20 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+						>
+							<RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
+						</button>
+					</div>
 				</div>
-			</div>
 
-			{/* Loading State */}
-			{loading ? (
-				<div className="flex justify-center items-center py-20">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-800"></div>
+				{/* Stats Cards */}
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+					<div className={`p-4 rounded-2xl border ${theme.cardBg} flex items-center justify-between`}>
+						<div>
+							<p className={`text-sm ${theme.textSecondary}`}>إجمالي الشحنات</p>
+							<p className={`text-2xl font-bold ${theme.textPrimary}`}>{stats.total}</p>
+						</div>
+						<div className={`p-3 rounded-xl ${isDarkMode ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "bg-blue-50 text-blue-600"}`}>
+							<Truck className="w-6 h-6" />
+						</div>
+					</div>
+					<div className={`p-4 rounded-2xl border ${theme.cardBg} flex items-center justify-between`}>
+						<div>
+							<p className={`text-sm ${theme.textSecondary}`}>شحنات نشطة</p>
+							<p className={`text-2xl font-bold ${theme.textPrimary}`}>{stats.active}</p>
+						</div>
+						<div className={`p-3 rounded-xl ${isDarkMode ? "bg-yellow-500/10 text-yellow-500" : "bg-yellow-50 text-yellow-600"}`}>
+							<Clock className="w-6 h-6" />
+						</div>
+					</div>
+					<div className={`p-4 rounded-2xl border ${theme.cardBg} flex items-center justify-between`}>
+						<div>
+							<p className={`text-sm ${theme.textSecondary}`}>مكتملة</p>
+							<p className={`text-2xl font-bold ${theme.textPrimary}`}>{stats.completed}</p>
+						</div>
+						<div className={`p-3 rounded-xl ${isDarkMode ? "bg-emerald-500/10 text-emerald-500" : "bg-emerald-50 text-emerald-600"}`}>
+							<CheckCircle className="w-6 h-6" />
+						</div>
+					</div>
 				</div>
-			) : (
-				<>
-					{/* Shipments Table */}
-					<div className="overflow-x-auto px-4 mb-8">
-						<table className="w-full text-center border-collapse bg-white shadow-md rounded-lg">
-							<thead>
-								<tr className="text-white border-b border-red-900 bg-red-800">
-									<th className="py-4 px-4">#</th>
-									<th className="py-4 px-4">رقم ACID</th>
-									<th className="py-4 px-4">اسم العميل</th>
-									<th className="py-4 px-4">الموظف المسؤول</th>
-									<th className="py-4 px-4">الميناء</th>
-									<th className="py-4 px-4">الدولة</th>
-									<th className="py-4 px-4">عدد الحاويات</th>
-									<th className="py-4 px-4">الحالة</th>
-									<th className="py-4 px-4">تاريخ الإنشاء</th>
-									<th className="py-4 px-4">الإجراءات</th>
+
+				{/* Tabs & Filters */}
+				<div className={`bg-transparent rounded-3xl overflow-hidden mb-6`}>
+					{/* Tabs */}
+					<div className="flex p-1 gap-2 mb-6 bg-gray-100/50 dark:bg-white/5 rounded-2xl w-fit">
+						<button
+							onClick={() => setActiveTab("import")}
+							className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === "import" ? theme.tabActive : theme.tabInactive}`}
+						>
+							<Download className="w-4 h-4" />
+							وارد (تخليص)
+						</button>
+						<button
+							onClick={() => setActiveTab("export")}
+							className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === "export" ? theme.tabActive : theme.tabInactive}`}
+						>
+							<Upload className="w-4 h-4" />
+							صادر (شحن)
+						</button>
+					</div>
+
+					{/* Filters */}
+					<div className="flex flex-col md:flex-row gap-4 mb-6">
+						<div className="flex-1 relative">
+							<Search className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${theme.textSecondary}`} />
+							<input 
+								type="text" 
+								placeholder={activeTab === "import" ? "بحث برقم ACID، العميل..." : "بحث برقم الشحنة، العميل، الوجهة..."}
+								value={search}
+								onChange={(e) => setSearch(e.target.value)}
+								className={`w-full rounded-xl pr-10 pl-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] ${theme.inputBg}`}
+							/>
+						</div>
+						<div className="w-full md:w-48 relative">
+							<Filter className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${theme.textSecondary}`} />
+							<select
+								value={statusFilter}
+								onChange={(e) => setStatusFilter(e.target.value)}
+								className={`w-full rounded-xl pr-10 pl-4 py-3 appearance-none focus:outline-none focus:ring-2 focus:ring-[#D4AF37] ${theme.inputBg}`}
+							>
+								<option value="all">كل الحالات</option>
+								{activeTab === 'import' ? (
+									<>
+										<option value="في انتظار الشحن">في انتظار الشحن</option>
+										<option value="في الطريق">في الطريق</option>
+										<option value="تم وصول البضاعة">تم وصول البضاعة</option>
+										<option value="تمت بنجاح">مكتملة</option>
+									</>
+								) : (
+									<>
+										<option value="documents_verification">مراجعة المستندات</option>
+										<option value="in_transit">في الطريق</option>
+										<option value="delivered">تم الوصول</option>
+										<option value="completed">مكتملة</option>
+									</>
+								)}
+							</select>
+						</div>
+					</div>
+				</div>
+
+				{/* Table */}
+				<div className={`rounded-xl border overflow-hidden backdrop-blur-sm ${theme.cardBg}`}>
+					<div className="overflow-x-auto">
+						<table className="w-full text-sm">
+							<thead className={`${isDarkMode ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "bg-gray-50 text-gray-700"} border-b ${isDarkMode ? "border-white/5" : "border-gray-100"}`}>
+								<tr>
+									<th className="px-6 py-4 text-right font-bold">رقم الشحنة</th>
+									<th className="px-6 py-4 text-right font-bold">العميل</th>
+									<th className="px-6 py-4 text-right font-bold">
+										{activeTab === "import" ? "الميناء" : "الوجهة"}
+									</th>
+									<th className="px-6 py-4 text-right font-bold">الحالة</th>
+									<th className="px-6 py-4 text-right font-bold">التاريخ</th>
+									<th className="px-6 py-4 text-center font-bold">الإجراءات</th>
 								</tr>
 							</thead>
-
-							<tbody>
-								{filteredShipments.length === 0 ? (
+							<tbody className={`divide-y ${isDarkMode ? "divide-white/5" : "divide-gray-100"}`}>
+								{loading ? (
 									<tr>
-										<td colSpan="10" className="py-6 text-gray-500">
-											لا يوجد شحنات مطابقة لبحثك
+										<td colSpan="6" className="py-8 text-center">
+											<div className="flex justify-center items-center gap-2">
+												<div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-bounce" />
+												<div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-bounce delay-100" />
+												<div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-bounce delay-200" />
+											</div>
+										</td>
+									</tr>
+								) : filteredData.length === 0 ? (
+									<tr>
+										<td colSpan="6" className={`py-12 text-center ${theme.textSecondary}`}>
+											<Inbox className="w-12 h-12 mx-auto mb-3 opacity-20" />
+											لا توجد شحنات للعرض
 										</td>
 									</tr>
 								) : (
-									filteredShipments.map((ship, index) => (
-										<tr
-											key={ship.id}
-											className="border-b border-red-100 text-gray-800 hover:bg-red-50"
-										>
-											<td className="py-4 px-4 font-semibold text-red-900">
-												{index + 1}
+									filteredData.map((item) => (
+										<tr key={item.id} className={`transition-colors ${isDarkMode ? "hover:bg-white/5" : "hover:bg-gray-50"}`}>
+											<td className={`px-6 py-4 font-mono font-medium ${theme.textPrimary}`}>
+												{item.number}
 											</td>
-											<td className="py-4 px-4 font-mono text-sm">
-												{ship.acid}
+											<td className={`px-6 py-4 ${theme.textPrimary}`}>
+												{item.clientName}
 											</td>
-											<td className="py-4 px-4">{ship.clientName}</td>
-											<td className="py-4 px-4">{ship.employeeName}</td>
-											<td className="py-4 px-4">{ship.port}</td>
-											<td className="py-4 px-4">{ship.country}</td>
-											<td className="py-4 px-4">{ship.numContainers}</td>
-											<td
-												className={`py-4 px-4 font-semibold ${getStatusColor(
-													ship.status
-												)}`}
-											>
-												{ship.status}
+											<td className={`px-6 py-4 ${theme.textSecondary}`}>
+												{item.port}
 											</td>
-											<td className="py-4 px-4">
-												{new Date(ship.createdAt).toLocaleDateString("ar-EG")}
+											<td className="px-6 py-4">
+												{getStatusBadge(item.status)}
 											</td>
-											<td className="py-4 px-4">
-												<div className="flex gap-2 justify-center">
-													<button
+											<td className={`px-6 py-4 ${theme.textSecondary} dir-ltr text-right`}>
+												{new Date(item.date).toLocaleDateString("ar-EG")}
+											</td>
+											<td className="px-6 py-4">
+												<div className="flex items-center justify-center gap-2">
+													{/* Actions */}
+													<button 
 														onClick={() => {
-															setSelectedShipment(ship.id);
-															setShowDetailsModal(true);
+															if (item.type === 'import') {
+																setSelectedShipmentId(item.id);
+																setShowDetailsModal(true);
+															} else {
+																// For Export, navigate to existing details page but maybe admin version?
+																// AdminShipmentManagement.jsx seems to be for Import (legacy name).
+																// EmployeeExportShipmentDetailsPage is good.
+																// Or better, just generic view if possible.
+																// Let's use the employee details page route for now as it has everything.
+																navigate(`/admin/export-shipment/${item.id}`); // Need a route?
+																// Actually just use Employee details route, admin permissions usually cover it
+																navigate(`/employee/export-shipment/${item.id}`); 
+															}
 														}}
-														className="text-blue-600 hover:text-blue-800 underline text-sm"
+														className={`p-2 rounded-lg transition-colors ${isDarkMode ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-600"}`}
+														title="عرض التفاصيل"
 													>
-														عرض التفاصيل
+														<Eye className="w-4 h-4" />
 													</button>
-													<button
-														onClick={() => handleDeleteShipment(ship.acid)}
-														className="text-red-600 hover:text-red-800 underline text-sm"
+													
+													{/* Admin Status Edit */}
+													<button 
+														onClick={(e) => openStatusModal(item, e)}
+														className={`p-2 rounded-lg transition-colors bg-orange-100 text-orange-600 hover:bg-orange-200`}
+														title="تعديل الحالة"
 													>
-														حذف
+														<Edit className="w-4 h-4" />
+													</button>
+
+													<button 
+														onClick={() => {
+															setShipmentToDelete(item.id);
+															setShowDeleteDialog(true);
+														}}
+														className={`p-2 rounded-lg transition-colors ${isDarkMode ? "hover:bg-red-500/20 text-red-400" : "hover:bg-red-50 text-red-600"}`}
+														title="حذف"
+													>
+														<Trash2 className="w-4 h-4" />
 													</button>
 												</div>
 											</td>
@@ -247,69 +501,93 @@ export default function ShipmentsManagement() {
 							</tbody>
 						</table>
 					</div>
+				</div>
+			</div>
 
-					{/* Statistics */}
-					<div className="px-16 mb-8">
-						<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-							<div className="bg-white rounded-lg shadow p-4 text-center">
-								<p className="text-2xl font-bold text-[#690000]">
-									{shipments.length}
-								</p>
-								<p className="text-sm text-gray-600">إجمالي الشحنات</p>
-							</div>
-							<div className="bg-white rounded-lg shadow p-4 text-center">
-								<p className="text-2xl font-bold text-green-600">
-									{
-										shipments.filter(
-											(s) =>
-												s.status === "مكتملة" || s.status === "تمت بنجاح" || s.status === "Completed"
-										).length
-									}
-								</p>
-								<p className="text-sm text-gray-600">مكتملة</p>
-							</div>
-							<div className="bg-white rounded-lg shadow p-4 text-center">
-								<p className="text-2xl font-bold text-blue-600">
-									{
-										shipments.filter(
-											(s) =>
-												s.status === "في الطريق" || s.status === "In Transit"
-										).length
-									}
-								</p>
-								<p className="text-sm text-gray-600">في الطريق</p>
-							</div>
-							<div className="bg-white rounded-lg shadow p-4 text-center">
-								<p className="text-2xl font-bold text-gray-600">
-									{
-										shipments.filter(
-											(s) =>
-												s.status === "في انتظار الشحن" || s.status === "Pending"
-										).length
-									}
-								</p>
-								<p className="text-sm text-gray-600">في انتظار الشحن</p>
-							</div>
-						</div>
-					</div>
-				</>
-			)}
-
-			{/* Shipment Details Modal */}
-			{showDetailsModal && selectedShipment && (
+			{/* Import Details Modal (Reusable) */}
+			{showDetailsModal && selectedShipmentId && (
 				<ShipmentDetailsModal
-					shipmentId={selectedShipment}
+					shipmentId={selectedShipmentId}
 					onClose={() => {
 						setShowDetailsModal(false);
-						setSelectedShipment(null);
+						setSelectedShipmentId(null);
 					}}
-					onUpdate={fetchShipments}
+					onUpdate={fetchData}
 				/>
 			)}
 
-			<div className="mt-16">
-				<Footer />
-			</div>
+			{/* Delete Dialog */}
+			<ConfirmDialog
+				isOpen={showDeleteDialog}
+				onConfirm={handleDelete}
+				onCancel={() => {
+					setShowDeleteDialog(false);
+					setShipmentToDelete(null);
+				}}
+				title="تأكيد الحذف"
+				message="هل أنت متأكد من حذف هذه الشحنة؟ هذا الإجراء لا يمكن التراجع عنه."
+				confirmText="حذف نهائي"
+				cancelText="إلغاء"
+				confirmColor="red"
+			/>
+
+			{/* Status Update Modal */}
+			{showStatusModal && (
+				<div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowStatusModal(false)}>
+					<div className={`w-full max-w-md p-6 rounded-2xl shadow-2xl relative ${theme.modalBg}`} onClick={e => e.stopPropagation()}>
+						<h3 className={`text-xl font-bold mb-6 ${theme.textPrimary}`}>تحديث حالة الشحنة</h3>
+						
+						<div className="space-y-4">
+							<div>
+								<label className={`block text-sm font-bold mb-2 ${theme.textPrimary}`}>الحالة الجديدة</label>
+								<select 
+									value={newStatus}
+									onChange={(e) => setNewStatus(e.target.value)}
+									className={`w-full p-3 rounded-xl border outline-none ${theme.inputBg}`}
+								>
+									<option value="">اختر الحالة...</option>
+									{activeTab === 'export' ? (
+										EXPORT_STATUS_KEYS.map(status => (
+											<option key={status} value={status}>{EXPORT_STATUS_LABELS[status]}</option>
+										))
+									) : (
+										IMPORT_STATUS_FLOW.map(status => (
+											<option key={status} value={status}>{status}</option>
+										))
+									)}
+								</select>
+							</div>
+
+							<div>
+								<label className={`block text-sm font-bold mb-2 ${theme.textPrimary}`}>ملاحظات</label>
+								<textarea 
+									value={statusNotes}
+									onChange={(e) => setStatusNotes(e.target.value)}
+									rows={3}
+									className={`w-full p-3 rounded-xl border outline-none resize-none ${theme.inputBg}`}
+									placeholder="أضف ملاحظات اختيارية..."
+								/>
+							</div>
+
+							<div className="flex gap-3 pt-4">
+								<button
+									onClick={() => setShowStatusModal(false)}
+									className={`flex-1 py-3 rounded-xl font-bold ${isDarkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-700"}`}
+								>
+									إلغاء
+								</button>
+								<button
+									onClick={handleStatusUpdate}
+									disabled={!newStatus || processingAction}
+									className="flex-1 py-3 rounded-xl font-bold bg-[#D4AF37] text-black hover:bg-[#b5952f] disabled:opacity-50"
+								>
+									{processingAction ? "جاري التحديث..." : "حفظ التغييرات"}
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

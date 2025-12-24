@@ -555,10 +555,10 @@ const getMyCustomers = async (req, res) => {
 		const userId = req.user._id;
 		const userType = req.user.type;
 
-		if (userType !== "employee") {
+		if (userType !== "employee" && userType !== "admin") {
 			return res.status(403).json({
 				success: false,
-				message: "Only employees can access this endpoint",
+				message: "Only employees and admins can access this endpoint",
 			});
 		}
 

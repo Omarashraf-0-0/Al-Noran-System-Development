@@ -1,354 +1,477 @@
 import React, { useState, useEffect } from 'react';
-import AdminHeader from '../components/AdminHeader';
-import Footer from '../components/Footer';
+import Header from '../components/Header';
 import axios from 'axios';
 import { toast, Toaster } from 'react-hot-toast';
+import { useTheme } from '../context/ThemeContext';
+import { 
+	Wallet, CreditCard, FileText, CheckCircle, 
+	XCircle, AlertTriangle, Search, Filter, 
+	ArrowUpRight, ArrowDownLeft, RefreshCw,
+	Banknote, Inbox
+} from 'lucide-react';
 
-const PaymentsManagementPage = () => {
-    const token = localStorage.getItem("token");
-    const [usersData, setUsersData] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function PaymentsManagementPage() {
+	const { isDarkMode } = useTheme();
+	const token = localStorage.getItem("token");
+	const [loading, setLoading] = useState(true);
+	const [usersData, setUsersData] = useState([]);
+	const [filteredData, setFilteredData] = useState([]);
+	const [search, setSearch] = useState("");
+	
+	// Stats
+	const [stats, setStats] = useState({
+		totalWallet: 0,
+		totalDue: 0,
+		pendingPayments: 0
+	});
 
-    // UI State for Modals
-    const [selectedUserForInvoices, setSelectedUserForInvoices] = useState(null);
-    const [userInvoices, setUserInvoices] = useState([]); // Invoices for editing
+	// Modals
+	const [modals, setModals] = useState({
+		viewInvoices: null, // user object
+		viewPayments: null, // user object
+		updateWallet: null, // user object
+	});
 
-    const [selectedUserForPayments, setSelectedUserForPayments] = useState(null);
-    const [userPayments, setUserPayments] = useState([]); // Payments for review
+	// Data for modals
+	const [userInvoices, setUserInvoices] = useState([]);
+	const [userPayments, setUserPayments] = useState([]);
+	const [walletForm, setWalletForm] = useState({ amount: '', notes: '' });
+	const [processingMap, setProcessingMap] = useState({}); // track processing per item id
 
-    const [selectedUserForWallet, setSelectedUserForWallet] = useState(null);
-    const [walletAmount, setWalletAmount] = useState('');
+	// Theme Config
+	const theme = {
+		pageBg: isDarkMode ? "bg-[#1a1600]" : "bg-[#FFFDF5]",
+		cardBg: isDarkMode ? "bg-[#2d2600]/60 border-[#D4AF37]/20" : "bg-white border-gray-100",
+		headerText: isDarkMode ? "text-[#D4AF37]" : "text-[#690000]",
+		textPrimary: isDarkMode ? "text-[#F3E5AB]" : "text-gray-800",
+		textSecondary: isDarkMode ? "text-[#D4AF37]/60" : "text-gray-500",
+		inputBg: isDarkMode ? "bg-[#2d2600] border-[#D4AF37]/30 text-white" : "bg-white border-gray-300 text-gray-900",
+		modalBg: isDarkMode ? "bg-[#2d2600] border-[#D4AF37]/30 shadow-2xl shadow-black/50" : "bg-white shadow-xl",
+		accentBtn: "bg-[#D4AF37] text-black hover:bg-[#b5952f]",
+	};
 
-    useEffect(() => {
-        fetchFinancials();
-    }, [token]);
+	useEffect(() => {
+		fetchData();
+	}, [token]);
 
-    const fetchFinancials = async () => {
-        try {
-            setLoading(true);
-            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/payments/admin/summary`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setUsersData(res.data);
-            setLoading(false);
-        } catch (error) {
-            console.error("Error fetching financials:", error);
-            toast.error("Failed to load financial data");
-            setLoading(false);
-        }
-    };
+	useEffect(() => {
+		filterData();
+	}, [search, usersData]);
 
-    // --- Invoice View Handlers ---
-    const handleOpenInvoices = async (user) => {
-        try {
-            const allInvoicesRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/invoice/getAllInvoices`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const allInv = allInvoicesRes.data.invoices || [];
-            const userInvs = allInv.filter(inv => inv.userId === user.user._id);
-            setUserInvoices(userInvs);
-            setSelectedUserForInvoices(user);
-        } catch (e) {
-            console.error("Error fetching invoices details:", e);
-            toast.error("Could not fetch invoices details");
-        }
-    };
+	const fetchData = async () => {
+		try {
+			setLoading(true);
+			const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/payments/admin/summary`, {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+			
+			const data = res.data;
+			setUsersData(data);
+			
+			// Calculate Stats
+			const totalWallet = data.reduce((acc, curr) => acc + (curr.user.wallet || 0), 0);
+			const totalDue = data.reduce((acc, curr) => acc + (curr.totalDue || 0), 0);
+			const pendingPayments = data.reduce((acc, curr) => acc + (curr.pendingPaymentsCount || 0), 0);
+			
+			setStats({ totalWallet, totalDue, pendingPayments });
 
-    // --- Wallet Handlers ---
-    const handleOpenWalletModal = (user) => {
-        setSelectedUserForWallet(user);
-        setWalletAmount('');
-    };
+		} catch (error) {
+			console.error("Error fetching financials:", error);
+			// toast.error("فشل تحميل البيانات المالية");
+		} finally {
+			setLoading(false);
+		}
+	};
 
-    const handleUpdateWallet = async () => {
-        if (!walletAmount) return;
-        try {
-            await axios.put(
-                `${import.meta.env.VITE_API_URL}/api/payments/users/${selectedUserForWallet.user._id}/wallet`,
-                { amount: walletAmount, type: 'add' }, // Assuming 'add' adds to existing. The UI says "Add to Wallet".
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            toast.success("Wallet updated successfully");
-            setWalletAmount('');
-            setSelectedUserForWallet(null);
-            fetchFinancials();
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to update wallet");
-        }
-    };
+	const filterData = () => {
+		if (!search.trim()) {
+			setFilteredData(usersData);
+			return;
+		}
+		const query = search.toLowerCase();
+		const result = usersData.filter(item => 
+			item.user.name?.toLowerCase().includes(query) ||
+			item.user.email?.toLowerCase().includes(query)
+		);
+		setFilteredData(result);
+	};
 
-    // --- Payment Review Handlers ---
-    const handleOpenPayments = (userData) => {
-        setSelectedUserForPayments(userData.user);
-        setUserPayments(userData.payments);
-    };
+	// --- Handlers ---
 
-    const handleUpdatePaymentStatus = async (paymentId, transactionId, newStatus) => {
-        try {
-            await axios.patch(
-                `${import.meta.env.VITE_API_URL}/api/payments/${paymentId}/transactions/${transactionId}`,
-                { status: newStatus },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            toast.success(`Transaction ${newStatus}`);
+	const handleOpenInvoices = async (user) => {
+		setModals(prev => ({ ...prev, viewInvoices: user }));
+		try {
+			// Fetch invoices fresh or filter from big list if needed. 
+			// Assuming '/invoice/getAllInvoices' returns all, might be heavy. 
+			// Check if we can fetch per user. If not, stick to getAll logic.
+			const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/invoice/getAllInvoices`, {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+			const allInv = res.data.invoices || [];
+			const userInvs = allInv.filter(inv => inv.userId === user.user._id);
+			setUserInvoices(userInvs);
+		} catch (error) {
+			toast.error("فشل تحميل الفواتير");
+		}
+	};
 
-            // Update local state
-            const updatedPayments = userPayments.map(p => {
-                if (p._id === paymentId) {
-                    const newTrans = p.transactions.map(t =>
-                        t._id === transactionId ? { ...t, status: newStatus } : t
-                    );
-                    return { ...p, transactions: newTrans };
-                }
-                return p;
-            });
-            setUserPayments(updatedPayments);
-            fetchFinancials();
-        } catch (error) {
-            toast.error("Failed to update status");
-        }
-    };
+	const handleOpenPayments = (userData) => {
+		setModals(prev => ({ ...prev, viewPayments: userData }));
+		setUserPayments(userData.payments || []);
+	};
 
-    return (
-        <div className="min-h-screen bg-gray-50 font-sans relative" dir="rtl">
-            <Toaster />
-            <AdminHeader />
+	const handleWalletUpdate = async () => {
+		const user = modals.updateWallet;
+		if (!user || !walletForm.amount) return;
+		
+		try {
+			await axios.put(
+				`${import.meta.env.VITE_API_URL}/api/payments/users/${user.user._id}/wallet`,
+				{ amount: walletForm.amount, type: 'add' },
+				{ headers: { Authorization: `Bearer ${token}` } }
+			);
+			toast.success("تم تحديث المحفظة بنجاح");
+			setModals(prev => ({ ...prev, updateWallet: null }));
+			setWalletForm({ amount: '', notes: '' });
+			fetchData();
+		} catch (error) {
+			toast.error("فشل تحديث المحفظة");
+		}
+	};
 
-            <main className="container mx-auto px-16 py-8">
-                <h1 className="text-4xl font-bold text-[#690000] text-right mb-8 mt-4">
-                    إدارة المدفوعات
-                </h1>
+	const handlePaymentStatus = async (paymentId, transactionId, status) => {
+		const key = `${paymentId}-${transactionId}`;
+		setProcessingMap(prev => ({ ...prev, [key]: true }));
+		
+		try {
+			await axios.patch(
+				`${import.meta.env.VITE_API_URL}/api/payments/${paymentId}/transactions/${transactionId}`,
+				{ status },
+				{ headers: { Authorization: `Bearer ${token}` } }
+			);
+			toast.success(`تم ${status === 'APPROVED' ? 'الموافقة على' : 'رفض'} المعاملة`);
+			
+			// Update local state immediately
+			setUserPayments(prev => prev.map(p => {
+				if (p._id === paymentId) {
+					return {
+						...p,
+						transactions: p.transactions.map(t => 
+							t._id === transactionId ? { ...t, status } : t
+						)
+					};
+				}
+				return p;
+			}));
+			fetchData(); // Refresh global stats
+		} catch (error) {
+			toast.error("فشل تحديث الحالة");
+		} finally {
+			setProcessingMap(prev => ({ ...prev, [key]: false }));
+		}
+	};
 
-                {loading ? (
-                    <div className="flex justify-center items-center py-20">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-800"></div>
-                    </div>
-                ) : (
-                    <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-center border-collapse">
-                                <thead className="bg-[#690000] text-white">
-                                    <tr>
-                                        <th className="py-4 px-4">اسم العميل</th>
-                                        <th className="py-4 px-4">رصيد المحفظة</th>
-                                        <th className="py-4 px-4">إجمالي المستحق (EGP)</th>
-                                        <th className="py-4 px-4">الفواتير</th>
-                                        <th className="py-4 px-4">المدفوعات المعلقة</th>
-                                        <th className="py-4 px-4">الإجراءات</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-red-100">
-                                    {usersData.length > 0 ? usersData.map((data) => (
-                                        <tr key={data.user._id} className="hover:bg-red-50 text-gray-800">
-                                            <td className="p-4 font-medium">{data.user.name}</td>
-                                            <td className="p-4 font-bold text-green-700">
-                                                {data.user.wallet?.toLocaleString()} ج.م
-                                            </td>
-                                            <td className="p-4 font-bold text-lg">
-                                                {data.totalDue.toLocaleString()} ج.م
-                                            </td>
-                                            <td className="p-4">
-                                                <button
-                                                    onClick={() => handleOpenInvoices(data)}
-                                                    className="text-blue-600 hover:text-blue-800 text-sm font-semibold underline"
-                                                >
-                                                    {data.invoicesCount} فاتورة (عرض)
-                                                </button>
-                                            </td>
-                                            <td className="p-4">
-                                                <button
-                                                    onClick={() => handleOpenPayments(data)}
-                                                    className={`text-sm font-bold ${data.pendingPaymentsCount > 0 ? 'text-orange-500' : 'text-gray-400'}`}
-                                                >
-                                                    {data.pendingPaymentsCount} معلق (عرض)
-                                                </button>
-                                            </td>
-                                            <td className="p-4">
-                                                <button
-                                                    onClick={() => handleOpenWalletModal(data)}
-                                                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors mx-1"
-                                                >
-                                                    إضافة للمحفظة
-                                                </button>
-                                                <button
-                                                    onClick={() => handleOpenPayments(data)}
-                                                    className="bg-red-800 text-white px-3 py-1 rounded text-sm hover:bg-red-900 transition-colors mx-1"
-                                                >
-                                                    المدفوعات
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    )) : (
-                                        <tr>
-                                            <td colSpan="6" className="p-8 text-center text-gray-500">لا يوجد بيانات لعرضها</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-            </main>
+	return (
+		<div className={`min-h-screen ${theme.pageBg} transition-colors duration-300 font-sans pt-28 pb-12`}>
+			<Toaster position="top-center" />
+			<Header />
 
-            {/* Invoices Modal (Read-Only) */}
-            {selectedUserForInvoices && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white">
-                            <h2 className="text-xl font-bold">عرض فواتير: {selectedUserForInvoices.user.name}</h2>
-                            <button onClick={() => setSelectedUserForInvoices(null)} className="text-gray-500 hover:text-red-500">✕</button>
-                        </div>
-                        <div className="p-6">
-                            {userInvoices.length === 0 ? <p>لا توجد فواتير</p> : userInvoices.map(inv => (
-                                <div key={inv._id} className="mb-6 border p-4 rounded-lg bg-gray-50">
-                                    <div className="flex justify-between mb-2 font-bold bg-gray-200 p-2 rounded">
-                                        <span>رقم الفاتورة: {inv.invoiceNumber}</span>
-                                        <span className="text-sm text-gray-600">
-                                            {new Date(inv.createdAt).toLocaleDateString()}
-                                            <span className={`mr-2 px-2 py-0.5 rounded text-xs ${inv.status === 'تم الدفع' ? 'bg-green-200' : 'bg-yellow-200'}`}>{inv.status}</span>
-                                        </span>
-                                    </div>
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="text-gray-500 border-b">
-                                                <th className="pb-2">البند</th>
-                                                <th className="pb-2">السعر</th>
-                                                <th className="pb-2">العملة</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {inv.invoiceItems.map(item => (
-                                                <tr key={item._id} className="border-b last:border-0 border-gray-100">
-                                                    <td className="py-2">{item.item}</td>
-                                                    <td className="py-2 font-bold">{item.itemPrice}</td>
-                                                    <td className="py-2">{item.currencyType}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				
+				{/* Welcome Section */}
+				<div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+					<div>
+						<h1 className={`text-3xl font-bold ${theme.headerText} mb-2`}>
+							الإدارة المالية 💰
+						</h1>
+						<p className={`${theme.textSecondary}`}>متابعة محافظ العملاء، الفواتير، والمدفوعات المعلقة</p>
+					</div>
+					<button 
+						onClick={fetchData}
+						className={`p-2 rounded-xl transition-all active:scale-95 ${isDarkMode ? "bg-white/10 hover:bg-white/20 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+					>
+						<RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
+					</button>
+				</div>
 
-            {/* Wallet Update Modal */}
-            {selectedUserForWallet && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-                        <div className="p-6 border-b flex justify-between items-center">
-                            <h2 className="text-xl font-bold">إضافة رصيد للمحفظة</h2>
-                            <button onClick={() => setSelectedUserForWallet(null)} className="text-gray-500 hover:text-red-500">✕</button>
-                        </div>
-                        <div className="p-6">
-                            <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2">إسم العميل</label>
-                                <p className="text-gray-900 font-semibold">{selectedUserForWallet.user.name}</p>
-                            </div>
-                            <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2">الرصيد الحالي</label>
-                                <p className="text-green-700 font-bold">{selectedUserForWallet.user.wallet?.toLocaleString()} ج.م</p>
-                            </div>
-                            <div className="mb-6">
-                                <label className="block text-gray-700 text-sm font-bold mb-2">المبلغ المراد إضافته (EGP)</label>
-                                <input
-                                    type="number"
-                                    value={walletAmount}
-                                    onChange={(e) => setWalletAmount(e.target.value)}
-                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                    placeholder="أدخل المبلغ..."
-                                    autoFocus
-                                />
-                            </div>
-                            <div className="flex justify-end gap-2">
-                                <button
-                                    onClick={() => setSelectedUserForWallet(null)}
-                                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
-                                >
-                                    إلغاء
-                                </button>
-                                <button
-                                    onClick={handleUpdateWallet}
-                                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                                    disabled={!walletAmount}
-                                >
-                                    إضافة رصيد
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+				{/* Stats Cards */}
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+					<div className={`p-4 rounded-2xl border ${theme.cardBg} flex items-center justify-between`}>
+						<div>
+							<p className={`text-sm ${theme.textSecondary}`}>إجمالي رصيد المحافظ</p>
+							<p className="text-2xl font-bold text-emerald-500">{stats.totalWallet.toLocaleString()} ج.م</p>
+						</div>
+						<div className={`p-3 rounded-xl bg-emerald-500/10 text-emerald-500`}>
+							<Wallet className="w-6 h-6" />
+						</div>
+					</div>
+					<div className={`p-4 rounded-2xl border ${theme.cardBg} flex items-center justify-between`}>
+						<div>
+							<p className={`text-sm ${theme.textSecondary}`}>إجمالي المستحقات</p>
+							<p className="text-2xl font-bold text-red-500">{stats.totalDue.toLocaleString()} ج.م</p>
+						</div>
+						<div className={`p-3 rounded-xl bg-red-500/10 text-red-500`}>
+							<ArrowDownLeft className="w-6 h-6" />
+						</div>
+					</div>
+					<div className={`p-4 rounded-2xl border ${theme.cardBg} flex items-center justify-between`}>
+						<div>
+							<p className={`text-sm ${theme.textSecondary}`}>مدفوعات معلقة</p>
+							<p className={`text-2xl font-bold ${theme.textPrimary}`}>{stats.pendingPayments}</p>
+						</div>
+						<div className={`p-3 rounded-xl bg-orange-500/10 text-orange-500`}>
+							<AlertTriangle className="w-6 h-6" />
+						</div>
+					</div>
+				</div>
 
-            {/* Payments Modal (Unchanged largely, just ensuring it's still here) */}
-            {selectedUserForPayments && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white">
-                            <h2 className="text-xl font-bold">مدفوعات العميل: {selectedUserForPayments.name}</h2>
-                            <button onClick={() => setSelectedUserForPayments(null)} className="text-gray-500 hover:text-red-500">✕</button>
-                        </div>
-                        <div className="p-6 grid grid-cols-1 gap-6">
-                            {userPayments.length === 0 ? <p>لا توجد مدفوعات</p> : userPayments.map(pay => (
-                                <div key={pay._id} className="border rounded-lg overflow-hidden">
-                                    <div className="bg-gray-100 p-3 border-b flex justify-between">
-                                        <span className="font-bold">تاريخ الدفع: {new Date(pay.createdAt).toLocaleDateString()}</span>
-                                        <span className="text-sm bg-white px-2 rounded border">{pay.paymentMethod}</span>
-                                    </div>
-                                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {pay.transactions.map(trans => (
-                                            <div key={trans._id} className="border rounded p-2 flex flex-col gap-2">
-                                                <a href={trans.imageUrls} target="_blank" rel="noopener noreferrer">
-                                                    <img
-                                                        src={trans.imageUrls}
-                                                        alt="Receipt"
-                                                        className="w-full h-40 object-cover rounded cursor-pointer hover:opacity-90"
-                                                        onError={(e) => {
-                                                            e.target.onerror = null;
-                                                            e.target.src = '/placeholder-image.png';
-                                                        }}
-                                                    />
-                                                </a>
-                                                <div className="flex justify-between items-center mt-2">
-                                                    <span className={`text-xs font-bold px-2 py-1 rounded ${trans.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                                                        trans.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                                                            'bg-yellow-100 text-yellow-800'
-                                                        }`}>
-                                                        {trans.status === 'PENDING' ? 'قيد المراجعة' :
-                                                            trans.status === 'APPROVED' ? 'تمت الموافقة' : 'مرفوض'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex gap-2 mt-2">
-                                                    <button
-                                                        onClick={() => handleUpdatePaymentStatus(pay._id, trans._id, 'APPROVED')}
-                                                        disabled={trans.status === 'APPROVED'}
-                                                        className="flex-1 bg-green-600 text-white py-1 rounded text-xs hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    >
-                                                        قبول
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleUpdatePaymentStatus(pay._id, trans._id, 'REJECTED')}
-                                                        disabled={trans.status === 'REJECTED'}
-                                                        className="flex-1 bg-red-600 text-white py-1 rounded text-xs hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    >
-                                                        رفض
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
+				{/* Search & Content */}
+				<div className={`rounded-xl border overflow-hidden backdrop-blur-sm ${theme.cardBg}`}>
+					{/* Toolbar */}
+					<div className={`p-4 border-b ${isDarkMode ? "border-white/5" : "border-gray-100"} flex flex-col md:flex-row gap-4`}>
+						<div className="relative flex-1">
+							<Search className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${theme.textSecondary}`} />
+							<input 
+								type="text" 
+								placeholder="بحث باسم العميل..." 
+								value={search}
+								onChange={(e) => setSearch(e.target.value)}
+								className={`w-full rounded-xl pr-10 pl-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] ${theme.inputBg}`}
+							/>
+						</div>
+					</div>
 
-            <Footer />
-        </div>
-    );
-};
+					{/* Table */}
+					<div className="overflow-x-auto">
+						<table className="w-full text-sm">
+							<thead className={`${isDarkMode ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "bg-gray-50 text-gray-700"} border-b ${isDarkMode ? "border-white/5" : "border-gray-100"}`}>
+								<tr>
+									<th className="px-6 py-4 text-right font-bold">العميل</th>
+									<th className="px-6 py-4 text-right font-bold">المحفظة</th>
+									<th className="px-6 py-4 text-right font-bold">المستحق</th>
+									<th className="px-6 py-4 text-center font-bold">الفواتير</th>
+									<th className="px-6 py-4 text-center font-bold">الإجراءات</th>
+								</tr>
+							</thead>
+							<tbody className={`divide-y ${isDarkMode ? "divide-white/5" : "divide-gray-100"}`}>
+								{loading ? (
+									<tr><td colSpan="5" className="py-8 text-center text-gray-500">جاري التحميل...</td></tr>
+								) : filteredData.length === 0 ? (
+									<tr>
+										<td colSpan="5" className={`py-12 text-center ${theme.textSecondary}`}>
+											<Inbox className="w-12 h-12 mx-auto mb-3 opacity-20" />
+											لا توجد بيانات للعرض
+										</td>
+									</tr>
+								) : (
+									filteredData.map((data) => (
+										<tr key={data.user._id} className={`transition-colors ${isDarkMode ? "hover:bg-white/5" : "hover:bg-gray-50"}`}>
+											<td className={`px-6 py-4 font-bold ${theme.textPrimary}`}>
+												{data.user.name}
+											</td>
+											<td className="px-6 py-4">
+												<span className="font-mono text-emerald-500 font-bold">{data.user.wallet?.toLocaleString()}</span>
+											</td>
+											<td className="px-6 py-4">
+												<span className={`font-mono font-bold ${data.totalDue > 0 ? "text-red-500" : "text-gray-400"}`}>
+													{data.totalDue?.toLocaleString()}
+												</span>
+											</td>
+											<td className="px-6 py-4 text-center">
+												<button 
+													onClick={() => handleOpenInvoices(data)}
+													className={`text-xs px-2 py-1 rounded-lg border ${isDarkMode ? "border-white/20 text-gray-300 hover:bg-white/10" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+												>
+													{data.invoicesCount} فاتورة
+												</button>
+											</td>
+											<td className="px-6 py-4">
+												<div className="flex items-center justify-center gap-2">
+													<button
+														onClick={() => setModals({ ...modals, updateWallet: data })}
+														className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+														title="إضافة رصيد"
+													>
+														<ArrowUpRight className="w-4 h-4" />
+													</button>
+													<button
+														onClick={() => handleOpenPayments(data)}
+														className={`p-2 rounded-lg relative ${data.pendingPaymentsCount > 0 ? "bg-orange-500/10 text-orange-500 hover:bg-orange-500/20" : "bg-gray-500/10 text-gray-500"}`}
+														title="مراجعة المدفوعات"
+													>
+														<Banknote className="w-4 h-4" />
+														{data.pendingPaymentsCount > 0 && (
+															<span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+														)}
+													</button>
+												</div>
+											</td>
+										</tr>
+									))
+								)}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
 
-export default PaymentsManagementPage;
+			{/* ================= MODALS ================= */}
+			
+			{/* 1. Wallet Modal */}
+			{modals.updateWallet && (
+				<div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setModals({ ...modals, updateWallet: null })}>
+					<div className={`w-full max-w-sm p-6 rounded-2xl shadow-2xl ${theme.modalBg}`} onClick={e => e.stopPropagation()}>
+						<h3 className={`text-xl font-bold mb-4 ${theme.textPrimary}`}>إضافة رصيد: {modals.updateWallet.user.name}</h3>
+						
+						<div className="space-y-4">
+							<div>
+								<label className={`block text-sm mb-1 ${theme.textSecondary}`}>المبلغ (ج.م)</label>
+								<input 
+									type="number"
+									value={walletForm.amount}
+									onChange={e => setWalletForm({ ...walletForm, amount: e.target.value })}
+									className={`w-full p-3 rounded-xl outline-none border focus:ring-2 focus:ring-[#D4AF37] ${theme.inputBg}`}
+									placeholder="0.00"
+									autoFocus
+								/>
+							</div>
+							<div className="flex gap-3 pt-2">
+								<button 
+									onClick={() => setModals({ ...modals, updateWallet: null })}
+									className={`flex-1 py-2 rounded-xl font-bold ${isDarkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-700"}`}
+								>
+									إلغاء
+								</button>
+								<button 
+									onClick={handleWalletUpdate}
+									disabled={!walletForm.amount}
+									className={`flex-1 py-2 rounded-xl font-bold ${theme.accentBtn} disabled:opacity-50`}
+								>
+									تأكيد
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* 2. Invoices Modal */}
+			{modals.viewInvoices && (
+				<div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setModals({ ...modals, viewInvoices: null })}>
+					<div className={`w-full max-w-3xl p-6 rounded-2xl shadow-2xl max-h-[85vh] flex flex-col ${theme.modalBg}`} onClick={e => e.stopPropagation()}>
+						<div className="flex justify-between items-center mb-6">
+							<h3 className={`text-xl font-bold ${theme.textPrimary}`}>فواتير: {modals.viewInvoices.user.name}</h3>
+							<button onClick={() => setModals({ ...modals, viewInvoices: null })} className="text-gray-500 hover:text-red-500"><XCircle className="w-6 h-6" /></button>
+						</div>
+						
+						<div className="overflow-y-auto flex-1 pr-2 custom-scrollbar">
+							{userInvoices.length === 0 ? (
+								<div className={`text-center py-10 ${theme.textSecondary}`}>لا توجد فواتير</div>
+							) : (
+								<div className="space-y-3">
+									{userInvoices.map(inv => (
+										<div key={inv._id} className={`p-4 rounded-xl border ${isDarkMode ? "border-white/10 bg-white/5" : "border-gray-100 bg-gray-50"}`}>
+											<div className="flex justify-between items-start mb-2">
+												<div>
+													<p className={`font-bold ${theme.textPrimary}`}>#{inv.invoiceNumber}</p>
+													<p className={`text-xs ${theme.textSecondary}`}>{new Date(inv.createdAt).toLocaleDateString("ar-EG")}</p>
+												</div>
+												<span className={`px-2 py-1 rounded text-xs font-bold ${inv.status.includes('دفع') ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+													{inv.status}
+												</span>
+											</div>
+											<div className={`text-sm ${theme.textPrimary}`}>
+												{inv.invoiceItems.map((item, idx) => (
+													<div key={idx} className="flex justify-between py-1 border-t border-dashed border-gray-200/20 first:border-0">
+														<span>{item.item}</span>
+														<span className="font-mono">{item.itemPrice} {item.currencyType}</span>
+													</div>
+												))}
+											</div>
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* 3. Payments Review Modal */}
+			{modals.viewPayments && (
+				<div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setModals({ ...modals, viewPayments: null })}>
+					<div className={`w-full max-w-4xl p-6 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col ${theme.modalBg}`} onClick={e => e.stopPropagation()}>
+						<div className="flex justify-between items-center mb-6">
+							<h3 className={`text-xl font-bold ${theme.textPrimary}`}>مدفوعات: {modals.viewPayments.user.name}</h3>
+							<button onClick={() => setModals({ ...modals, viewPayments: null })} className="text-gray-500 hover:text-red-500"><XCircle className="w-6 h-6" /></button>
+						</div>
+
+						<div className="overflow-y-auto flex-1 pr-2 custom-scrollbar space-y-6">
+							{userPayments.length === 0 ? (
+								<div className={`text-center py-10 ${theme.textSecondary}`}>لا توجد مدفوعات</div>
+							) : (
+								userPayments.map(pay => (
+									<div key={pay._id} className={`rounded-xl overflow-hidden border ${isDarkMode ? "border-white/10" : "border-gray-200"}`}>
+										<div className={`p-3 border-b flex justify-between items-center ${isDarkMode ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200"}`}>
+											<span className={`text-sm font-bold ${theme.textPrimary}`}>
+												{new Date(pay.createdAt).toLocaleDateString("ar-EG")}
+											</span>
+											<span className={`text-xs px-2 py-1 rounded bg-white/10 border border-white/10 ${theme.textPrimary}`}>
+												{pay.paymentMethod}
+											</span>
+										</div>
+										<div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+											{pay.transactions.map(trans => (
+												<div key={trans._id} className={`relative group border rounded-lg p-2 flex flex-col gap-2 ${isDarkMode ? "border-white/10 bg-black/20" : "border-gray-100 bg-white"}`}>
+													<div className="aspect-[4/3] w-full rounded-lg overflow-hidden bg-gray-100 relative">
+														<a href={trans.imageUrls} target="_blank" rel="noopener noreferrer" className="block h-full">
+															<img 
+																src={trans.imageUrls} 
+																alt="إيصال" 
+																className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+																onError={(e) => { e.target.src = "https://placehold.co/400?text=No+Image"; }}
+															/>
+														</a>
+														<div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold shadow-sm ${
+															trans.status === 'APPROVED' ? 'bg-green-500 text-white' :
+															trans.status === 'REJECTED' ? 'bg-red-500 text-white' :
+															'bg-yellow-500 text-white'
+														}`}>
+															{trans.status === 'PENDING' ? 'قيد المراجعة' :
+															 trans.status === 'APPROVED' ? 'مقبول' : 'مرفوض'}
+														</div>
+													</div>
+													
+													{/* Actions */}
+													{trans.status === 'PENDING' && (
+														<div className="flex gap-2 mt-auto pt-2">
+															<button
+																onClick={() => handlePaymentStatus(pay._id, trans._id, 'APPROVED')}
+																disabled={processingMap[`${pay._id}-${trans._id}`]}
+																className="flex-1 bg-green-500 hover:bg-green-600 text-white py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+															>
+																{processingMap[`${pay._id}-${trans._id}`] ? "..." : "قبول"}
+															</button>
+															<button
+																onClick={() => handlePaymentStatus(pay._id, trans._id, 'REJECTED')}
+																disabled={processingMap[`${pay._id}-${trans._id}`]}
+																className="flex-1 bg-red-500 hover:bg-red-600 text-white py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+															>
+																{processingMap[`${pay._id}-${trans._id}`] ? "..." : "رفض"}
+															</button>
+														</div>
+													)}
+												</div>
+											))}
+										</div>
+									</div>
+								))
+							)}
+						</div>
+					</div>
+				</div>
+			)}
+
+		</div>
+	);
+}

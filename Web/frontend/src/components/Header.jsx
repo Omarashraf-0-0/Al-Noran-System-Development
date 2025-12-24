@@ -272,9 +272,9 @@ const Header = () => {
 
 		// Employee Navigation (Base links for all employees)
 		// Employee Navigation (Base links for all employees)
+// Employee Navigation (Base links for all employees)
 		if (user.type === "employee" || user.type === "admin") {
-			const employeeLinks = [
-				{ label: "الرئيسية", path: "/employeedashboard", icon: LayoutDashboard },
+			const baseEmployeeLinks = [
 				// Import Section
 				{
 					label: "الاستيراد",
@@ -301,26 +301,30 @@ const Header = () => {
 				{ label: "الدعم", path: "/support-dashboard", icon: MessageCircle },
 			];
 
-			// If User is NOT Admin, return only employee links
+			// If User is NOT Admin, return standard employee dashboard + links
 			if (!isAdminUser()) {
-				return employeeLinks;
+				return [
+					{ label: "الرئيسية", path: "/employeedashboard", icon: LayoutDashboard },
+					...baseEmployeeLinks
+				];
 			}
 
-			// If User IS Admin, append Admin links GROUPED
+			// If User IS Admin, return Admin Dashboard + Employee Dashboard + Admin Links
 			return [
-				...employeeLinks,
+				{ label: "لوحة الإدارة", path: "/admindashboard", icon: BarChart3 },
+				{ label: "لوحة الموظف", path: "/employeedashboard", icon: LayoutDashboard },
+				...baseEmployeeLinks,
 				{
-					label: "الإدارة",
-					path: "/admin",
+					label: "إدارة النظام",
+					path: "/admin-management",
 					icon: Settings,
 					isDropdown: true,
 					dropdownItems: [
 						{ label: "الموظفين", path: "/employeemanagement", icon: User },
 						{ label: "العملاء", path: "/customermanagement", icon: Users },
-						{ label: "التقارير", path: "/admindashboard", icon: BarChart3 },
-						...(user.type === "admin" || user.employeeDetails?.employeeType === "System Admin" 
-							? [{ label: "الإعدادات", path: "/settings", icon: Settings }] 
-							: [])
+						{ label: "الشهادات", path: "/certificatesmanagement", icon: FileText },
+						{ label: "العمليات", path: "/shipmentsmanagement", icon: Ship },
+						{ label: "المدفوعات", path: "/payments-management", icon: CreditCard },
 					]
 				}
 			];
