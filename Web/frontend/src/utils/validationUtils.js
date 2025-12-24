@@ -48,11 +48,10 @@ export const isValidEgyptianNationalId = (nationalId) => {
         return { isValid: false, error: "رقم البطاقة غير صحيح (اليوم غير صالح)" };
     }
 
-    // Validate governorate code (01-35)
+    // Validate governorate code (01-35) or 88 for foreign born
     const governorate = parseInt(cleanId.substring(7, 9));
-    if (governorate < 1 || governorate > 35) {
-        // Note: Governorate code 88 is used for people born outside Egypt in some contexts,
-        // but standard validation is usually 01-35. We stick to the user's rule of 01-35.
+    // Standard codes 01-35, and special code 88 for citizens born abroad
+    if ((governorate < 1 || governorate > 35) && governorate !== 88) {
         return {
             isValid: false,
             error: "رقم البطاقة غير صحيح (كود المحافظة غير صالح)",
@@ -83,6 +82,59 @@ export const isValidPassportNumber = (passportNumber) => {
     // Must contain only alphanumeric characters
     if (!/^[A-Z0-9]{6,9}$/i.test(cleanPassport)) {
         return { isValid: false, error: "يجب أن يحتوي رقم الباسبور على أحرف وأرقام فقط" };
+    }
+
+    return { isValid: true, error: null };
+};
+
+/**
+ * Validates an Egyptian mobile phone number.
+ * Must start with 01 and be followed by 0,1,2,5 and then 8 digits (11 total).
+ * 
+ * @param {string} phone - The phone number to validate.
+ * @returns {Object} - { isValid: boolean, error: string|null }
+ */
+export const isValidPhoneNumber = (phone) => {
+    if (!phone) return { isValid: false, error: "رقم الهاتف مطلوب" };
+
+    const regex = /^01[0-2,5]{1}[0-9]{8}$/;
+    if (!regex.test(phone)) {
+        return { isValid: false, error: "رقم الهاتف غير صحيح. يجب أن يكون رقم مصري مكون من 11 رقم ويبدأ بـ 01" };
+    }
+
+    return { isValid: true, error: null };
+};
+
+/**
+ * Validates a password.
+ * Must be at least 8 characters long and contain:
+ * - One lowercase letter
+ * - One uppercase letter
+ * - One number
+ * - One special character (@$!%*?&)
+ * 
+ * @param {string} password - The password to validate.
+ * @returns {Object} - { isValid: boolean, error: string|null }
+ */
+export const isValidPassword = (password) => {
+    if (!password) return { isValid: false, error: "كلمة المرور مطلوبة" };
+
+    if (password.length < 8) {
+        return { isValid: false, error: "كلمة المرور يجب أن تكون 8 أحرف على الأقل" };
+    }
+
+    // Strong password regex
+    // (?=.*[a-z]) - At least one lowercase letter
+    // (?=.*[A-Z]) - At least one uppercase letter
+    // (?=.*\d) - At least one number
+    // (?=.*[@$!%*?&]) - At least one special character
+    const regex = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+
+    if (!regex.test(password)) {
+        return {
+            isValid: false,
+            error: "كلمة المرور يجب أن تحتوي على حرف كبير، حرف صغير، رقم، وحرف خاص (@$!%*?&)"
+        };
     }
 
     return { isValid: true, error: null };

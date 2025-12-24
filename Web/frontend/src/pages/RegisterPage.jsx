@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-import { isValidPassportNumber } from "../utils/validationUtils";
+import { isValidPassportNumber, isValidEgyptianNationalId, isValidPhoneNumber, isValidPassword } from "../utils/validationUtils";
 import { useTheme } from "../context/ThemeContext";
 import coloredLogo from "../assets/images/coloredLogo.svg";
 import whiteLogo from "../assets/images/white logo.svg";
@@ -73,9 +73,12 @@ const RegisterPage = () => {
             return;
         }
 
-        if (!isGoogleSignup && formData.password.length < 6) {
-            toast.error("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
-            return;
+        if (!isGoogleSignup) {
+            const passwordValidation = isValidPassword(formData.password);
+            if (!passwordValidation.isValid) {
+                toast.error(passwordValidation.error);
+                return;
+            }
         }
 
         if (formData.type === "personal") {
@@ -85,8 +88,9 @@ const RegisterPage = () => {
             }
 
             if (formData.nationality === "egyptian") {
-                if (!formData.ssn || formData.ssn.length !== 14) {
-                    toast.error("رجاءً أدخل رقم بطاقة قومية صحيح (14 رقم)");
+                const idValidation = isValidEgyptianNationalId(formData.ssn);
+                if (!idValidation.isValid) {
+                    toast.error(idValidation.error);
                     return;
                 }
             } else if (formData.nationality === "nonEgyptian") {
@@ -103,8 +107,9 @@ const RegisterPage = () => {
             return;
         }
 
-        if (!formData.phone) {
-            toast.error("رجاءً أدخل رقم الهاتف");
+        const phoneValidation = isValidPhoneNumber(formData.phone);
+        if (!phoneValidation.isValid) {
+            toast.error(phoneValidation.error);
             return;
         }
 
@@ -162,11 +167,10 @@ const RegisterPage = () => {
         { id: "factory", label: "مصنع", icon: "🏭" },
     ];
 
-    const inputClasses = `w-full pr-12 pl-4 py-3.5 border rounded-xl placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] transition-all duration-300 ${
-        isDarkMode 
-            ? "bg-[#1a1a1a] border-white/10 text-white focus:bg-[#202020]" 
-            : "bg-gray-50 border-gray-200 text-gray-800 focus:bg-white"
-    }`;
+    const inputClasses = `w-full pr-12 pl-4 py-3.5 border rounded-xl placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] transition-all duration-300 ${isDarkMode
+        ? "bg-[#1a1a1a] border-white/10 text-white focus:bg-[#202020]"
+        : "bg-gray-50 border-gray-200 text-gray-800 focus:bg-white"
+        }`;
 
     const labelClasses = `block text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`;
 
@@ -206,7 +210,7 @@ const RegisterPage = () => {
                     to="/"
                     className={`absolute top-6 right-6 flex items-center gap-2 transition-colors duration-300 group z-10 ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-[#690000]"}`}
                     style={{
-                        animation: isVisible ? 'fade-in-up 0.6s ease-out forwards' : 'none',    
+                        animation: isVisible ? 'fade-in-up 0.6s ease-out forwards' : 'none',
                         opacity: 0
                     }}
                 >
@@ -219,13 +223,12 @@ const RegisterPage = () => {
                 {/* Theme Toggle Button */}
                 <button
                     onClick={toggleTheme}
-                    className={`absolute top-6 left-6 p-2 rounded-full transition-all duration-300 z-50 ${
-                        isDarkMode 
-                            ? "bg-white/10 text-yellow-400 hover:bg-white/20" 
-                            : "bg-gray-100 text-[#690000] hover:bg-gray-200"
-                    }`}
+                    className={`absolute top-6 left-6 p-2 rounded-full transition-all duration-300 z-50 ${isDarkMode
+                        ? "bg-white/10 text-yellow-400 hover:bg-white/20"
+                        : "bg-gray-100 text-[#690000] hover:bg-gray-200"
+                        }`}
                 >
-                     {isDarkMode ? (
+                    {isDarkMode ? (
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                         </svg>
@@ -278,7 +281,7 @@ const RegisterPage = () => {
                             }}
                         >
                             <label className={labelClasses}>
-                                الاسم الكامل <span className="text-red-500">*</span>    
+                                الاسم الكامل <span className="text-red-500">*</span>
                             </label>
                             <div className="relative group">
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#690000] transition-colors">
@@ -289,7 +292,7 @@ const RegisterPage = () => {
                                 <input
                                     type="text"
                                     value={formData.fullname}
-                                    onChange={handleInputChange("fullname")}        
+                                    onChange={handleInputChange("fullname")}
                                     placeholder="ادخل الاسم الكامل"
                                     required
                                     className={inputClasses}
@@ -349,7 +352,7 @@ const RegisterPage = () => {
                                     <input
                                         type="tel"
                                         value={formData.phone}
-                                        onChange={handleInputChange("phone")}   
+                                        onChange={handleInputChange("phone")}
                                         placeholder="01xxxxxxxxx"
                                         required
                                         className={inputClasses}
@@ -383,91 +386,91 @@ const RegisterPage = () => {
 
                         {/* Password Row - Only show if not Google signup */}
                         {!isGoogleSignup && (
-                        <div
-                            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-                            style={{
-                                animation: isVisible ? 'fade-in-up 0.6s ease-out 0.25s forwards' : 'none',
-                                opacity: 0
-                            }}
-                        >
-                            {/* Password */}
-                            <div>
-                                <label className={labelClasses}>
-                                    كلمة المرور <span className="text-red-500">*</span>
-                                </label>
-                                <div className="relative group">
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#690000] transition-colors">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                        </svg>
+                            <div
+                                className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                                style={{
+                                    animation: isVisible ? 'fade-in-up 0.6s ease-out 0.25s forwards' : 'none',
+                                    opacity: 0
+                                }}
+                            >
+                                {/* Password */}
+                                <div>
+                                    <label className={labelClasses}>
+                                        كلمة المرور <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="relative group">
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#690000] transition-colors">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                            </svg>
+                                        </div>
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            value={formData.password}
+                                            onChange={handleInputChange("password")}
+                                            placeholder="••••••••"
+                                            required={!isGoogleSignup}
+                                            className={`${inputClasses} pl-12`}
+                                            dir="ltr"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#690000] transition-colors"
+                                        >
+                                            {showPassword ? (
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            )}
+                                        </button>
                                     </div>
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        value={formData.password}
-                                        onChange={handleInputChange("password")}
-                                        placeholder="••••••••"
-                                        required={!isGoogleSignup}
-                                        className={`${inputClasses} pl-12`}
-                                        dir="ltr"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#690000] transition-colors"
-                                    >
-                                        {showPassword ? (
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                            </svg>
-                                        ) : (
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        )}
-                                    </button>
                                 </div>
-                            </div>
 
-                            {/* Confirm Password */}
-                            <div>
-                                <label className={labelClasses}>
-                                    تأكيد كلمة المرور <span className="text-red-500">*</span>
-                                </label>
-                                <div className="relative group">
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#690000] transition-colors">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />        
-                                        </svg>
+                                {/* Confirm Password */}
+                                <div>
+                                    <label className={labelClasses}>
+                                        تأكيد كلمة المرور <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="relative group">
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#690000] transition-colors">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                            </svg>
+                                        </div>
+                                        <input
+                                            type={showConfirmPassword ? "text" : "password"}
+                                            value={formData.confirmPassword}
+                                            onChange={handleInputChange("confirmPassword")}
+                                            placeholder="••••••••"
+                                            required
+                                            className={`${inputClasses} pl-12`}
+                                            dir="ltr"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#690000] transition-colors"
+                                        >
+                                            {showConfirmPassword ? (
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            )}
+                                        </button>
                                     </div>
-                                    <input
-                                        type={showConfirmPassword ? "text" : "password"}
-                                        value={formData.confirmPassword}        
-                                        onChange={handleInputChange("confirmPassword")}
-                                        placeholder="••••••••"
-                                        required
-                                        className={`${inputClasses} pl-12`}
-                                        dir="ltr"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#690000] transition-colors"
-                                    >
-                                        {showConfirmPassword ? (
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                            </svg>
-                                        ) : (
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        )}
-                                    </button>
                                 </div>
                             </div>
-                        </div>
                         )}
 
                         {/* Account Type */}
@@ -478,17 +481,16 @@ const RegisterPage = () => {
                             }}
                         >
                             <label className={`${labelClasses} mb-3`}>
-                                نوع الحساب <span className="text-red-500">*</span>      
+                                نوع الحساب <span className="text-red-500">*</span>
                             </label>
                             <div className="grid grid-cols-3 gap-3">
                                 {accountTypes.map((type) => (
                                     <label
                                         key={type.id} // Added key here (was missing in previous user snippet but React needs it)
-                                        className={`flex flex-col items-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
-                                            formData.type === type.id       
-                                                ? (isDarkMode ? "border-red-500 bg-red-500/20 shadow-md text-red-400" : "border-[#690000] bg-[#690000]/5 shadow-md text-[#690000]")
-                                                : (isDarkMode ? "border-white/10 hover:border-red-500/30 hover:bg-white/5 text-gray-400" : "border-gray-200 hover:border-[#690000]/30 hover:bg-gray-50 text-gray-600")
-                                        }`}
+                                        className={`flex flex-col items-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${formData.type === type.id
+                                            ? (isDarkMode ? "border-red-500 bg-red-500/20 shadow-md text-red-400" : "border-[#690000] bg-[#690000]/5 shadow-md text-[#690000]")
+                                            : (isDarkMode ? "border-white/10 hover:border-red-500/30 hover:bg-white/5 text-gray-400" : "border-gray-200 hover:border-[#690000]/30 hover:bg-gray-50 text-gray-600")
+                                            }`}
                                     >
                                         <input
                                             type="radio"
@@ -512,19 +514,18 @@ const RegisterPage = () => {
                         {formData.type === "personal" && (
                             <div
                                 style={{
-                                    animation: 'fade-in-up 0.4s ease-out forwards'  
+                                    animation: 'fade-in-up 0.4s ease-out forwards'
                                 }}
                             >
                                 <label className={`${labelClasses} mb-3`}>
-                                    الجنسية <span className="text-red-500">*</span> 
+                                    الجنسية <span className="text-red-500">*</span>
                                 </label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <label
-                                        className={`flex items-center justify-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
-                                            formData.nationality === "egyptian"
-                                                ? (isDarkMode ? "border-red-500 bg-red-500/20 shadow-md text-red-400" : "border-[#690000] bg-[#690000]/5 shadow-md text-[#690000]")
-                                                : (isDarkMode ? "border-white/10 hover:border-red-500/30 hover:bg-white/5 text-gray-400" : "border-gray-200 hover:border-[#690000]/30 hover:bg-gray-50 text-gray-600")
-                                        }`}
+                                        className={`flex items-center justify-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${formData.nationality === "egyptian"
+                                            ? (isDarkMode ? "border-red-500 bg-red-500/20 shadow-md text-red-400" : "border-[#690000] bg-[#690000]/5 shadow-md text-[#690000]")
+                                            : (isDarkMode ? "border-white/10 hover:border-red-500/30 hover:bg-white/5 text-gray-400" : "border-gray-200 hover:border-[#690000]/30 hover:bg-gray-50 text-gray-600")
+                                            }`}
                                     >
                                         <input
                                             type="radio"
@@ -535,17 +536,16 @@ const RegisterPage = () => {
                                             className="hidden"
                                             required
                                         />
-                                        <span className="text-xl">🇪🇬</span>   
+                                        <span className="text-xl">🇪🇬</span>
                                         <span className={`text-sm font-medium`}>
                                             مصري
                                         </span>
                                     </label>
                                     <label
-                                        className={`flex items-center justify-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
-                                            formData.nationality === "nonEgyptian"
-                                                ? (isDarkMode ? "border-red-500 bg-red-500/20 shadow-md text-red-400" : "border-[#690000] bg-[#690000]/5 shadow-md text-[#690000]")
-                                                : (isDarkMode ? "border-white/10 hover:border-red-500/30 hover:bg-white/5 text-gray-400" : "border-gray-200 hover:border-[#690000]/30 hover:bg-gray-50 text-gray-600")
-                                        }`}
+                                        className={`flex items-center justify-center gap-2 p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${formData.nationality === "nonEgyptian"
+                                            ? (isDarkMode ? "border-red-500 bg-red-500/20 shadow-md text-red-400" : "border-[#690000] bg-[#690000]/5 shadow-md text-[#690000]")
+                                            : (isDarkMode ? "border-white/10 hover:border-red-500/30 hover:bg-white/5 text-gray-400" : "border-gray-200 hover:border-[#690000]/30 hover:bg-gray-50 text-gray-600")
+                                            }`}
                                     >
                                         <input
                                             type="radio"
@@ -569,7 +569,7 @@ const RegisterPage = () => {
                         {formData.type === "personal" && formData.nationality === "egyptian" && (
                             <div
                                 style={{
-                                    animation: 'fade-in-up 0.4s ease-out forwards'  
+                                    animation: 'fade-in-up 0.4s ease-out forwards'
                                 }}
                             >
                                 <label className={labelClasses}>
@@ -584,7 +584,7 @@ const RegisterPage = () => {
                                     <input
                                         type="text"
                                         value={formData.ssn}
-                                        onChange={handleInputChange("ssn")}     
+                                        onChange={handleInputChange("ssn")}
                                         placeholder="ادخل رقم البطاقة القومية (14 رقم)"
                                         required
                                         maxLength={14}
@@ -595,11 +595,11 @@ const RegisterPage = () => {
                             </div>
                         )}
 
-                        {/* Passport Number - Only for Non-Egyptian personal accounts */}       
+                        {/* Passport Number - Only for Non-Egyptian personal accounts */}
                         {formData.type === "personal" && formData.nationality === "nonEgyptian" && (
                             <div
                                 style={{
-                                    animation: 'fade-in-up 0.4s ease-out forwards'  
+                                    animation: 'fade-in-up 0.4s ease-out forwards'
                                 }}
                             >
                                 <label className={labelClasses}>
@@ -722,7 +722,7 @@ const RegisterPage = () => {
                         انضم إلى نوران
                     </h2>
                     <p className="text-white/80 text-lg max-w-sm leading-relaxed mb-10">
-                        ابدأ رحلتك معنا واستفد من خدماتنا المتميزة في التخليص الجمركي والشحن.   
+                        ابدأ رحلتك معنا واستفد من خدماتنا المتميزة في التخليص الجمركي والشحن.
                     </p>
 
                     {/* Features */}
@@ -734,7 +734,7 @@ const RegisterPage = () => {
                         ].map((feature, index) => (
                             <div key={index} className="flex items-center gap-3 text-white/80">
                                 <svg className="w-5 h-5 text-[#1ba3b6] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />   
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                 </svg>
                                 <span>{feature}</span>
                             </div>

@@ -6,6 +6,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Datafield from "../components/DataField";
 import RequestDocumentsModal from "../components/RequestDocumentsModal";
+import FileViewerModal from "../components/FileViewerModal";
 import contractIcon from "../assets/images/contract.png";
 import mainIllustration from "../assets/images/Untitled design (7) 1.png";
 import { useTheme } from "../context/ThemeContext";
@@ -32,14 +33,14 @@ const handleProxyDownload = async (fileId, fileName) => {
 		if (disposition) {
 			const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
 			const matches = filenameRegex.exec(disposition);
-			if (matches != null && matches[1]) { 
+			if (matches != null && matches[1]) {
 				downloadName = decodeURIComponent(matches[1].replace(/['"]/g, ''));
 			}
 		}
 
 		const blob = await response.blob();
 		const blobUrl = window.URL.createObjectURL(blob);
-		
+
 		// Use a temporary anchor to trigger download
 		const link = document.createElement('a');
 		link.href = blobUrl;
@@ -48,7 +49,7 @@ const handleProxyDownload = async (fileId, fileName) => {
 		link.click();
 		document.body.removeChild(link);
 		window.URL.revokeObjectURL(blobUrl);
-		
+
 		toast.success("تم التحميل بنجاح", { id: toastId });
 	} catch (error) {
 		console.error("Download error:", error);
@@ -132,11 +133,10 @@ const ExportStepper = ({ currentStatus, isDarkMode }) => {
 	if (currentStatus === "cancelled") {
 		return (
 			<div className="w-full py-4">
-				<div className={`border rounded-lg p-4 text-center ${
-					isDarkMode 
-						? "bg-red-900/20 border-red-700/50" 
-						: "bg-red-50 border-red-200"
-				}`}>
+				<div className={`border rounded-lg p-4 text-center ${isDarkMode
+					? "bg-red-900/20 border-red-700/50"
+					: "bg-red-50 border-red-200"
+					}`}>
 					<span className="text-3xl mb-2 block">❌</span>
 					<p className={`font-bold ${isDarkMode ? "text-red-400" : "text-red-800"}`}>تم إلغاء الشحنة</p>
 				</div>
@@ -155,7 +155,7 @@ const ExportStepper = ({ currentStatus, isDarkMode }) => {
 
 					const circleClass = isActive
 						? isCurrent
-							? isDarkMode 
+							? isDarkMode
 								? "bg-red-700 ring-4 ring-red-900/50"
 								: "bg-red-900 ring-4 ring-red-200"
 							: isDarkMode ? "bg-red-700" : "bg-red-900"
@@ -165,8 +165,8 @@ const ExportStepper = ({ currentStatus, isDarkMode }) => {
 						: isDarkMode ? "text-gray-500" : "text-gray-400";
 					const nextStepIsActive =
 						index < STATUS_STEPS.length - 1 && index + 1 <= activeStepIndex;
-					const lineClass = nextStepIsActive 
-						? isDarkMode ? "bg-red-700" : "bg-red-900" 
+					const lineClass = nextStepIsActive
+						? isDarkMode ? "bg-red-700" : "bg-red-900"
 						: isDarkMode ? "bg-gray-700" : "bg-gray-300";
 
 					return (
@@ -224,6 +224,15 @@ const ExportShipmentDetailsPage = () => {
 	const [pendingFiles, setPendingFiles] = useState({});
 	const [uploadingDoc, setUploadingDoc] = useState(null);
 	const [deletingDoc, setDeletingDoc] = useState(null);
+
+	// Document Preview State
+	const [viewerData, setViewerData] = useState({
+		open: false,
+		url: null,
+		name: null,
+		type: null,
+		fileId: null
+	});
 
 	const token = localStorage.getItem("token");
 
@@ -299,20 +308,20 @@ const ExportShipmentDetailsPage = () => {
 	// =====================
 	// Document Request Handlers (for Employee) - Same workflow as EmployeeShipmentManagement
 	// =====================
-	
+
 	// Add document to local array (not saved yet)
 	const handleAddDocumentRequest = () => {
 		if (!documentName.trim()) {
 			toast.error("يرجى إدخال اسم المستند");
 			return;
 		}
-		
+
 		// Check if document already exists in local array
 		if (requiredDocuments.some(doc => doc.name.toLowerCase() === documentName.trim().toLowerCase())) {
 			toast.error("هذا المستند مضاف بالفعل");
 			return;
 		}
-		
+
 		setRequiredDocuments([
 			...requiredDocuments,
 			{ name: documentName.trim(), uploaded: false },
@@ -320,14 +329,14 @@ const ExportShipmentDetailsPage = () => {
 		setDocumentName("");
 		toast.success("تم إضافة المستند للقائمة");
 	};
-	
+
 	// Remove document from local array (not saved yet)
 	const handleRemoveDocumentRequest = (index) => {
 		const updated = requiredDocuments.filter((_, i) => i !== index);
 		setRequiredDocuments(updated);
 		toast.success("تم حذف المستند من القائمة");
 	};
-	
+
 	// Save all documents to backend
 	const handleSaveDocumentRequests = async () => {
 		if (requiredDocuments.length === 0) {
@@ -338,7 +347,7 @@ const ExportShipmentDetailsPage = () => {
 		setSavingDocuments(true);
 		try {
 			toast.loading("جاري إرسال طلب المستندات...");
-			
+
 			// Send each document request to the backend
 			for (const doc of requiredDocuments) {
 				await axios.post(
@@ -349,7 +358,7 @@ const ExportShipmentDetailsPage = () => {
 					}
 				);
 			}
-			
+
 			toast.dismiss();
 			toast.success("تم حفظ المستندات المطلوبة وإرسال إشعار للعميل");
 			setShowDocumentRequestModal(false);
@@ -392,31 +401,19 @@ const ExportShipmentDetailsPage = () => {
 	};
 
 	const handleViewDocument = async (doc) => {
-		if (!doc.fileId || doc.fileId === "temp-file-id") {
-			toast.error("معرف الملف غير صالح");
-			return;
-		}
+		// Open FileViewerModal with document data
+		console.log('📂 Opening preview for:', doc);
+		setViewerData({
+			open: true,
+			url: doc.url || null,
+			name: doc.name || doc.originalname || doc.filename || 'مستند',
+			type: doc.mimetype || 'application/pdf',
+			fileId: doc.fileId || doc._id || null
+		});
+	};
 
-		try {
-			toast.loading("جاري تحميل الملف...");
-			const fileResponse = await axios.get(
-				`${import.meta.env.VITE_API_URL}/api/uploads/${doc.fileId}`,
-				{
-					headers: { Authorization: `Bearer ${token}` },
-				}
-			);
-			toast.dismiss();
-
-			const fileUrl = fileResponse.data?.upload?.presignedUrl || fileResponse.data?.presignedUrl;
-			if (fileUrl) {
-				window.open(fileUrl, "_blank");
-			} else {
-				toast.error("لم يتم العثور على رابط الملف");
-			}
-		} catch (error) {
-			toast.dismiss();
-			toast.error("فشل تحميل الملف");
-		}
+	const closeViewer = () => {
+		setViewerData({ open: false, url: null, name: null, type: null, fileId: null });
 	};
 
 	// =====================
@@ -428,7 +425,7 @@ const ExportShipmentDetailsPage = () => {
 			toast.error("حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت");
 			return;
 		}
-		
+
 		setPendingFiles((prev) => ({
 			...prev,
 			[docName]: file,
@@ -450,14 +447,13 @@ const ExportShipmentDetailsPage = () => {
 		setUploadingDoc(docName);
 		try {
 			toast.loading(`جاري رفع ${docName}...`);
+			console.log("📤 Starting upload for:", docName);
 
 			// Step 1: Upload file to S3
 			const formData = new FormData();
 			formData.append("file", file);
 			formData.append("category", "export_shipment");
 			formData.append("relatedId", actualId);
-			// Don't send documentType - it's not needed for export shipments
-			// The document name is stored in the requiredDocuments array
 
 			const uploadResponse = await axios.post(
 				`${import.meta.env.VITE_API_URL}/api/uploads`,
@@ -470,16 +466,26 @@ const ExportShipmentDetailsPage = () => {
 				}
 			);
 
+			console.log("📦 S3 Upload Response:", uploadResponse.data);
 			const uploadId = uploadResponse.data.upload?._id || uploadResponse.data.upload?.id || uploadResponse.data.uploadId;
 
+			if (!uploadId) {
+				throw new Error("لم يتم الحصول على معرف الملف من الخادم");
+			}
+			console.log("🔑 Got uploadId:", uploadId);
+
 			// Step 2: Link upload to export shipment required document
-			await axios.post(
-				`${import.meta.env.VITE_API_URL}/api/export-shipments/${actualId}/upload-required/${encodeURIComponent(docName)}`,
+			const linkUrl = `${import.meta.env.VITE_API_URL}/api/export-shipments/${actualId}/upload-required/${encodeURIComponent(docName)}`;
+			console.log("🔗 Linking to:", linkUrl, "with uploadId:", uploadId);
+
+			const linkResponse = await axios.post(
+				linkUrl,
 				{ uploadId },
 				{
 					headers: { Authorization: `Bearer ${token}` },
 				}
 			);
+			console.log("✅ Link Response:", linkResponse.data);
 
 			toast.dismiss();
 			toast.success(`تم رفع ${docName} بنجاح`);
@@ -489,7 +495,9 @@ const ExportShipmentDetailsPage = () => {
 			fetchShipmentDetails();
 		} catch (error) {
 			toast.dismiss();
-			const errorMsg = error.response?.data?.message || "فشل في رفع الملف";
+			console.error("❌ Upload Error:", error);
+			console.error("❌ Error Response:", error.response?.data);
+			const errorMsg = error.response?.data?.message || error.message || "فشل في رفع الملف";
 			toast.error(errorMsg);
 		} finally {
 			setUploadingDoc(null);
@@ -709,16 +717,15 @@ const ExportShipmentDetailsPage = () => {
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<div className={`p-3 rounded-lg border ${isDarkMode ? "bg-purple-900/30 border-purple-700/40" : "bg-white border-purple-200"}`}>
 								<p className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>حالة الشهادة</p>
-								<p className={`font-bold ${
-									shipment.certificateOfOriginStatus === "issued" 
-										? isDarkMode ? "text-green-400" : "text-green-600" 
-										: shipment.certificateOfOriginStatus === "pending" 
-											? isDarkMode ? "text-yellow-400" : "text-yellow-600" 
-											: isDarkMode ? "text-gray-500" : "text-gray-400"
-								}`}>
-									{shipment.certificateOfOriginStatus === "issued" ? "صادرة" : 
-									 shipment.certificateOfOriginStatus === "pending" ? "قيد الإصدار" : 
-									 "لم يتم التقديم"}
+								<p className={`font-bold ${shipment.certificateOfOriginStatus === "issued"
+									? isDarkMode ? "text-green-400" : "text-green-600"
+									: shipment.certificateOfOriginStatus === "pending"
+										? isDarkMode ? "text-yellow-400" : "text-yellow-600"
+										: isDarkMode ? "text-gray-500" : "text-gray-400"
+									}`}>
+									{shipment.certificateOfOriginStatus === "issued" ? "صادرة" :
+										shipment.certificateOfOriginStatus === "pending" ? "قيد الإصدار" :
+											"لم يتم التقديم"}
 								</p>
 							</div>
 							{shipment.certificateOfOriginNumber && (
@@ -772,11 +779,10 @@ const ExportShipmentDetailsPage = () => {
 												<div key={index} className="flex gap-4 pr-2">
 													{/* Timeline Dot */}
 													<div
-														className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${
-															index === 0
-																? isDarkMode ? "bg-red-700 text-white" : "bg-red-800 text-white"
-																: isDarkMode ? "bg-gray-700 text-gray-400" : "bg-gray-100 text-gray-600"
-														}`}
+														className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${index === 0
+															? isDarkMode ? "bg-red-700 text-white" : "bg-red-800 text-white"
+															: isDarkMode ? "bg-gray-700 text-gray-400" : "bg-gray-100 text-gray-600"
+															}`}
 													>
 														{historyConfig.icon}
 													</div>
@@ -834,11 +840,10 @@ const ExportShipmentDetailsPage = () => {
 									return (
 										<div
 											key={index}
-											className={`flex items-center justify-between p-3 rounded-lg border ${
-												isDarkMode 
-													? "bg-green-900/30 border-green-700/40" 
-													: "bg-white border-green-200"
-											}`}
+											className={`flex items-center justify-between p-3 rounded-lg border ${isDarkMode
+												? "bg-green-900/30 border-green-700/40"
+												: "bg-white border-green-200"
+												}`}
 										>
 											<div className="flex items-center gap-2">
 												<span className={`text-xl ${isDarkMode ? "text-green-400" : "text-green-600"}`}>📄</span>
@@ -852,16 +857,19 @@ const ExportShipmentDetailsPage = () => {
 												</div>
 											</div>
 											<div className="flex gap-1">
-												{doc.url && (
-													<a
-														href={doc.url}
-														target="_blank"
-														rel="noopener noreferrer"
+												{(doc.url || fileId) && (
+													<button
+														onClick={() => handleViewDocument({
+															url: doc.url,
+															name: fileName,
+															mimetype: doc.mimetype,
+															fileId: fileId
+														})}
 														className="bg-blue-600 text-white px-2 py-1 rounded text-sm hover:bg-blue-700 transition flex items-center gap-1"
 														title="عرض"
 													>
 														<Eye className="w-4 h-4" />
-													</a>
+													</button>
 												)}
 												{fileId && (
 													<button
@@ -908,21 +916,20 @@ const ExportShipmentDetailsPage = () => {
 									{shipment.requiredDocuments.map((doc) => (
 										<div
 											key={doc._id}
-											className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border-2 ${
-												doc.uploaded
-													? isDarkMode 
-														? "bg-green-900/20 border-green-700/40" 
-														: "bg-green-50 border-green-200"
-													: isDarkMode 
-														? "bg-yellow-900/20 border-yellow-700/40" 
-														: "bg-yellow-50 border-yellow-200"
-											}`}
+											className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border-2 ${doc.uploaded
+												? isDarkMode
+													? "bg-green-900/20 border-green-700/40"
+													: "bg-green-50 border-green-200"
+												: isDarkMode
+													? "bg-yellow-900/20 border-yellow-700/40"
+													: "bg-yellow-50 border-yellow-200"
+												}`}
 										>
 											<div className="flex items-center gap-3 mb-2 sm:mb-0">
-												<span className={`text-2xl ${doc.uploaded 
-													? isDarkMode ? "text-green-400" : "text-green-600" 
+												<span className={`text-2xl ${doc.uploaded
+													? isDarkMode ? "text-green-400" : "text-green-600"
 													: isDarkMode ? "text-yellow-400" : "text-yellow-600"
-												}`}>
+													}`}>
 													{doc.uploaded ? "✅" : "⏳"}
 												</span>
 												<div>
@@ -1009,7 +1016,13 @@ const ExportShipmentDetailsPage = () => {
 																onClick={() => {
 																	const file = pendingFiles[doc.name];
 																	const fileUrl = URL.createObjectURL(file);
-																	window.open(fileUrl, "_blank");
+																	setViewerData({
+														open: true,
+														url: fileUrl,
+														name: file.name,
+														type: file.type,
+														fileId: null
+													});
 																}}
 																className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition text-sm"
 															>
@@ -1067,7 +1080,7 @@ const ExportShipmentDetailsPage = () => {
 													</span>
 												</div>
 											)}
-											
+
 											{/* Client View: Already uploaded but no fileId */}
 											{userType !== "employee" && doc.uploaded && !doc.fileId && (
 												<span className="text-green-600 font-medium flex items-center gap-1">
@@ -1079,7 +1092,7 @@ const ExportShipmentDetailsPage = () => {
 								</div>
 							) : (
 								<p className={`text-center py-4 ${isDarkMode ? "text-gray-500" : "text-gray-500"}`}>
-									{userType === "employee" 
+									{userType === "employee"
 										? "لم يتم طلب أي مستندات بعد. انقر على 'طلب مستندات' لطلب مستندات من العميل."
 										: "لا توجد مستندات مطلوبة حالياً."
 									}
@@ -1099,11 +1112,10 @@ const ExportShipmentDetailsPage = () => {
 										: "/export-shipments"
 								)
 							}
-							className={`w-full sm:w-auto px-6 py-3 font-bold rounded-lg transition ${
-								isDarkMode 
-									? "bg-gray-800 text-gray-300 hover:bg-gray-700" 
-									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
-							}`}
+							className={`w-full sm:w-auto px-6 py-3 font-bold rounded-lg transition ${isDarkMode
+								? "bg-gray-800 text-gray-300 hover:bg-gray-700"
+								: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+								}`}
 						>
 							← العودة للشحنات
 						</button>
@@ -1112,7 +1124,7 @@ const ExportShipmentDetailsPage = () => {
 						{shipment.ucrRequestId?._id && (
 							<button
 								onClick={() => navigate(
-									userType === "employee" 
+									userType === "employee"
 										? `/employee/ucr-request/${shipment.ucrRequestId._id}`
 										: `/ucr-request/${shipment.ucrRequestId._id}`
 								)}
@@ -1145,11 +1157,10 @@ const ExportShipmentDetailsPage = () => {
 
 						{/* Completed message */}
 						{shipment.currentStatus === "completed" && (
-							<span className={`w-full sm:w-auto px-6 py-3 font-bold rounded-lg flex items-center justify-center gap-2 ${
-								isDarkMode 
-									? "bg-green-900/30 text-green-400" 
-									: "bg-green-100 text-green-800"
-							}`}>
+							<span className={`w-full sm:w-auto px-6 py-3 font-bold rounded-lg flex items-center justify-center gap-2 ${isDarkMode
+								? "bg-green-900/30 text-green-400"
+								: "bg-green-100 text-green-800"
+								}`}>
 								<span>تم إكمال الشحنة بنجاح!</span>
 							</span>
 						)}
@@ -1172,6 +1183,16 @@ const ExportShipmentDetailsPage = () => {
 				onRemoveDocument={handleRemoveDocumentRequest}
 				onSave={handleSaveDocumentRequests}
 				uploading={savingDocuments}
+			/>
+
+			{/* File Viewer Modal */}
+			<FileViewerModal
+				isOpen={viewerData.open}
+				onClose={closeViewer}
+				fileUrl={viewerData.url}
+				fileName={viewerData.name}
+				fileType={viewerData.type}
+				fileId={viewerData.fileId}
 			/>
 
 			<Footer />
