@@ -55,11 +55,15 @@ const ShipmentsTable = ({
 						${userType === 'client' 
 							? "bg-white border-gray-100 hover:border-red-100 hover:shadow-lg" 
 							: isDarkMode
-								? "bg-white/5 border-white/5 hover:border-white/20 hover:shadow-lg hover:shadow-[#1ba3b6]/5 backdrop-blur-sm"
-								: "bg-white border-gray-100 hover:border-[#1ba3b6]/30 hover:shadow-lg hover:shadow-[#1ba3b6]/10"
+								? `bg-white/5 border-white/5 hover:border-white/20 hover:shadow-lg backdrop-blur-sm`
+								: `bg-white border-gray-100 hover:shadow-lg`
 						}
 						${viewMode === "list" ? "grid grid-cols-12 gap-4 items-center p-4" : ""}
 					`}
+                    style={userType !== 'client' ? {
+                        borderColor: isDarkMode ? undefined : theme.statusColor + '4D', // 30% opacity
+                        boxShadowColor: theme.statusColor + '1A' // 10% opacity
+                    } : {}}
 				>
 					{/* Top Row: Status & Type & Date */}
 					<div className={`${viewMode === "list" ? "col-span-4 flex flex-col gap-2" : "flex justify-between items-start mb-4"}`}>
@@ -108,10 +112,20 @@ const ShipmentsTable = ({
 							userType === 'client' 
 								? "text-gray-800 group-hover:text-red-700" 
 								: isDarkMode
-									? "text-white group-hover:text-[#1ba3b6]"
-									: "text-gray-800 group-hover:text-[#1ba3b6]"
-						}`}>
-							{shipment.shipmentNo}
+									? "text-white"
+									: "text-gray-800"
+						}`}
+                        style={userType !== 'client' ? { color: 'inherit' } : {}}
+                        // We will handle group-hover color via inline style or class if possible, but simpler to rely on dynamic class if we could. 
+                        // Since we can't easily inject dynamic class for group-hover, we might stick to a conditional class if we had many themes.
+                        // Actually, let's use style for hover effect? No, React style doesn't support pseudo classes.
+                        // Let's fallback to standard classes if possible or use the theme config more effectively.
+                        // For Admin (Gold), we want text-[#D4AF37] on hover.
+                        // For Employee (Teal), text-[#1ba3b6].
+                        >
+                            <span className={`transition-colors ${userType === 'admin' ? "group-hover:text-[#D4AF37]" : (userType === 'employee' ? "group-hover:text-[#1ba3b6]" : "")}`}>
+							    {shipment.shipmentNo}
+                            </span>
 						</h3>
 						
 						{viewMode === "list" && (
@@ -175,8 +189,8 @@ const ShipmentsTable = ({
 								${userType === 'client' 
 									? "bg-gray-50 group-hover:bg-red-800 group-hover:text-white text-gray-700" 
 									: isDarkMode
-										? "bg-white/5 group-hover:bg-[#1ba3b6] group-hover:text-white text-white/70"
-										: "bg-gray-50 group-hover:bg-[#1ba3b6] group-hover:text-white text-gray-700"
+										? `bg-white/5 text-white/70 ${userType === 'admin' ? "group-hover:bg-[#D4AF37] group-hover:text-black" : "group-hover:bg-[#1ba3b6] group-hover:text-white"}`
+										: `bg-gray-50 text-gray-700 ${userType === 'admin' ? "group-hover:bg-[#D4AF37] group-hover:text-white" : "group-hover:bg-[#1ba3b6] group-hover:text-white"}`
 								}
 							`}
 						>

@@ -54,9 +54,16 @@ const MyCustomers = () => {
 	];
 
 	// Theme constants
-	const themeCardBg = isDarkMode ? "bg-white/5 border-white/5" : "bg-white border-gray-100";
-	const themeText = isDarkMode ? "text-white" : "text-gray-900";
+    const userType = JSON.parse(localStorage.getItem("user"))?.type;
+    const employeeType = JSON.parse(localStorage.getItem("user"))?.employeeDetails?.employeeType;
+    const isAdmin = userType === 'admin' || employeeType === 'System Admin';
+
+	const themeCardBg = isDarkMode ? (isAdmin ? "bg-[#1a1600]/80 border-[#D4AF37]/20" : "bg-white/5 border-white/5") : (isAdmin ? "bg-white border-gray-100 shadow-sm" : "bg-white border-gray-100");
+	const themeText = isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-white") : (isAdmin ? "text-[#690000]" : "text-gray-900");
 	const themeSubText = isDarkMode ? "text-gray-400" : "text-gray-500";
+    const themePageBg = isDarkMode ? (isAdmin ? "bg-[#0a0800]" : "bg-[#050a0d]") : (isAdmin ? "bg-[#FFFDF5]" : "bg-gray-50");
+    const themeAccentText = isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-[#1ba3b6]") : (isAdmin ? "text-[#690000]" : "text-[#1ba3b6]");
+    const themeAccentBg = isDarkMode ? (isAdmin ? "bg-[#D4AF37]/10" : "bg-white/10") : (isAdmin ? "bg-amber-100" : "bg-cyan-100");
 
 	useEffect(() => {
 		fetchCustomers();
@@ -194,17 +201,17 @@ const MyCustomers = () => {
 	};
 
 	return (
-		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#050a0d]" : "bg-gray-50"}`}>
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${themePageBg}`}>
 			
 			{/* Animated Background */}
 			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
 				{isDarkMode ? (
 					<>
-						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[100px] animate-pulse"></div>
-						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#0d5c66]/20 rounded-full filter blur-[120px]"></div>
+						<div className={`absolute top-[10%] left-[5%] w-[500px] h-[500px] rounded-full filter blur-[100px] animate-pulse ${isAdmin ? "bg-[#D4AF37]/10" : "bg-[#1ba3b6]/10"}`}></div>
+						<div className={`absolute bottom-[20%] right-[10%] w-[600px] h-[600px] rounded-full filter blur-[120px] ${isAdmin ? "bg-[#690000]/10" : "bg-[#0d5c66]/20"}`}></div>
 					</>
 				) : (
-					<div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-cyan-50/50 to-transparent"></div>
+					<div className={`absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b ${isAdmin ? "from-amber-50/50" : "from-cyan-50/50"} to-transparent`}></div>
 				)}
 			</div>
 			
@@ -214,18 +221,18 @@ const MyCustomers = () => {
 				<div className="max-w-7xl mx-auto">
 					{/* Page Header */}
 					<div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-[#1ba3b6]"}`}>
+						<h1 className={`text-3xl font-bold flex items-center gap-3 ${themeAccentText}`}>
 							<span className="text-4xl">👥</span>
 							عملائي
-							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-cyan-100 text-[#1ba3b6]"}`}>
+							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? (isAdmin ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "bg-white/10 text-gray-400") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-cyan-100 text-[#1ba3b6]")}`}>
 								{filteredCustomers.length} عميل
 							</span>
 						</h1>
 						
 						{/* Quick Stats */}
 						<div className="flex items-center gap-4">
-							<div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${isDarkMode ? "bg-white/5 border border-white/10" : "bg-white border border-gray-200 shadow-sm"}`}>
-								<Package size={18} className="text-[#1ba3b6]" />
+							<div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${isDarkMode ? (isAdmin ? "bg-[#1a1600] border border-[#D4AF37]/20" : "bg-white/5 border border-white/10") : (isAdmin ? "bg-white border border-gray-200 shadow-sm" : "bg-white border border-gray-200 shadow-sm")}`}>
+								<Package size={18} className={isAdmin ? "text-[#D4AF37]" : "text-[#1ba3b6]"} />
 								<span className={`font-bold ${themeText}`}>
 									{customers.reduce((acc, c) => acc + (c.shipments?.length || 0), 0)}
 								</span>
@@ -255,17 +262,17 @@ const MyCustomers = () => {
 						userType={user?.type}
 						isDarkMode={isDarkMode}
 					>
-						<div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+						<div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? (isAdmin ? "bg-black/20 border-[#D4AF37]/20" : "bg-white/5 border-white/10") : (isAdmin ? "bg-white border-gray-200" : "bg-white border-gray-200")}`}>
 							<button
 								onClick={() => setViewMode("grid")}
-								className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/10 text-[#1ba3b6]") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gray-100 text-[#1ba3b6]")) : "text-gray-400"}`}
 								title="عرض شبكة"
 							>
 								<LayoutGrid size={20} />
 							</button>
 							<button
 								onClick={() => setViewMode("list")}
-								className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/10 text-[#1ba3b6]") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gray-100 text-[#1ba3b6]")) : "text-gray-400"}`}
 								title="عرض قائمة"
 							>
 								<List size={20} />
@@ -303,7 +310,7 @@ const MyCustomers = () => {
 									return (
 										<div
 											key={customer._id}
-											className={`group rounded-2xl border transition-all duration-300 overflow-hidden ${themeCardBg} ${isDarkMode ? "hover:border-[#1ba3b6]/30" : "hover:border-[#1ba3b6]/30"} hover:shadow-xl`}
+											className={`group rounded-2xl border transition-all duration-300 overflow-hidden ${themeCardBg} ${isDarkMode ? (isAdmin ? "hover:border-[#D4AF37]/50" : "hover:border-[#1ba3b6]/30") : (isAdmin ? "hover:border-[#D4AF37]/50" : "hover:border-[#1ba3b6]/30")} hover:shadow-xl`}
 										>
 											{/* Customer Header/Card Body */}
 											<div
@@ -313,7 +320,7 @@ const MyCustomers = () => {
 												<div className="flex items-center gap-4">
 													{/* Avatar */}
 													<div className="relative">
-														<div className={`w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold ${isDarkMode ? "bg-gradient-to-br from-[#1ba3b6] to-[#0d5c66] text-white" : "bg-gradient-to-br from-[#1ba3b6] to-[#158a9b] text-white"}`}>
+														<div className={`w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold ${isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-gradient-to-br from-[#1ba3b6] to-[#0d5c66] text-white") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gradient-to-br from-[#1ba3b6] to-[#158a9b] text-white")}`}>
 															{customer.fullname?.charAt(0).toUpperCase() || customer.username?.charAt(0).toUpperCase() || "?"}
 														</div>
 														<div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-[#050a0d]"></div>
@@ -346,7 +353,7 @@ const MyCustomers = () => {
 														</div>
 
 														{/* View Icon (Instead of Expand) */}
-														<div className={`p-2 rounded-full transition-colors ${isDarkMode ? "bg-white/5 group-hover:bg-[#1ba3b6] group-hover:text-white" : "bg-gray-100 group-hover:bg-[#1ba3b6] group-hover:text-white"}`}>
+														<div className={`p-2 rounded-full transition-colors ${isDarkMode ? (isAdmin ? "bg-white/5 group-hover:bg-[#D4AF37] group-hover:text-black" : "bg-white/5 group-hover:bg-[#1ba3b6] group-hover:text-white") : (isAdmin ? "bg-gray-100 group-hover:bg-[#D4AF37] group-hover:text-white" : "bg-gray-100 group-hover:bg-[#1ba3b6] group-hover:text-white")}`}>
 															<Package size={20} className={isDarkMode ? "text-gray-400 group-hover:text-white" : "text-gray-500 group-hover:text-white"} />
 														</div>
 													</div>
@@ -382,14 +389,14 @@ const MyCustomers = () => {
 										className={`p-3 rounded-full transition-all duration-300 ${
 											currentPage === 1 
 												? (isDarkMode ? "text-gray-700 bg-white/5 cursor-not-allowed" : "text-gray-300 bg-gray-100 cursor-not-allowed") 
-												: (isDarkMode ? "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm")
+												: (isDarkMode ? (isAdmin ? "hover:bg-[#D4AF37] hover:text-black bg-[#D4AF37]/10 text-[#D4AF37]" : "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white") : (isAdmin ? "hover:bg-[#D4AF37] hover:text-white bg-white text-gray-700 shadow-sm" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm"))
 										}`}
 									>
 										<ChevronLeft size={24} />
 									</button>
 									
 									<div className={`px-6 py-2 rounded-xl font-bold ${isDarkMode ? "bg-white/5 text-white border border-white/10" : "bg-white text-gray-800 shadow-sm"}`}>
-										<span className="text-[#1ba3b6]">{currentPage}</span>
+										<span className={isAdmin ? (isDarkMode ? "text-[#D4AF37]" : "text-[#690000]") : "text-[#1ba3b6]"}>{currentPage}</span>
 										<span className="mx-2 opacity-50">/</span>
 										<span className="opacity-70">{totalPages}</span>
 									</div>
@@ -400,7 +407,7 @@ const MyCustomers = () => {
 										className={`p-3 rounded-full transition-all duration-300 ${
 											currentPage === totalPages 
 												? (isDarkMode ? "text-gray-700 bg-white/5 cursor-not-allowed" : "text-gray-300 bg-gray-100 cursor-not-allowed") 
-												: (isDarkMode ? "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm")
+												: (isDarkMode ? (isAdmin ? "hover:bg-[#D4AF37] hover:text-black bg-[#D4AF37]/10 text-[#D4AF37]" : "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white") : (isAdmin ? "hover:bg-[#D4AF37] hover:text-white bg-white text-gray-700 shadow-sm" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm"))
 										}`}
 									>
 										<ChevronRight size={24} />
@@ -419,7 +426,7 @@ const MyCustomers = () => {
 					onClick={closeShipmentsModal}
 				>
 					<div 
-						className={`relative rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl transform transition-all scale-100 ${isDarkMode ? "bg-[#1e1e1e] border border-white/10" : "bg-white"}`}
+						className={`relative rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl transform transition-all scale-100 ${isDarkMode ? (isAdmin ? "bg-[#1a1600] border border-[#D4AF37]/20" : "bg-[#1e1e1e] border border-white/10") : "bg-white"}`}
 						onClick={e => e.stopPropagation()}
 					>
 						{/* Modal Header */}

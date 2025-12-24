@@ -26,6 +26,18 @@ export default function ShipmentsList() {
 	const user = JSON.parse(localStorage.getItem("user"));
 	const userID = user?.id;
 	const token = localStorage.getItem("token");
+	const isAdmin = user?.type === 'admin' || user?.employeeDetails?.employeeType === 'System Admin';
+
+	// Theme Configuration
+	const theme = {
+		mainBg: isDarkMode ? (isAdmin ? "bg-[#0a0800]" : "bg-[#050a0d]") : (isAdmin ? "bg-[#FFFDF5]" : "bg-gray-50"),
+		textPrimary: isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-[#1ba3b6]") : (isAdmin ? "text-[#690000]" : "text-[#1ba3b6]"),
+		textSecondary: isDarkMode ? "text-gray-400" : "text-gray-600",
+		accentBg: isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20" : "bg-[#1ba3b6]/10") : (isAdmin ? "bg-[#D4AF37]/10" : "bg-cyan-100"),
+		accentText: isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-[#1ba3b6]") : (isAdmin ? "text-[#690000]" : "text-[#1ba3b6]"),
+		cardBg: isDarkMode ? (isAdmin ? "bg-[#1a1600]/80 border-[#D4AF37]/20" : "bg-white/5 border-white/10") : "bg-white border-gray-200",
+		buttonActive: isDarkMode ? (isAdmin ? "bg-[#D4AF37] text-black" : "bg-[#1ba3b6] text-white") : (isAdmin ? "bg-[#D4AF37] text-white" : "bg-[#1ba3b6] text-white"),
+	};
 
 	// Available shipment statuses
 	const shipmentStatuses = [
@@ -180,17 +192,17 @@ export default function ShipmentsList() {
 	};
 
 	return (
-		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#050a0d]" : "bg-gray-50"}`}>
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${theme.mainBg}`}>
 			
 			{/* Animated Background */}
 			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
 				{isDarkMode ? (
 					<>
-						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[100px] animate-pulse"></div>
-						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#0d5c66]/20 rounded-full filter blur-[120px]"></div>
+						<div className={`absolute top-[10%] left-[5%] w-[500px] h-[500px] rounded-full filter blur-[100px] animate-pulse ${isAdmin ? "bg-[#D4AF37]/10" : "bg-[#1ba3b6]/10"}`}></div>
+						<div className={`absolute bottom-[20%] right-[10%] w-[600px] h-[600px] rounded-full filter blur-[120px] ${isAdmin ? "bg-[#690000]/10" : "bg-[#0d5c66]/20"}`}></div>
 					</>
 				) : (
-					<div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-cyan-50/50 to-transparent"></div>
+					<div className={`absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b ${isAdmin ? "from-amber-50/50" : "from-cyan-50/50"} to-transparent`}></div>
 				)}
 			</div>
 
@@ -199,24 +211,24 @@ export default function ShipmentsList() {
 			<section className="flex-grow w-full pt-28 pb-12 px-4 md:px-8 relative z-10">
 				<div className="max-w-7xl mx-auto">
 					{/* Welcome Banner with Custom Stats */}
-					<WelcomeBanner customStats={stats} />
+					<WelcomeBanner customStats={stats} isAdmin={isAdmin} />
 
 					{/* Header & Type Filter */}
 					<div className="flex flex-col lg:flex-row justify-between items-center mb-8 gap-6">
-						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-[#1ba3b6]"}`}>
+						<h1 className={`text-3xl font-bold flex items-center gap-3 ${theme.textPrimary}`}>
 							<span className="text-4xl">📦</span>
 							شحناتي
-							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-cyan-100 text-[#1ba3b6]"}`}>
+							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isAdmin ? (isDarkMode ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "bg-amber-100/50 text-[#690000]") : (isDarkMode ? "bg-white/10 text-gray-400" : "bg-cyan-100 text-[#1ba3b6]")}`}>
 								{filteredShipments.length} شحنة
 							</span>
 						</h1>
 						
 						{/* Type Filter Buttons */}
-						<div className={`flex p-1.5 rounded-xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
+						<div className={`flex p-1.5 rounded-xl border ${theme.cardBg}`}>
 							<button 
 								onClick={() => setSelectedType("all")}
 								className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${selectedType === "all" 
-									? "bg-[#1ba3b6] text-white shadow-lg" 
+									? theme.buttonActive + " shadow-lg" 
 									: (isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-800")}`}
 							>
 								الكل
@@ -224,7 +236,7 @@ export default function ShipmentsList() {
 							<button 
 								onClick={() => setSelectedType("import")}
 								className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${selectedType === "import" 
-									? "bg-[#1ba3b6] text-white shadow-lg" 
+									? theme.buttonActive + " shadow-lg" 
 									: (isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-800")}`}
 							>
 								<Package size={16} />
@@ -233,7 +245,7 @@ export default function ShipmentsList() {
 							<button 
 								onClick={() => setSelectedType("export")}
 								className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${selectedType === "export" 
-									? "bg-[#1ba3b6] text-white shadow-lg" 
+									? theme.buttonActive + " shadow-lg" 
 									: (isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-800")}`}
 							>
 								<Ship size={16} />

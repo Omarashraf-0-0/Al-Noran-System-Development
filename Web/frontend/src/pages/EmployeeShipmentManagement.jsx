@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTheme } from "../context/ThemeContext";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
@@ -121,12 +122,25 @@ const EmployeeShipmentManagement = () => {
 	const [documentName, setDocumentName] = useState("");
 	const [uploadingFile, setUploadingFile] = useState(false);
 
+	// Theme & Auth
+	const { isDarkMode } = useTheme();
+	const user = JSON.parse(localStorage.getItem("user"));
+	const isAdmin = user?.type === 'admin' || user?.employeeDetails?.employeeType === 'System Admin';
+
+	const theme = {
+		pageBg: isDarkMode ? (isAdmin ? "bg-[#0a0800]" : "bg-[#050a0d]") : (isAdmin ? "bg-[#FFFDF5]" : "bg-gray-50"),
+		cardBg: isDarkMode ? (isAdmin ? "bg-[#1a1600]/80 border-[#D4AF37]/20" : "bg-white/5 border-white/10") : "bg-white border-gray-100",
+		textPrimary: isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-[#1ba3b6]") : (isAdmin ? "text-[#690000]" : "text-gray-800"),
+		textSecondary: isDarkMode ? "text-gray-400" : "text-gray-600",
+	};
+
 	// Auth check
 	useEffect(() => {
 		const storedUser = localStorage.getItem("user");
 		if (storedUser) {
 			const parsedUser = JSON.parse(storedUser);
-			if (parsedUser.type !== "employee") {
+			// Allow Admin to access this page too
+			if (parsedUser.type !== "employee" && parsedUser.type !== "admin") {
 				toast.error("غير مصرح لك بالوصول لهذه الصفحة");
 				navigate("/");
 			}
@@ -506,7 +520,7 @@ const handleStatusChange = (newStatus) => {
 	}
 
 	return (
-		<div className="bg-gray-50 min-h-screen text-gray-800">
+		<div className={`${theme.pageBg} min-h-screen transition-colors duration-300`}>
 			<Header />
 
 			<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">

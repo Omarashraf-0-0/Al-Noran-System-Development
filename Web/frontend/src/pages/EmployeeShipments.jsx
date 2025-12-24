@@ -12,6 +12,16 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function EmployeeShipments() {
 	const { isDarkMode } = useTheme();
+
+    const userType = JSON.parse(localStorage.getItem("user"))?.type;
+    const employeeType = JSON.parse(localStorage.getItem("user"))?.employeeDetails?.employeeType;
+    const isAdmin = userType === 'admin' || employeeType === 'System Admin';
+
+    // Theme Helpers
+    const themePageBg = isDarkMode ? (isAdmin ? "bg-[#0a0800]" : "bg-[#050a0d]") : (isAdmin ? "bg-[#FFFDF5]" : "bg-gray-50");
+    const themeAccentText = isDarkMode ? (isAdmin ? "text-[#D4AF37]" : "text-[#1ba3b6]") : (isAdmin ? "text-[#690000]" : "text-[#1ba3b6]");
+    const themeAccentBg = isDarkMode ? (isAdmin ? "bg-[#D4AF37]/10" : "bg-white/10") : (isAdmin ? "bg-amber-100" : "bg-cyan-100");
+    const themeAccentColor = isAdmin ? (isDarkMode ? "#D4AF37" : "#690000") : "#1ba3b6";
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [isSortOpen, setIsSortOpen] = useState(false);
@@ -176,17 +186,17 @@ export default function EmployeeShipments() {
 	const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
 
 	return (
-		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#050a0d]" : "bg-gray-50"}`}>
+		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${themePageBg}`}>
 			
-			{/* Animated Background - Turquoise Theme */}
+			{/* Animated Background - Turquoise Theme / Gold Admin */}
 			<div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
 				{isDarkMode ? (
 					<>
-						<div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-[#1ba3b6]/10 rounded-full filter blur-[100px] animate-pulse"></div>
-						<div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-[#0d5c66]/20 rounded-full filter blur-[120px]"></div>
+						<div className={`absolute top-[10%] left-[5%] w-[500px] h-[500px] rounded-full filter blur-[100px] animate-pulse ${isAdmin ? "bg-[#D4AF37]/10" : "bg-[#1ba3b6]/10"}`}></div>
+						<div className={`absolute bottom-[20%] right-[10%] w-[600px] h-[600px] rounded-full filter blur-[120px] ${isAdmin ? "bg-[#690000]/10" : "bg-[#0d5c66]/20"}`}></div>
 					</>
 				) : (
-					<div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-cyan-50/50 to-transparent"></div>
+					<div className={`absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b ${isAdmin ? "from-amber-50/50" : "from-cyan-50/50"} to-transparent`}></div>
 				)}
 			</div>
 
@@ -196,10 +206,10 @@ export default function EmployeeShipments() {
 				<div className="max-w-7xl mx-auto">
 					{/* Header Section */}
 					<div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-						<h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? "text-gray-100" : "text-[#1ba3b6]"}`}>
+						<h1 className={`text-3xl font-bold flex items-center gap-3 ${themeAccentText}`}>
 							<span className="text-4xl">📦</span>
 							جميع الشحنات
-							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? "bg-white/10 text-gray-400" : "bg-cyan-100 text-[#1ba3b6]"}`}>
+							<span className={`text-sm font-normal px-3 py-1 rounded-full ${isDarkMode ? (isAdmin ? "bg-[#D4AF37]/10 text-[#D4AF37]" : "bg-white/10 text-gray-400") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-cyan-100 text-[#1ba3b6]")}`}>
 								{filteredShipments.length} شحنة
 							</span>
 						</h1>
@@ -225,17 +235,17 @@ export default function EmployeeShipments() {
 						userType={user?.type}
 						isDarkMode={isDarkMode}
 					>
-						<div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
+						<div className={`flex items-center p-1 rounded-2xl border ${isDarkMode ? (isAdmin ? "bg-black/20 border-[#D4AF37]/20" : "bg-white/5 border-white/10") : (isAdmin ? "bg-white border-gray-200" : "bg-white border-gray-200")}`}>
 							<button
 								onClick={() => setViewMode("grid")}
-								className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								className={`p-3 rounded-xl transition-all ${viewMode === "grid" ? (isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/10 text-[#1ba3b6]") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gray-100 text-[#1ba3b6]")) : "text-gray-400"}`}
 								title="عرض شبكة"
 							>
 								<LayoutGrid size={20} />
 							</button>
 							<button
 								onClick={() => setViewMode("list")}
-								className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? "bg-white/10 text-[#1ba3b6]" : "bg-gray-100 text-[#1ba3b6]") : "text-gray-400"}`}
+								className={`p-3 rounded-xl transition-all ${viewMode === "list" ? (isDarkMode ? (isAdmin ? "bg-[#D4AF37]/20 text-[#D4AF37]" : "bg-white/10 text-[#1ba3b6]") : (isAdmin ? "bg-amber-100 text-[#690000]" : "bg-gray-100 text-[#1ba3b6]")) : "text-gray-400"}`}
 								title="عرض قائمة"
 							>
 								<List size={20} />
@@ -280,14 +290,14 @@ export default function EmployeeShipments() {
 										className={`p-3 rounded-full transition-all duration-300 ${
 											currentPage === 1 
 												? (isDarkMode ? "text-gray-700 bg-white/5 cursor-not-allowed" : "text-gray-300 bg-gray-100 cursor-not-allowed") 
-												: (isDarkMode ? "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm")
+												: (isDarkMode ? (isAdmin ? "hover:bg-[#D4AF37] hover:text-black bg-[#D4AF37]/10 text-[#D4AF37]" : "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white") : (isAdmin ? "hover:bg-[#D4AF37] hover:text-white bg-white text-gray-700 shadow-sm" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm"))
 										}`}
 									>
 										<ChevronLeft size={24} />
 									</button>
 									
 									<div className={`px-6 py-2 rounded-xl font-bold ${isDarkMode ? "bg-white/5 text-white border border-white/10" : "bg-white text-gray-800 shadow-sm"}`}>
-										<span className={isDarkMode ? "text-[#1ba3b6]" : "text-[#1ba3b6]"}>{currentPage}</span>
+										<span className={isAdmin ? (isDarkMode ? "text-[#D4AF37]" : "text-[#690000]") : "text-[#1ba3b6]"}>{currentPage}</span>
 										<span className="mx-2 opacity-50">/</span>
 										<span className="opacity-70">{totalPages}</span>
 									</div>
@@ -298,7 +308,7 @@ export default function EmployeeShipments() {
 										className={`p-3 rounded-full transition-all duration-300 ${
 											currentPage === totalPages 
 												? (isDarkMode ? "text-gray-700 bg-white/5 cursor-not-allowed" : "text-gray-300 bg-gray-100 cursor-not-allowed") 
-												: (isDarkMode ? "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm")
+												: (isDarkMode ? (isAdmin ? "hover:bg-[#D4AF37] hover:text-black bg-[#D4AF37]/10 text-[#D4AF37]" : "hover:bg-[#1ba3b6] hover:text-white bg-white/10 text-white") : (isAdmin ? "hover:bg-[#D4AF37] hover:text-white bg-white text-gray-700 shadow-sm" : "hover:bg-[#1ba3b6] hover:text-white bg-white text-gray-700 shadow-sm"))
 										}`}
 									>
 										<ChevronRight size={24} />
