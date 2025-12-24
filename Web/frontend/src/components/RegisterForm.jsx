@@ -240,14 +240,16 @@ const RegisterForm = ({ onSubmit }) => {
 						htmlFor="terms"
 						className="text-sm sm:text-base text-right cursor-pointer"
 					>
-						<span className={isDarkMode ? "text-gray-300" : "text-[#690000]"}>أوافق على</span>{" "}
+						<span className={isDarkMode ? "text-gray-300" : "text-[#690000]"}>
+                            أقر أنا المفوض عن الشركة بصحة البيانات المذكورة وأوافق على
+                        </span>{" "}
 						<a
 							href="/terms"
 							className={`underline hover:opacity-70 ${isDarkMode ? "text-red-400" : "text-[#690000]"}`}
 							target="_blank"
 							rel="noopener noreferrer"
 						>
-							الشروط والأحكام
+							شروط شركة النوران
 						</a>
 					</label>
 				</div>

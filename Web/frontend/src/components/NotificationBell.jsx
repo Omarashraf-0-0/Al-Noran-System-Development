@@ -21,9 +21,8 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
-const NotificationBell = () => {
+const NotificationBell = ({ isOpen, onToggle, onClose }) => {
 	const [notifications, setNotifications] = useState([]);
-	const [showDropdown, setShowDropdown] = useState(false);
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
@@ -259,7 +258,7 @@ const NotificationBell = () => {
 			const wasUnread = clickedNotification && !clickedNotification.read;
 
 			// Close dropdown
-			setShowDropdown(false);
+			onClose();
 
 			// Navigate to notification details page with notification data
 			navigate(`/notification/${notifId}`, {
@@ -292,7 +291,7 @@ const NotificationBell = () => {
 			});
 		} catch (error) {
 			console.error("Error handling notification click:", error);
-			setShowDropdown(false);
+			onClose();
 		}
 	};
 
@@ -327,8 +326,8 @@ const NotificationBell = () => {
 			{/* Bell Icon */}
 			<button
 				onClick={() => {
-					setShowDropdown(!showDropdown);
-					if (!showDropdown) {
+					onToggle();
+					if (!isOpen) {
 						fetchNotifications(); // Refresh when opening
 					}
 				}}
@@ -345,7 +344,7 @@ const NotificationBell = () => {
 			</button>
 
 			{/* Dropdown */}
-			{showDropdown && (
+			{isOpen && (
 				<div className={`absolute top-full right-0 mt-3 w-80 md:w-96 rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border z-50 max-h-[30rem] flex flex-col ${theme.dropdownBg} backdrop-blur-2xl ring-1 ring-black/5 origin-top-right animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200`}>
 					{/* Header */}
 					<div className={`p-4 border-b flex justify-between items-center ${theme.headerBg} rounded-t-2xl`}>
@@ -418,7 +417,7 @@ const NotificationBell = () => {
 					<div className={`p-3 border-t ${theme.headerBg}`}>
 						<button
 							onClick={() => {
-								setShowDropdown(false);
+								onClose();
 								navigate("/notifications");
 							}}
 							className={`w-full py-2 rounded-lg ${accent.button} text-white text-sm font-bold transition-colors shadow-md`}

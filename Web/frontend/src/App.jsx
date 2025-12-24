@@ -6,7 +6,13 @@ import RegisterPage from "./pages/RegisterPage";
 import ForgetPasswordPage from "./pages/ForgetPasswordPage";
 import OTPPage from "./pages/OTPPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import TermsPage from "./pages/TermsPage";
 import LandingPage from "./pages/LandingPage";
+
+// ... (existing imports)
+
+// Inside the Routes definitions:
+<Route path="/terms" element={<TermsPage />} />
 import ACIDRequestPage from "./pages/ACIDRequestPage";
 import DocumentUploadPage from "./pages/DocumentUploadPage";
 import NotFound404 from "./pages/NotFound404";
@@ -191,6 +197,7 @@ const App = () => {
 					<Route path="/" element={<LandingPage />} />
 					<Route path="/login" element={<LoginPage />} />
 					<Route path="/register" element={<RegisterPage />} />
+                    <Route path="/terms" element={<TermsPage />} />
 					<Route path="/forgetpassword" element={<ForgetPasswordPage />} />
 					<Route path="/verify-otp" element={<OTPPage />} />
 					<Route path="/resetpassword" element={<ResetPasswordPage />} />

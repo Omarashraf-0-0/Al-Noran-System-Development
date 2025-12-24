@@ -5,7 +5,7 @@ const HeroSection = () => {
 	const user = JSON.parse(localStorage.getItem("user") || "null");
 
 	return (
-		<section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+		<section id="about" className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
 			{/* Background Image with Parallax-like effect */}
 			<div
 				className="absolute inset-0 bg-cover bg-center bg-no-repeat transform scale-105"

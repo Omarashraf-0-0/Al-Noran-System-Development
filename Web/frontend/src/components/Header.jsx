@@ -458,7 +458,13 @@ const Header = () => {
 								{/* User Profile */}
 								<div className="relative" ref={profileMenuRef}>
 									<button
-										onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+										onClick={() => {
+											setIsProfileMenuOpen(!isProfileMenuOpen);
+											if (!isProfileMenuOpen) {
+												setShowNotifications(false);
+												setOpenDropdown(null);
+											}
+										}}
 										className="flex items-center gap-2 hover:opacity-90 focus:outline-none transition-opacity bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full border border-white/10"
 									>
 										<img
@@ -531,8 +537,19 @@ const Header = () => {
 								</div>
 
 								{/* Notifications */}
-								<div className="text-white">
-									<NotificationBell isDarkMode={isDarkMode} />
+								<div ref={notificationRef} className="text-white">
+									<NotificationBell 
+										isDarkMode={isDarkMode}
+										isOpen={showNotifications}
+										onToggle={() => {
+											setShowNotifications(!showNotifications);
+											if (!showNotifications) {
+												setIsProfileMenuOpen(false);
+												setOpenDropdown(null);
+											}
+										}}
+										onClose={() => setShowNotifications(false)}
+									/>
 								</div>
 							</>
 						) : location.pathname === "/login" ? (
@@ -562,11 +579,14 @@ const Header = () => {
 									item.isDropdown ? (
 										<div key={index} className="relative group">
 											<button
-												onClick={() =>
-													setOpenDropdown(
-														openDropdown === item.label ? null : item.label
-													)
-												}
+												onClick={() => {
+													const newState = openDropdown === item.label ? null : item.label;
+													setOpenDropdown(newState);
+													if (newState) {
+														setIsProfileMenuOpen(false);
+														setShowNotifications(false);
+													}
+												}}
 												className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 whitespace-nowrap ${
 													item.dropdownItems?.some((sub) =>
 														isActivePath(sub.path)
