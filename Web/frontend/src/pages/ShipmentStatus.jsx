@@ -4,7 +4,6 @@ import Header from "../components/Header";
 import Stepper from "../components/Stepper";
 import FileRow from "../components/FileRow";
 import Footer from "../components/Footer";
-import NotificationBell from "../components/NotificationBell";
 import mainIllustration from "../assets/images/Untitled design (7) 1.png";
 import contractIcon from "../assets/images/contract.png";
 import Datafield from "../components/DataField";
@@ -99,6 +98,7 @@ const ShipmentStatus = () => {
 	const [pendingFiles, setPendingFiles] = useState({});
 	const [uploadingDoc, setUploadingDoc] = useState(null);
 	const [viewerData, setViewerData] = useState({ open: false, url: null, name: null, type: null, fileId: null });
+	const [contacting, setContacting] = useState(false);
 
 	const token = localStorage.getItem("token");
 
@@ -249,6 +249,41 @@ const ShipmentStatus = () => {
 		// return () => clearInterval(pollInterval);
 	}, [shipmentId, token]);
 
+	// Handle Contact Support
+	const handleContactSupport = async () => {
+		if (contacting || !shipment) return;
+		
+		try {
+			setContacting(true);
+			const toastId = toast.loading("جاري فتح المحادثة...");
+
+			// Get or create chat for this shipment
+			const response = await axios.post(
+				`${import.meta.env.VITE_API_URL}/api/chat`,
+				{ shipmentId: shipment._id },
+				{
+					headers: { Authorization: `Bearer ${token}` }
+				}
+			);
+
+			if (response.data && response.data.chat) {
+				toast.dismiss(toastId);
+				toast.success("تم فتح المحادثة");
+				// Redirect to Client Support Dashboard with the specific chat open
+				navigate(`/client-support?chatId=${response.data.chat._id}`);
+			} else {
+				throw new Error("Invalid response received");
+			}
+
+		} catch (error) {
+			console.error("Error opening chat:", error);
+			toast.dismiss();
+			toast.error(error.response?.data?.message || "فشل فتح المحادثة");
+		} finally {
+			setContacting(false);
+		}
+	};
+
 	// Watch for status changes
 	useEffect(() => {
 		if (shipment && shipment.status) {
@@ -300,13 +335,36 @@ const ShipmentStatus = () => {
 	return (
 		// Full page wrapper
 		<div className={`min-h-screen transition-colors ${isDarkMode ? "bg-[#0a0505] text-gray-200" : "bg-gray-50 text-gray-800"}`}>
+            {/* Custom Animations */}
+            <style>{`
+                @keyframes slide-up-fade {
+                    0% {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                .animate-slide-up-fade {
+                    animation: slide-up-fade 0.8s ease-out forwards;
+                }
+            `}</style>
+
 			{/*  Header Section */}
 			<Header />
 
 			{/*  Main content area */}
-			<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+			<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-28">
 				{/* Centered content card */}
-				<div className={`max-w-5xl mx-auto p-6 sm:p-10 rounded-2xl shadow-sm transition-colors ${isDarkMode ? "bg-[#1a1010]/80" : "bg-white"}`}>
+				<div 
+					className={`max-w-5xl mx-auto p-6 sm:p-10 rounded-3xl shadow-2xl backdrop-blur-md transition-all duration-300 animate-slide-up-fade ${
+						isDarkMode 
+							? "bg-[#1a1010]/90 border border-white/5 shadow-[0_0_40px_rgba(220,38,38,0.1)]" 
+							: "bg-white/90 border border-white shadow-[0_10px_40px_rgba(0,0,0,0.05)]"
+					}`}
+				>
 					{/* Loading State */}
 					{loading ? (
 						<div className="flex justify-center items-center py-12 gap-4">
@@ -327,11 +385,6 @@ const ShipmentStatus = () => {
 						</div>
 					) : shipment ? (
 						<>
-							{/* Notification Bell */}
-							<div className="flex justify-end mb-4">
-								<NotificationBell shipmentId={shipment._id} />
-							</div>
-
 							{/*  Top illustration */}
 							<div className="flex justify-center mb-10">
 								<img
@@ -784,20 +837,25 @@ const ShipmentStatus = () => {
 								{/* Contact Your Agent Button */}
 								{shipment?.employee_id && (
 									<button
-										onClick={() => navigate(`/shipment-chat/${shipment._id}`)}
-										className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-red-900 to-red-700 text-white font-bold rounded-lg shadow-md hover:from-red-800 hover:to-red-600 transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700"
+										onClick={handleContactSupport}
+										disabled={contacting}
+										className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-red-900 to-red-700 text-white font-bold rounded-lg shadow-md hover:from-red-800 hover:to-red-600 transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700 disabled:opacity-70 disabled:cursor-not-allowed"
 									>
-										<svg
-											className="w-6 h-6"
-											fill="currentColor"
-											viewBox="0 0 20 20"
-										>
-											<path
-												fillRule="evenodd"
-												d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
-												clipRule="evenodd"
-											/>
-										</svg>
+										{contacting ? (
+											<div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+										) : (
+											<svg
+												className="w-6 h-6"
+												fill="currentColor"
+												viewBox="0 0 20 20"
+											>
+												<path
+													fillRule="evenodd"
+													d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
+													clipRule="evenodd"
+												/>
+											</svg>
+										)}
 										<span>تواصل مع موظفك</span>
 									</button>
 								)}

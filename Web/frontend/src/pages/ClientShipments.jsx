@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { Search, Filter, SortAsc, ChevronLeft, ChevronRight, Ship, LayoutGrid, List, Package, Clock, CheckCircle, AlertCircle, Anchor } from "lucide-react";
+import { Search, Filter, SortAsc, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Ship, LayoutGrid, List, Package, Clock, CheckCircle, AlertCircle, Anchor } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useTheme } from "../context/ThemeContext";
@@ -24,8 +24,13 @@ export default function ClientShipments() {
 	const [sortOption, setSortOption] = useState("newest");
 	const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
 
+	// Refs for popup positioning
+	const filterBtnRef = useRef(null);
+	const sortBtnRef = useRef(null);
+
 	// Pagination State
 	const [currentPage, setCurrentPage] = useState(1);
+	const [jumpToPage, setJumpToPage] = useState("");
 	const itemsPerPage = viewMode === "grid" ? 9 : 6;
 
 	const user = JSON.parse(localStorage.getItem("user"));
@@ -138,6 +143,32 @@ export default function ClientShipments() {
 		setCurrentPage(1);
 	}, [searchTerm, selectedStatus, sortOption, viewMode]);
 
+	// Close dropdowns when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (e) => {
+			if (filterBtnRef.current && !filterBtnRef.current.contains(e.target)) {
+				setIsFilterOpen(false);
+			}
+			if (sortBtnRef.current && !sortBtnRef.current.contains(e.target)) {
+				setIsSortOpen(false);
+			}
+		};
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
+
+	// Handle jump to page
+	const handleJumpToPage = (e) => {
+		e.preventDefault();
+		const pageNum = parseInt(jumpToPage);
+		if (pageNum >= 1 && pageNum <= totalPages) {
+			setCurrentPage(pageNum);
+			setJumpToPage("");
+		} else {
+			toast.error(`الرجاء إدخال رقم صفحة بين 1 و ${totalPages}`);
+		}
+	};
+
 	return (
 		<div className={`flex flex-col min-h-screen font-sans relative transition-colors duration-300 ${isDarkMode ? "bg-[#0a0505]" : "bg-gray-50"}`}>
 			
@@ -228,18 +259,74 @@ export default function ClientShipments() {
 
 						{/* Filter & Sort Buttons */}
 						<div className="flex items-center gap-3 w-full md:w-auto">
-							<button onClick={toggleFilter} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
-								isFilterOpen ? "bg-red-600 text-white" : (isDarkMode ? "bg-white/10 text-gray-300 hover:bg-white/20" : "bg-red-50 text-red-800 hover:bg-red-100")
-							}`}>
-								<Filter size={18} />
-								<span className="hidden sm:inline">تصفية</span>
-							</button>
-							<button onClick={toggleSort} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
-								isSortOpen ? "bg-red-600 text-white" : (isDarkMode ? "bg-white/10 text-gray-300 hover:bg-white/20" : "bg-gray-100 text-gray-700 hover:bg-gray-200")
-							}`}>
-								<SortAsc size={18} />
-								<span className="hidden sm:inline">ترتيب</span>
-							</button>
+							
+							{/* Filter Button & Dropdown */}
+							<div className="relative" ref={filterBtnRef}>
+								<button 
+									onClick={toggleFilter} 
+									className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
+										isFilterOpen ? "bg-red-600 text-white" : (isDarkMode ? "bg-white/10 text-gray-300 hover:bg-white/20" : "bg-red-50 text-red-800 hover:bg-red-100")
+									}`}
+								>
+									<Filter size={18} />
+									<span className="hidden sm:inline">تصفية</span>
+								</button>
+								{isFilterOpen && (
+									<div className={`absolute top-full right-0 mt-2 w-56 p-3 rounded-xl shadow-2xl border z-30 ${isDarkMode ? "bg-[#1e1e1e] border-white/10 text-gray-200" : "bg-white border-gray-100 text-gray-700"}`} dir="rtl">
+										<h4 className="font-bold mb-2 text-sm opacity-70">تصفية حسب الحالة</h4>
+										<div className="space-y-1">
+											{shipmentStatuses.map((status) => (
+												<button
+													key={status.value}
+													onClick={() => { setSelectedStatus(status.value); setIsFilterOpen(false); }}
+													className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
+														selectedStatus === status.value 
+															? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-50 text-red-800")
+															: "hover:bg-gray-500/10"
+													}`}
+												>
+													{status.label}
+												</button>
+											))}
+										</div>
+									</div>
+								)}
+							</div>
+
+							{/* Sort Button & Dropdown */}
+							<div className="relative" ref={sortBtnRef}>
+								<button 
+									onClick={toggleSort} 
+									className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
+										isSortOpen ? "bg-red-600 text-white" : (isDarkMode ? "bg-white/10 text-gray-300 hover:bg-white/20" : "bg-gray-100 text-gray-700 hover:bg-gray-200")
+									}`}
+								>
+									<SortAsc size={18} />
+									<span className="hidden sm:inline">ترتيب</span>
+								</button>
+								{isSortOpen && (
+									<div className={`absolute top-full right-0 mt-2 w-48 p-3 rounded-xl shadow-2xl border z-30 ${isDarkMode ? "bg-[#1e1e1e] border-white/10 text-gray-200" : "bg-white border-gray-100 text-gray-700"}`} dir="rtl">
+										<h4 className="font-bold mb-2 text-sm opacity-70">ترتيب حسب</h4>
+										{[
+											{ v: "newest", l: "الأحدث أولاً" },
+											{ v: "oldest", l: "الأقدم أولاً" },
+											{ v: "last_updated", l: "آخر تحديث" }
+										].map((opt) => (
+											<button
+												key={opt.v}
+												onClick={() => { setSortOption(opt.v); setIsSortOpen(false); }}
+												className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
+													sortOption === opt.v
+														? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-50 text-red-800")
+														: "hover:bg-gray-500/10"
+												}`}
+											>
+												{opt.l}
+											</button>
+										))}
+									</div>
+								)}
+							</div>
 
 							{/* View Mode Toggle */}
 							<div className={`flex items-center p-1 rounded-xl border ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-200"}`}>
@@ -259,52 +346,6 @@ export default function ClientShipments() {
 								</button>
 							</div>
 						</div>
-
-						{/* Filter Dropdown */}
-						{isFilterOpen && (
-							<div className={`absolute top-full right-0 mt-2 w-56 p-3 rounded-xl shadow-2xl border z-30 ${isDarkMode ? "bg-[#1e1e1e] border-white/10 text-gray-200" : "bg-white border-gray-100 text-gray-700"}`} dir="rtl">
-								<h4 className="font-bold mb-2 text-sm opacity-70">تصفية حسب الحالة</h4>
-								<div className="space-y-1">
-									{shipmentStatuses.map((status) => (
-										<button
-											key={status.value}
-											onClick={() => { setSelectedStatus(status.value); setIsFilterOpen(false); }}
-											className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
-												selectedStatus === status.value 
-													? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-50 text-red-800")
-													: "hover:bg-gray-500/10"
-											}`}
-										>
-											{status.label}
-										</button>
-									))}
-								</div>
-							</div>
-						)}
-
-						{/* Sort Dropdown */}
-						{isSortOpen && (
-							<div className={`absolute top-full right-32 mt-2 w-48 p-3 rounded-xl shadow-2xl border z-30 ${isDarkMode ? "bg-[#1e1e1e] border-white/10 text-gray-200" : "bg-white border-gray-100 text-gray-700"}`} dir="rtl">
-								<h4 className="font-bold mb-2 text-sm opacity-70">ترتيب حسب</h4>
-								{[
-									{ v: "newest", l: "الأحدث أولاً" },
-									{ v: "oldest", l: "الأقدم أولاً" },
-									{ v: "last_updated", l: "آخر تحديث" }
-								].map((opt) => (
-									<button
-										key={opt.v}
-										onClick={() => { setSortOption(opt.v); setIsSortOpen(false); }}
-										className={`w-full text-right px-3 py-2 rounded-lg text-sm transition-colors ${
-											sortOption === opt.v
-												? (isDarkMode ? "bg-red-900/30 text-red-400" : "bg-red-50 text-red-800")
-												: "hover:bg-gray-500/10"
-										}`}
-									>
-										{opt.l}
-									</button>
-								))}
-							</div>
-						)}
 					</div>
 
 					{/* 📦 Shipments Display */}
@@ -418,38 +459,127 @@ export default function ClientShipments() {
 								</div>
 							)}
 
-							{/* Pagination Controls */}
+							{/* Enhanced Pagination */}
 							{totalPages > 1 && (
-								<div className="flex justify-center items-center gap-4 mt-8" dir="ltr">
+								<div className={`flex flex-wrap justify-center items-center gap-3 mt-8 p-4 rounded-2xl ${isDarkMode ? "bg-white/5" : "bg-white shadow-sm"}`} dir="ltr">
+									{/* First Page */}
+									<button
+										onClick={() => setCurrentPage(1)}
+										disabled={currentPage === 1}
+										className={`p-2 rounded-lg transition-colors ${
+											currentPage === 1 
+												? (isDarkMode ? "text-gray-600 cursor-not-allowed" : "text-gray-300 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-700")
+										}`}
+										title="الصفحة الأولى"
+									>
+										<ChevronsLeft size={20} />
+									</button>
+
+									{/* Previous Page */}
 									<button
 										onClick={prevPage}
 										disabled={currentPage === 1}
-										className={`p-3 rounded-full transition-all ${
+										className={`p-2 rounded-lg transition-colors ${
 											currentPage === 1 
-												? (isDarkMode ? "text-gray-700 bg-white/5 cursor-not-allowed" : "text-gray-300 bg-gray-100 cursor-not-allowed") 
-												: (isDarkMode ? "hover:bg-red-900/50 text-white bg-white/10" : "hover:bg-red-100 text-gray-700 bg-white shadow-sm")
+												? (isDarkMode ? "text-gray-600 cursor-not-allowed" : "text-gray-300 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-700")
 										}`}
+										title="الصفحة السابقة"
 									>
 										<ChevronLeft size={20} />
 									</button>
-									
-									<div className={`px-5 py-2 rounded-xl font-medium ${isDarkMode ? "bg-white/5 text-gray-300" : "bg-white text-gray-700 shadow-sm"}`}>
-										<span className={isDarkMode ? "text-red-400" : "text-red-700"}>{currentPage}</span>
-										<span className="mx-2 opacity-50">/</span>
-										<span className="opacity-70">{totalPages}</span>
+
+									{/* Page Numbers */}
+									<div className="flex items-center gap-1">
+										{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+											let pageNum;
+											if (totalPages <= 5) {
+												pageNum = i + 1;
+											} else if (currentPage <= 3) {
+												pageNum = i + 1;
+											} else if (currentPage >= totalPages - 2) {
+												pageNum = totalPages - 4 + i;
+											} else {
+												pageNum = currentPage - 2 + i;
+											}
+											return (
+												<button
+													key={pageNum}
+													onClick={() => setCurrentPage(pageNum)}
+													className={`w-10 h-10 rounded-lg font-medium transition-all ${
+														currentPage === pageNum 
+															? "bg-red-600 text-white" 
+															: (isDarkMode ? "hover:bg-white/10 text-gray-300" : "hover:bg-gray-100 text-gray-700")
+													}`}
+												>
+													{pageNum}
+												</button>
+											);
+										})}
 									</div>
 
+									{/* Next Page */}
 									<button
 										onClick={nextPage}
 										disabled={currentPage === totalPages}
-										className={`p-3 rounded-full transition-all ${
+										className={`p-2 rounded-lg transition-colors ${
 											currentPage === totalPages 
-												? (isDarkMode ? "text-gray-700 bg-white/5 cursor-not-allowed" : "text-gray-300 bg-gray-100 cursor-not-allowed") 
-												: (isDarkMode ? "hover:bg-red-900/50 text-white bg-white/10" : "hover:bg-red-100 text-gray-700 bg-white shadow-sm")
+												? (isDarkMode ? "text-gray-600 cursor-not-allowed" : "text-gray-300 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-700")
 										}`}
+										title="الصفحة التالية"
 									>
 										<ChevronRight size={20} />
 									</button>
+
+									{/* Last Page */}
+									<button
+										onClick={() => setCurrentPage(totalPages)}
+										disabled={currentPage === totalPages}
+										className={`p-2 rounded-lg transition-colors ${
+											currentPage === totalPages 
+												? (isDarkMode ? "text-gray-600 cursor-not-allowed" : "text-gray-300 cursor-not-allowed") 
+												: (isDarkMode ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-700")
+										}`}
+										title="الصفحة الأخيرة"
+									>
+										<ChevronsRight size={20} />
+									</button>
+
+									{/* Divider */}
+									<div className={`w-px h-8 mx-2 ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`}></div>
+
+									{/* Jump to Page */}
+									<form onSubmit={handleJumpToPage} className="flex items-center gap-2">
+										<span className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>الذهاب إلى</span>
+										<input
+											type="number"
+											min="1"
+											max={totalPages}
+											value={jumpToPage}
+											onChange={(e) => setJumpToPage(e.target.value)}
+											placeholder="#"
+											className={`w-16 px-3 py-2 rounded-lg text-center text-sm focus:outline-none focus:ring-2 ${
+												isDarkMode 
+													? "bg-white/10 text-white placeholder-gray-500 focus:ring-red-500/50" 
+													: "bg-gray-100 text-gray-900 placeholder-gray-400 focus:ring-red-500/30"
+											}`}
+										/>
+										<button 
+											type="submit"
+											className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+												isDarkMode ? "bg-red-900/50 text-red-400 hover:bg-red-900" : "bg-red-100 text-red-700 hover:bg-red-200"
+											}`}
+										>
+											انتقال
+										</button>
+									</form>
+
+									{/* Page Info */}
+									<span className={`text-sm ${isDarkMode ? "text-gray-500" : "text-gray-500"}`}>
+										({currentPage} من {totalPages})
+									</span>
 								</div>
 							)}
 						</>

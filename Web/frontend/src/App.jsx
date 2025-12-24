@@ -37,6 +37,8 @@ import AdminProfilePage from "./pages/AdminProfilePage";
 import MyProfileClient from "./pages/MyProfileClient";
 import PaymentsManagementPage from "./pages/PaymentsManagementPage";
 import ClientPaymentsPage from "./pages/ClientPaymentsPage";
+import ClientArchivePage from "./pages/ClientArchivePage";
+import ClientSupportDashboard from "./pages/ClientSupportDashboard";
 import NotificationPage from "./pages/NotificationPage";
 import AllNotificationsPage from "./pages/AllNotificationsPage";
 
@@ -520,11 +522,27 @@ const App = () => {
 					}
 				/>
 				<Route
+					path="/client-archive"
+					element={
+						<ClientRoute>
+							<ClientArchivePage />
+						</ClientRoute>
+					}
+				/>
+				<Route
 					path="/payments-management"
 					element={
 						<AdminRoute>
 							<PaymentsManagementPage />
 						</AdminRoute>
+					}
+				/>
+				<Route
+					path="/client-support"
+					element={
+						<ClientRoute>
+							<ClientSupportDashboard />
+						</ClientRoute>
 					}
 				/>
 				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}

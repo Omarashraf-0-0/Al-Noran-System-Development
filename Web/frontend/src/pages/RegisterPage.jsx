@@ -2,8 +2,15 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import AuthNavbar from "../components/AuthNavbar";
+import BackgroundContainer from "../components/BackgroundContainer";
+import FormContainer from "../components/FormContainer";
+import RegisterForm from "../components/RegisterForm";
+import { useTheme } from "../context/ThemeContext";
 
 const RegisterPage = () => {
+    const { isDarkMode } = useTheme();
+
 	const handleRegister = (formData) => {
 		console.log("Register attempt:", formData);
 		console.log("API URL:", import.meta.env.VITE_API_URL);
@@ -53,14 +60,14 @@ const RegisterPage = () => {
 	];
 
 	return (
-		<>
+		<div className={`transition-colors duration-300 ${isDarkMode ? "dark" : ""}`}>
 			<AuthNavbar />
 			<BackgroundContainer>
 				<FormContainer>
 					<RegisterForm onSubmit={handleRegister} />
 				</FormContainer>
 			</BackgroundContainer>
-		</>
+		</div>
 	);
 };
 

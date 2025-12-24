@@ -4,9 +4,11 @@ import { toast } from "react-hot-toast";
 import axios from "axios";
 import coloredLogo from "../assets/images/coloredLogo.svg";
 import whiteLogo from "../assets/images/white logo.svg";
+import { useTheme } from "../context/ThemeContext";
 
 const ForgetPasswordPage = () => {
 	const navigate = useNavigate();
+    const { isDarkMode, toggleTheme } = useTheme();
 	const [email, setEmail] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [isVisible, setIsVisible] = useState(false);
@@ -69,11 +71,11 @@ const ForgetPasswordPage = () => {
 			`}</style>
 
 			{/* Left Side - Form */}
-			<div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-16 bg-white overflow-hidden relative">
+			<div className={`w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-16 overflow-hidden relative transition-colors duration-300 ${isDarkMode ? "bg-[#0a0a0a]" : "bg-white"}`}>
 				{/* Back to Login Link */}
 				<Link 
 					to="/login" 
-					className="absolute top-6 right-6 flex items-center gap-2 text-gray-500 hover:text-[#690000] transition-colors duration-300 group"
+					className={`absolute top-6 right-6 flex items-center gap-2 transition-colors duration-300 group ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-[#690000]"}`}
 					style={{ 
 						animation: isVisible ? 'fade-in-up 0.6s ease-out forwards' : 'none',
 						opacity: 0 
@@ -84,6 +86,27 @@ const ForgetPasswordPage = () => {
 					</svg>
 					<span className="font-medium">العودة</span>
 				</Link>
+
+                {/* Theme Toggle Button */}
+                <button
+                    onClick={toggleTheme}
+                    className={`absolute top-6 left-6 p-2 rounded-full transition-all duration-300 z-50 ${
+                        isDarkMode 
+                            ? "bg-white/10 text-yellow-400 hover:bg-white/20" 
+                            : "bg-gray-100 text-[#690000] hover:bg-gray-200"
+                    }`}
+                    aria-label="تبديل الوضع الليلي"
+                >
+                    {isDarkMode ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                    )}
+                </button>
 
 				<div className={`w-full max-w-md transition-all duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
 					{/* Logo */}
@@ -96,15 +119,15 @@ const ForgetPasswordPage = () => {
 					>
 						<Link to="/">
 							<img
-								src={coloredLogo}
+								src={isDarkMode ? whiteLogo : coloredLogo}
 								alt="النوران"
 								className="h-28 mx-auto mb-6 hover:scale-110 transition-transform duration-300"
 							/>
 						</Link>
-						<h1 className="text-3xl font-bold text-[#690000] mb-2">
+						<h1 className={`text-3xl font-bold mb-2 ${isDarkMode ? "text-white" : "text-[#690000]"}`}>
 							نسيت كلمة المرور؟
 						</h1>
-						<p className="text-gray-500">
+						<p className={isDarkMode ? "text-gray-400" : "text-gray-500"}>
 							أدخل بريدك الإلكتروني وسنرسل لك رمز التحقق
 						</p>
 					</div>
@@ -117,7 +140,7 @@ const ForgetPasswordPage = () => {
 								opacity: 0 
 							}}
 						>
-							<label className="block text-sm font-semibold text-gray-700 mb-2">
+							<label className={`block text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
 								البريد الإلكتروني
 							</label>
 							<div className="relative group">
@@ -132,7 +155,11 @@ const ForgetPasswordPage = () => {
 									onChange={(e) => setEmail(e.target.value)}
 									placeholder="example@email.com"
 									required
-									className="w-full pr-12 pl-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] focus:bg-white transition-all duration-300"
+									className={`w-full pr-12 pl-4 py-4 border rounded-xl placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] transition-all duration-300 ${
+                                        isDarkMode 
+                                            ? "bg-[#1a1a1a] border-white/10 text-white focus:bg-[#202020]" 
+                                            : "bg-gray-50 border-gray-200 text-gray-800 focus:bg-white"
+                                    }`}
 									dir="ltr"
 								/>
 							</div>
@@ -167,7 +194,7 @@ const ForgetPasswordPage = () => {
 
 					{/* Footer */}
 					<p 
-						className="text-center text-gray-600 mt-8"
+						className={`text-center mt-8 ${isDarkMode ? "text-gray-500" : "text-gray-600"}`}
 						style={{ 
 							animation: isVisible ? 'fade-in-up 0.6s ease-out 0.3s forwards' : 'none',
 							opacity: 0 
@@ -176,7 +203,7 @@ const ForgetPasswordPage = () => {
 						تذكرت كلمة المرور؟{" "}
 						<Link
 							to="/login"
-							className="text-[#690000] hover:text-[#8B0000] font-bold transition-colors hover:underline"
+							className={`font-bold transition-colors hover:underline ${isDarkMode ? "text-red-400 hover:text-red-300" : "text-[#690000] hover:text-[#8B0000]"}`}
 						>
 							تسجيل الدخول
 						</Link>

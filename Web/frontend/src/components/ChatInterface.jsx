@@ -42,6 +42,15 @@ const ChatInterface = ({ preselectedChatId }) => {
 				bgLight: "bg-[#D4AF37]/10",
 			};
 		}
+		if (userType === 'client') {
+			return {
+				primary: "bg-red-700",
+				primaryText: "text-red-700",
+				primaryHover: "hover:bg-red-800",
+				border: "border-red-700/30",
+				bgLight: "bg-red-700/10",
+			};
+		}
 		// Default Employee
 		return {
 			primary: "bg-[#1ba3b6]",
@@ -371,24 +380,20 @@ const ChatInterface = ({ preselectedChatId }) => {
 				? "bg-[#141419]/90 border-white/10 shadow-black/50" 
 				: "bg-white border-gray-200 shadow-xl"
 		}`}>
-			{userType === "employee" && (
-				<div className={`w-full md:w-1/3 lg:w-1/4 md:border-l ${isDarkMode ? "bg-black/20 border-white/5" : "bg-gray-50 border-gray-100"}`}>
-					<ChatList
-						users={formattedChats}
-						selectedUser={currentChatUser}
-						theme={isDarkMode ? 'dark' : 'light'}
-						accents={accents}
-						onSelectUser={(formattedChat) => {
-							const actualChat = chats.find((c) => c._id === formattedChat.id);
-							handleSelectChat(actualChat);
-						}}
-					/>
-				</div>
-			)}
+			<div className={`w-full md:w-1/3 lg:w-1/4 md:border-l ${isDarkMode ? "bg-black/20 border-white/5" : "bg-gray-50 border-gray-100"}`}>
+				<ChatList
+					users={formattedChats}
+					selectedUser={currentChatUser}
+					theme={isDarkMode ? 'dark' : 'light'}
+					accents={accents}
+					onSelectUser={(formattedChat) => {
+						const actualChat = chats.find((c) => c._id === formattedChat.id);
+						handleSelectChat(actualChat);
+					}}
+				/>
+			</div>
 			<div
-				className={`flex-1 flex flex-col ${
-					userType === "client" ? "w-full" : ""
-				} ${isDarkMode ? "bg-transparent" : "bg-white"}`}
+				className={`flex-1 flex flex-col w-full ${isDarkMode ? "bg-transparent" : "bg-white"}`}
 			>
 				{selectedChat && currentChatUser ? (
 					<ChatWindow

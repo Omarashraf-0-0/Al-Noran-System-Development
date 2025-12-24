@@ -6,11 +6,12 @@ import { useGoogleLogin } from "@react-oauth/google";
 import ReCAPTCHA from "react-google-recaptcha";
 import coloredLogo from "../assets/images/coloredLogo.svg";
 import whiteLogo from "../assets/images/white logo.svg";
-
+import { useTheme } from "../context/ThemeContext";
 
 const LoginPage = () => {
 	const navigate = useNavigate();
 	const recaptchaRef = useRef(null);
+    const { isDarkMode, toggleTheme } = useTheme();
 	const [isLoading, setIsLoading] = useState(false);
 	const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
@@ -230,11 +231,11 @@ const LoginPage = () => {
 			`}</style>
 
 			{/* Left Side - Form */}
-			<div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-16 bg-white overflow-hidden relative">
+			<div className={`w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-16 overflow-hidden relative transition-colors duration-300 ${isDarkMode ? "bg-[#0a0a0a]" : "bg-white"}`}>
 				{/* Back to Home Link */}
 				<Link 
 					to="/" 
-					className="absolute top-6 right-6 flex items-center gap-2 text-gray-500 hover:text-[#690000] transition-colors duration-300 group"
+					className={`absolute top-6 right-6 flex items-center gap-2 transition-colors duration-300 group ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-[#690000]"}`}
 					style={{ 
 						animation: isVisible ? 'fade-in-up 0.6s ease-out forwards' : 'none',
 						opacity: 0 
@@ -245,6 +246,27 @@ const LoginPage = () => {
 					</svg>
 					<span className="font-medium">الرئيسية</span>
 				</Link>
+
+                {/* Theme Toggle Button */}
+                <button
+                    onClick={toggleTheme}
+                    className={`absolute top-6 left-6 p-2 rounded-full transition-all duration-300 z-50 ${
+                        isDarkMode 
+                            ? "bg-white/10 text-yellow-400 hover:bg-white/20" 
+                            : "bg-gray-100 text-[#690000] hover:bg-gray-200"
+                    }`}
+                    aria-label="تبديل الوضع الليلي"
+                >
+                    {isDarkMode ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                    )}
+                </button>
 
 				<div className={`w-full max-w-md transition-all duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
 					{/* Logo */}
@@ -257,15 +279,15 @@ const LoginPage = () => {
 					>
 						<Link to="/">
 							<img
-								src={coloredLogo}
+								src={isDarkMode ? whiteLogo : coloredLogo}
 								alt="النوران"
 								className="h-28 mx-auto mb-6 hover:scale-110 transition-transform duration-300"
 							/>
 						</Link>
-						<h1 className="text-3xl font-bold text-[#690000] mb-2">
+						<h1 className={`text-3xl font-bold mb-2 ${isDarkMode ? "text-white" : "text-[#690000]"}`}>
 							مرحباً بك مجدداً
 						</h1>
-						<p className="text-gray-500">
+						<p className={isDarkMode ? "text-gray-400" : "text-gray-500"}>
 							سجل دخولك للوصول إلى حسابك
 						</p>
 					</div>
@@ -279,7 +301,7 @@ const LoginPage = () => {
 								opacity: 0 
 							}}
 						>
-							<label className="block text-sm font-semibold text-gray-700 mb-2">
+							<label className={`block text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
 								البريد الإلكتروني
 							</label>
 							<div className="relative group">
@@ -294,7 +316,11 @@ const LoginPage = () => {
 									onChange={handleInputChange("email")}
 									placeholder="example@email.com"
 									required
-									className="w-full pr-12 pl-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] focus:bg-white transition-all duration-300"
+									className={`w-full pr-12 pl-4 py-4 border rounded-xl placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] transition-all duration-300 ${
+                                        isDarkMode 
+                                            ? "bg-[#1a1a1a] border-white/10 text-white focus:bg-[#202020]" 
+                                            : "bg-gray-50 border-gray-200 text-gray-800 focus:bg-white"
+                                    }`}
 									dir="ltr"
 								/>
 							</div>
@@ -307,7 +333,7 @@ const LoginPage = () => {
 								opacity: 0 
 							}}
 						>
-							<label className="block text-sm font-semibold text-gray-700 mb-2">
+							<label className={`block text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
 								كلمة المرور
 							</label>
 							<div className="relative group">
@@ -322,7 +348,11 @@ const LoginPage = () => {
 									onChange={handleInputChange("password")}
 									placeholder="••••••••"
 									required
-									className="w-full pr-12 pl-12 py-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] focus:bg-white transition-all duration-300"
+									className={`w-full pr-12 pl-12 py-4 border rounded-xl placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] transition-all duration-300 ${
+                                        isDarkMode 
+                                            ? "bg-[#1a1a1a] border-white/10 text-white focus:bg-[#202020]" 
+                                            : "bg-gray-50 border-gray-200 text-gray-800 focus:bg-white"
+                                    }`}
 									dir="ltr"
 								/>
 								<button
@@ -354,7 +384,7 @@ const LoginPage = () => {
 						>
 							<Link
 								to="/forgetpassword"
-								className="text-sm text-[#690000] hover:text-[#8B0000] font-medium transition-colors hover:underline"
+								className={`text-sm font-medium transition-colors hover:underline ${isDarkMode ? "text-red-400 hover:text-red-300" : "text-[#690000] hover:text-[#8B0000]"}`}
 							>
 								نسيت كلمة المرور؟
 							</Link>
@@ -382,7 +412,7 @@ const LoginPage = () => {
 									setCaptchaToken(null);
 									toast.error('حدث خطأ في التحقق. يرجى المحاولة مرة أخرى');
 								}}
-								theme="light"
+								theme={isDarkMode ? "dark" : "light"}
 							/>
 						</div>
 						{/* Submit Button */}
@@ -424,10 +454,10 @@ const LoginPage = () => {
 						}}
 					>
 						<div className="absolute inset-0 flex items-center">
-							<div className="w-full border-t border-gray-200"></div>
+							<div className={`w-full border-t ${isDarkMode ? "border-white/10" : "border-gray-200"}`}></div>
 						</div>
 						<div className="relative flex justify-center text-sm">
-							<span className="px-4 bg-white text-gray-500">أو</span>
+							<span className={`px-4 ${isDarkMode ? "bg-[#0a0a0a] text-gray-500" : "bg-white text-gray-500"}`}>أو</span>
 						</div>
 					</div>
 
@@ -443,7 +473,9 @@ const LoginPage = () => {
 							type="button"
 							onClick={() => googleLogin()}
 							disabled={isGoogleLoading}
-							className="w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-[#690000]/30 transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed"
+							className={`w-full flex items-center justify-center gap-3 py-3.5 px-4 border rounded-xl transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed ${
+                                isDarkMode ? "border-white/10 hover:bg-white/5 bg-[#1a1a1a]" : "border-gray-200 hover:bg-gray-50 hover:border-[#690000]/30"
+                            }`}
 						>
 							{isGoogleLoading ? (
 								<>
@@ -458,7 +490,7 @@ const LoginPage = () => {
 									<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" onError={(e) => {
 										e.target.onerror = null;
 									}} />
-									<span className="text-gray-700 font-medium">المتابعة مع Google</span>
+									<span className={`font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>المتابعة مع Google</span>
 								</>
 							)}
 						</button>
@@ -466,7 +498,7 @@ const LoginPage = () => {
 
 					{/* Register Link */}
 					<p 
-						className="text-center text-gray-600 mt-8"
+						className={`text-center mt-8 ${isDarkMode ? "text-gray-500" : "text-gray-600"}`}
 						style={{ 
 							animation: isVisible ? 'fade-in-up 0.6s ease-out 0.7s forwards' : 'none',
 							opacity: 0 
@@ -475,7 +507,7 @@ const LoginPage = () => {
 						ليس لديك حساب؟{" "}
 						<Link
 							to="/register"
-							className="text-[#690000] hover:text-[#8B0000] font-bold transition-colors hover:underline"
+							className={`font-bold transition-colors hover:underline ${isDarkMode ? "text-red-400 hover:text-red-300" : "text-[#690000] hover:text-[#8B0000]"}`}
 						>
 							إنشاء حساب جديد
 						</Link>

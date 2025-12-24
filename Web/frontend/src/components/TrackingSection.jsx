@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import { useTheme } from "../context/ThemeContext";
 
 const TrackingSection = () => {
+    const { isDarkMode } = useTheme();
 	const [trackingNumber, setTrackingNumber] = useState("");
 	const [isTracking, setIsTracking] = useState(false);
 	const [trackingResult, setTrackingResult] = useState(null);
@@ -38,7 +40,7 @@ const TrackingSection = () => {
 	};
 
 	return (
-		<section id="tracking-section" className="py-24 bg-white relative overflow-hidden">
+		<section id="tracking-section" className={`py-24 relative overflow-hidden transition-colors duration-300 ${isDarkMode ? "bg-[#140a0a]" : "bg-white"}`}>
 			{/* Decorative background elements */}
 			<div className="absolute top-0 right-0 w-80 h-80 bg-[#690000]/5 rounded-full filter blur-3xl -translate-y-1/2 translate-x-1/3"></div>
 			<div className="absolute bottom-0 left-0 w-80 h-80 bg-[#1ba3b6]/5 rounded-full filter blur-3xl translate-y-1/2 -translate-x-1/3"></div>
@@ -52,24 +54,28 @@ const TrackingSection = () => {
 				<div className="max-w-4xl mx-auto">
 					{/* Header */}
 					<div className="text-center mb-12">
-						<span className="inline-block px-4 py-2 bg-[#1ba3b6]/10 text-[#1ba3b6] rounded-full text-sm font-bold mb-4">
+						<span className={`inline-block px-4 py-2 rounded-full text-sm font-bold mb-4 ${isDarkMode ? "bg-[#1ba3b6]/20 text-[#1ba3b6]" : "bg-[#1ba3b6]/10 text-[#1ba3b6]"}`}>
 							تتبع السفن البحرية
 						</span>
-						<h2 className="text-3xl md:text-5xl font-bold text-[#690000] mb-4">
+						<h2 className={`text-3xl md:text-5xl font-bold mb-4 ${isDarkMode ? "text-white" : "text-[#690000]"}`}>
 							تتبع شحنتك البحرية
 						</h2>
-						<p className="text-xl text-gray-500">
+						<p className={`text-xl ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
 							أدخل اسم السفينة لمعرفة موقعها والوقت المتوقع للوصول للموانئ المصرية
 						</p>
 					</div>
 
 					{/* Search Form */}
 					<form onSubmit={handleTrack} className="relative">
-						<div className="bg-white p-3 rounded-2xl shadow-2xl border border-gray-100 hover:border-[#1ba3b6]/30 transition-colors duration-300">
+						<div className={`p-3 rounded-2xl shadow-2xl border transition-colors duration-300 ${
+                            isDarkMode 
+                                ? "bg-[#1a1a1a] border-white/10 hover:border-[#1ba3b6]/30" 
+                                : "bg-white border-gray-100 hover:border-[#1ba3b6]/30"
+                        }`}>
 							<div className="flex flex-col sm:flex-row items-center gap-3">
 								{/* Search Icon */}
-								<div className="hidden sm:flex items-center justify-center w-14 h-14 bg-[#690000]/10 rounded-xl">
-									<svg className="w-6 h-6 text-[#690000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<div className={`hidden sm:flex items-center justify-center w-14 h-14 rounded-xl ${isDarkMode ? "bg-[#690000]/20" : "bg-[#690000]/10"}`}>
+									<svg className={`w-6 h-6 ${isDarkMode ? "text-red-400" : "text-[#690000]"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 									</svg>
 								</div>
@@ -80,17 +86,16 @@ const TrackingSection = () => {
 									value={trackingNumber}
 									onChange={(e) => setTrackingNumber(e.target.value)}
 									placeholder="ادخل اسم السفينة (مثال: EVER GIVEN)"
-									className="
+									className={`
 										flex-1 w-full px-6 py-4 
 										rounded-xl
 										focus:ring-2 focus:ring-[#1ba3b6] focus:outline-none
 										text-lg text-right
 										placeholder:text-gray-400
-										text-gray-800
-										bg-gray-50
 										border border-transparent
 										transition-all duration-300
-									"
+                                        ${isDarkMode ? "bg-[#0a0a0a] text-white" : "bg-gray-50 text-gray-800"}
+									`}
 									dir="rtl"
 								/>
 								
@@ -139,7 +144,9 @@ const TrackingSection = () => {
 
 					{/* Search Results */}
 					{trackingResult && (
-						<div className="mt-8 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden text-right animate-fade-in-up">
+						<div className={`mt-8 rounded-2xl shadow-lg border overflow-hidden text-right animate-fade-in-up ${
+                            isDarkMode ? "bg-[#1a1a1a] border-white/10" : "bg-white border-gray-100"
+                        }`}>
 							<div className="bg-gradient-to-r from-[#690000] to-[#8B0000] text-white p-6">
 								<div className="flex items-center justify-between">
 									<div>
@@ -157,16 +164,24 @@ const TrackingSection = () => {
 							<div className="p-6">
 								{/* Key Stats Grid */}
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-									<div className="bg-gradient-to-br from-red-50 to-red-100/50 p-6 rounded-xl border border-red-200/50 hover:shadow-md transition-all">
+									<div className={`p-6 rounded-xl border transition-all hover:shadow-md ${
+                                        isDarkMode 
+                                            ? "bg-red-900/10 border-red-900/20" 
+                                            : "bg-gradient-to-br from-red-50 to-red-100/50 border-red-200/50"
+                                    }`}>
 										<div className="flex items-center gap-3 mb-2">
 											<span className="text-2xl">📍</span>
 											<p className="text-gray-500 text-sm">آخر ميناء (Last Port)</p>
 										</div>
-										<p className="text-2xl font-bold text-[#690000]">
+										<p className={`text-2xl font-bold ${isDarkMode ? "text-red-400" : "text-[#690000]"}`}>
 											{trackingResult.lastPort}
 										</p>
 									</div>
-									<div className="bg-gradient-to-br from-teal-50 to-teal-100/50 p-6 rounded-xl border border-teal-200/50 hover:shadow-md transition-all">
+									<div className={`p-6 rounded-xl border transition-all hover:shadow-md ${
+                                        isDarkMode 
+                                            ? "bg-teal-900/10 border-teal-900/20" 
+                                            : "bg-gradient-to-br from-teal-50 to-teal-100/50 border-teal-200/50"
+                                    }`}>
 										<div className="flex items-center gap-3 mb-2">
 											<span className="text-2xl">⚡</span>
 											<p className="text-gray-500 text-sm">السرعة الحالية</p>
@@ -178,20 +193,22 @@ const TrackingSection = () => {
 								</div>
 
 								{/* ETA Table */}
-								<div className="flex justify-between items-center mb-4 border-b pb-3">
-									<h4 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+								<div className={`flex justify-between items-center mb-4 border-b pb-3 ${isDarkMode ? "border-white/10" : "border-gray-100"}`}>
+									<h4 className={`text-lg font-bold flex items-center gap-2 ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
 										<span>🇪🇬</span>
 										الوقت المتوقع للوصول للموانئ المصرية
 									</h4>
 									{trackingResult.calculationSource && (
-										<span className="text-xs text-gray-400 bg-gray-100 px-3 py-1.5 rounded-full border">
+										<span className={`text-xs px-3 py-1.5 rounded-full border ${
+                                            isDarkMode ? "text-gray-400 bg-white/5 border-white/10" : "text-gray-400 bg-gray-100"
+                                        }`}>
 											{trackingResult.calculationSource}
 										</span>
 									)}
 								</div>
-								<div className="overflow-x-auto rounded-xl border border-gray-100">
+								<div className={`overflow-x-auto rounded-xl border ${isDarkMode ? "border-white/5" : "border-gray-100"}`}>
 									<table className="w-full text-sm text-right">
-										<thead className="bg-gradient-to-r from-gray-50 to-gray-100 text-gray-600">
+										<thead className={isDarkMode ? "bg-white/5 text-gray-300" : "bg-gradient-to-r from-gray-50 to-gray-100 text-gray-600"}>
 											<tr>
 												<th className="px-4 py-4 font-bold">الميناء</th>
 												<th className="px-4 py-4 font-bold">المسافة (ميل بحري)</th>
@@ -199,10 +216,10 @@ const TrackingSection = () => {
 												<th className="px-4 py-4 font-bold">الوقت (أيام)</th>
 											</tr>
 										</thead>
-										<tbody className="divide-y divide-gray-100">
+										<tbody className={`divide-y ${isDarkMode ? "divide-white/5" : "divide-gray-100"}`}>
 											{trackingResult.etaToEgypt.map((port, index) => (
-												<tr key={index} className="hover:bg-[#1ba3b6]/5 transition-colors">
-													<td className="px-4 py-4 font-medium text-gray-800">
+												<tr key={index} className={`transition-colors ${isDarkMode ? "hover:bg-white/5" : "hover:bg-[#1ba3b6]/5"}`}>
+													<td className={`px-4 py-4 font-medium ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>
 														{port.portName}
 													</td>
 													<td className="px-4 py-4 text-gray-600">
@@ -220,7 +237,9 @@ const TrackingSection = () => {
 									</table>
 								</div>
 
-								<div className="mt-6 text-xs text-center text-gray-400 bg-gray-50 p-4 rounded-xl">
+								<div className={`mt-6 text-xs text-center p-4 rounded-xl ${
+                                    isDarkMode ? "bg-white/5 text-gray-500" : "bg-gray-50 text-gray-400"
+                                }`}>
 									* التقديرات بناءً على الموقع الحالي والسرعة المتوسطة. قد تختلف الأوقات الفعلية.
 									<br />
 									<a href={trackingResult.url} target="_blank" rel="noopener noreferrer" className="text-[#1ba3b6] hover:text-[#158a9a] underline mt-2 inline-flex items-center gap-1">
@@ -241,10 +260,14 @@ const TrackingSection = () => {
 							{ icon: "📍", title: "الموقع الحالي", desc: "معرفة آخر ميناء زارته السفينة" },
 							{ icon: "⏱️", title: "وقت الوصول", desc: "تقدير الوقت للموانئ المصرية" },
 						].map((item, index) => (
-							<div key={index} className="flex items-center gap-4 p-5 bg-white rounded-xl border border-gray-100 hover:border-[#1ba3b6]/30 hover:shadow-lg transition-all duration-300 group">
+							<div key={index} className={`flex items-center gap-4 p-5 rounded-xl border transition-all duration-300 group ${
+                                isDarkMode 
+                                    ? "bg-[#1a1a1a] border-white/5 hover:border-[#1ba3b6]/30" 
+                                    : "bg-white border-gray-100 hover:border-[#1ba3b6]/30 hover:shadow-lg"
+                            }`}>
 								<span className="text-3xl group-hover:scale-110 transition-transform">{item.icon}</span>
 								<div>
-									<h4 className="font-bold text-gray-800">{item.title}</h4>
+									<h4 className={`font-bold ${isDarkMode ? "text-white" : "text-gray-800"}`}>{item.title}</h4>
 									<p className="text-sm text-gray-500">{item.desc}</p>
 								</div>
 							</div>

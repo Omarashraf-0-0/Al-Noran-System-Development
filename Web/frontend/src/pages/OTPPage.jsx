@@ -4,10 +4,12 @@ import { toast } from "react-hot-toast";
 import axios from "axios";
 import coloredLogo from "../assets/images/coloredLogo.svg";
 import whiteLogo from "../assets/images/white logo.svg";
+import { useTheme } from "../context/ThemeContext";
 
 const OTPPage = () => {
 	const location = useLocation();
 	const navigate = useNavigate();
+    const { isDarkMode, toggleTheme } = useTheme();
 	const email = location.state?.email || "";
 
 	const [otp, setOtp] = useState(["", "", "", "", ""]); // 5 digits
@@ -95,6 +97,7 @@ const OTPPage = () => {
 		try {
 			await axios.post(`${import.meta.env.VITE_API_URL}/api/otp/forgotPassword`, {
 				email,
+				otp: otpString,
 			});
 			toast.success("تم إرسال رمز جديد");
 			setResendTimer(60);
@@ -134,11 +137,11 @@ const OTPPage = () => {
 			`}</style>
 
 			{/* Left Side - Form */}
-			<div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-16 bg-white overflow-hidden relative">
+			<div className={`w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-16 overflow-hidden relative transition-colors duration-300 ${isDarkMode ? "bg-[#0a0a0a]" : "bg-white"}`}>
 				{/* Back Link */}
 				<Link 
 					to="/forgetpassword" 
-					className="absolute top-6 right-6 flex items-center gap-2 text-gray-500 hover:text-[#690000] transition-colors duration-300 group"
+					className={`absolute top-6 right-6 flex items-center gap-2 transition-colors duration-300 group ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-[#690000]"}`}
 					style={{ 
 						animation: isVisible ? 'fade-in-up 0.6s ease-out forwards' : 'none',
 						opacity: 0 
@@ -149,6 +152,27 @@ const OTPPage = () => {
 					</svg>
 					<span className="font-medium">العودة</span>
 				</Link>
+
+                {/* Theme Toggle Button */}
+                <button
+                    onClick={toggleTheme}
+                    className={`absolute top-6 left-6 p-2 rounded-full transition-all duration-300 z-50 ${
+                        isDarkMode 
+                            ? "bg-white/10 text-yellow-400 hover:bg-white/20" 
+                            : "bg-gray-100 text-[#690000] hover:bg-gray-200"
+                    }`}
+                    aria-label="تبديل الوضع الليلي"
+                >
+                    {isDarkMode ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                    )}
+                </button>
 
 				<div className={`w-full max-w-md transition-all duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
 					{/* Logo */}
@@ -161,15 +185,15 @@ const OTPPage = () => {
 					>
 						<Link to="/">
 							<img
-								src={coloredLogo}
+								src={isDarkMode ? whiteLogo : coloredLogo}
 								alt="النوران"
 								className="h-28 mx-auto mb-6 hover:scale-110 transition-transform duration-300"
 							/>
 						</Link>
-						<h1 className="text-3xl font-bold text-[#690000] mb-2">
+						<h1 className={`text-3xl font-bold mb-2 ${isDarkMode ? "text-white" : "text-[#690000]"}`}>
 							أدخل رمز التحقق
 						</h1>
-						<p className="text-gray-500">
+						<p className={isDarkMode ? "text-gray-400" : "text-gray-500"}>
 							تم إرسال رمز مكون من 5 أرقام إلى
 						</p>
 						<p className="text-[#690000] font-semibold mt-1" dir="ltr">
@@ -198,7 +222,11 @@ const OTPPage = () => {
 									onChange={(e) => handleChange(index, e.target.value.replace(/\D/g, ""))}
 									onKeyDown={(e) => handleKeyDown(index, e)}
 									onPaste={handlePaste}
-									className="w-14 h-16 md:w-16 md:h-20 text-center text-3xl font-bold bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] focus:bg-white transition-all duration-300"
+									className={`w-14 h-16 md:w-16 md:h-20 text-center text-3xl font-bold border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#690000]/20 focus:border-[#690000] transition-all duration-300 ${
+                                        isDarkMode 
+                                            ? "bg-[#1a1a1a] border-white/10 text-white focus:bg-[#202020]" 
+                                            : "bg-gray-50 border-gray-200 text-gray-800 focus:bg-white"
+                                    }`}
 								/>
 							))}
 						</div>
@@ -239,7 +267,7 @@ const OTPPage = () => {
 						}}
 					>
 						{resendTimer > 0 ? (
-							<p className="text-gray-500">
+							<p className={isDarkMode ? "text-gray-400" : "text-gray-500"}>
 								إعادة الإرسال بعد <span className="text-[#690000] font-bold">{resendTimer}</span> ثانية
 							</p>
 						) : (

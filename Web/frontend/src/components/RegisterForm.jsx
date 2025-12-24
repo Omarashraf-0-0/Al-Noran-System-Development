@@ -5,8 +5,10 @@ import Button from "./Button";
 import FieldRow from "./FieldRow";
 import { Link } from "react-router";
 import { isValidEgyptianNationalId } from "../utils/validationUtils";
+import { useTheme } from "../context/ThemeContext";
 
 const RegisterForm = ({ onSubmit }) => {
+    const { isDarkMode } = useTheme();
 	const [formData, setFormData] = React.useState({
 		fullname: "",
 		email: "",
@@ -65,7 +67,7 @@ const RegisterForm = ({ onSubmit }) => {
 	return (
 		<div className="w-full">
 			<Spacer size="md" />
-			<h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-center text-[#690000]">
+			<h2 className={`text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-center ${isDarkMode ? "text-white" : "text-[#690000]"}`}>
 				إنشاء حساب
 			</h2>
 			<Spacer size="xl" />
@@ -142,7 +144,7 @@ const RegisterForm = ({ onSubmit }) => {
 
 				{/* نوع الحساب */}
 				<div className="mb-4">
-					<label className="block text-[#690000] text-sm sm:text-base font-bold mb-3 text-right">
+					<label className={`block text-sm sm:text-base font-bold mb-3 text-right ${isDarkMode ? "text-gray-300" : "text-[#690000]"}`}>
 						نوع الحساب <span className="text-red-600 mr-1">*</span>
 					</label>
 					<div className="flex flex-col sm:flex-row gap-4">
@@ -154,12 +156,12 @@ const RegisterForm = ({ onSubmit }) => {
 								value="personal"
 								checked={formData.type === "personal"}
 								onChange={handleInputChange("type")}
-								className="ml-2 w-4 h-4 text-[#690000] focus:ring-[#690000]"
+								className={`ml-2 w-4 h-4 focus:ring-[#690000] ${isDarkMode ? "text-red-500 bg-gray-700 border-gray-600" : "text-[#690000]"}`}
 								required
 							/>
 							<label
 								htmlFor="personal"
-								className="text-sm sm:text-base text-[#690000] cursor-pointer"
+								className={`text-sm sm:text-base cursor-pointer ${isDarkMode ? "text-gray-300" : "text-[#690000]"}`}
 							>
 								شخصي
 							</label>
@@ -173,12 +175,12 @@ const RegisterForm = ({ onSubmit }) => {
 								value="commercial"
 								checked={formData.type === "commercial"}
 								onChange={handleInputChange("type")}
-								className="ml-2 w-4 h-4 text-[#690000] focus:ring-[#690000]"
+								className={`ml-2 w-4 h-4 focus:ring-[#690000] ${isDarkMode ? "text-red-500 bg-gray-700 border-gray-600" : "text-[#690000]"}`}
 								required
 							/>
 							<label
 								htmlFor="commercial"
-								className="text-sm sm:text-base text-[#690000] cursor-pointer"
+								className={`text-sm sm:text-base cursor-pointer ${isDarkMode ? "text-gray-300" : "text-[#690000]"}`}
 							>
 								تجاري
 							</label>
@@ -192,12 +194,12 @@ const RegisterForm = ({ onSubmit }) => {
 								value="factory"
 								checked={formData.type === "factory"}
 								onChange={handleInputChange("type")}
-								className="ml-2 w-4 h-4 text-[#690000] focus:ring-[#690000]"
+								className={`ml-2 w-4 h-4 focus:ring-[#690000] ${isDarkMode ? "text-red-500 bg-gray-700 border-gray-600" : "text-[#690000]"}`}
 								required
 							/>
 							<label
 								htmlFor="factory"
-								className="text-sm sm:text-base text-[#690000] cursor-pointer"
+								className={`text-sm sm:text-base cursor-pointer ${isDarkMode ? "text-gray-300" : "text-[#690000]"}`}
 							>
 								مصنع
 							</label>
@@ -231,17 +233,17 @@ const RegisterForm = ({ onSubmit }) => {
 						name="terms"
 						checked={formData.terms}
 						onChange={handleCheckboxChange("terms")}
-						className="ml-2 mt-1 w-4 h-4 text-[#690000] focus:ring-[#690000] rounded"
+						className={`ml-2 mt-1 w-4 h-4 focus:ring-[#690000] rounded ${isDarkMode ? "text-red-500 bg-gray-700 border-gray-600" : "text-[#690000]"}`}
 						required
 					/>
 					<label
 						htmlFor="terms"
 						className="text-sm sm:text-base text-right cursor-pointer"
 					>
-						<span className="text-[#690000]">أوافق على</span>{" "}
+						<span className={isDarkMode ? "text-gray-300" : "text-[#690000]"}>أوافق على</span>{" "}
 						<a
 							href="/terms"
-							className="text-[#690000] underline hover:text-[#690000]/70"
+							className={`underline hover:opacity-70 ${isDarkMode ? "text-red-400" : "text-[#690000]"}`}
 							target="_blank"
 							rel="noopener noreferrer"
 						>
@@ -264,7 +266,7 @@ const RegisterForm = ({ onSubmit }) => {
 						<p className="text-sm sm:text-base">
 							<Link
 								to="/login"
-								className="text-[#690000] underline hover:text-[#690000]/70"
+								className={`underline hover:opacity-70 ${isDarkMode ? "text-red-400" : "text-[#690000]"}`}
 							>
 								لديك حساب بالفعل؟ تسجيل الدخول
 							</Link>

@@ -25,7 +25,9 @@ import {
   BarChart3,
   Ship,
   ClipboardList,
-  Hash
+  Hash,
+  Sun,
+  Moon
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import NotificationBell from "./NotificationBell";
@@ -264,14 +266,15 @@ const Header = () => {
 				{ label: "رفع المستندات", path: "/upload-documents", icon: FileText },
 				{ label: "إدارة المدفوعات", path: "/client-payments", icon: CreditCard },
 				{ label: "الأرشيف", path: "/client-archive", icon: Archive },
-				{ label: "الدعم", path: "/chat", icon: MessageCircle },
+				{ label: "الدعم", path: "/client-support", icon: MessageCircle },
 			];
 		}
 
 		// Employee Navigation (Base links for all employees)
+		// Employee Navigation (Base links for all employees)
 		if (user.type === "employee" || user.type === "admin") {
 			const employeeLinks = [
-				{ label: "الرئيسية", path: "/employeedashboard", icon: "📊" },
+				{ label: "الرئيسية", path: "/employeedashboard", icon: LayoutDashboard },
 				// Import Section
 				{
 					label: "الاستيراد",
@@ -309,14 +312,14 @@ const Header = () => {
 				{
 					label: "الإدارة",
 					path: "/admin",
-					icon: "🛠️",
+					icon: Settings,
 					isDropdown: true,
 					dropdownItems: [
-						{ label: "الموظفين", path: "/employeemanagement", icon: "👔" },
-						{ label: "العملاء", path: "/customermanagement", icon: "👥" },
-						{ label: "التقارير", path: "/admindashboard", icon: "📈" },
+						{ label: "الموظفين", path: "/employeemanagement", icon: User },
+						{ label: "العملاء", path: "/customermanagement", icon: Users },
+						{ label: "التقارير", path: "/admindashboard", icon: BarChart3 },
 						...(user.type === "admin" || user.employeeDetails?.employeeType === "System Admin" 
-							? [{ label: "الإعدادات", path: "/settings", icon: "⚙️" }] 
+							? [{ label: "الإعدادات", path: "/settings", icon: Settings }] 
 							: [])
 					]
 				}
@@ -459,7 +462,7 @@ const Header = () => {
 										className="flex items-center gap-2 hover:opacity-90 focus:outline-none transition-opacity bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full border border-white/10"
 									>
 										<img
-											src={account_circle}
+											src={profilePhoto || account_circle}
 											alt="User Account"
 											className="h-8 w-8 rounded-full object-cover ring-2 ring-white/30"
 										/>
@@ -474,7 +477,7 @@ const Header = () => {
 											<div className={`p-5 ${theme.headerBg} border-b ${theme.divider}`}>
 												<div className="flex items-center gap-3 mb-3">
 													<img
-														src={account_circle}
+														src={profilePhoto || account_circle}
 														alt="User"
 														className="h-12 w-12 rounded-full object-cover ring-2 ring-white shadow-md"
 													/>
@@ -493,10 +496,10 @@ const Header = () => {
 											<div className="py-2">
 												<Link
 													to="/profile"
-													className={`flex items-center gap-3 px-5 py-3 text-sm ${theme.dropdownText} ${theme.dropdownHover} transition-colors`}
+													className={`flex items-center gap-3 px-5 py-3 text-sm ${theme.dropdownText} ${theme.dropdownHover} transition-colors group`}
 													onClick={() => setIsProfileMenuOpen(false)}
 												>
-													<span className="text-xl">👤</span>
+													<User className="w-5 h-5 text-gray-400 group-hover:text-current transition-colors" />
 													الملف الشخصي
 												</Link>
 												
@@ -504,18 +507,22 @@ const Header = () => {
 												
 												<button
 													onClick={toggleTheme}
-													className={`w-full text-right flex items-center gap-3 px-5 py-3 text-sm ${theme.dropdownText} ${theme.dropdownHover} transition-colors`}
+													className={`w-full text-right flex items-center gap-3 px-5 py-3 text-sm ${theme.dropdownText} ${theme.dropdownHover} transition-colors group`}
 												>
-													<span className="text-xl">{isDarkMode ? "☀️" : "🌙"}</span>
+													{isDarkMode ? (
+														<Sun className="w-5 h-5 text-gray-400 group-hover:text-yellow-500 transition-colors" />
+													) : (
+														<Moon className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
+													)}
 													{isDarkMode ? "الوضع النهاري" : "الوضع الليلي"}
 												</button>
 												<div className={`h-px ${theme.divider} my-1 mx-4`}></div>
 												
 												<button
 													onClick={handleLogout}
-													className="w-full text-right flex items-center gap-3 px-5 py-3 text-sm text-red-600 hover:bg-red-500/10 transition-colors font-medium"
+													className="w-full text-right flex items-center gap-3 px-5 py-3 text-sm text-red-600 hover:bg-red-500/10 transition-colors font-medium group"
 												>
-													<span className="text-xl">🚪</span>
+													<LogOut className="w-5 h-5 text-red-500 group-hover:text-red-700 transition-colors" />
 													تسجيل الخروج
 												</button>
 											</div>
@@ -560,34 +567,36 @@ const Header = () => {
 														openDropdown === item.label ? null : item.label
 													)
 												}
-												className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-1 whitespace-nowrap ${
+												className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 whitespace-nowrap ${
 													item.dropdownItems?.some((sub) =>
 														isActivePath(sub.path)
 													)
-														? "bg-white/20 text-white font-bold shadow-sm"
+														? "bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/20"
 														: "text-white/90 hover:bg-white/10 hover:text-white"
 												}`}
 											>
-												<item.icon className={`w-4 h-4 transition-colors ${item.dropdownItems?.some(sub => isActivePath(sub.path)) ? "text-white" : "text-gray-400 group-hover:text-[#690000]"}`} />
+												<item.icon className={`w-4 h-4 transition-colors ${item.dropdownItems?.some(sub => isActivePath(sub.path)) ? "text-white" : "text-white/80"}`} />
 												<span>{item.label}</span>
 												<ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${openDropdown === item.label ? "rotate-180" : ""}`} />
 											</button>
 
 											{/* Floating Glass Dropdown Menu */}
 											{openDropdown === item.label && (
-												<div className="absolute top-full right-0 mt-2 w-56 bg-white/95 backdrop-blur-2xl rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-gray-100/50 p-1.5 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
+												<div className={`absolute top-full right-0 mt-3 w-64 ${theme.dropdownBg} backdrop-blur-2xl rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border ${isDarkMode ? 'border-white/10' : 'border-white/50'} p-2 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 ring-1 ring-black/5`}>
 													{item.dropdownItems?.map((subItem, subIndex) => (
 														<Link
 															key={subIndex}
 															to={subItem.path}
 															onClick={() => setOpenDropdown(null)}
-															className={`group flex items-center px-4 py-3 text-sm transition-all duration-200 ${
+															className={`group flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all duration-200 mb-1 last:mb-0 ${
 																isActivePath(subItem.path)
-																	? `${accent.bg} ${accent.text} font-bold border-r-4 ${accent.border}`
+																	? `${accent.bg} ${accent.text} font-bold shadow-sm ring-1 ring-inset ${isDarkMode ? 'ring-white/10' : 'ring-black/5'}`
 																	: `${theme.dropdownText} ${theme.dropdownHover}`
 															}`}
 														>
-															<subItem.icon className={`w-4 h-4 ${isActivePath(subItem.path) ? "text-white" : "text-gray-400"}`} />
+															<span className={`p-1.5 rounded-lg transition-colors ${isActivePath(subItem.path) ? "bg-white/20" : "bg-gray-100/50 dark:bg-white/5 group-hover:bg-white/20"}`}>
+																<subItem.icon className={`w-4 h-4 ${isActivePath(subItem.path) ? accent.text : "text-gray-500 dark:text-gray-400"}`} />
+															</span>
 															{subItem.label}
 														</Link>
 													))}
@@ -599,19 +608,19 @@ const Header = () => {
 										<Link
 											key={index}
 											to={item.path}
-											className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+											className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 whitespace-nowrap flex items-center gap-2 ${
 												isActivePath(item.path)
-													? "bg-white/20 text-white font-bold shadow-sm"
+													? "bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/20"
 													: "text-white/90 hover:bg-white/10 hover:text-white"
 											}`}
 										>
-											<item.icon className={`w-4 h-4 transition-colors ${isActivePath(item.path) ? "text-white" : "text-gray-400 group-hover:text-[#690000]"}`} />
+											<item.icon className={`w-4 h-4 transition-colors ${isActivePath(item.path) ? "text-white" : "text-white/80"}`} />
 											{item.label}
 										</Link>
 									)
 								)}
-						</div>
-					</nav>
+							</div>
+						</nav>
 					</div>
 
 

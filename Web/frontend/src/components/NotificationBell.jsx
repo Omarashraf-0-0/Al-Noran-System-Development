@@ -3,6 +3,22 @@ import { toast } from "react-hot-toast";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
+import { 
+	Bell, 
+	PackagePlus, 
+	Truck, 
+	MapPin, 
+	CheckCircle2, 
+	FileText, 
+	FileCheck, 
+	FileX, 
+	Hash, 
+	Stamp, 
+	ClipboardList, 
+	CreditCard, 
+	MessageCircle, 
+	Megaphone 
+} from "lucide-react";
 import axios from "axios";
 
 const NotificationBell = () => {
@@ -103,14 +119,45 @@ const NotificationBell = () => {
 	
 	const accent = getAccentColors();
 
+	// Dynamic theme based on user type
+	const getThemeColors = () => {
+		const role = user?.type || 'client';
+		const emType = user?.employeeDetails?.employeeType;
+		
+		if (role === 'admin' || (role === 'employee' && emType === 'System Admin')) {
+			return {
+				dropdownBg: isDarkMode ? "bg-[#1a1500] border-[#3d3000]" : "bg-white border-amber-100",
+				headerBg: isDarkMode ? "bg-[#2b2000] border-[#3d3000]" : "bg-amber-50 border-amber-100",
+				hoverBg: isDarkMode ? "hover:bg-[#2b2500]" : "hover:bg-amber-50",
+				unreadBg: isDarkMode ? "bg-[#3d3000]/50" : "bg-amber-50/50",
+			};
+		}
+		if (role === 'employee') {
+			return {
+				dropdownBg: isDarkMode ? "bg-[#0a1a1f] border-[#163a42]" : "bg-white border-cyan-100",
+				headerBg: isDarkMode ? "bg-[#0f2830] border-[#163a42]" : "bg-cyan-50 border-cyan-100",
+				hoverBg: isDarkMode ? "hover:bg-[#0f2830]" : "hover:bg-cyan-50",
+				unreadBg: isDarkMode ? "bg-[#163a42]/50" : "bg-cyan-50/50",
+			};
+		}
+		return {
+			dropdownBg: isDarkMode ? "bg-[#1a1010] border-[#3d1a1a]" : "bg-white border-red-100",
+			headerBg: isDarkMode ? "bg-[#2b0000] border-[#3d1a1a]" : "bg-red-50 border-red-100",
+			hoverBg: isDarkMode ? "hover:bg-[#2b1515]" : "hover:bg-red-50",
+			unreadBg: isDarkMode ? "bg-[#3d1a1a]/50" : "bg-red-50/50",
+		};
+	};
+	
+	const themeColors = getThemeColors();
+
 	const theme = {
-		dropdownBg: isDarkMode ? "bg-[#1a1010] border-[#3d1a1a]" : "bg-white border-gray-200",
-		headerBg: isDarkMode ? "bg-[#2b0000] border-[#3d1a1a]" : "bg-gray-50 border-gray-200",
+		dropdownBg: themeColors.dropdownBg,
+		headerBg: themeColors.headerBg,
 		textMain: isDarkMode ? "text-gray-100" : "text-gray-800",
 		textSub: isDarkMode ? "text-gray-400" : "text-gray-600",
-		hoverBg: isDarkMode ? "hover:bg-[#2b1515]" : "hover:bg-gray-50",
-		unreadBg: isDarkMode ? "bg-[#3d1a1a]" : "bg-blue-50",
-		divider: isDarkMode ? "divide-[#3d1a1a] border-[#3d1a1a]" : "divide-gray-100 border-gray-200",
+		hoverBg: themeColors.hoverBg,
+		unreadBg: themeColors.unreadBg,
+		divider: isDarkMode ? "divide-white/5 border-white/5" : "divide-gray-100 border-gray-200",
 	};
 
 	// Fetch notifications from API
@@ -299,44 +346,49 @@ const NotificationBell = () => {
 
 			{/* Dropdown */}
 			{showDropdown && (
-				<div className={`absolute top-full right-0 mt-2 w-80 rounded-xl shadow-xl border z-50 max-h-[30rem] flex flex-col ${theme.dropdownBg} origin-top-right animate-fade-in-up`}>
+				<div className={`absolute top-full right-0 mt-3 w-80 md:w-96 rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border z-50 max-h-[30rem] flex flex-col ${theme.dropdownBg} backdrop-blur-2xl ring-1 ring-black/5 origin-top-right animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200`}>
 					{/* Header */}
-					<div className={`p-4 border-b flex justify-between items-center ${theme.headerBg}`}>
+					<div className={`p-4 border-b flex justify-between items-center ${theme.headerBg} rounded-t-2xl`}>
 						<div className="flex items-center gap-2">
 							<h3 className={`font-bold ${theme.textMain}`}>الإشعارات</h3>
 							{unreadCount > 0 && (
-								<span className={`${accent.bgLight} ${accent.main} text-xs px-2 py-0.5 rounded-full font-bold`}>
+								<span className={`${accent.bgLight} ${accent.main} text-xs px-2.5 py-0.5 rounded-full font-bold ring-1 ring-inset ring-current/10`}>
 									{unreadCount} غير مقروء
 								</span>
 							)}
 						</div>
 						<button
 							onClick={markAllAsRead}
-							className="text-xs text-blue-500 hover:text-blue-600 font-medium transition-colors"
+							className="text-xs text-blue-500 hover:text-blue-600 font-bold transition-colors px-2 py-1 rounded-lg hover:bg-blue-50"
 						>
 							تمييز الكل كمقروء
 						</button>
 					</div>
 
 					{/* Notification List */}
-					<div className="overflow-y-auto flex-1 custom-scrollbar">
+					<div className="overflow-y-auto flex-1 custom-scrollbar scroll-smooth">
 						{loading ? (
 							<div className="p-8 text-center">
 								<div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${accent.spinner} mx-auto`}></div>
-								<p className={`mt-2 ${theme.textSub}`}>جاري التحميل...</p>
+								<p className={`mt-2 ${theme.textSub} font-medium`}>جاري التحميل...</p>
 							</div>
 						) : notifications.length === 0 ? (
-							<div className="p-8 text-center">
-								<p className={theme.textSub}>لا توجد إشعارات حالياً</p>
+							<div className="p-12 text-center flex flex-col items-center justify-center">
+								<div className={`w-16 h-16 rounded-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} flex items-center justify-center mb-3`}>
+									<Bell className={`w-8 h-8 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+								</div>
+								<p className={`${theme.textSub} font-medium`}>لا توجد إشعارات حالياً</p>
 							</div>
 						) : (
-							<div className={`divide-y ${theme.divider}`}>
+							<div className="divide-y divide-gray-100 dark:divide-white/5">
 								{notifications.map((notif) => (
 									<div
 										key={notif._id}
 										onClick={() => handleNotificationClick(notif._id)}
-										className={`p-4 cursor-pointer transition flex items-start gap-3 ${
-											notif.read ? `bg-transparent ${theme.hoverBg}` : `${theme.unreadBg}`
+										className={`p-4 cursor-pointer transition-all duration-200 flex items-start gap-4 group ${
+											notif.read 
+												? `bg-transparent hover:bg-gray-50/50 dark:hover:bg-white/5` 
+												: `${isDarkMode ? 'bg-gradient-to-r from-[#3d1a1a]/40 to-transparent' : 'bg-blue-50/50'} hover:bg-opacity-100`
 										}`}
 									>
 										<span className="text-2xl mt-1 shrink-0">
@@ -380,26 +432,27 @@ const NotificationBell = () => {
 	);
 };
 
-// Helper function to get icon based on notification type
+// Helper to get icon component
 const getNotificationIcon = (type) => {
+	const iconProps = { className: "w-6 h-6" };
 	const icons = {
-		shipment_created: "📦",
-		shipment_status_changed: "🚚",
-		shipment_arrived: "✅",
-		shipment_completed: "🎉",
-		document_uploaded: "📄",
-		document_approved: "✅",
-		document_rejected: "❌",
-		acid_created: "🆔",
-		acid_issued: "✅",
-		ucr_created: "📋",
-		ucr_approved: "✅",
-		payment_reminder: "💰",
-		payment_received: "✅",
-		chat_message: "💬",
-		general: "📢",
+		shipment_created: <PackagePlus {...iconProps} className="w-6 h-6 text-blue-500" />,
+		shipment_status_changed: <Truck {...iconProps} className="w-6 h-6 text-orange-500" />,
+		shipment_arrived: <MapPin {...iconProps} className="w-6 h-6 text-green-500" />,
+		shipment_completed: <CheckCircle2 {...iconProps} className="w-6 h-6 text-green-600" />,
+		document_uploaded: <FileText {...iconProps} className="w-6 h-6 text-purple-500" />,
+		document_approved: <FileCheck {...iconProps} className="w-6 h-6 text-green-500" />,
+		document_rejected: <FileX {...iconProps} className="w-6 h-6 text-red-500" />,
+		acid_created: <Hash {...iconProps} className="w-6 h-6 text-indigo-500" />,
+		acid_issued: <Stamp {...iconProps} className="w-6 h-6 text-teal-500" />,
+		ucr_created: <ClipboardList {...iconProps} className="w-6 h-6 text-blue-400" />,
+		ucr_approved: <FileCheck {...iconProps} className="w-6 h-6 text-green-500" />,
+		payment_reminder: <CreditCard {...iconProps} className="w-6 h-6 text-yellow-500" />,
+		payment_received: <CheckCircle2 {...iconProps} className="w-6 h-6 text-green-500" />,
+		chat_message: <MessageCircle {...iconProps} className="w-6 h-6 text-pink-500" />,
+		general: <Megaphone {...iconProps} className="w-6 h-6 text-gray-500" />,
 	};
-	return icons[type] || "📢";
+	return icons[type] || <Bell {...iconProps} className="w-6 h-6 text-gray-400" />;
 };
 
 // Helper function to format time

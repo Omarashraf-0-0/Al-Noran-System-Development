@@ -6,7 +6,11 @@ import TrackingSection from "../components/TrackingSection";
 import ClientOpinions from "../components/ClientOpinions";
 import Footer from "../components/Footer";
 
+import { useTheme } from "../context/ThemeContext";
+
 const LandingPage = () => {
+	const { isDarkMode } = useTheme();
+
 	const handleSearchClick = () => {
 		// Scroll to tracking section
 		const trackingSection = document.getElementById("tracking-section");
@@ -16,7 +20,7 @@ const LandingPage = () => {
 	};
 
 	return (
-		<div className="min-h-screen" dir="rtl">
+		<div className={`min-h-screen ${isDarkMode ? "bg-[#0a0a0a]" : "bg-white"}`} dir="rtl">
 			<Navbar
 				showAuth={true}
 				showSearch={true}
