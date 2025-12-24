@@ -164,10 +164,10 @@ const updateAcidStatus = async (req, res) => {
 
 		// If updating shipment fields, only employees can do it
 		if (hasShipment !== undefined || shipmentId || shipmentCreatedAt) {
-			if (userType !== "employee") {
+			if (userType !== "employee" && userType !== "admin") {
 				return res.status(403).json({
 					success: false,
-					message: "Only employees can update shipment information",
+					message: "Only employees and admins can update shipment information",
 				});
 			}
 			// Allow employee to update shipment fields
@@ -263,10 +263,10 @@ const getAllRequestsForEmployee = async (req, res) => {
 	try {
 		// Check if user is employee (check both userType and type for compatibility)
 		const userType = req.user.userType || req.user.type;
-		if (userType !== "employee") {
+		if (userType !== "employee" && userType !== "admin") {
 			return res.status(403).json({
 				success: false,
-				message: "Access denied. Employees only.",
+				message: "Access denied. Employees and Admins only.",
 			});
 		}
 
@@ -340,10 +340,10 @@ const updateAcidStatusByEmployee = async (req, res) => {
 		// Check if user is employee (check both userType and type for compatibility)
 		const userType = req.user.userType || req.user.type;
 		console.log(`📝 [updateAcidStatusByEmployee] User Type: ${userType}`);
-		if (userType !== "employee") {
+		if (userType !== "employee" && userType !== "admin") {
 			return res.status(403).json({
 				success: false,
-				message: "Access denied. Employees only.",
+				message: "Access denied. Employees and Admins only.",
 			});
 		}
 
@@ -470,6 +470,7 @@ const deleteAcidRequest = async (req, res) => {
 		// Allow deletion by employee or by the user who created it
 		if (
 			userType === "employee" ||
+			userType === "admin" ||
 			request.userId.toString() === req.user._id.toString()
 		) {
 			await AcidRequest.findByIdAndDelete(id);
