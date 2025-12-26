@@ -3,17 +3,21 @@ package noran.desktop.Controllers;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
 import noran.desktop.Database.MongoConnection;
+import noran.desktop.Utils.ComboBoxStyler;
 import noran.desktop.models.Shipment;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
+import java.net.URL;
 import java.util.Date;
+import java.util.ResourceBundle;
 import java.util.function.Function;
 
-public class ImportShipmentPopupController {
+public class ImportShipmentPopupController implements Initializable {
 
     @FXML
     private TextField acidField;
@@ -54,6 +58,12 @@ public class ImportShipmentPopupController {
     private String shipmentId;
     private String userId;
     private String employeeId;
+
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+        // Apply consistent ComboBox styling
+        ComboBoxStyler.style(statusCombo);
+    }
 
     /**
      * Load an existing import shipment into the form for editing

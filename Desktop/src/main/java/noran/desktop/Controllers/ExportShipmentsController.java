@@ -269,7 +269,7 @@ public class ExportShipmentsController {
             stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
             stage.getIcons().add(
                     new javafx.scene.image.Image(getClass().getResourceAsStream("/noran/desktop/images/Logo.png")));
-            stage.setScene(new javafx.scene.Scene(root, 420, 650));
+            stage.setScene(new javafx.scene.Scene(root, 560, 750));
             stage.setTitle(
                     export.getId() == null || export.getId().isEmpty() ? "إضافة شحنة تصدير" : "تعديل شحنة التصدير");
             stage.showAndWait();

@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import javafx.collections.*?>
-<?import javafx.geometry.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.image.*?>
-<?import javafx.scene.layout.*?>
+<?import java.lang.String?>
+<?import javafx.collections.FXCollections?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
 
-<VBox alignment="CENTER" prefHeight="580.0" prefWidth="440.0" spacing="16" 
-      style="-fx-background-color: white; -fx-background-radius: 24; -fx-border-radius: 24; -fx-border-color: #e9ecef; -fx-border-width: 1;" 
-      xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" 
-      fx:controller="noran.desktop.Controllers.ShipmentPopupController">
+<VBox alignment="CENTER" prefHeight="580.0" prefWidth="440.0" spacing="16" style="-fx-background-color: white; -fx-background-radius: 24; -fx-border-radius: 24; -fx-border-color: #e9ecef; -fx-border-width: 1;" xmlns="http://javafx.com/javafx/20.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.ShipmentPopupController">
     <padding>
-        <Insets top="32" right="36" bottom="32" left="36"/>
+        <Insets bottom="32" left="36" right="36" top="32" />
     </padding>
 
     <!-- Illustration -->
@@ -23,27 +25,21 @@
     </ImageView>
 
     <!-- Title -->
-    <Label style="-fx-font-family: 'Segoe UI'; -fx-font-size: 22px; -fx-font-weight: 700; -fx-text-fill: #690000;" text="إضافة / تعديل شحنة" />
+    <Label style="-fx-font-family: 'Segoe UI'; -fx-font-size: 22px; -fx-font-weight: 700; -fx-text-fill: #690000;" text=" تعديل شحنة" />
 
     <!-- Form Fields -->
-    <VBox spacing="12" style="-fx-padding: 8 0;" nodeOrientation="RIGHT_TO_LEFT">
-        <ComboBox fx:id="clientCombo" nodeOrientation="RIGHT_TO_LEFT" prefWidth="370.0" promptText="اختر العميل" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 8 12; -fx-font-size: 15px; -fx-font-weight: 600;" />
+    <VBox nodeOrientation="RIGHT_TO_LEFT" spacing="12" style="-fx-padding: 8 0;">
+        <ComboBox fx:id="clientCombo" nodeOrientation="RIGHT_TO_LEFT" prefWidth="370.0" promptText="اختر العميل" />
 
-        <TextField fx:id="acidField" alignment="CENTER_RIGHT" promptText="ACID" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
+        <TextField fx:id="acidField" promptText="ACID" style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
         
-        <TextField fx:id="portField" alignment="CENTER_RIGHT" promptText="اسم الميناء" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
+        <TextField fx:id="portField" promptText="اسم الميناء" style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
         
-        <TextField fx:id="countryField" alignment="CENTER_RIGHT" promptText="الدولة" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
+        <TextField fx:id="countryField" promptText="الدولة" style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
         
-        <TextField fx:id="containersField" alignment="CENTER_RIGHT" promptText="عدد الحاويات" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
+        <TextField fx:id="containersField" promptText="عدد الحاويات" style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
 
-        <ComboBox fx:id="statusCombo" nodeOrientation="RIGHT_TO_LEFT" prefWidth="370.0" promptText="الحالة" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 8 12; -fx-font-size: 15px;">
+        <ComboBox fx:id="statusCombo" nodeOrientation="RIGHT_TO_LEFT" prefWidth="370.0" promptText="الحالة">
             <items>
                 <FXCollections fx:factory="observableArrayList">
                     <String fx:value="Pending" />
@@ -57,17 +53,12 @@
             </items>
         </ComboBox>
 
-        <TextField fx:id="policyField" alignment="CENTER_RIGHT" promptText="رقم البوليصة / ملاحظات" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
+        <TextField fx:id="policyField" promptText="رقم البوليصة / ملاحظات" style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
     </VBox>
 
     <!-- Buttons -->
     <HBox alignment="CENTER" spacing="16" style="-fx-padding: 16 0 0 0;">
-        <Button onAction="#cancel" prefWidth="120" prefHeight="46"
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-text-fill: #495057; -fx-font-size: 15px; -fx-font-weight: 600; -fx-cursor: hand;" 
-            text="إلغاء" />
-        <Button onAction="#save" prefWidth="120" prefHeight="46"
-            style="-fx-background-color: linear-gradient(to bottom, #c41e1e, #a40000, #7a0000); -fx-background-radius: 14; -fx-text-fill: white; -fx-font-size: 15px; -fx-font-weight: 700; -fx-cursor: hand;" 
-            text="حفظ" />
+        <Button onAction="#cancel" prefHeight="46" prefWidth="120" style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-text-fill: #495057; -fx-font-size: 15px; -fx-font-weight: 600; -fx-cursor: hand;" text="إلغاء" />
+        <Button onAction="#save" prefHeight="46" prefWidth="120" style="-fx-background-color: linear-gradient(to bottom, #c41e1e, #a40000, #7a0000); -fx-background-radius: 14; -fx-text-fill: white; -fx-font-size: 15px; -fx-font-weight: 700; -fx-cursor: hand;" text="حفظ" />
     </HBox>
 </VBox>

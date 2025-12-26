@@ -1,27 +1,44 @@
 package noran.desktop.Controllers;
 
 import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
+import noran.desktop.Utils.ComboBoxStyler;
 import noran.desktop.models.Client;
+
+import java.net.URL;
+import java.util.ResourceBundle;
 import java.util.function.Function;
 
-public class ClientPopupController {
+public class ClientPopupController implements Initializable {
 
-    @FXML private TextField fullnameField;
-    @FXML private TextField emailField;
-    @FXML private TextField ssnField;
-    @FXML private TextField phoneField;
-    @FXML private TextField passwordField;
-    @FXML private ComboBox<String> clientTypeField;
+    @FXML
+    private TextField fullnameField;
+    @FXML
+    private TextField emailField;
+    @FXML
+    private TextField ssnField;
+    @FXML
+    private TextField phoneField;
+    @FXML
+    private TextField passwordField;
+    @FXML
+    private ComboBox<String> clientTypeField;
 
     private Client originalClient;
     private boolean saved = false;
 
     // Handler function: Takes a Client, returns Boolean (Success/Fail)
     private Function<Client, Boolean> saveHandler;
+
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+        // Apply consistent ComboBox styling
+        ComboBoxStyler.style(clientTypeField);
+    }
 
     public void setSaveHandler(Function<Client, Boolean> saveHandler) {
         this.saveHandler = saveHandler;
@@ -34,7 +51,10 @@ public class ClientPopupController {
         emailField.setText(client.getEmail());
         ssnField.setText(client.getSsn());
         phoneField.setText(client.getPhone());
-        clientTypeField.setValue(client.getClientType());
+        // Only set value if not null/empty, otherwise let prompt text show
+        if (client.getClientType() != null && !client.getClientType().isEmpty()) {
+            clientTypeField.setValue(client.getClientType());
+        }
         passwordField.setText(client.getPassword() != null ? client.getPassword() : "");
     }
 
@@ -78,7 +98,9 @@ public class ClientPopupController {
         close();
     }
 
-    public boolean isSaved() { return saved; }
+    public boolean isSaved() {
+        return saved;
+    }
 
     private void close() {
         Stage stage = (Stage) fullnameField.getScene().getWindow();

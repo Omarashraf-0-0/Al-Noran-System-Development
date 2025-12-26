@@ -55,6 +55,7 @@ import com.itextpdf.layout.properties.UnitValue;
 // Internal Imports
 import noran.desktop.AppSession;
 import noran.desktop.Database.MongoConnection;
+import noran.desktop.Utils.ComboBoxStyler;
 
 import java.io.File;
 import java.io.IOException;
@@ -108,7 +109,7 @@ public class AdminInvoicesController {
         statusFilter.setValue("الكل");
         statusFilter.setItems(FXCollections.observableArrayList("الكل", "في انتظار الموافقة", "مقبولة", "مرفوضة"));
         statusFilter.valueProperty().addListener((obs, old, newVal) -> refreshTable());
-        styleComboBox(statusFilter);
+        ComboBoxStyler.style(statusFilter);
 
         // Setup filtered list for search
         filteredData = new javafx.collections.transformation.FilteredList<>(invoicesList, p -> true);
@@ -125,52 +126,6 @@ public class AdminInvoicesController {
         if (sidebarController != null)
             sidebarController.setActivePage("invoice completion");
         setupTopBar();
-    }
-
-    // Helper method to style ComboBox with modern look
-    private void styleComboBox(ComboBox<?> comboBox) {
-        String defaultStyle = "-fx-background-color: white; " +
-                "-fx-border-color: #d1d5db; " +
-                "-fx-border-radius: 8; " +
-                "-fx-background-radius: 8; " +
-                "-fx-padding: 6 12; " +
-                "-fx-font-size: 14px; " +
-                "-fx-cursor: hand;";
-
-        String focusedStyle = "-fx-background-color: white; " +
-                "-fx-border-color: #1ba3b6; " +
-                "-fx-border-width: 2; " +
-                "-fx-border-radius: 8; " +
-                "-fx-background-radius: 8; " +
-                "-fx-padding: 6 12; " +
-                "-fx-font-size: 14px; " +
-                "-fx-cursor: hand; " +
-                "-fx-effect: dropshadow(gaussian, rgba(27, 163, 182, 0.25), 8, 0, 0, 2);";
-
-        comboBox.setStyle(defaultStyle);
-
-        comboBox.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
-            comboBox.setStyle(isFocused ? focusedStyle : defaultStyle);
-        });
-
-        comboBox.setOnMouseEntered(e -> {
-            if (!comboBox.isFocused()) {
-                comboBox.setStyle(
-                        "-fx-background-color: white; " +
-                                "-fx-border-color: #1ba3b6; " +
-                                "-fx-border-radius: 8; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-padding: 6 12; " +
-                                "-fx-font-size: 14px; " +
-                                "-fx-cursor: hand;");
-            }
-        });
-
-        comboBox.setOnMouseExited(e -> {
-            if (!comboBox.isFocused()) {
-                comboBox.setStyle(defaultStyle);
-            }
-        });
     }
 
     private void setupTopBar() {

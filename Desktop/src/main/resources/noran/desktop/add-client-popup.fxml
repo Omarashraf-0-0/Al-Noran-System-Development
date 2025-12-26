@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import javafx.collections.*?>
-<?import javafx.geometry.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.image.*?>
-<?import javafx.scene.layout.*?>
+<?import java.lang.String?>
+<?import javafx.collections.FXCollections?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
 
-<VBox alignment="CENTER" prefHeight="620.0" prefWidth="420.0" spacing="20" 
-      style="-fx-background-color: white; -fx-background-radius: 24; -fx-border-radius: 24; -fx-border-color: #e9ecef; -fx-border-width: 1;" 
-      xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" 
-      fx:controller="noran.desktop.Controllers.ClientPopupController">
+<VBox alignment="CENTER" prefHeight="620.0" prefWidth="420.0" spacing="20" style="-fx-background-color: white; -fx-background-radius: 24; -fx-border-radius: 24; -fx-border-color: #e9ecef; -fx-border-width: 1;" xmlns="http://javafx.com/javafx/20.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="noran.desktop.Controllers.ClientPopupController">
     <padding>
-        <Insets top="36" right="40" bottom="36" left="40"/>
+        <Insets bottom="36" left="40" right="40" top="36" />
     </padding>
 
     <!-- Logo -->
@@ -26,21 +28,16 @@
     <Label style="-fx-font-family: 'Segoe UI'; -fx-font-size: 24px; -fx-font-weight: 700; -fx-text-fill: #690000;" text="إضافة عميل جديد" />
 
     <!-- Form Fields -->
-    <VBox spacing="14" style="-fx-padding: 10 0;" nodeOrientation="RIGHT_TO_LEFT">
-        <TextField fx:id="fullnameField" alignment="CENTER_RIGHT" promptText="اسم العميل" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
+    <VBox nodeOrientation="RIGHT_TO_LEFT" spacing="14" style="-fx-padding: 10 0;">
+        <TextField fx:id="fullnameField" promptText="اسم العميل" style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
 
-        <TextField fx:id="passwordField" alignment="CENTER_RIGHT" promptText="كلمة السر" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
+        <TextField fx:id="passwordField" promptText="كلمة السر" style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
 
-        <TextField fx:id="phoneField" alignment="CENTER_RIGHT" promptText="رقم الهاتف" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
+        <TextField fx:id="phoneField" promptText="رقم الهاتف" style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
 
-        <TextField fx:id="ssnField" alignment="CENTER_RIGHT" promptText="الرقم التعريفي / الرقم القومي" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
+        <TextField fx:id="ssnField" promptText="الرقم التعريفي / الرقم القومي" style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
 
-        <ComboBox fx:id="clientTypeField" editable="false" nodeOrientation="RIGHT_TO_LEFT" prefWidth="340.0" promptText="نوع العميل" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 8 12; -fx-font-size: 15px;">
+        <ComboBox fx:id="clientTypeField" editable="false" nodeOrientation="RIGHT_TO_LEFT" prefWidth="340.0" promptText="نوع العميل">
             <items>
                 <FXCollections fx:factory="observableArrayList">
                     <String fx:value="personal" />
@@ -49,17 +46,12 @@
             </items>
         </ComboBox>
 
-        <TextField fx:id="emailField" alignment="CENTER_RIGHT" promptText="البريد الإلكتروني" 
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
+        <TextField fx:id="emailField" promptText="البريد الإلكتروني" style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-padding: 14 18; -fx-font-size: 15px; -fx-prompt-text-fill: #adb5bd;" />
     </VBox>
 
     <!-- Buttons -->
     <HBox alignment="CENTER" spacing="16" style="-fx-padding: 16 0 0 0;">
-        <Button onAction="#cancel" prefWidth="130" prefHeight="48"
-            style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-text-fill: #495057; -fx-font-size: 16px; -fx-font-weight: 600; -fx-cursor: hand;" 
-            text="إلغاء" />
-        <Button onAction="#save" prefWidth="130" prefHeight="48"
-            style="-fx-background-color: linear-gradient(to bottom, #c41e1e, #a40000, #7a0000); -fx-background-radius: 14; -fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: 700; -fx-cursor: hand;" 
-            text="إضافة" />
+        <Button onAction="#cancel" prefHeight="48" prefWidth="130" style="-fx-background-color: #f8f9fa; -fx-background-radius: 14; -fx-border-color: #e9ecef; -fx-border-radius: 14; -fx-border-width: 2; -fx-text-fill: #495057; -fx-font-size: 16px; -fx-font-weight: 600; -fx-cursor: hand;" text="إلغاء" />
+        <Button onAction="#save" prefHeight="48" prefWidth="130" style="-fx-background-color: linear-gradient(to bottom, #c41e1e, #a40000, #7a0000); -fx-background-radius: 14; -fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: 700; -fx-cursor: hand;" text="إضافة" />
     </HBox>
 </VBox>

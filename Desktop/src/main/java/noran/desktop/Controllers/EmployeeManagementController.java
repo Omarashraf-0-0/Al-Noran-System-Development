@@ -26,6 +26,7 @@ import javafx.stage.Stage;
 import javafx.scene.layout.VBox;
 import noran.desktop.AppSession;
 import noran.desktop.Database.MongoConnection;
+import noran.desktop.Utils.ComboBoxStyler;
 import noran.desktop.models.Employee;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -104,7 +105,7 @@ public class EmployeeManagementController {
                     "الكل", "مدخل بيانات", "موظف عمليات", "موظف مالي", "مسؤول"));
             employeeTypeFilter.setValue("الكل");
             employeeTypeFilter.valueProperty().addListener((obs, old, newVal) -> applyFilters());
-            styleComboBox(employeeTypeFilter);
+            ComboBoxStyler.style(employeeTypeFilter);
         }
 
         // Initialize Employee Status Filter
@@ -112,55 +113,8 @@ public class EmployeeManagementController {
             employeeStatusFilter.setItems(FXCollections.observableArrayList("الكل", "نشط", "مجمد"));
             employeeStatusFilter.setValue("الكل");
             employeeStatusFilter.valueProperty().addListener((obs, old, newVal) -> applyFilters());
-            styleComboBox(employeeStatusFilter);
+            ComboBoxStyler.style(employeeStatusFilter);
         }
-    }
-
-    // Helper method to style ComboBox with modern look
-    private void styleComboBox(javafx.scene.control.ComboBox<?> comboBox) {
-        String defaultStyle = "-fx-background-color: white; " +
-                "-fx-border-color: #d1d5db; " +
-                "-fx-border-radius: 8; " +
-                "-fx-background-radius: 8; " +
-                "-fx-padding: 6 12; " +
-                "-fx-font-size: 14px; " +
-                "-fx-cursor: hand;";
-
-        String focusedStyle = "-fx-background-color: white; " +
-                "-fx-border-color: #1ba3b6; " +
-                "-fx-border-width: 2; " +
-                "-fx-border-radius: 8; " +
-                "-fx-background-radius: 8; " +
-                "-fx-padding: 6 12; " +
-                "-fx-font-size: 14px; " +
-                "-fx-cursor: hand; " +
-                "-fx-effect: dropshadow(gaussian, rgba(27, 163, 182, 0.25), 8, 0, 0, 2);";
-
-        comboBox.setStyle(defaultStyle);
-
-        comboBox.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
-            comboBox.setStyle(isFocused ? focusedStyle : defaultStyle);
-        });
-
-        // Also style on hover
-        comboBox.setOnMouseEntered(e -> {
-            if (!comboBox.isFocused()) {
-                comboBox.setStyle(
-                        "-fx-background-color: white; " +
-                                "-fx-border-color: #1ba3b6; " +
-                                "-fx-border-radius: 8; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-padding: 6 12; " +
-                                "-fx-font-size: 14px; " +
-                                "-fx-cursor: hand;");
-            }
-        });
-
-        comboBox.setOnMouseExited(e -> {
-            if (!comboBox.isFocused()) {
-                comboBox.setStyle(defaultStyle);
-            }
-        });
     }
 
     private void applyFilters() {
@@ -448,7 +402,7 @@ public class EmployeeManagementController {
     private void setupTopBar() {
         User currentUser = AppSession.getInstance().getCurrentUser();
         if (topBarController != null) {
-            topBarController.setPageTitle("إدارة الصلاحيات");
+            topBarController.setPageTitle("إدارة الموظفين");
             topBarController.setSidebar(sidebar);
             topBarController.setSearchPlaceholder("البحث بالاسم، الهاتف، أو الإيميل...");
             if (currentUser != null) {

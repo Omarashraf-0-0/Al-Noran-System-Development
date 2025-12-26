@@ -32,6 +32,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import noran.desktop.AppSession;
 import noran.desktop.Database.MongoDirectConnection;
+import noran.desktop.Utils.ComboBoxStyler;
 import org.bson.types.ObjectId;
 
 import java.io.File;
@@ -239,39 +240,8 @@ public class AdminAddInvoiceController {
         currencyBox.setValue("EGP");
         currencyBox.setPrefWidth(Double.MAX_VALUE);
         currencyBox.setPrefHeight(45);
-        currencyBox.setStyle(
-                "-fx-background-color: white; " +
-                        "-fx-border-color: #d1d5db; " +
-                        "-fx-border-radius: 10; " +
-                        "-fx-background-radius: 10; " +
-                        "-fx-padding: 8 12; " +
-                        "-fx-font-size: 14px; " +
-                        "-fx-cursor: hand;");
-
-        // Add focus styling for ComboBox
-        currencyBox.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
-            if (isFocused) {
-                currencyBox.setStyle(
-                        "-fx-background-color: white; " +
-                                "-fx-border-color: #1ba3b6; " +
-                                "-fx-border-width: 2; " +
-                                "-fx-border-radius: 10; " +
-                                "-fx-background-radius: 10; " +
-                                "-fx-padding: 8 12; " +
-                                "-fx-font-size: 14px; " +
-                                "-fx-cursor: hand; " +
-                                "-fx-effect: dropshadow(gaussian, rgba(27, 163, 182, 0.25), 8, 0, 0, 2);");
-            } else {
-                currencyBox.setStyle(
-                        "-fx-background-color: white; " +
-                                "-fx-border-color: #d1d5db; " +
-                                "-fx-border-radius: 10; " +
-                                "-fx-background-radius: 10; " +
-                                "-fx-padding: 8 12; " +
-                                "-fx-font-size: 14px; " +
-                                "-fx-cursor: hand;");
-            }
-        });
+        // Apply consistent styling using utility
+        ComboBoxStyler.style(currencyBox);
 
         // Currency container with label
         VBox currencyContainer = new VBox(8);

@@ -1,25 +1,41 @@
 package noran.desktop.Controllers;
 
 import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
+import noran.desktop.Utils.ComboBoxStyler;
 import noran.desktop.models.Employee;
+
+import java.net.URL;
+import java.util.ResourceBundle;
 import java.util.function.Function;
 
-public class EmployeePopupController {
+public class EmployeePopupController implements Initializable {
 
-    @FXML private TextField fullnameField;
-    @FXML private TextField emailField;
-    @FXML private TextField phoneField;
-    @FXML private TextField passwordField;
-    @FXML private ComboBox<String> jobTypeField;
+    @FXML
+    private TextField fullnameField;
+    @FXML
+    private TextField emailField;
+    @FXML
+    private TextField phoneField;
+    @FXML
+    private TextField passwordField;
+    @FXML
+    private ComboBox<String> jobTypeField;
 
     private Employee originalEmployee;
     private boolean saved = false;
 
     // Function that takes an Employee and returns Boolean (Success/Fail)
     private Function<Employee, Boolean> saveHandler;
+
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+        // Apply consistent ComboBox styling
+        ComboBoxStyler.style(jobTypeField);
+    }
 
     public void setSaveHandler(Function<Employee, Boolean> saveHandler) {
         this.saveHandler = saveHandler;
@@ -31,7 +47,10 @@ public class EmployeePopupController {
         emailField.setText(emp.getEmail());
         phoneField.setText(emp.getPhone());
         passwordField.setText(emp.getPassword());
-        jobTypeField.setValue(emp.getJobType());
+        // Only set value if not null/empty, otherwise let prompt text show
+        if (emp.getJobType() != null && !emp.getJobType().isEmpty()) {
+            jobTypeField.setValue(emp.getJobType());
+        }
     }
 
     @FXML
@@ -57,7 +76,8 @@ public class EmployeePopupController {
                 saved = true;
                 close();
             }
-            // If success is false, we DO NOT close. The alert is shown by the main controller.
+            // If success is false, we DO NOT close. The alert is shown by the main
+            // controller.
         }
     }
 
@@ -67,7 +87,9 @@ public class EmployeePopupController {
         close();
     }
 
-    public boolean isSaved() { return saved; }
+    public boolean isSaved() {
+        return saved;
+    }
 
     private void close() {
         Stage stage = (Stage) fullnameField.getScene().getWindow();
