@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import Header from "../components/Header";
@@ -7,6 +7,8 @@ import Cropper from "react-easy-crop";
 
 const ClientProfilePage = () => {
     const navigate = useNavigate();
+    const { clientId } = useParams(); // Get clientId from URL if admin is viewing a client
+    const [isViewingOtherUser, setIsViewingOtherUser] = useState(false); // Track if admin is viewing another user
     const [user, setUser] = useState(null);
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -49,7 +51,7 @@ const ClientProfilePage = () => {
     useEffect(() => {
         fetchUserProfile();
         fetchDocuments();
-    }, []);
+    }, [clientId]);
 
     // Block navigation if there are unsaved changes
     useEffect(() => {
@@ -72,29 +74,37 @@ const ClientProfilePage = () => {
                 return;
             }
 
-            const response = await axios.get(
-                `${import.meta.env.VITE_API_URL}/api/users/profile`,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            );
+            // If clientId exists in URL params, fetch that specific user (admin viewing client)
+            // Otherwise, fetch the logged-in user's own profile
+            const apiUrl = clientId
+                ? `${import.meta.env.VITE_API_URL}/api/users/${clientId}/profile`
+                : `${import.meta.env.VITE_API_URL}/api/users/profile`;
 
-            console.log("👤 User profile data:", response.data.user);
-            console.log("📸 Profile photo from DB:", response.data.user.profilePhoto);
+            const response = await axios.get(apiUrl, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
 
-            setUser(response.data.user);
-            const userData = {
-                fullname: response.data.user.fullname || "",
-                username: response.data.user.username || "",
-                phone: response.data.user.phone || "",
-                email: response.data.user.email || "",
+            // Set flag if admin is viewing another user
+            setIsViewingOtherUser(!!clientId);
+
+            // API returns different structure for /api/users/:id/profile vs /api/users/profile
+            const userData = clientId ? response.data.client : response.data.user;
+            console.log("👤 User profile data:", userData);
+            console.log("📸 Profile photo from DB:", userData?.profilePhoto);
+
+            setUser(userData);
+            const formDataValues = {
+                fullname: userData?.fullname || "",
+                username: userData?.username || "",
+                phone: userData?.phone || "",
+                email: userData?.email || "",
             };
-            setFormData(userData);
-            setOriginalFormData(userData);
+            setFormData(formDataValues);
+            setOriginalFormData(formDataValues);
             setHasUnsavedChanges(false);
             // Fetch profile photo if exists
-            if (response.data.user.profilePhoto) {
-                const photoKey = response.data.user.profilePhoto;
+            if (userData?.profilePhoto) {
+                const photoKey = userData.profilePhoto;
                 console.log("📸 Profile photo key:", photoKey);
 
                 // If it's an S3 key, get presigned URL
@@ -102,8 +112,7 @@ const ClientProfilePage = () => {
                     console.log("🔑 Getting presigned URL for S3 key...");
                     try {
                         const photoResponse = await axios.get(
-                            `${
-                                import.meta.env.VITE_API_URL
+                            `${import.meta.env.VITE_API_URL
                             }/api/uploads/presigned-url/${encodeURIComponent(photoKey)}`,
                             {
                                 headers: { Authorization: `Bearer ${token}` },
@@ -677,8 +686,8 @@ const ClientProfilePage = () => {
                                                 {uploadingPhoto
                                                     ? "جاري الرفع..."
                                                     : profilePhoto
-                                                    ? "تغيير الصورة"
-                                                    : "إضافة صورة"}
+                                                        ? "تغيير الصورة"
+                                                        : "إضافة صورة"}
                                             </label>
 
                                             {profilePhoto && (
@@ -713,9 +722,8 @@ const ClientProfilePage = () => {
                                                 value={formData.fullname}
                                                 onChange={handleInputChange}
                                                 readOnly={!isEditing}
-                                                className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg text-right ${
-                                                    isEditing ? "bg-white" : "bg-gray-50"
-                                                } text-gray-700`}
+                                                className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg text-right ${isEditing ? "bg-white" : "bg-gray-50"
+                                                    } text-gray-700`}
                                             />
                                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                                                 <svg
@@ -746,9 +754,8 @@ const ClientProfilePage = () => {
                                                 value={formData.username}
                                                 onChange={handleInputChange}
                                                 readOnly={!isEditing}
-                                                className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg text-right ${
-                                                    isEditing ? "bg-white" : "bg-gray-50"
-                                                } text-gray-700`}
+                                                className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg text-right ${isEditing ? "bg-white" : "bg-gray-50"
+                                                    } text-gray-700`}
                                             />
                                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                                                 <svg
@@ -780,9 +787,8 @@ const ClientProfilePage = () => {
                                                 value={formData.email}
                                                 onChange={handleInputChange}
                                                 readOnly={!isEditing}
-                                                className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg text-right ${
-                                                    isEditing ? "bg-white" : "bg-gray-50"
-                                                } text-gray-700`}
+                                                className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg text-right ${isEditing ? "bg-white" : "bg-gray-50"
+                                                    } text-gray-700`}
                                             />
                                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                                                 <svg
@@ -813,9 +819,8 @@ const ClientProfilePage = () => {
                                                 value={formData.phone}
                                                 onChange={handleInputChange}
                                                 readOnly={!isEditing}
-                                                className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg text-right ${
-                                                    isEditing ? "bg-white" : "bg-gray-50"
-                                                } text-gray-700`}
+                                                className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg text-right ${isEditing ? "bg-white" : "bg-gray-50"
+                                                    } text-gray-700`}
                                             />
                                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                                                 <svg
@@ -906,11 +911,10 @@ const ClientProfilePage = () => {
                                             <button
                                                 onClick={handleSave}
                                                 disabled={!hasUnsavedChanges}
-                                                className={`px-6 py-2.5 text-white rounded-lg transition-all duration-300 font-semibold text-sm flex items-center gap-2 ${
-                                                    hasUnsavedChanges
-                                                        ? "shadow-lg shadow-cyan-500/50 ring-2 ring-cyan-400 animate-pulse"
-                                                        : "opacity-50 cursor-not-allowed"
-                                                }`}
+                                                className={`px-6 py-2.5 text-white rounded-lg transition-all duration-300 font-semibold text-sm flex items-center gap-2 ${hasUnsavedChanges
+                                                    ? "shadow-lg shadow-cyan-500/50 ring-2 ring-cyan-400 animate-pulse"
+                                                    : "opacity-50 cursor-not-allowed"
+                                                    }`}
                                                 style={{ backgroundColor: "#1BA3B6" }}
                                                 onMouseEnter={(e) =>
                                                     hasUnsavedChanges &&
@@ -1007,8 +1011,8 @@ const ClientProfilePage = () => {
                                                                 <p className="text-sm text-gray-500">
                                                                     {hasDocument
                                                                         ? `بتاريخ ${new Date(
-                                                                                doc.uploadedAt
-                                                                          ).toLocaleDateString("ar-EG")}`
+                                                                            doc.uploadedAt
+                                                                        ).toLocaleDateString("ar-EG")}`
                                                                         : "لم يتم الرفع بعد"}
                                                                 </p>
                                                             </div>
@@ -1034,12 +1038,12 @@ const ClientProfilePage = () => {
                                                                             className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
                                                                             style={{ backgroundColor: "#1BA3B6" }}
                                                                             onMouseEnter={(e) =>
-                                                                                (e.target.style.backgroundColor =
-                                                                                    "#158A9A")
+                                                                            (e.target.style.backgroundColor =
+                                                                                "#158A9A")
                                                                             }
                                                                             onMouseLeave={(e) =>
-                                                                                (e.target.style.backgroundColor =
-                                                                                    "#1BA3B6")
+                                                                            (e.target.style.backgroundColor =
+                                                                                "#1BA3B6")
                                                                             }
                                                                         >
                                                                             عرض الملف
@@ -1069,9 +1073,8 @@ const ClientProfilePage = () => {
                                                     {/* Progress bar */}
                                                     <div className="h-1 bg-gray-200">
                                                         <div
-                                                            className={`h-full transition-all duration-300 ${
-                                                                hasDocument ? "bg-green-500" : "bg-red-500"
-                                                            }`}
+                                                            className={`h-full transition-all duration-300 ${hasDocument ? "bg-green-500" : "bg-red-500"
+                                                                }`}
                                                             style={{ width: hasDocument ? "100%" : "0%" }}
                                                         />
                                                     </div>

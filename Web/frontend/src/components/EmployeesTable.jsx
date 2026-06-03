@@ -1,6 +1,7 @@
 import React from "react";
 import { useTheme } from "../context/ThemeContext";
-import { Eye, Trash2, Ban, Unlock, ChevronUp, ChevronDown } from "lucide-react";
+import { Eye, Trash2, Ban, Unlock, ChevronUp, ChevronDown, FileText } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const EmployeesTable = ({
 	employees,
@@ -34,7 +35,7 @@ const EmployeesTable = ({
 
 	// Sortable Header Component
 	const SortHeader = ({ label, sortKey, canSort = true }) => (
-		<th 
+		<th
 			className={`py-4 px-4 font-bold ${theme.headerText} whitespace-nowrap transition-colors ${canSort ? "cursor-pointer hover:opacity-80 select-none" : ""}`}
 			onClick={() => canSort && onSort && onSort(sortKey)}
 		>
@@ -80,9 +81,8 @@ const EmployeesTable = ({
 								<td className="py-4 px-4 font-bold">{emp.name}</td>
 								<td className="py-4 px-4 opacity-90 font-mono text-sm">{emp.username}</td>
 								<td className="py-4 px-4">
-									<span className={`px-2 py-1 rounded text-xs font-bold ${
-										isDarkMode ? "bg-[#1BA3B6]/20 text-[#1BA3B6]" : "bg-blue-50 text-blue-700 border border-blue-100"
-									}`}>
+									<span className={`px-2 py-1 rounded text-xs font-bold ${isDarkMode ? "bg-[#1BA3B6]/20 text-[#1BA3B6]" : "bg-blue-50 text-blue-700 border border-blue-100"
+										}`}>
 										{getEmployeeTypeLabel(emp.employeeType)}
 									</span>
 								</td>
@@ -110,14 +110,21 @@ const EmployeesTable = ({
 										>
 											<Eye className="w-5 h-5" />
 										</button>
-										
+
+										<Link
+											to={`/employee/${emp.id}`}
+											className="bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-white p-2 rounded-lg transition-all shadow-sm group"
+											title="ملف الموظف"
+										>
+											<FileText className="w-5 h-5" />
+										</Link>
+
 										<button
 											onClick={() => onSuspend(emp)}
-											className={`p-2 rounded-lg transition-all shadow-sm group ${
-												emp.suspended
-													? "bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white"
-													: "bg-orange-500/10 text-orange-600 hover:bg-orange-500 hover:text-white"
-											}`}
+											className={`p-2 rounded-lg transition-all shadow-sm group ${emp.suspended
+												? "bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white"
+												: "bg-orange-500/10 text-orange-600 hover:bg-orange-500 hover:text-white"
+												}`}
 											title={emp.suspended ? "إعادة التفعيل" : "إيقاف عن العمل"}
 										>
 											{emp.suspended ? <Unlock className="w-5 h-5" /> : <Ban className="w-5 h-5" />}

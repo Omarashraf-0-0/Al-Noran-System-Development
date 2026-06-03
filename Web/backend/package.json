@@ -18,7 +18,6 @@
     "axios": "^1.12.2",
     "bcrypt": "^5.1.1",
     "cheerio": "^1.1.2",
-    "client-s3": "github:aws-sdk/client-s3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",

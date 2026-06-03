@@ -182,9 +182,9 @@ const ProfileRoute = () => {
 	} else if (userType === "employee") {
 		return <EmployeeProfilePage />;
 	}
-	
+
 	// Default fallback
-	
+
 	// Default fallback
 	return <EmployeeProfilePage />;
 };
@@ -197,7 +197,7 @@ const App = () => {
 					<Route path="/" element={<LandingPage />} />
 					<Route path="/login" element={<LoginPage />} />
 					<Route path="/register" element={<RegisterPage />} />
-                    <Route path="/terms" element={<TermsPage />} />
+					<Route path="/terms" element={<TermsPage />} />
 					<Route path="/forgetpassword" element={<ForgetPasswordPage />} />
 					<Route path="/verify-otp" element={<OTPPage />} />
 					<Route path="/resetpassword" element={<ResetPasswordPage />} />
@@ -426,6 +426,15 @@ const App = () => {
 							</EmployeeRoute>
 						}
 					/>
+					{/* Employee Profile (for admin to view/edit employee) */}
+					<Route
+						path="/employee/:clientId"
+						element={
+							<AdminRoute>
+								<ClientProfilePage />
+							</AdminRoute>
+						}
+					/>
 
 					{/* ===== Export System Routes (UCR) ===== */}
 					{/* Client Export Routes */}
@@ -519,43 +528,43 @@ const App = () => {
 						}
 					/>
 
-				{/* NEW */}
-				<Route
-					path="/client-payments"
-					element={
-						<ClientRoute>
-							<ClientPaymentsPage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/client-archive"
-					element={
-						<ClientRoute>
-							<ClientArchivePage />
-						</ClientRoute>
-					}
-				/>
-				<Route
-					path="/payments-management"
-					element={
-						<AdminRoute>
-							<PaymentsManagementPage />
-						</AdminRoute>
-					}
-				/>
-				<Route
-					path="/client-support"
-					element={
-						<ClientRoute>
-							<ClientSupportDashboard />
-						</ClientRoute>
-					}
-				/>
-				{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
-				<Route path="*" element={<NotFound404 />} />
-			</Routes>
-		</div>
+					{/* NEW */}
+					<Route
+						path="/client-payments"
+						element={
+							<ClientRoute>
+								<ClientPaymentsPage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/client-archive"
+						element={
+							<ClientRoute>
+								<ClientArchivePage />
+							</ClientRoute>
+						}
+					/>
+					<Route
+						path="/payments-management"
+						element={
+							<AdminRoute>
+								<PaymentsManagementPage />
+							</AdminRoute>
+						}
+					/>
+					<Route
+						path="/client-support"
+						element={
+							<ClientRoute>
+								<ClientSupportDashboard />
+							</ClientRoute>
+						}
+					/>
+					{/* <Route path="/welcomebanner" element={<WelcomeBanner />} /> */}
+					<Route path="*" element={<NotFound404 />} />
+				</Routes>
+			</div>
 		</ThemeProvider>
 	);
 };
